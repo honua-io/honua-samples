@@ -3,11 +3,11 @@
 // and against the canonical capability key list.
 //
 // Zero npm dependencies on purpose: this hand-rolls the small subset of JSON
-// Schema (draft-07) keywords sample.v1.schema.json actually uses (type,
-// required, properties, additionalProperties, items, enum, pattern,
-// minLength, minItems, uniqueItems). If the schema grows real conditional
-// logic (allOf/oneOf/$ref/etc.) swap this for ajv rather than extending the
-// mini-engine below.
+// Schema (draft-07) keywords sample.v1.schema.json actually uses. See
+// scripts/lib/mini-schema.mjs for the engine itself (shared with
+// scripts/generate-samples-coverage.mjs's self-check of its own output) and
+// scripts/lib/capability-keys.mjs for the capability key list loader (also
+// shared with generate-samples-coverage.mjs).
 //
 // Capability key list resolution order:
 //   1. KEY_LIST_URL env var, if set to an http(s) URL -- fetched at run time.
@@ -19,16 +19,12 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadCapabilityKeyList } from "./lib/capability-keys.mjs";
+import { validateAgainstSchema } from "./lib/mini-schema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const SCHEMA_PATH = path.join(REPO_ROOT, "schemas", "sample.v1.schema.json");
-const FIXTURE_KEY_LIST_PATH = path.join(
-  REPO_ROOT,
-  "schemas",
-  "fixtures",
-  "capability-keys.fixture.json",
-);
 
 /**
  * @param {string} samplesDirArg
@@ -103,61 +99,6 @@ async function main(samplesDirArg) {
   return errorsByFile.size === 0;
 }
 
-async function loadCapabilityKeyList() {
-  const url = process.env.KEY_LIST_URL?.trim();
-
-  if (url) {
-    if (!/^https?:\/\//i.test(url)) {
-      throw new Error(
-        `KEY_LIST_URL is set to "${url}" but is not an http(s) URL. ` +
-          `Unset it to fall back to the local fixture, or point it at the published capability-keys.v1.json.`,
-      );
-    }
-    let response;
-    try {
-      response = await fetch(url);
-    } catch (err) {
-      throw new Error(
-        `failed to fetch KEY_LIST_URL (${url}): ${err.message}`,
-      );
-    }
-    if (!response.ok) {
-      throw new Error(
-        `KEY_LIST_URL (${url}) returned HTTP ${response.status}`,
-      );
-    }
-    const json = await response.json();
-    return { keys: toKeySet(json), source: `KEY_LIST_URL (${url})` };
-  }
-
-  const json = JSON.parse(await readFile(FIXTURE_KEY_LIST_PATH, "utf8"));
-  return {
-    keys: toKeySet(json),
-    source: "schemas/fixtures/capability-keys.fixture.json (pinned fixture -- see KEY_LIST_URL)",
-  };
-}
-
-/**
- * Accepts either a bare array of keys or an object with a `keys` array, so
- * this keeps working unchanged once the real honua-server#2893 artifact
- * format is known.
- */
-function toKeySet(json) {
-  if (Array.isArray(json)) {
-    return new Set(json);
-  }
-  if (json && Array.isArray(json.keys)) {
-    return new Set(json.keys);
-  }
-  // canonical capability-keys.v1.json shape from honua-server#2893
-  if (json && Array.isArray(json.capabilities)) {
-    return new Set(json.capabilities.map((c) => c.key));
-  }
-  throw new Error(
-    "capability key list must be a JSON array of strings, or an object with a `keys` array",
-  );
-}
-
 async function listSampleDirs(samplesDir) {
   let entries;
   try {
@@ -172,93 +113,6 @@ async function listSampleDirs(samplesDir) {
     }
   }
   return dirs.sort();
-}
-
-// ---- minimal JSON Schema (draft-07 subset) validator ----------------------
-
-/**
- * @param {any} schema
- * @param {any} value
- * @param {string} pathLabel
- * @param {string[]} errors
- */
-function validateAgainstSchema(schema, value, pathLabel, errors) {
-  if (schema.type) {
-    const actual = jsonType(value);
-    const expected = Array.isArray(schema.type) ? schema.type : [schema.type];
-    if (!expected.includes(actual)) {
-      errors.push(
-        `${pathLabel}: expected type ${expected.join(" | ")}, got ${actual}`,
-      );
-      return; // further checks would be misleading against the wrong type
-    }
-  }
-
-  if (schema.enum && !schema.enum.includes(value)) {
-    errors.push(
-      `${pathLabel}: value ${JSON.stringify(value)} is not one of ${JSON.stringify(schema.enum)}`,
-    );
-  }
-
-  if (typeof value === "string") {
-    if (schema.pattern && !new RegExp(schema.pattern).test(value)) {
-      errors.push(
-        `${pathLabel}: "${value}" does not match pattern ${schema.pattern}`,
-      );
-    }
-    if (typeof schema.minLength === "number" && value.length < schema.minLength) {
-      errors.push(`${pathLabel}: string is shorter than minLength ${schema.minLength}`);
-    }
-  }
-
-  if (Array.isArray(value)) {
-    if (typeof schema.minItems === "number" && value.length < schema.minItems) {
-      errors.push(`${pathLabel}: array has fewer than minItems ${schema.minItems}`);
-    }
-    if (schema.uniqueItems) {
-      const seen = new Set();
-      for (const item of value) {
-        const key = typeof item === "object" ? JSON.stringify(item) : item;
-        if (seen.has(key)) {
-          errors.push(`${pathLabel}: array items must be unique (duplicate ${JSON.stringify(item)})`);
-        }
-        seen.add(key);
-      }
-    }
-    if (schema.items) {
-      value.forEach((item, i) => {
-        validateAgainstSchema(schema.items, item, `${pathLabel}[${i}]`, errors);
-      });
-    }
-  }
-
-  if (schema.type === "object" || (value && typeof value === "object" && !Array.isArray(value) && schema.properties)) {
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      for (const requiredKey of schema.required ?? []) {
-        if (!(requiredKey in value)) {
-          errors.push(`${pathLabel}: missing required property "${requiredKey}"`);
-        }
-      }
-      if (schema.additionalProperties === false && schema.properties) {
-        for (const key of Object.keys(value)) {
-          if (!(key in schema.properties)) {
-            errors.push(`${pathLabel}: unexpected additional property "${key}"`);
-          }
-        }
-      }
-      for (const [key, subSchema] of Object.entries(schema.properties ?? {})) {
-        if (key in value) {
-          validateAgainstSchema(subSchema, value[key], `${pathLabel}.${key}`, errors);
-        }
-      }
-    }
-  }
-}
-
-function jsonType(value) {
-  if (value === null) return "null";
-  if (Array.isArray(value)) return "array";
-  return typeof value; // "object" | "string" | "number" | "boolean" | "undefined"
 }
 
 // ---- reporting --------------------------------------------------------

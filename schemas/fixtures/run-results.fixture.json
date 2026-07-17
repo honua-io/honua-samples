@@ -1,0 +1,24 @@
+{
+  "_comment": "Fabricated results/run-results.v1.json envelope for exercising scripts/generate-samples-coverage.mjs locally without a live docker compose run (honua-io/honua-samples#5). Not consumed by any script automatically -- pass it explicitly: RUN_RESULTS_PATH=schemas/fixtures/run-results.fixture.json node scripts/generate-samples-coverage.mjs",
+  "schema": "run-results.v1",
+  "generatedAt": "2026-07-17T05:12:47.127Z",
+  "serverVersion": "1.2.3",
+  "baseUrl": "http://localhost:8080",
+  "results": [
+    {
+      "id": "hello-featureserver-rest",
+      "capabilities": ["import.file", "serve.geoservices-featureserver"],
+      "outcome": "pass",
+      "durationMs": 1303,
+      "serverVersion": "1.2.3"
+    },
+    {
+      "id": "retired-sample-no-longer-in-repo",
+      "capabilities": ["serve.wms"],
+      "outcome": "fail",
+      "durationMs": 42,
+      "serverVersion": "1.2.3",
+      "error": "orphan result: proves generate-samples-coverage.mjs ignores run-results entries whose sample id no longer has a matching samples/<id>/sample.json manifest"
+    }
+  ]
+}
