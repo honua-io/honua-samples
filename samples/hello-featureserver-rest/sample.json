@@ -2,9 +2,16 @@
   "id": "hello-featureserver-rest",
   "title": "Hello FeatureServer (plain REST)",
   "description": "Imports a tiny GeoJSON file, publishes it as a layer, and queries it back over the Esri-compatible GeoServices REST FeatureServer -- no SDK, just fetch().",
-  "capabilities": ["import.file", "serve.feature-service"],
-  "sdks": ["rest"],
-  "protocols": ["geoservices-rest"],
+  "capabilities": [
+    "import.file",
+    "serve.geoservices-featureserver"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "geoservices-rest"
+  ],
   "edition": "community",
   "entrypoint": {
     "type": "node",

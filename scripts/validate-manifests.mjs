@@ -149,6 +149,10 @@ function toKeySet(json) {
   if (json && Array.isArray(json.keys)) {
     return new Set(json.keys);
   }
+  // canonical capability-keys.v1.json shape from honua-server#2893
+  if (json && Array.isArray(json.capabilities)) {
+    return new Set(json.capabilities.map((c) => c.key));
+  }
   throw new Error(
     "capability key list must be a JSON array of strings, or an object with a `keys` array",
   );
