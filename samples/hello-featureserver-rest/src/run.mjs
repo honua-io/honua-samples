@@ -143,7 +143,9 @@ async function allowAnonymousReads(serviceName) {
 
 async function queryFeatureServer(serviceName, layerId) {
   const url = `${BASE_URL}/rest/services/${serviceName}/FeatureServer/${layerId}/query?where=1%3D1&outFields=*&f=json`;
-  const response = await fetch(url, { headers: adminHeaders() });
+  // Deliberately NO API key here: step 4 opened anonymous reads, and this
+  // query is what proves that path actually works.
+  const response = await fetch(url);
   const body = await asJson(response, "FeatureServer query");
   if (!response.ok) {
     throw new Error(`FeatureServer query failed (HTTP ${response.status}): ${JSON.stringify(body)}`);

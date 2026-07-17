@@ -127,14 +127,15 @@ function runSample(dirName, manifest, serverVersion) {
   return new Promise((resolve) => {
     const started = Date.now();
     const sampleCwd = path.join(SAMPLES_DIR, dirName);
-    const [command, ...args] = manifest.entrypoint.command.split(" ");
-
     console.log(`run-samples: [${manifest.id}] running "${manifest.entrypoint.command}"`);
 
-    const child = spawn(command, args, {
+    // shell: true so quoted arguments in entrypoint.command survive; a naive
+    // split(" ") breaks the first sample that needs one.
+    const child = spawn(manifest.entrypoint.command, {
       cwd: sampleCwd,
       env: process.env,
       stdio: "inherit",
+      shell: true,
     });
 
     child.on("error", (err) => {
