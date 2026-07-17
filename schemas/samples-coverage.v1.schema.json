@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://honua.io/schemas/samples-coverage.v1.schema.json",
+  "title": "Honua Samples Coverage Snapshot v1",
+  "description": "Shape of samples-coverage.v1.json, written by scripts/generate-samples-coverage.mjs and uploaded as a CI artifact on trunk builds (honua-io/honua-samples#5). This is the producer snapshot honua-evidence's capability matrix ingests: per canonical capability key, the sample(s) that demonstrate it. Capability keys with zero covering samples are absent -- never padded with an empty array -- so the matrix can render that honestly as a gap.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "capabilities"],
+  "properties": {
+    "schemaVersion": { "const": "samples-coverage.v1" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "capabilities": {
+      "type": "object",
+      "description": "Keyed by canonical capability key (validated against the same key list as samples/*/sample.json -- see scripts/lib/capability-keys.mjs). Only keys covered by at least one sample manifest are present.",
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "title", "url", "sdks", "edition"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Matches the sample's samples/<id>/ directory name and sample.json `id`."
+            },
+            "title": {
+              "type": "string",
+              "description": "Copied from the sample manifest's `title`."
+            },
+            "url": {
+              "type": "string",
+              "description": "Gallery URL: https://samples.honua.io/<id> (domain decided, DNS pending as of this writing)."
+            },
+            "sdks": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["js", "python", "dotnet", "rest"] },
+              "minItems": 1
+            },
+            "edition": {
+              "type": "string",
+              "enum": ["community", "pro", "enterprise"],
+              "description": "Copied from the sample manifest's `edition` (defaults to 'community' when the manifest omits it, per schemas/sample.v1.schema.json)."
+            },
+            "lastRun": {
+              "type": "object",
+              "description": "Present only when results/run-results.v1.json (the latest scripts/run-samples.mjs envelope) has a matching entry for this sample id -- i.e. the sample is status=\"active\" and has been executed at least once. Absent for draft samples or samples never yet run.",
+              "additionalProperties": false,
+              "required": ["outcome", "serverVersion", "at"],
+              "properties": {
+                "outcome": { "type": "string", "enum": ["pass", "fail"] },
+                "serverVersion": { "type": "string" },
+                "at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "The run envelope's generatedAt timestamp (run-results.v1.json has no per-sample timestamp, only durationMs)."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

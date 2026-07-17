@@ -19,6 +19,7 @@ Rules:
 - **Every sample runs headless in CI** against a composed Honua server (Community edition unless the manifest requires higher); run results are published as evidence.
 - **SDKs are consumed as published packages only** (npm/NuGet/PyPI) — no source copies, no sibling project references.
 - Samples that demonstrate Esri-client compatibility point at the same endpoints ArcGIS clients use, unchanged.
+- **Capabilities are never padded with zero-sample entries** in the coverage snapshot (below) — a capability with no covering sample is simply absent, so the honua-evidence matrix renders that honestly as a gap.
 
 ## Manifest schema
 
@@ -51,7 +52,83 @@ variable first; when it is set to an `http(s)` URL, that is fetched instead
 of the fixture. This is a one-line swap in
 [`.github/workflows/validate.yml`](.github/workflows/validate.yml) (set the
 `KEY_LIST_URL` repo/org variable) once the real artifact is published -- no
-script changes required.
+script changes required. The same loader (`scripts/lib/capability-keys.mjs`)
+backs `scripts/generate-samples-coverage.mjs` below.
+
+## Samples coverage snapshot
+
+`scripts/generate-samples-coverage.mjs` joins every `samples/<id>/sample.json`
+manifest with the latest
+[`results/run-results.v1.json`](schemas/run-results.v1.schema.json) envelope
+(written by `scripts/run-samples.mjs`) into
+[`samples-coverage.v1.json`](schemas/samples-coverage.v1.schema.json): the
+producer snapshot [honua-evidence](https://github.com/honua-io/honua-evidence)'s
+capability matrix ingests, keyed by capability key → the sample(s) that
+demonstrate it.
+
+```json
+{
+  "schemaVersion": "samples-coverage.v1",
+  "generatedAt": "2026-07-17T20:17:30.531Z",
+  "capabilities": {
+    "import.file": [
+      {
+        "id": "hello-featureserver-rest",
+        "title": "Hello FeatureServer (plain REST)",
+        "url": "https://samples.honua.io/hello-featureserver-rest",
+        "sdks": ["rest"],
+        "edition": "community",
+        "lastRun": { "outcome": "pass", "serverVersion": "1.2.3", "at": "2026-07-17T05:12:47.127Z" }
+      }
+    ]
+  }
+}
+```
+
+Rules:
+
+- **Only capability keys with ≥1 covering sample appear.** Nothing is padded
+  with an empty array — a missing key means zero coverage, not a schema quirk.
+- **`lastRun` is present only when the sample has actually been executed** —
+  i.e. it's `status: "active"` and has a matching entry in the latest
+  `run-results.v1.json`. Draft samples, or active samples that haven't run
+  yet, simply omit it.
+- **Capability keys are validated the same way `validate-manifests.mjs` does**
+  (`KEY_LIST_URL` env var, falling back to the pinned fixture) — this is
+  defense in depth so a typo'd key can never reach the published snapshot,
+  even on a run where `validate.yml` hasn't gated the manifest first (e.g. the
+  nightly `run-samples` schedule). Unknown keys are dropped with a warning,
+  not a hard failure, since `validate-manifests.mjs` is the authoritative gate
+  for that.
+- The generator self-checks its own output against
+  [`schemas/samples-coverage.v1.schema.json`](schemas/samples-coverage.v1.schema.json)
+  before writing it.
+
+Published as a CI artifact (`samples-coverage`) by the `run-samples` workflow
+on every trunk push, PR touching relevant paths, and nightly run — see
+[`.github/workflows/run-samples.yml`](.github/workflows/run-samples.yml).
+**Deferred:** honua-evidence dispatch/pull integration
+([honua-io/honua-evidence#3](https://github.com/honua-io/honua-evidence/issues/3))
+— that repo's ingest pipeline doesn't exist yet, so for now the artifact is
+published here for honua-evidence to pull once its side lands.
+
+### Generate it locally
+
+```bash
+node scripts/generate-samples-coverage.mjs
+```
+
+Reads `samples/*/sample.json` and `results/run-results.v1.json` by default,
+writes `coverage/samples-coverage.v1.json` (gitignored, like `results/` — it's
+a generated CI artifact, not a committed file). Override any of the three
+with env vars for local testing without touching real files, e.g. against the
+committed fabricated fixture:
+
+```bash
+RUN_RESULTS_PATH=schemas/fixtures/run-results.fixture.json \
+OUT_PATH=/tmp/samples-coverage.v1.json \
+node scripts/generate-samples-coverage.mjs
+```
 
 ## Local dev
 
@@ -100,6 +177,9 @@ Bootstrap. Coordination: [honua-server#2892](https://github.com/honua-io/honua-s
 Manifest schema + validation CI: [#1](https://github.com/honua-io/honua-samples/issues/1).
 Headless runner: [#2](https://github.com/honua-io/honua-samples/issues/2) (scaffold; see the
 `run-samples` workflow header for what's deferred).
+Samples coverage snapshot: [#5](https://github.com/honua-io/honua-samples/issues/5)
+(producer snapshot published; honua-evidence-side dispatch/pull integration
+deferred to [honua-evidence#3](https://github.com/honua-io/honua-evidence/issues/3)).
 
 ## License
 
