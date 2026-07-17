@@ -1,0 +1,64 @@
+name: run-samples
+
+# Headless sample runner (scaffold for honua-io/honua-samples#2). Composes
+# honua-server + PostGIS, waits for readiness, executes every "active"
+# sample's entrypoint against it, and uploads the result envelope.
+#
+# EXPECTED TO ITERATE: this proves the loop end-to-end with the one reference
+# sample (hello-featureserver-rest, Community edition, plain REST). Not yet
+# covered (see honua-io/honua-samples#2 acceptance criteria):
+#   - nightly schedule tuning / flake handling once there are more samples
+#   - a headless-browser lane for future JS/SDK samples
+#   - a Pro-licensed compose profile + CI license secret for edition-gated
+#     samples
+on:
+  pull_request:
+    paths:
+      - "samples/**"
+      - "scripts/run-samples.mjs"
+      - "docker/**"
+      - ".github/workflows/run-samples.yml"
+  schedule:
+    - cron: "17 5 * * *" # nightly
+  workflow_dispatch: {}
+
+env:
+  HONUA_ADMIN_PASSWORD: quickstart-admin-password
+  HONUA_ADMIN_API_KEY: quickstart-admin-password
+  HONUA_BASE_URL: http://localhost:8080
+
+jobs:
+  run:
+    name: run active samples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Compose up (postgres + honua-server)
+        # HONUA_SERVER_IMAGE lets this pin a different tag/digest without
+        # editing docker/compose.yml; defaults to the trunk-tracking GHCR
+        # image (no versioned release exists yet -- see docker/compose.yml).
+        run: docker compose -f docker/compose.yml up -d
+
+      - name: Run active samples
+        run: node scripts/run-samples.mjs
+
+      - name: Dump honua-server logs on failure
+        if: failure()
+        run: docker compose -f docker/compose.yml logs honua
+
+      - name: Upload run results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-results
+          path: results/run-results.v1.json
+          if-no-files-found: warn
+
+      - name: Compose down
+        if: always()
+        run: docker compose -f docker/compose.yml down -v

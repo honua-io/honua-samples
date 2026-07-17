@@ -1,0 +1,50 @@
+# Composed stack for the headless sample runner (see scripts/run-samples.mjs
+# and .github/workflows/run-samples.yml).
+#
+# Uses the published honua-server image from GHCR rather than building from
+# source -- honua-io/honua-server publishes multi-arch images at
+# ghcr.io/honua-io/honua-server (confirmed via `docker manifest inspect` /
+# `docker buildx imagetools inspect ghcr.io/honua-io/honua-server:trunk`,
+# 2026-07-16). There is no versioned release tag yet, only trunk/nightly
+# tracking tags -- HONUA_SERVER_IMAGE lets CI or a local dev pin a different
+# tag/digest without editing this file.
+# TODO(#2): swap to a versioned release tag once honua-server cuts one.
+services:
+  postgres:
+    image: pgrouting/pgrouting:17-3.5-3.7.3
+    environment:
+      POSTGRES_DB: honua_dev
+      POSTGRES_USER: honua_user
+      POSTGRES_PASSWORD: honua_password
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U honua_user -d honua_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  honua:
+    image: "${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:trunk}"
+    ports:
+      - "${HONUA_HTTP_PORT:-8080}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=honua_dev;Username=honua_user;Password=honua_password"
+      HONUA_ADMIN_PASSWORD: "${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
+      Security__ConnectionEncryption__MasterKey: "${HONUA_CONNECTION_ENCRYPTION_MASTER_KEY:-honua-samples-ci-master-key-0123456789}"
+      Security__ConnectionEncryption__Salt: "${HONUA_CONNECTION_ENCRYPTION_SALT:-aG9udWEtc2FtcGxlcy1jaS1zYWx0LTIwMjY=}"
+      Cors__AllowedOrigins__0: "http://localhost:3000"
+      Kestrel__Endpoints__Http__Url: "http://+:8080"
+      Kestrel__Endpoints__Http__Protocols: "Http1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 30

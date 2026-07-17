@@ -1,0 +1,38 @@
+name: validate
+
+on:
+  pull_request:
+    paths:
+      - "samples/**"
+      - "schemas/**"
+      - "scripts/validate-manifests.mjs"
+      - ".github/workflows/validate.yml"
+  push:
+    branches: [trunk]
+    paths:
+      - "samples/**"
+      - "schemas/**"
+      - "scripts/validate-manifests.mjs"
+      - ".github/workflows/validate.yml"
+
+jobs:
+  validate-manifests:
+    name: validate sample manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate samples/*/sample.json
+        # KEY_LIST_URL is the one-line swap point for the canonical capability
+        # key list published by honua-io/honua-server#2893. Until that lands,
+        # leaving it unset falls back to the pinned fixture at
+        # schemas/fixtures/capability-keys.fixture.json (see the loud comment
+        # in that file). Once the artifact exists, set this as a repo/org
+        # variable -- no workflow or script edits needed beyond this one line.
+        env:
+          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+        run: node scripts/validate-manifests.mjs
