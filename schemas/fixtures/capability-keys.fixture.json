@@ -1,0 +1,23 @@
+{
+  "_comment": "LOUD NOTICE: this is a PINNED, HAND-WRITTEN FIXTURE, not the canonical capability key list. It exists so validation CI is not blocked on honua-io/honua-server#2893 (the 'capability-keys.v1.json' artifact that repo will publish). The ~15 keys below are plausible guesses at the real vocabulary shape (dot-namespaced, kebab-case segments) for scaffolding purposes only.",
+  "todo": "When honua-server#2893 lands and publishes a real capability-keys.v1.json artifact (npm/GitHub Release/raw content URL), set the KEY_LIST_URL secret/variable in .github/workflows/validate.yml to point at it. scripts/validate-manifests.mjs already prefers KEY_LIST_URL over this file when it is set -- no script changes needed, it's a one-line workflow swap.",
+  "source": "honua-io/honua-server#2893 (not yet published as of this writing)",
+  "version": "fixture-v1",
+  "keys": [
+    "editing.feature-edits",
+    "editing.attachments",
+    "serve.feature-service",
+    "serve.ogc-features",
+    "serve.wms",
+    "serve.wmts",
+    "serve.vector-tiles",
+    "serve.mapserver",
+    "serve.stac",
+    "geocoding.single-line",
+    "geocoding.reverse",
+    "import.file",
+    "analytics.spatial-joins",
+    "alerts.enter-exit",
+    "raster.cog"
+  ]
+}

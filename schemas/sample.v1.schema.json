@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://honua.io/schemas/sample.v1.schema.json",
+  "title": "Honua Sample Manifest v1",
+  "description": "Schema for samples/<sample-id>/sample.json. Every runnable sample in this repo declares itself with one of these manifests; CI validates it on every PR (see scripts/validate-manifests.mjs).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "description",
+    "capabilities",
+    "sdks",
+    "protocols",
+    "entrypoint",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Kebab-case identifier. MUST match the name of the containing samples/<sample-id>/ directory.",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short human-readable title shown in the gallery.",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "One or two sentences describing what the sample demonstrates.",
+      "minLength": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Dot-namespaced capability keys this sample exercises, e.g. 'serve.feature-service'. Every key must appear in the canonical capability key list (see schemas/fixtures/capability-keys.fixture.json and the KEY_LIST_URL indirection in .github/workflows/validate.yml).",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "sdks": {
+      "type": "array",
+      "description": "Which SDK(s)/client style the sample uses. 'rest' means raw HTTP with no SDK package.",
+      "items": {
+        "type": "string",
+        "enum": ["js", "python", "dotnet", "rest"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "protocols": {
+      "type": "array",
+      "description": "Wire protocols the sample talks, e.g. 'geoservices-rest', 'ogc-api-features'.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "edition": {
+      "type": "string",
+      "description": "Minimum Honua Server edition required to run this sample. Defaults to 'community' when omitted.",
+      "enum": ["community", "pro", "enterprise"],
+      "default": "community"
+    },
+    "entrypoint": {
+      "type": "object",
+      "description": "How the headless runner (scripts/run-samples.mjs) executes this sample.",
+      "additionalProperties": false,
+      "required": ["type", "command"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Runtime family used to run 'command'.",
+          "enum": ["node", "python", "dotnet", "script"]
+        },
+        "command": {
+          "type": "string",
+          "description": "Shell command run with the sample directory as the working directory.",
+          "minLength": 1
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "description": "'active' samples are executed by the headless runner in CI/nightly. 'draft' samples are validated but not yet executed.",
+      "enum": ["active", "draft"]
+    }
+  }
+}

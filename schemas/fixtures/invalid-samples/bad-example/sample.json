@@ -1,0 +1,12 @@
+{
+  "id": "totally-different-id",
+  "title": "Deliberately broken sample",
+  "capabilities": ["serve.not-a-real-capability", "BadFormat"],
+  "sdks": ["js", "carrier-pigeon"],
+  "protocols": ["geoservices-rest"],
+  "edition": "gold",
+  "entrypoint": {
+    "type": "node"
+  },
+  "status": "definitely-not-a-status"
+}
