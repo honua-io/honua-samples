@@ -1,15 +1,23 @@
 name: pages
 
+# Builds the samples.honua.io gallery (honua-io/honua-samples#3) fresh on
+# every deploy via scripts/build-gallery.mjs, then publishes site/ as-is.
+# Every *.html under site/ is therefore build output, not committed (see
+# .gitignore) -- only site/CNAME and site/.nojekyll are tracked.
 on:
   push:
     branches: [trunk]
     paths:
       - "site/**"
+      - "samples/**"
+      - "scripts/**"
+      - "config/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch: {}
 
 permissions:
   contents: read
+  actions: read # to best-effort download the latest run-samples.yml run-results artifact below
   pages: write
   id-token: write
 
@@ -25,6 +33,42 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Download latest run-results artifact (best effort)
+        # Feeds scripts/build-gallery.mjs's honest per-sample run badges. Not
+        # fatal if absent (no run-samples.yml run yet, or its artifact
+        # already expired) -- the gallery then just shows "no run results
+        # yet" for active samples instead of a badge, same as a local build.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow run-samples.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "No successful run-samples.yml run found yet -- continuing without run-results."
+            exit 0
+          fi
+          mkdir -p results
+          if gh run download "$run_id" --repo "$GITHUB_REPOSITORY" -n run-results -D results; then
+            echo "Downloaded run-results artifact from run $run_id."
+          else
+            echo "Could not download the run-results artifact from run $run_id (may have expired) -- continuing without it."
+          fi
+
+      - name: Build gallery
+        # KEY_LIST_URL is the same swap point validate.yml and run-samples.yml
+        # use (see scripts/lib/capability-keys.mjs); the sdk-js catalog fetch
+        # has its own committed fallback (config/sdkjs-catalog.snapshot.json,
+        # see scripts/lib/sdkjs-catalog.mjs) so this step never breaks a
+        # deploy on an upstream hiccup in either direction.
+        env:
+          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+        run: node scripts/build-gallery.mjs
+
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:
           path: site

@@ -5,14 +5,18 @@ on:
     paths:
       - "samples/**"
       - "schemas/**"
-      - "scripts/validate-manifests.mjs"
+      - "scripts/**"
+      - "site/**"
+      - "config/**"
       - ".github/workflows/validate.yml"
   push:
     branches: [trunk]
     paths:
       - "samples/**"
       - "schemas/**"
-      - "scripts/validate-manifests.mjs"
+      - "scripts/**"
+      - "site/**"
+      - "config/**"
       - ".github/workflows/validate.yml"
 
 jobs:
@@ -36,3 +40,24 @@ jobs:
         env:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
         run: node scripts/validate-manifests.mjs
+
+  gallery-build-check:
+    name: gallery build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build gallery in --check mode
+        # Exercises the full samples.honua.io gallery build (honua-io/honua-samples#3)
+        # against both inputs -- this repo's own samples/*/sample.json manifests
+        # and the honua-sdk-js catalog.v2.json projection -- and fails the PR if
+        # either side has a problem the deploy-time build would otherwise only
+        # warn about (e.g. an sdk-js catalog entry referencing a capability key
+        # that isn't in the canonical key list, or missing a sourcePath).
+        env:
+          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+        run: node scripts/build-gallery.mjs --check
