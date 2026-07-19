@@ -1,0 +1,21 @@
+{
+  "id": "stac-search-rest",
+  "title": "STAC catalog + item geometry (plain REST)",
+  "description": "Imports a tiny GeoJSON dataset, publishes it, and walks Honua's STAC API -- catalog, conformance, and bbox-filtered items -- asserting real item geometry comes back, not just a 200.",
+  "capabilities": [
+    "import.file",
+    "serve.stac"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "stac"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "node",
+    "command": "node src/run.mjs"
+  },
+  "status": "active"
+}
