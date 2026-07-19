@@ -15,6 +15,16 @@
 // (scripts/lib/capability-keys.mjs) -- an sdk-js entry referencing an
 // unrecognized key fails --check just like an own-sample manifest would.
 //
+// Detail pages also embed the ACTUAL RUNNING SAMPLE wherever a
+// sha256-verified static browser bundle has been staged for it
+// (honua-io/honua-samples#11, consuming honua-sdk-js#642/#648's
+// sample-bundles-latest release via scripts/lib/sample-bundles.mjs) --
+// never a fake/broken iframe: an sdk-js entry with no staged bundle gets an
+// explicit "no runnable build published yet" panel, and this repo's own
+// headless/CLI samples get a labeled "headless sample" panel instead of an
+// embed. See scripts/lib/sample-bundles.mjs's header for the integrity and
+// degraded-fallback rules.
+//
 // Zero npm dependencies, matching the rest of this repo's scripts.
 //
 // Usage:
@@ -26,18 +36,21 @@
 //                                             # gate PRs on a broken gallery build
 //
 // Env vars (all optional):
-//   RUN_RESULTS_PATH   default "results/run-results.v1.json" (missing is tolerated)
-//   KEY_LIST_URL        see scripts/lib/capability-keys.mjs
-//   SDKJS_CATALOG_URL   see scripts/lib/sdkjs-catalog.mjs
-//   SDKJS_CROSSWALK_URL see scripts/lib/sdkjs-catalog.mjs
+//   RUN_RESULTS_PATH           default "results/run-results.v1.json" (missing is tolerated)
+//   KEY_LIST_URL                see scripts/lib/capability-keys.mjs
+//   SDKJS_CATALOG_URL           see scripts/lib/sdkjs-catalog.mjs
+//   SDKJS_CROSSWALK_URL         see scripts/lib/sdkjs-catalog.mjs
+//   SAMPLE_BUNDLES_MANIFEST_URL see scripts/lib/sample-bundles.mjs
+//   SAMPLE_BUNDLES_TARBALL_URL  see scripts/lib/sample-bundles.mjs
 
 import { execFileSync } from "node:child_process";
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCapabilityKeyRecords } from "./lib/capability-keys.mjs";
 import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs";
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
+import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -64,13 +77,23 @@ async function main() {
   const { crosswalk } = await loadCapabilityCrosswalk();
   const sdkRawEntries = catalog.samples ?? [];
 
+  // Bundle staging never fails --check/the build on a fetch problem (see
+  // scripts/lib/sample-bundles.mjs) -- only on a genuine integrity mismatch,
+  // which is intentionally allowed to throw out of main() and fail the run.
+  const bundleState = await ensureSampleBundlesStaged({ refreshSnapshot: !CHECK_MODE });
+  const bundleById = new Map((bundleState.manifest?.samples ?? []).map((s) => [s.id, s]));
+  const stagedBundleIds = new Set(bundleState.stagedIds);
+
   const ownCards = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
-  const sdkCards = sdkRawEntries.map((e) => toSdkCard(e, crosswalk, keyByKey, problems));
+  const sdkCards = sdkRawEntries.map((e) => toSdkCard(e, crosswalk, keyByKey, problems, bundleById, stagedBundleIds));
   const cards = [...ownCards, ...sdkCards];
 
   const categories = groupByCategory(cards, keyByKey);
   const generatedAt = new Date().toISOString();
   const sourceCommit = resolveSourceCommit();
+  const bundleNotice = bundleState.degraded
+    ? `Sample bundle fetch degraded this deploy: ${bundleState.degradedReason} -- no sdk-js samples are embedded; each shows "no runnable build published yet".`
+    : null;
 
   if (problems.length > 0) {
     console.error(`build-gallery: ${problems.length} problem(s) found:`);
@@ -89,25 +112,42 @@ async function main() {
   await copyAssets();
   await writeFile(
     path.join(SITE_DIR, "index.html"),
-    renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit }),
+    renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }),
     "utf8",
   );
 
   for (const card of ownCards) {
     const dir = path.join(SITE_DIR, card.id);
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "index.html"), renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit), "utf8");
+    await writeFile(
+      path.join(dir, "index.html"),
+      renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice),
+      "utf8",
+    );
   }
 
+  let embeddedCount = 0;
   for (const card of sdkCards) {
     const dir = path.join(SITE_DIR, "sdk", card.id);
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "index.html"), renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit), "utf8");
+    if (card.bundleStaged) {
+      // Copy AFTER mkdir/rm above so this never races build-gallery's own
+      // site/sdk/ cleanup -- the staging root (scripts/lib/sample-bundles.mjs)
+      // lives outside site/ entirely for exactly this reason.
+      await cp(path.join(bundleState.stagingRoot, card.id), path.join(dir, "app"), { recursive: true });
+      embeddedCount += 1;
+    }
+    await writeFile(
+      path.join(dir, "index.html"),
+      renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice),
+      "utf8",
+    );
   }
 
   const pageCount = 1 + ownCards.length + sdkCards.length;
   console.log(
     `build-gallery: wrote ${pageCount} page(s) to site/ -- ${ownCards.length} from ${OWN_REPO}, ${sdkCards.length} from ${SDKJS_REPO}` +
+      ` (${embeddedCount} sdk-js sample(s) embedded with a verified running bundle)` +
       (problems.length ? ` (${problems.length} problem(s) warned, see above)` : ""),
   );
 }
@@ -197,6 +237,7 @@ function toOwnCard(sample, runResults, keyByKey, problems) {
     githubUrl: `https://github.com/${OWN_REPO}/tree/trunk/samples/${dirName}`,
     readmeHtml: readme ? renderMarkdown(readme) : null,
     runBadge,
+    entrypoint: manifest.entrypoint ?? null,
   };
 }
 
@@ -220,7 +261,7 @@ function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
   };
 }
 
-function toSdkCard(entry, crosswalk, keyByKey, problems) {
+function toSdkCard(entry, crosswalk, keyByKey, problems, bundleById, stagedBundleIds) {
   const id = entry.id;
   if (!entry.sourcePath) {
     problems.push(`${SDKJS_REPO} catalog entry "${id}" has no sourcePath -- cannot link to GitHub source`);
@@ -250,6 +291,12 @@ function toSdkCard(entry, crosswalk, keyByKey, problems) {
     detailPath: `/sdk/${id}/`,
     githubUrl: entry.sourcePath ? `https://github.com/${SDKJS_REPO}/tree/trunk/${entry.sourcePath}` : null,
     docsUrl: entry.docsPath ? `https://github.com/${SDKJS_REPO}/blob/trunk/${entry.docsPath}` : null,
+    // Populated only when scripts/lib/sample-bundles.mjs's manifest has this
+    // id AND this build actually staged sha256-verified files for it this
+    // run (bundleSample can be non-null while bundleStaged is false in a
+    // degraded run -- see the file header comment on scripts/lib/sample-bundles.mjs).
+    bundleSample: bundleById.get(id) ?? null,
+    bundleStaged: stagedBundleIds.has(id),
   };
 }
 
@@ -284,7 +331,7 @@ function groupByCategory(cards, keyByKey) {
 
 // ---- rendering: shared chrome -----------------------------------------
 
-function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCommit }) {
+function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCommit, bundleNotice }) {
   const assetPrefix = depth === 0 ? "assets" : "../".repeat(depth) + "assets";
   const homeHref = depth === 0 ? "./" : "../".repeat(depth);
   return `<!doctype html>
@@ -308,19 +355,20 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
 <main>
 ${bodyHtml}
 </main>
-<footer class="site-footer">${renderFooter(generatedAt, sourceCommit)}</footer>
+<footer class="site-footer">${renderFooter(generatedAt, sourceCommit, bundleNotice)}</footer>
 ${depth === 0 ? `<script src="${assetPrefix}/gallery-filter.js"></script>` : ""}
 </body>
 </html>
 `;
 }
 
-function renderFooter(generatedAt, sourceCommit) {
+function renderFooter(generatedAt, sourceCommit, bundleNotice) {
   const commitLink =
     sourceCommit && /^[0-9a-f]{40}$/i.test(sourceCommit)
       ? `<a href="https://github.com/${OWN_REPO}/commit/${sourceCommit}" target="_blank" rel="noopener noreferrer">${sourceCommit.slice(0, 12)}</a>`
       : escapeHtml(sourceCommit ?? "unknown");
-  return `<span>Generated ${escapeHtml(generatedAt)}</span><span>Source commit: ${commitLink}</span>`;
+  const notice = bundleNotice ? `<span class="bundle-notice">⚠ ${escapeHtml(bundleNotice)}</span>` : "";
+  return `<span>Generated ${escapeHtml(generatedAt)}</span><span>Source commit: ${commitLink}</span>${notice}`;
 }
 
 function chip(text, extraClass) {
@@ -344,9 +392,60 @@ function runBadgeHtml(badge) {
   return `<span class="badge ${badge.state}">${escapeHtml(badge.label)}</span>`;
 }
 
+// ---- rendering: bundle embed / no-bundle / headless panels ---------------
+//
+// Honesty rules (honua-io/honua-samples#11): a detail page NEVER shows an
+// iframe unless this build actually staged sha256-verified files for it
+// (card.bundleStaged); an entry with a catalog projection but no staged
+// bundle always gets the explicit "no runnable build published yet" panel,
+// never a broken/empty iframe; own-repo headless/CLI samples always get the
+// labeled headless panel, never a fake embed.
+
+const DATA_MODE_LABELS = {
+  fixture: "fixture mode",
+  hybrid: "hybrid mode",
+  "public-live": "public-live mode",
+  live: "live mode",
+};
+
+function renderEmbedPanel(card) {
+  const { bundleSample } = card;
+  const commit = bundleSample.builtFrom?.commit;
+  const commitHtml =
+    commit && /^[0-9a-f]{40}$/i.test(commit)
+      ? `<a href="https://github.com/${SDKJS_REPO}/commit/${commit}" target="_blank" rel="noopener noreferrer">${commit.slice(0, 12)}</a>`
+      : escapeHtml(commit ?? "unknown commit");
+  const modeLabel = DATA_MODE_LABELS[bundleSample.dataMode] ?? escapeHtml(bundleSample.dataMode ?? "unknown data mode");
+  const entrypoint = bundleSample.entrypoint ?? "index.html";
+  const appHref = entrypoint === "index.html" ? "app/" : `app/${entrypoint}`;
+  return `
+<div class="embed-panel">
+  <iframe src="${escapeAttr(appHref)}" title="${escapeAttr(card.title)} -- running sample" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+  <p class="embed-toolbar">
+    <a href="${escapeAttr(appHref)}" target="_blank" rel="noopener noreferrer">Open full screen ↗</a>
+    <span class="provenance">Built from honua-sdk-js @${commitHtml}, ${modeLabel}${bundleSample.builtFrom?.packageVersion ? ` (v${escapeHtml(bundleSample.builtFrom.packageVersion)})` : ""}</span>
+  </p>
+</div>`;
+}
+
+function renderNoBundlePanel(reason) {
+  return `<div class="no-bundle-panel"><p class="empty-state">No runnable build published yet.${reason ? ` ${escapeHtml(reason)}` : ""}</p></div>`;
+}
+
+function renderHeadlessPanel(card) {
+  const command = card.entrypoint?.command ? `<code>${escapeHtml(card.entrypoint.command)}</code>` : "its documented entrypoint";
+  const runsWorkflowUrl = `https://github.com/${OWN_REPO}/actions/workflows/run-samples.yml`;
+  return `
+<div class="headless-panel">
+  <p><strong>Headless sample</strong> — run it locally: ${command}. See
+    <a href="${runsWorkflowUrl}" target="_blank" rel="noopener noreferrer">run receipts ↗</a>
+    for the latest CI execution against a real server.</p>
+</div>`;
+}
+
 // ---- rendering: index ---------------------------------------------------
 
-function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit }) {
+function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }) {
   const ownCount = cards.filter((c) => c.kind === "own").length;
   const sdkCount = cards.filter((c) => c.kind === "sdk").length;
 
@@ -381,6 +480,7 @@ function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommi
     depth: 0,
     generatedAt,
     sourceCommit,
+    bundleNotice,
   });
 }
 
@@ -464,7 +564,16 @@ function renderCard(card) {
 
 // ---- rendering: own sample detail page ----------------------------------
 
-function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit) {
+function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice) {
+  // No own-repo sample publishes a browser bundle today (this repo never
+  // builds from upstream source, and hello-featureserver-rest is headless);
+  // entrypoint.type "node" (or anything but "browser") always gets the
+  // headless panel. A future own-repo browser sample with no staged bundle
+  // gets the same honest no-bundle panel an unbundled sdk-js entry gets.
+  const runnablePanel =
+    card.entrypoint?.type === "browser"
+      ? renderNoBundlePanel("This repo does not yet publish a staged browser bundle for it.")
+      : renderHeadlessPanel(card);
   const bodyHtml = `
 <a class="back-link" href="../">← All samples</a>
 <h1>${escapeHtml(card.title)}</h1>
@@ -476,6 +585,7 @@ function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit) {
   <span>Status: ${escapeHtml(card.status)}</span>
 </div>
 ${runBadgeHtml(card.runBadge)}
+${runnablePanel}
 <h2>Capabilities</h2>
 ${capabilityChips(card.capabilities, keyByKey)}
 <p><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a></p>
@@ -488,15 +598,23 @@ ${card.readmeHtml ? `<div class="readme">${card.readmeHtml}</div>` : `<p class="
     depth: 1,
     generatedAt,
     sourceCommit,
+    bundleNotice,
   });
 }
 
 // ---- rendering: sdk-js entry detail page --------------------------------
 
-function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit) {
+function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice) {
   const lifecycleHtml = card.lifecycle
     ? `<span>Lifecycle: ${escapeHtml(card.lifecycle.state)}${card.lifecycle.reason ? ` — ${escapeHtml(card.lifecycle.reason)}` : ""}</span>`
     : "";
+  const runnablePanel = card.bundleStaged
+    ? renderEmbedPanel(card)
+    : renderNoBundlePanel(
+        card.bundleSample
+          ? "A build was published for it before, but no verified bundle is staged for this deploy."
+          : "",
+      );
   const bodyHtml = `
 <a class="back-link" href="../../">← All samples</a>
 <p class="empty-state">Projected from <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s sample catalog. Code is not vendored here -- follow the GitHub link below for the source.</p>
@@ -509,6 +627,7 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit) {
   <span>Renderers: ${card.renderers.map(escapeHtml).join(", ") || "—"}</span>
   ${lifecycleHtml}
 </div>
+${runnablePanel}
 <h2>Capabilities</h2>
 ${capabilityChips(card.capabilities, keyByKey)}
 <p>
@@ -523,6 +642,7 @@ ${capabilityChips(card.capabilities, keyByKey)}
     depth: 2,
     generatedAt,
     sourceCommit,
+    bundleNotice,
   });
 }
 

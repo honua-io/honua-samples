@@ -206,6 +206,57 @@ the fresh payload -- run `node scripts/build-gallery.mjs` locally and commit
 the refreshed file occasionally so the offline fallback doesn't drift far
 behind honua-sdk-js's trunk.
 
+### Embeds: the actual running sample on the detail page
+
+A detail page doesn't just describe an honua-sdk-js sample -- when a verified
+build exists, it runs it live in an iframe (honua-io/honua-samples#11),
+consuming honua-sdk-js's `sample-bundles-latest` GitHub Release
+([honua-io/honua-sdk-js#642](https://github.com/honua-io/honua-sdk-js/issues/642)/[#648](https://github.com/honua-io/honua-sdk-js/issues/648)):
+a `sample-bundles.v1.json` manifest (per-sample entrypoint, data mode,
+`builtFrom` commit/version, and per-file `{path, bytes, sha256, integrity}`)
+plus a `sample-bundles.tar.gz` of the built static files. This repo never
+builds sdk-js source itself -- only the already-built, already-CI-verified
+bundle is ever consumed.
+
+**Inputs.** `scripts/lib/sample-bundles.mjs` fetches both assets from the
+release (default: plain HTTPS `github.com/.../releases/download/...`, no
+`gh` CLI or auth needed for a public release; override with
+`SAMPLE_BUNDLES_MANIFEST_URL` / `SAMPLE_BUNDLES_TARBALL_URL`), extracts the
+tarball, and stages verified files under a gitignored scratch root
+(`.sample-bundles-staging/`) -- never inside `site/` directly, so
+`scripts/build-gallery.mjs`'s own `site/sdk/` cleanup can never race the
+staged files (they're copied in *after* that cleanup, per sample).
+
+**Integrity.** Every file the manifest declares is re-hashed (SHA-256) against
+the bytes actually extracted from the tarball before anything is staged. Any
+mismatch -- wrong hash, wrong size, a file the manifest declares but the
+tarball doesn't contain -- throws immediately and stages nothing for that
+sample; this is a hard failure, not a warning, and is what fails the `pages.yml`
+staging step. A card only ever gets an `<iframe>` when this build actually
+staged sha256-verified files for it; the provenance line under the embed
+("Built from honua-sdk-js @`<commit>`, fixture mode") is read straight from
+the manifest's `builtFrom`, never guessed.
+
+**Honesty rules.** An sdk-js entry the manifest doesn't cover (or that didn't
+verify this run) renders an explicit "No runnable build published yet" panel
+-- never a broken or empty iframe. This repo's own headless/CLI samples (like
+`hello-featureserver-rest`) get a distinct "Headless sample -- run it locally"
+panel with the run command and a link to CI run receipts, never a fake embed
+either. A future browser-buildable sample in this repo without a staged
+bundle of its own falls back to the same honest no-bundle panel.
+
+**Fallback.** Bundle *bytes* are never committed (each release build is many
+MB of JS/CSS/wasm, and honua-sdk-js's own CI already re-verifies them on every
+publish). If the live fetch fails for any reason -- network blip, rate limit,
+or the release not existing yet -- `scripts/lib/sample-bundles.mjs` falls back
+to the committed manifest-only snapshot,
+[`config/sample-bundles.snapshot.json`](config/sample-bundles.snapshot.json),
+and the deploy degrades honestly: every sdk-js card shows the no-bundle panel,
+and a visible warning appears in the page footer explaining why. Nothing ever
+serves a stale or unverified embed. `pages.yml` runs staging as its own step
+before the gallery build so an integrity failure is attributed clearly and
+fails the deploy, while a fetch failure alone never does.
+
 ### The gallery index: categories, filters, and the `?caps=` contract
 
 The index groups sample cards by capability **category** (from the canonical
@@ -232,12 +283,18 @@ migration footprint scanner, lands here pre-filtered to the matching samples.
 ### Validate it locally
 
 ```bash
-node scripts/build-gallery.mjs          # builds site/ (index + one page per sample/entry)
+node scripts/build-gallery.mjs          # builds site/ (index + one page per sample/entry);
+                                         # also fetches + integrity-verifies + stages sdk-js
+                                         # sample bundles inline (see the Embeds section above)
 node scripts/build-gallery.mjs --check  # same build, but exits non-zero on any
                                          # cross-repo/data problem (unknown
                                          # capability key, missing sourcePath, ...) --
                                          # this is what validate.yml's
                                          # gallery-build-check job runs on every PR
+node scripts/lib/sample-bundles.mjs     # staging only, standalone (what pages.yml's
+                                         # dedicated staging step runs) -- exits 1 on an
+                                         # integrity mismatch, 0 (with a warning) on a
+                                         # plain fetch failure
 ```
 
 `site/*.html` and `site/{assets,sdk,<sample-id>}/` are build output
@@ -256,6 +313,16 @@ deferred to [honua-evidence#3](https://github.com/honua-io/honua-evidence/issues
 Gallery: [#3](https://github.com/honua-io/honua-samples/issues/3) (this PR; left
 open until samples.honua.io is deployed and verified live with both inputs
 rendering).
+Gallery embeds: [#11](https://github.com/honua-io/honua-samples/issues/11)
+(staging/integrity/embed pipeline implemented and verified end-to-end against
+a synthetic fixture release matching honua-sdk-js's manifest schema exactly --
+see that PR's description. Honest current state: honua-sdk-js's real
+`sample-bundles-latest` release does not exist yet, because its
+"Publish sample bundles release" job needs the "JS SDK" job, which has been
+failing on every honua-sdk-js trunk push since #648 merged (an unrelated
+evidence-neutral-checkout gate failure). Every gallery deploy therefore
+degrades honestly to "no runnable build published yet" for every sdk-js entry
+until that upstream job is fixed; nothing here is blocked on this repo).
 
 ## License
 
