@@ -4,13 +4,29 @@
   "generatedAt": "2026-07-17T05:12:47.127Z",
   "serverVersion": "1.2.3",
   "baseUrl": "http://localhost:8080",
+  "edition": "community",
   "results": [
     {
       "id": "hello-featureserver-rest",
       "capabilities": ["import.file", "serve.geoservices-featureserver"],
       "outcome": "pass",
       "durationMs": 1303,
-      "serverVersion": "1.2.3"
+      "serverVersion": "1.2.3",
+      "attempts": [
+        { "attempt": 1, "outcome": "pass", "durationMs": 1303 }
+      ]
+    },
+    {
+      "id": "browser-featureserver-query",
+      "capabilities": ["import.file", "serve.geoservices-featureserver"],
+      "outcome": "pass",
+      "durationMs": 2150,
+      "serverVersion": "1.2.3",
+      "flaky": true,
+      "attempts": [
+        { "attempt": 1, "outcome": "fail", "durationMs": 5008, "error": "timed out waiting for [data-sample-status] after 5000ms" },
+        { "attempt": 2, "outcome": "pass", "durationMs": 2150 }
+      ]
     },
     {
       "id": "retired-sample-no-longer-in-repo",
@@ -18,7 +34,19 @@
       "outcome": "fail",
       "durationMs": 42,
       "serverVersion": "1.2.3",
-      "error": "orphan result: proves generate-samples-coverage.mjs ignores run-results entries whose sample id no longer has a matching samples/<id>/sample.json manifest"
+      "error": "orphan result: proves generate-samples-coverage.mjs ignores run-results entries whose sample id no longer has a matching samples/<id>/sample.json manifest",
+      "attempts": [
+        { "attempt": 1, "outcome": "fail", "durationMs": 40, "error": "orphan result attempt 1" },
+        { "attempt": 2, "outcome": "fail", "durationMs": 42, "error": "orphan result attempt 2" }
+      ]
+    },
+    {
+      "id": "retired-pro-sample-no-longer-in-repo",
+      "capabilities": ["serve.wms"],
+      "outcome": "skipped",
+      "durationMs": 0,
+      "serverVersion": "1.2.3",
+      "error": "sample requires edition \"pro\" but runner is running as \"community\""
     }
   ]
 }

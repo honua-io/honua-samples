@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>browser-featureserver-query</title>
+</head>
+<body>
+<!--
+  browser-featureserver-query
+
+  Plain-browser walkthrough of the same import -> publish -> query loop as
+  ../../hello-featureserver-rest/src/run.mjs, but every step is a browser-side
+  fetch()/FormData/Blob call from this static page instead of a Node script --
+  proving scripts/lib/browser-lane.mjs's headless-browser runner lane
+  (honua-io/honua-samples#2). No SDK package involved, same as the Node twin.
+
+  Success-signal convention (see schemas/sample.v1.schema.json's
+  entrypoint.command doc): once finished, this script sets
+  `document.body.dataset.sampleStatus` to "pass" or "fail". The runner
+  (scripts/lib/browser-lane.mjs) polls for the `[data-sample-status]` selector
+  and reads that attribute -- nothing else on this page matters to the runner.
+
+  scripts/run-samples.mjs passes ?baseUrl=...&apiKey=... query params (the
+  browser-side equivalent of the Node samples' HONUA_BASE_URL/
+  HONUA_ADMIN_API_KEY env vars, since a static page has no process.env).
+  Opening this file directly in a real browser also works, with the same
+  defaults the Node sample uses.
+-->
+<pre id="log">running...</pre>
+<script type="module">
+  const params = new URLSearchParams(location.search);
+  const BASE_URL = params.get("baseUrl") ?? "http://localhost:8080";
+  const ADMIN_API_KEY = params.get("apiKey") ?? "quickstart-admin-password";
+  const CONNECTION_NAME = "local-browser";
+  const LAYER_NAME = "browser-hello-points";
+  const TABLE_NAME = `honua_samples_browser_hello_${Date.now()}`;
+
+  const logEl = document.getElementById("log");
+  function log(line) {
+    console.log(`[browser-featureserver-query] ${line}`);
+    logEl.textContent += `\n${line}`;
+  }
+
+  const POINTS_GEOJSON = {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", properties: { name: "Ferry Building" }, geometry: { type: "Point", coordinates: [-122.3937, 37.7955] } },
+      { type: "Feature", properties: { name: "Coit Tower" }, geometry: { type: "Point", coordinates: [-122.4058, 37.8024] } },
+      { type: "Feature", properties: { name: "Painted Ladies" }, geometry: { type: "Point", coordinates: [-122.433, 37.7762] } },
+    ],
+  };
+
+  function adminHeaders(extra = {}) {
+    return { "X-API-Key": ADMIN_API_KEY, ...extra };
+  }
+
+  async function asJson(response, step) {
+    const text = await response.text();
+    let body;
+    try {
+      body = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(`${step}: response was not JSON (HTTP ${response.status}): ${text.slice(0, 500)}`);
+    }
+    return body;
+  }
+
+  async function uploadGeoJson() {
+    const form = new FormData();
+    const blob = new Blob([JSON.stringify(POINTS_GEOJSON)], { type: "application/geo+json" });
+    form.append("file", blob, "points.geojson");
+    form.append("TableName", TABLE_NAME);
+
+    const response = await fetch(`${BASE_URL}/api/v1/admin/import/upload`, {
+      method: "POST",
+      headers: adminHeaders(),
+      body: form,
+    });
+    const body = await asJson(response, "upload");
+    if (!response.ok || body.success === false) {
+      throw new Error(`upload failed (HTTP ${response.status}): ${JSON.stringify(body)}`);
+    }
+    if (!body.physicalTableName) {
+      throw new Error(`upload response did not include physicalTableName: ${JSON.stringify(body)}`);
+    }
+    return body;
+  }
+
+  async function registerConnection() {
+    const existing = await fetch(`${BASE_URL}/api/v1/admin/connections`, { headers: adminHeaders() });
+    if (existing.ok) {
+      const body = await asJson(existing, "list connections");
+      const list = Array.isArray(body?.data) ? body.data : [];
+      if (list.some((c) => c.name === CONNECTION_NAME)) {
+        return { alreadyExists: true };
+      }
+    }
+
+    const response = await fetch(`${BASE_URL}/api/v1/admin/connections`, {
+      method: "POST",
+      headers: adminHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        name: CONNECTION_NAME,
+        host: "postgres",
+        port: 5432,
+        databaseName: "honua_dev",
+        username: "honua_user",
+        password: "honua_password",
+        sslRequired: false,
+        sslMode: "Prefer",
+      }),
+    });
+    const body = await asJson(response, "register connection");
+    if (!response.ok) {
+      throw new Error(`connection registration failed (HTTP ${response.status}): ${JSON.stringify(body)}`);
+    }
+    return body;
+  }
+
+  async function publishLayer(physicalTableName) {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/connections/${CONNECTION_NAME}/layers`, {
+      method: "POST",
+      headers: adminHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ schema: "honua_data", table: physicalTableName, layerName: LAYER_NAME, srid: 4326 }),
+    });
+    const body = await asJson(response, "publish layer");
+    if (!response.ok || body.success === false) {
+      throw new Error(`layer publish failed (HTTP ${response.status}): ${JSON.stringify(body)}`);
+    }
+    return body.data ?? body;
+  }
+
+  async function allowAnonymousReads(serviceName) {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/services/${serviceName}/access-policy`, {
+      method: "PUT",
+      headers: adminHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ allowAnonymous: true }),
+    });
+    if (!response.ok) {
+      const body = await asJson(response, "access policy");
+      throw new Error(`access-policy update failed (HTTP ${response.status}): ${JSON.stringify(body)}`);
+    }
+  }
+
+  async function queryFeatureServer(serviceName, layerId) {
+    const url = `${BASE_URL}/rest/services/${serviceName}/FeatureServer/${layerId}/query?where=1%3D1&outFields=*&f=json`;
+    // No API key here on purpose: the point of this step is proving the
+    // anonymous-read path works, same as the Node twin.
+    const response = await fetch(url);
+    const body = await asJson(response, "FeatureServer query");
+    if (!response.ok) {
+      throw new Error(`FeatureServer query failed (HTTP ${response.status}): ${JSON.stringify(body)}`);
+    }
+    return body;
+  }
+
+  function markStatus(status, error) {
+    document.body.dataset.sampleStatus = status;
+    if (error) {
+      document.body.dataset.sampleError = error;
+    }
+  }
+
+  async function main() {
+    log(`target server: ${BASE_URL}`);
+
+    log(`1/5 uploading ${TABLE_NAME} (${POINTS_GEOJSON.features.length} features)...`);
+    const uploaded = await uploadGeoJson();
+
+    log(`2/5 registering connection "${CONNECTION_NAME}"...`);
+    await registerConnection();
+
+    log(`3/5 publishing layer "${LAYER_NAME}"...`);
+    const published = await publishLayer(uploaded.physicalTableName);
+    const layerId = published.layerId;
+    const serviceName = published.serviceName ?? "default";
+    if (layerId === undefined || layerId === null) {
+      throw new Error(`publish response did not include a layerId: ${JSON.stringify(published)}`);
+    }
+
+    log(`4/5 allowing anonymous reads on service "${serviceName}"...`);
+    await allowAnonymousReads(serviceName);
+
+    log(`5/5 querying FeatureServer/${layerId}...`);
+    const result = await queryFeatureServer(serviceName, layerId);
+
+    const features = result.features ?? [];
+    const names = features
+      .map((f) => f?.attributes?.properties?.name ?? f?.attributes?.name)
+      .filter((name) => typeof name === "string")
+      .sort();
+    const expectedNames = POINTS_GEOJSON.features.map((f) => f.properties.name).sort();
+    const missing = expectedNames.filter((name) => !names.includes(name));
+
+    if (features.length !== POINTS_GEOJSON.features.length || missing.length > 0) {
+      throw new Error(
+        `expected ${expectedNames.length} features (${expectedNames.join(", ")}), got ${features.length} (${names.join(", ")})`,
+      );
+    }
+
+    log(`PASS: queried back ${features.length} features (${names.join(", ")}) from ${serviceName}/FeatureServer/${layerId}`);
+    markStatus("pass");
+  }
+
+  main().catch((err) => {
+    log(`FAIL: ${err.message}`);
+    markStatus("fail", err.message);
+  });
+</script>
+</body>
+</html>

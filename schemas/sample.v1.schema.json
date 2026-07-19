@@ -75,12 +75,12 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "Runtime family used to run 'command'.",
-          "enum": ["node", "python", "dotnet", "script"]
+          "description": "Runtime family used to run 'command'. 'browser' runs headless via Playwright instead of a child process -- see 'command' below.",
+          "enum": ["node", "python", "dotnet", "script", "browser"]
         },
         "command": {
           "type": "string",
-          "description": "Shell command run with the sample directory as the working directory.",
+          "description": "For type 'node' | 'python' | 'dotnet' | 'script': a shell command run with the sample directory as the working directory. For type 'browser': the path (relative to the sample directory) of the static HTML file the runner serves and navigates a headless browser to -- e.g. 'src/index.html'. Browser samples MUST set a `data-sample-status` attribute (value `pass` or `fail`) on an element in the page (conventionally `<body>`) once they finish; the runner polls for the `[data-sample-status]` selector and reads that attribute as the outcome. See 'Browser lane' in README.md.",
           "minLength": 1
         }
       }
