@@ -150,6 +150,12 @@ async function loadLatestResults() {
   const resultsById = new Map();
   for (const result of envelope.results ?? []) {
     if (!result?.id) continue;
+    // "skipped" (honua-io/honua-samples#2 -- an edition-gated sample the
+    // runner didn't have a high enough --edition to attempt) isn't a real
+    // run outcome for coverage purposes -- samples-coverage.v1.schema.json's
+    // lastRun.outcome only knows "pass"/"fail", and a skip means the sample
+    // effectively hasn't run yet, same as no entry at all.
+    if (result.outcome === "skipped") continue;
     resultsById.set(result.id, {
       outcome: result.outcome,
       serverVersion: result.serverVersion,

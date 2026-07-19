@@ -1,0 +1,42 @@
+# Pro-licensed compose overlay (honua-io/honua-samples#2, deliverable 2).
+#
+# Combine with the base stack rather than running standalone:
+#   docker compose -f docker/compose.yml -f docker/compose.pro.yml up -d
+#   node scripts/run-samples.mjs --edition pro
+#
+# honua-server has no published, purchasable Pro license mechanism wired up
+# for this repo yet -- there is no signed license file for CI to hold. This
+# overlay instead uses honua-server's own documented dev/test bypass: the
+# `Licensing:DevGrantEdition` config key (`Licensing__DevGrantEdition` env
+# var), served by DevLicenseEntitlementService
+# (src/Honua.Hosting/Features/Licensing/DevLicenseEntitlementService.cs in
+# honua-io/honua-server), which grants every FeatureCatalog entitlement at or
+# below the given edition and stamps a synthetic LicenseSnapshot
+# (LicenseId "dev-grant"). It fails closed -- throws at container startup --
+# if ASPNETCORE_ENVIRONMENT is "Production" (LicensingRegistration.cs), so
+# this overlay can never accidentally license a real deployment.
+#
+# Verify it actually took effect against a running container:
+#   curl -s -H "X-API-Key: $HONUA_ADMIN_PASSWORD" \
+#     http://localhost:8080/api/v1/admin/license/status | jq '.data.edition'
+#   # => "Pro"
+#
+# HONUA_LICENSE_DEV_GRANT_EDITION selects the granted edition (default "Pro");
+# pass the same value to `scripts/run-samples.mjs --edition` so the runner
+# actually attempts edition-gated samples against it -- the two are
+# independent knobs on purpose (the compose stack's actual capability vs. the
+# runner's willingness to exercise it), see .github/workflows/run-samples.yml
+# for how CI wires an optional license secret to both at once.
+#
+# TODO: once honua-io/honua-server publishes a real signed license
+# artifact/process for this repo's CI account, replace
+# Licensing__DevGrantEdition below with Licensing__LicensePath (a mounted
+# license file secret) + Licensing__TrustedKeys__<keyId> -- see
+# docs/concepts/editions-and-licensing.md in honua-server.
+services:
+  honua:
+    environment:
+      # Must not be "Production" or DevLicenseEntitlementService's
+      # registration throws at startup by design.
+      ASPNETCORE_ENVIRONMENT: "${HONUA_ASPNETCORE_ENVIRONMENT:-Development}"
+      Licensing__DevGrantEdition: "${HONUA_LICENSE_DEV_GRANT_EDITION:-Pro}"

@@ -1,20 +1,25 @@
 name: run-samples
 
-# Headless sample runner (scaffold for honua-io/honua-samples#2). Composes
-# honua-server + PostGIS, waits for readiness, executes every "active"
-# sample's entrypoint against it, and uploads the result envelope. Also
-# generates and uploads samples-coverage.v1.json (honua-io/honua-samples#5)
-# -- the producer snapshot honua-evidence's capability matrix ingests --
-# joining the run results with the sample manifests.
+# Headless sample runner (honua-io/honua-samples#2). Composes honua-server +
+# PostGIS, waits for readiness, executes every "active" sample's entrypoint
+# against it, and uploads the result envelope. Also generates and uploads
+# samples-coverage.v1.json (honua-io/honua-samples#5) -- the producer
+# snapshot honua-evidence's capability matrix ingests -- joining the run
+# results with the sample manifests.
 #
-# EXPECTED TO ITERATE: this proves the loop end-to-end with the one reference
-# sample (hello-featureserver-rest, Community edition, plain REST). Not yet
-# covered (see honua-io/honua-samples#2 acceptance criteria):
-#   - nightly schedule tuning / flake handling once there are more samples
-#   - a headless-browser lane for future JS/SDK samples
-#   - a Pro-licensed compose profile + CI license secret for edition-gated
-#     samples
-# Also deferred for #5: dispatching/pushing the samples-coverage snapshot to
+# #2's three deferred items now land here:
+#   - a headless-browser lane (entrypoint.type: "browser",
+#     scripts/lib/browser-lane.mjs) for JS/SDK samples that need real DOM/
+#     fetch behavior, not just a Node child process.
+#   - a Pro-licensed compose profile (docker/compose.pro.yml) + the
+#     "Determine edition" step below, which only enables it when the
+#     optional HONUA_LICENSE_DEV_GRANT_EDITION secret is configured --
+#     absent, edition-gated samples are recorded "skipped" (never failed,
+#     never silently omitted; see scripts/run-samples.mjs --edition).
+#   - per-sample retry with both attempts recorded in the result envelope
+#     (attempts[], flaky) -- see schemas/run-results.v1.schema.json.
+#
+# Still deferred for #5: dispatching/pushing the samples-coverage snapshot to
 # honua-evidence -- that repo's ingest pipeline doesn't exist yet
 # (honua-io/honua-evidence#3). For now this only publishes the artifact on
 # this repo's own runs; honua-evidence will pull it once its side lands.
@@ -58,18 +63,43 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Determine edition
+        # Pro-edition samples are opt-in, gated on an optional repo secret --
+        # never on by default, and never a hard failure when absent (see
+        # scripts/run-samples.mjs's --edition gating, which records skipped
+        # samples in the envelope instead of omitting or failing them).
+        # HONUA_LICENSE_DEV_GRANT_EDITION is honua-server's dev/test license
+        # bypass value (see docker/compose.pro.yml) -- not real license
+        # material, just a feature flag until honua-server publishes a real
+        # signed-license mechanism for this repo's CI account.
+        id: edition
+        env:
+          HAS_LICENSE_SECRET: ${{ secrets.HONUA_LICENSE_DEV_GRANT_EDITION != '' }}
+        run: |
+          if [ "$HAS_LICENSE_SECRET" = "true" ]; then
+            echo "edition=pro" >> "$GITHUB_OUTPUT"
+            echo "compose_files=-f docker/compose.yml -f docker/compose.pro.yml" >> "$GITHUB_OUTPUT"
+            echo "run-samples: HONUA_LICENSE_DEV_GRANT_EDITION secret is set -- composing with docker/compose.pro.yml, running as --edition pro"
+          else
+            echo "edition=community" >> "$GITHUB_OUTPUT"
+            echo "compose_files=-f docker/compose.yml" >> "$GITHUB_OUTPUT"
+            echo "run-samples: no HONUA_LICENSE_DEV_GRANT_EDITION secret configured -- running as --edition community; pro-gated samples will be recorded \"skipped\", not failed"
+          fi
+
       - name: Compose up (postgres + honua-server)
         # HONUA_SERVER_IMAGE lets this pin a different tag/digest without
         # editing docker/compose.yml; defaults to the trunk-tracking GHCR
         # image (no versioned release exists yet -- see docker/compose.yml).
-        run: docker compose -f docker/compose.yml up -d
+        env:
+          HONUA_LICENSE_DEV_GRANT_EDITION: ${{ secrets.HONUA_LICENSE_DEV_GRANT_EDITION }}
+        run: docker compose ${{ steps.edition.outputs.compose_files }} up -d
 
       - name: Run active samples
-        run: node scripts/run-samples.mjs
+        run: node scripts/run-samples.mjs --edition ${{ steps.edition.outputs.edition }}
 
       - name: Dump honua-server logs on failure
         if: failure()
-        run: docker compose -f docker/compose.yml logs honua
+        run: docker compose ${{ steps.edition.outputs.compose_files }} logs honua
 
       - name: Upload run results
         if: always()
@@ -78,6 +108,15 @@ jobs:
           name: run-results
           path: results/run-results.v1.json
           if-no-files-found: warn
+
+      - name: Summarize flaky samples (nightly)
+        # Only meaningful on the nightly schedule -- PR/push runs are small
+        # enough today that a flake should just be looked at directly, but
+        # nightly is unattended, so flaky (pass-only-after-retry) samples get
+        # called out in the job summary rather than silently disappearing
+        # into a green checkmark.
+        if: always() && github.event_name == 'schedule'
+        run: node scripts/summarize-flaky.mjs
 
       - name: Generate samples-coverage.v1.json
         # Runs even if a sample failed above (run-samples.mjs still writes
@@ -103,4 +142,4 @@ jobs:
 
       - name: Compose down
         if: always()
-        run: docker compose -f docker/compose.yml down -v
+        run: docker compose ${{ steps.edition.outputs.compose_files }} down -v

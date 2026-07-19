@@ -34,8 +34,8 @@ Every `samples/<sample-id>/sample.json` is validated against
 | `capabilities` | string[] | Dot-namespaced keys (e.g. `serve.feature-service`), min 1. Every key must exist in the canonical capability key list (see below). |
 | `sdks` | string[] | `js` \| `python` \| `dotnet` \| `rest`, min 1. |
 | `protocols` | string[] | Wire protocols exercised, min 1. |
-| `edition` | string | `community` \| `pro` \| `enterprise`; defaults to `community`. |
-| `entrypoint` | object | `{ "type": "node" \| "python" \| "dotnet" \| "script", "command": "..." }` -- how the headless runner executes the sample. |
+| `edition` | string | `community` \| `pro` \| `enterprise`; defaults to `community`. Gates execution -- see [Pro-licensed compose profile](#pro-licensed-compose-profile). |
+| `entrypoint` | object | `{ "type": "node" \| "python" \| "dotnet" \| "script" \| "browser", "command": "..." }` -- how the headless runner executes the sample. For `browser`, `command` is the HTML file (relative to the sample dir) to serve and open, not a shell command -- see [Browser lane](#browser-lane). |
 | `status` | string | `active` (executed by the runner) or `draft` (validated only). |
 
 ### Capability key list
@@ -148,7 +148,7 @@ node scripts/validate-manifests.mjs schemas/fixtures/invalid-samples
 
 ### Run the headless sample runner locally
 
-The runner (`scripts/run-samples.mjs`, scaffolded for
+The runner (`scripts/run-samples.mjs`, built out for
 [honua-samples#2](https://github.com/honua-io/honua-samples/issues/2)) composes
 honua-server + PostGIS, waits for `/healthz/ready`, executes every `active`
 sample's `entrypoint.command`, and writes
@@ -166,6 +166,89 @@ trunk-tracking tag -- override with `HONUA_SERVER_IMAGE=<image>:<tag>` to
 pin something else). PostGIS auto-starts via `docker/init-db.sql` (a vendored
 copy of honua-server's own init script); the server's readiness probe is
 `GET /healthz/ready`.
+
+Env vars (all optional): `HONUA_BASE_URL` (default `http://localhost:8080`),
+`HONUA_READY_TIMEOUT_MS` (default `120000`), `HONUA_SAMPLE_MAX_ATTEMPTS`
+(default `2`, see [Retry and flaky samples](#retry-and-flaky-samples)),
+`HONUA_BROWSER_STATIC_PORT`/`HONUA_BROWSER_TIMEOUT_MS` (see
+[Browser lane](#browser-lane) below).
+
+### Browser lane
+
+`entrypoint.type: "browser"` samples (one so far:
+[`browser-featureserver-query`](samples/browser-featureserver-query)) run
+headless in a real browser instead of a Node/Python/.NET child process --
+needed for anything that actually exercises DOM/`fetch()` behavior rather
+than just calling an SDK from a script. `scripts/lib/browser-lane.mjs`:
+
+1. Serves `samples/` over plain HTTP on a fixed port (`HONUA_BROWSER_STATIC_PORT`,
+   default `3000` -- matches `docker/compose.yml`'s
+   `Cors:AllowedOrigins` so a sample's cross-origin `fetch()` calls to the
+   composed server aren't blocked by CORS).
+2. Drives it with [Playwright](https://playwright.dev), pinned to a specific
+   version (`PLAYWRIGHT_VERSION` in `scripts/lib/browser-lane.mjs`) and
+   installed on demand into `node_modules/` -- **the one exception to this
+   repo's zero-npm-dependency style**, kept out of any package.json (there
+   isn't one) via a plain `npm install --no-save`, not a manifest entry. See
+   the loud comment at the top of `scripts/lib/browser-lane.mjs` for why this
+   isn't just `npx playwright` end-to-end (short version: npx doesn't make
+   the installed package `import`-able from an arbitrary script, which rules
+   it out for anything beyond a fixed CLI subcommand).
+3. Navigates to the sample's `entrypoint.command` (an HTML file path, not a
+   shell command, for this entrypoint type) and waits for the
+   `[data-sample-status]` DOM marker convention documented in
+   `schemas/sample.v1.schema.json`: the sample sets
+   `document.body.dataset.sampleStatus = "pass" | "fail"` once it's done, and
+   that's the runner's entire success signal.
+
+Run it exactly like any other sample -- `node scripts/run-samples.mjs`
+detects the `browser` entrypoint type automatically and starts the static
+server + Playwright only when at least one active sample needs them.
+
+### Pro-licensed compose profile
+
+Some samples require more than Community edition (`edition: "pro"` or
+`"enterprise"` in the manifest). `docker/compose.pro.yml` is an overlay that
+grants a higher edition to the composed server:
+
+```bash
+docker compose -f docker/compose.yml -f docker/compose.pro.yml up -d
+node scripts/run-samples.mjs --edition pro
+docker compose -f docker/compose.yml -f docker/compose.pro.yml down -v
+```
+
+honua-server has no published, purchasable license mechanism for this repo
+yet, so the overlay uses its documented dev/test bypass instead --
+`Licensing__DevGrantEdition` (backed by `DevLicenseEntitlementService` in
+honua-server), which fails closed outside `Development`/`Staging`
+environments. Verify it took effect:
+
+```bash
+curl -s -H "X-API-Key: $HONUA_ADMIN_PASSWORD" \
+  http://localhost:8080/api/v1/admin/license/status | jq '.data.edition'
+# => "Pro"
+```
+
+`scripts/run-samples.mjs --edition <community|pro|enterprise>` (default
+`community`) is the other half: a sample whose manifest `edition` exceeds the
+runner's `--edition` is recorded in the result envelope with
+`"outcome": "skipped"` and a reason -- it's never executed, and never causes
+the run to fail. In CI (`.github/workflows/run-samples.yml`), this is gated
+on an optional `HONUA_LICENSE_DEV_GRANT_EDITION` repo secret: unset, every run
+composes plain `docker/compose.yml` and runs `--edition community` (pro
+samples show up "skipped", not failed, not silently dropped); set, CI adds
+`docker/compose.pro.yml` and runs `--edition pro`.
+
+### Retry and flaky samples
+
+Every sample gets up to `HONUA_SAMPLE_MAX_ATTEMPTS` attempts (default `2`,
+i.e. one retry) before being recorded as failed. Every attempt -- pass or
+fail -- is recorded in the result envelope's `attempts[]`
+(`schemas/run-results.v1.schema.json`); a sample that failed at least once
+but ultimately passed is additionally flagged `"flaky": true` so it can be
+told apart from a clean pass. `.github/workflows/run-samples.yml`'s nightly
+run (`schedule:` trigger only) appends a "Flaky samples" table to the job
+summary listing any sample that only passed on retry.
 
 ## Gallery
 
@@ -248,8 +331,9 @@ node scripts/build-gallery.mjs --check  # same build, but exits non-zero on any
 
 Bootstrap. Coordination: [honua-server#2892](https://github.com/honua-io/honua-server/issues/2892).
 Manifest schema + validation CI: [#1](https://github.com/honua-io/honua-samples/issues/1).
-Headless runner: [#2](https://github.com/honua-io/honua-samples/issues/2) (scaffold; see the
-`run-samples` workflow header for what's deferred).
+Headless runner: [#2](https://github.com/honua-io/honua-samples/issues/2) (browser lane,
+Pro-licensed compose profile, and retry/flaky handling all landed; still
+deferred: honua-evidence dispatch, see below).
 Samples coverage snapshot: [#5](https://github.com/honua-io/honua-samples/issues/5)
 (producer snapshot published; honua-evidence-side dispatch/pull integration
 deferred to [honua-evidence#3](https://github.com/honua-io/honua-evidence/issues/3)).
