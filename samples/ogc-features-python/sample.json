@@ -1,0 +1,21 @@
+{
+  "id": "ogc-features-python",
+  "title": "OGC API Features walkthrough (Python)",
+  "description": "Pure-stdlib Python client (urllib only) that imports a tiny GeoJSON dataset, publishes it, then walks OGC API Features -- landing page, conformance, collections, and paged items -- asserting the full feature set roundtrips.",
+  "capabilities": [
+    "import.file",
+    "serve.ogc-api-features"
+  ],
+  "sdks": [
+    "python"
+  ],
+  "protocols": [
+    "ogc-api-features"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "python",
+    "command": "python3 src/run.py"
+  },
+  "status": "active"
+}
