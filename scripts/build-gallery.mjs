@@ -86,7 +86,14 @@ async function main() {
 
   const ownCards = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
   const sdkCards = sdkRawEntries.map((e) => toSdkCard(e, crosswalk, keyByKey, problems, bundleById, stagedBundleIds));
-  const cards = [...ownCards, ...sdkCards];
+  // Runnable-first: embedded browser samples lead, then own samples (live
+  // run receipts), then unbundled entries — so the gallery opens on things
+  // a visitor can actually run instead of "no runnable build" panels.
+  const cards = [
+    ...sdkCards.filter((c) => c.bundleStaged),
+    ...ownCards,
+    ...sdkCards.filter((c) => !c.bundleStaged),
+  ];
 
   const categories = groupByCategory(cards, keyByKey);
   const generatedAt = new Date().toISOString();
@@ -522,6 +529,7 @@ function renderFilterPanel(categories, cards, keyByKey) {
 <div class="filter-group">${editionValues.map((v) => `<label><input type="checkbox" class="filter-edition" value="${escapeAttr(v)}" /> ${escapeHtml(v)}</label>`).join("")}</div>
 <h2>Source repo</h2>
 <div class="filter-group">${sourceValues.map((v) => `<label><input type="checkbox" class="filter-source" value="${escapeAttr(v)}" /> ${escapeHtml(v)}</label>`).join("")}</div>
+<div class="filter-group filter-runnable-group"><label><input type="checkbox" id="filter-runnable" /> &#9654; Runnable in browser</label></div>
 <button type="button" id="filter-clear">Clear filters</button>
 <div id="cap-share-row" hidden>
   <div class="share-box">
@@ -546,11 +554,16 @@ function renderCategorySection(category) {
 function renderCard(card) {
   const dataCaps = escapeAttr(card.capabilities.join(","));
   const dataSdks = escapeAttr(card.sdks.join(","));
+  const runnable = card.kind === "sdk" && card.bundleStaged;
   const extra =
     card.kind === "own"
       ? runBadgeHtml(card.runBadge)
       : chip(`support: ${card.supportTier}`, "support-tier");
-  return `<article class="card" data-id="${escapeAttr(card.id)}" data-source="${escapeAttr(card.sourceRepo)}" data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-capabilities="${dataCaps}">
+  const runnableBadge = runnable
+    ? `<span class="badge runnable" title="Runs in the browser on this page">&#9654; Runnable</span>`
+    : "";
+  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-source="${escapeAttr(card.sourceRepo)}" data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}">
+  ${runnableBadge}
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
   <p class="summary">${escapeHtml(card.summary)}</p>
   <div class="chips">
