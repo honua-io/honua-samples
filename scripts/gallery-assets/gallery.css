@@ -459,3 +459,13 @@ main {
   color: var(--fg);
   font-size: 0.85rem;
 }
+
+/* Runnable badge (gallery cards) */
+.card { position: relative; }
+.badge.runnable {
+  position: absolute; top: 10px; right: 10px;
+  background: #0d7a63; color: #fff; font-size: 11px;
+  padding: 2px 8px; border-radius: 999px; letter-spacing: 0.04em;
+}
+@media (prefers-color-scheme: dark) { .badge.runnable { background: #2e9b80; } }
+.card.has-runnable h3 a { padding-right: 6.5rem; }

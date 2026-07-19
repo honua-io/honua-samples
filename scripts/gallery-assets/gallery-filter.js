@@ -25,6 +25,9 @@
     return Array.prototype.slice.call(document.querySelectorAll(".card[data-id]"));
   }
 
+  var runnableToggle = document.getElementById("filter-runnable");
+  if (runnableToggle) runnableToggle.addEventListener("change", applyFilters);
+
   function checkboxesIn(selector) {
     return Array.prototype.slice.call(document.querySelectorAll(selector));
   }
@@ -67,6 +70,7 @@
     var sdks = selectedValues(".filter-sdk");
     var editions = selectedValues(".filter-edition");
     var sources = selectedValues(".filter-source");
+    var runnableOnly = !!(document.getElementById("filter-runnable") || {}).checked;
 
     var visibleCount = 0;
     var total = 0;
@@ -81,6 +85,7 @@
         var cardSource = card.getAttribute("data-source") || "";
 
         var show =
+          (!runnableOnly || card.getAttribute("data-runnable") === "yes") &&
           (!capKeys.length || intersects(capKeys, cardCaps)) &&
           (!sdks.length || intersects(sdks, cardSdks)) &&
           (!editions.length || editions.indexOf(cardEdition) !== -1) &&
