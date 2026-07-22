@@ -221,13 +221,10 @@ honua-server has no published, purchasable license mechanism for this repo
 yet, so the overlay uses its documented dev/test bypass instead --
 `Licensing__DevGrantEdition` (backed by `DevLicenseEntitlementService` in
 honua-server), which fails closed outside `Development`/`Staging`
-environments. Verify it took effect:
-
-```bash
-curl -s -H "X-API-Key: $HONUA_ADMIN_PASSWORD" \
-  http://localhost:8080/api/v1/admin/license/status | jq '.data.edition'
-# => "Pro"
-```
+environments. Verify the effective edition in Console under **Operate →
+Licensing**, or use the generated API explorer's
+`GET /api/v1/admin/license/status` operation with the configured admin key;
+the returned `data.edition` value should be `Pro`.
 
 `scripts/run-samples.mjs --edition <community|pro|enterprise>` (default
 `community`) is the other half: a sample whose manifest `edition` exceeds the
