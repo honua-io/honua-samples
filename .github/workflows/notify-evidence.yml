@@ -1,0 +1,54 @@
+name: Notify honua-evidence
+
+# Fires a repository_dispatch (type producer-updated) to honua-io/honua-evidence
+# whenever the run-samples workflow completes successfully on trunk, so
+# honua-evidence re-aggregates promptly instead of waiting for its daily
+# schedule fallback (honua-io/honua-evidence#3).
+#
+# Unlike the other producers, honua-evidence does not pull a file committed
+# in this repo for samples coverage: aggregate.py's fetch_samples() calls the
+# GitHub Actions API for the latest successful "run-samples" run on trunk and
+# downloads its "samples-coverage" artifact. There is nothing to push-trigger
+# on, so this listens for that workflow's completion instead of a push/paths
+# filter.
+#
+# Secrets required:
+#   HONUA_EVIDENCE_DISPATCH_TOKEN — fine-grained PAT with write access
+#     sufficient to POST to repos/honua-io/honua-evidence/dispatches. If
+#     absent, the dispatch step is skipped with a warning rather than
+#     failing this repo's CI; honua-evidence's daily schedule remains the
+#     fallback trigger.
+
+on:
+  workflow_run:
+    workflows: ["run-samples"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify-evidence:
+    name: Dispatch producer-updated to honua-evidence
+    if: >-
+      ${{ github.repository_owner == 'honua-io' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'trunk' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch to honua-evidence
+        env:
+          GH_TOKEN: ${{ secrets.HONUA_EVIDENCE_DISPATCH_TOKEN }}
+        continue-on-error: true
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::warning::HONUA_EVIDENCE_DISPATCH_TOKEN is not set; skipping repository_dispatch to honua-evidence. Add a fine-grained PAT with write access to honua-io/honua-evidence to enable event-driven re-aggregation (honua-io/honua-evidence#3). honua-evidence's daily schedule will still pick this up."
+            exit 0
+          fi
+
+          gh api repos/honua-io/honua-evidence/dispatches \
+            -f event_type=producer-updated \
+            -F 'client_payload[producer]=honua-samples'
+
+          echo "Dispatched producer-updated (producer=honua-samples) to honua-io/honua-evidence."
