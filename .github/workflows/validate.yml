@@ -41,6 +41,25 @@ jobs:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
         run: node scripts/validate-manifests.mjs
 
+  consumer-admission-tests:
+    name: consumer admission and coverage boundary tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run node test suite
+        # Network-independent (NFR-002 on honua-io/honua-samples#16): every
+        # case works from the committed byte-exact sdk-js handoff snapshot
+        # pair -- admission (tampered/stale/schema-incompatible/locally
+        # reconstructed rejection), stable-identity dedup/merge, and the
+        # samples-coverage evidence boundary (SDK-projected cards are
+        # gallery-only and never counted in samples-coverage.v1.json).
+        run: node --test "scripts/test/*.test.mjs"
+
   gallery-build-check:
     name: gallery build check
     runs-on: ubuntu-latest
@@ -54,10 +73,13 @@ jobs:
       - name: Build gallery in --check mode
         # Exercises the full samples.honua.io gallery build (honua-io/honua-samples#3)
         # against both inputs -- this repo's own samples/*/sample.json manifests
-        # and the honua-sdk-js catalog.v2.json projection -- and fails the PR if
-        # either side has a problem the deploy-time build would otherwise only
-        # warn about (e.g. an sdk-js catalog entry referencing a capability key
-        # that isn't in the canonical key list, or missing a sourcePath).
+        # and the honua-sdk-js site-consumer handoff admitted through
+        # scripts/lib/sdkjs-handoff.mjs (honua-io/honua-samples#16) -- and fails
+        # the PR if either side has a problem the deploy-time build would
+        # otherwise only warn about (e.g. an sdk-js card referencing a
+        # capability key that isn't in the canonical key list), or if the
+        # handoff pair is tampered, stale, schema-incompatible, or locally
+        # reconstructed (admission failures are fatal in every mode).
         env:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
         run: node scripts/build-gallery.mjs --check

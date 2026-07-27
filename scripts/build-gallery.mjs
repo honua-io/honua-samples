@@ -5,10 +5,30 @@
 // canonical gallery, rendering TWO inputs:
 //   1. this repo's own samples/<id>/sample.json manifests (+ README.md, +
 //      results/run-results.v1.json when available for an honest run badge).
-//   2. honua-sdk-js's samples/catalog.v2.json projection (32 entries as of
-//      this writing), fetched live with a committed offline fallback -- see
-//      scripts/lib/sdkjs-catalog.mjs. Never vendored: entries link out to
-//      GitHub (sourcePath/docsPath) only.
+//   2. honua-sdk-js's versioned site-consumer handoff
+//      (samples/dist/honua-site-consumer-handoff.v1.json), the AUTHORITATIVE
+//      SDK projection since honua-io/honua-samples#16: fetched live with a
+//      committed byte-exact snapshot fallback and admitted through the
+//      fail-closed gate in scripts/lib/sdkjs-handoff.mjs (schema/version,
+//      fixture digest binding, duplicate-identity, referential-integrity,
+//      and evidence-freshness checks). Tampered, stale, schema-incompatible,
+//      or locally reconstructed handoffs FAIL the build -- no hand-authored
+//      SDK inventory is ever substituted. catalog.v2.json (see
+//      scripts/lib/sdkjs-catalog.mjs) remains consumed ONLY to enrich each
+//      admitted card with materialized canonical capabilityKeys, merged by
+//      stable identity with immutable-field agreement enforced. Never
+//      vendored: entries link out to GitHub (sourcePath/docsPath) only.
+//
+// Deduplication (honua-io/honua-samples#16): exactly ONE public card per
+// stable SDK sample identity (producer repository + catalog sample id).
+// Multiple evidence sources (handoff evidence, qualified-journey visual
+// evidence, staged bundles) enrich that one card as metadata -- duplicate
+// identities inside any input, or identity-field disagreements across
+// inputs, fail generation instead of cloning cards. SDK-projected cards are
+// GALLERY-ONLY evidence (display + provenance + links): they are tagged
+// evidenceScope "gallery-only" and are excluded from samples-coverage.v1.json
+// by scripts/generate-samples-coverage.mjs, which stays reserved for samples
+// this repo executes in its own run-samples workflow.
 //
 // Both inputs are validated against the same canonical capability key list
 // samples/*/sample.json manifests are validated against
@@ -38,6 +58,8 @@
 // Env vars (all optional):
 //   RUN_RESULTS_PATH           default "results/run-results.v1.json" (missing is tolerated)
 //   KEY_LIST_URL                see scripts/lib/capability-keys.mjs
+//   SDKJS_HANDOFF_URL           see scripts/lib/sdkjs-handoff.mjs
+//   SDKJS_HANDOFF_FIXTURE_URL   see scripts/lib/sdkjs-handoff.mjs
 //   SDKJS_CATALOG_URL           see scripts/lib/sdkjs-catalog.mjs
 //   SDKJS_CROSSWALK_URL         see scripts/lib/sdkjs-catalog.mjs
 //   SAMPLE_BUNDLES_MANIFEST_URL see scripts/lib/sample-bundles.mjs
@@ -50,6 +72,7 @@ import { fileURLToPath } from "node:url";
 import { loadCapabilityKeyRecords } from "./lib/capability-keys.mjs";
 import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs";
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
+import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -73,9 +96,32 @@ async function main() {
 
   const ownSamples = await loadOwnSamples();
   const runResults = await loadRunResults();
+
+  // Consumer-admission boundary (honua-io/honua-samples#16): the versioned
+  // sdk-js site-consumer handoff is the authoritative SDK projection.
+  // loadSdkJsHandoff throws when neither the live pair nor the committed
+  // snapshot pair passes admission (tampered/stale/schema-incompatible/
+  // locally reconstructed) -- that failure is deliberately fatal in BOTH
+  // --check and deploy builds.
+  const { handoff, source: handoffSource } = await loadSdkJsHandoff({ refreshSnapshot: !CHECK_MODE });
   const { catalog } = await loadSdkJsCatalog({ refreshSnapshot: !CHECK_MODE });
   const { crosswalk } = await loadCapabilityCrosswalk();
-  const sdkRawEntries = catalog.samples ?? [];
+  const merge = mergeSdkProjection({
+    handoff,
+    catalogEntries: catalog.samples ?? [],
+    crosswalk,
+    deriveCapabilityKeys,
+  });
+  if (merge.errors.length > 0) {
+    // Duplicate stable identities inside an input, identity-field
+    // disagreements between inputs, and non-authoritative public inventory
+    // entries all fail generation (REQ-004/REQ-007) -- never rendered as
+    // extra or forked cards.
+    throw new Error(
+      `sdk projection merge failed (${merge.errors.length} error(s)):\n  - ${merge.errors.join("\n  - ")}`,
+    );
+  }
+  console.log(`build-gallery: admitted sdk-js handoff from ${handoffSource} -- ${merge.records.length} card(s)`);
 
   // Bundle staging never fails --check/the build on a fetch problem (see
   // scripts/lib/sample-bundles.mjs) -- only on a genuine integrity mismatch,
@@ -85,7 +131,15 @@ async function main() {
   const stagedBundleIds = new Set(bundleState.stagedIds);
 
   const ownCards = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
-  const sdkCards = sdkRawEntries.map((e) => toSdkCard(e, crosswalk, keyByKey, problems, bundleById, stagedBundleIds));
+  const sdkCards = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
+  assertUniqueCardIdentities([...ownCards, ...sdkCards]);
+  for (const bundleId of stagedBundleIds) {
+    if (!sdkCards.some((c) => c.id === bundleId)) {
+      console.warn(
+        `build-gallery: staged bundle "${bundleId}" has no admitted sdk-js handoff card -- not embedding it (bundle release and handoff may briefly desync)`,
+      );
+    }
+  }
   // Runnable-first: embedded browser samples lead, then own samples (live
   // run receipts), then unbundled entries — so the gallery opens on things
   // a visitor can actually run instead of "no runnable build" panels.
@@ -113,15 +167,13 @@ async function main() {
   }
 
   await rm(path.join(SITE_DIR, "assets"), { recursive: true, force: true });
-  await rmGeneratedDetailDirs(ownSamples, sdkRawEntries);
+  await rmGeneratedDetailDirs(ownSamples);
   await mkdir(SITE_DIR, { recursive: true });
 
   await copyAssets();
-  await writeFile(
-    path.join(SITE_DIR, "index.html"),
-    renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }),
-    "utf8",
-  );
+  const indexHtml = renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit, bundleNotice });
+  assertNoDuplicateArticles(indexHtml);
+  await writeFile(path.join(SITE_DIR, "index.html"), indexHtml, "utf8");
 
   for (const card of ownCards) {
     const dir = path.join(SITE_DIR, card.id);
@@ -151,10 +203,26 @@ async function main() {
     );
   }
 
-  const pageCount = 1 + ownCards.length + sdkCards.length;
+  // Historical /sdk/<id>/ URLs for internal fixture-track catalog entries the
+  // authoritative handoff deliberately keeps out of the public projection:
+  // keep them resolving as explicit status pages (never substitute cards, per
+  // the producer's not-public route contract), so existing deep links don't
+  // 404 while the public card set stays exactly the admitted projection.
+  for (const entry of merge.fixtureOnlyEntries) {
+    const dir = path.join(SITE_DIR, "sdk", entry.id);
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "index.html"),
+      renderSdkStatusStubPage(entry, generatedAt, sourceCommit, bundleNotice),
+      "utf8",
+    );
+  }
+
+  const pageCount = 1 + ownCards.length + sdkCards.length + merge.fixtureOnlyEntries.length;
   console.log(
     `build-gallery: wrote ${pageCount} page(s) to site/ -- ${ownCards.length} from ${OWN_REPO}, ${sdkCards.length} from ${SDKJS_REPO}` +
-      ` (${embeddedCount} sdk-js sample(s) embedded with a verified running bundle)` +
+      ` (${embeddedCount} sdk-js sample(s) embedded with a verified running bundle` +
+      `${merge.fixtureOnlyEntries.length ? `, ${merge.fixtureOnlyEntries.length} internal-fixture status stub(s)` : ""})` +
       (problems.length ? ` (${problems.length} problem(s) warned, see above)` : ""),
   );
 }
@@ -268,36 +336,50 @@ function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
   };
 }
 
-function toSdkCard(entry, crosswalk, keyByKey, problems, bundleById, stagedBundleIds) {
+function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
+  const entry = record.card;
   const id = entry.id;
-  if (!entry.sourcePath) {
-    problems.push(`${SDKJS_REPO} catalog entry "${id}" has no sourcePath -- cannot link to GitHub source`);
-  }
-  const capabilities = deriveCapabilityKeys(entry, crosswalk);
-  for (const key of capabilities) {
+  for (const key of record.capabilityKeys) {
     if (!keyByKey.has(key)) {
-      problems.push(`${SDKJS_REPO} catalog entry "${id}" references unknown capability key "${key}" -- crosswalk or catalog is out of sync with the canonical key list`);
+      problems.push(`${SDKJS_REPO} handoff card "${id}" references unknown capability key "${key}" -- crosswalk or catalog is out of sync with the canonical key list`);
     }
   }
 
   return {
     kind: "sdk",
     id,
+    // Stable composite identity (REQ-001): producer repository + catalog
+    // sample id. Deduplication and cross-source joins key on this, never on
+    // title or presentation order.
+    identity: record.identity,
+    // Evidence boundary (honua-io/honua-samples#16): sdk-projected cards are
+    // gallery-only -- display, provenance, and evidence links. They are
+    // excluded from samples-coverage.v1.json by
+    // scripts/generate-samples-coverage.mjs.
+    evidenceScope: "gallery-only",
     title: entry.title ?? id,
     summary: entry.summary ?? "",
-    capabilities,
+    capabilities: record.capabilityKeys,
     sdks: ["js"],
-    edition: "community", // sdk-js samples are client-side; none declare a Honua Server edition requirement in catalog.v2.json.
+    edition: "community", // sdk-js samples are client-side; none declare a Honua Server edition requirement.
     track: entry.track ?? null,
     supportTier: entry.supportTier ?? "unspecified",
     lifecycle: entry.lifecycle ?? null,
     protocols: entry.protocols ?? [],
     renderers: entry.renderers ?? [],
+    qualification: entry.qualification ?? null,
+    evidence: entry.evidence ?? null,
+    evidenceBindingId: entry.evidenceBindingId ?? null,
+    canonicalPath: entry.canonicalPath,
+    legacyPaths: record.legacyPaths,
+    lifecycleNotice: record.lifecycleNotice,
+    qualifiedJourneys: record.qualifiedJourneys,
+    gaps: record.gaps,
     sourceRepo: "honua-sdk-js",
     detailUrl: `${GALLERY_BASE_URL}/sdk/${id}/`,
     detailPath: `/sdk/${id}/`,
-    githubUrl: entry.sourcePath ? `https://github.com/${SDKJS_REPO}/tree/trunk/${entry.sourcePath}` : null,
-    docsUrl: entry.docsPath ? `https://github.com/${SDKJS_REPO}/blob/trunk/${entry.docsPath}` : null,
+    githubUrl: `https://github.com/${SDKJS_REPO}/tree/trunk/${entry.source.path}`,
+    docsUrl: entry.source.docsPath ? `https://github.com/${SDKJS_REPO}/blob/trunk/${entry.source.docsPath}` : null,
     // Populated only when scripts/lib/sample-bundles.mjs's manifest has this
     // id AND this build actually staged sha256-verified files for it this
     // run (bundleSample can be non-null while bundleStaged is false in a
@@ -307,32 +389,69 @@ function toSdkCard(entry, crosswalk, keyByKey, problems, bundleById, stagedBundl
   };
 }
 
+/**
+ * Static build assertion (honua-io/honua-samples#16): the final public card
+ * set must contain exactly one card per stable identity. This can only trip
+ * if a future refactor introduces a second projection path -- the merge
+ * already fails on duplicate inputs -- but the invariant is cheap and the
+ * regression it guards against (39 articles for 32 identities) shipped once
+ * already.
+ */
+function assertUniqueCardIdentities(cards) {
+  const seen = new Set();
+  const duplicates = new Set();
+  for (const card of cards) {
+    const key = `${card.kind}:${card.id}`;
+    if (seen.has(key)) duplicates.add(key);
+    seen.add(key);
+  }
+  if (duplicates.size > 0) {
+    throw new Error(`duplicate public card identities after merge: ${[...duplicates].sort().join(", ")}`);
+  }
+}
+
 // ---- category grouping ---------------------------------------------------
 
 const OTHER_CATEGORY = "Other (no canonical capability yet)";
 
+// One <article> per logical sample (honua-io/honua-samples#16): each card is
+// assigned to exactly ONE section -- its deterministic primary category (the
+// alphabetically first category among its capability keys' categories, with
+// the "Other" bucket always last). Before this rule, a card whose
+// capabilities spanned N categories rendered N times, which is precisely the
+// duplication the issue observed live (39 articles for 32 identities, e.g.
+// cesium-route-playback three times). The card's FULL capability set stays
+// on the card (data-capabilities + chips + detail page), so capability
+// filters in non-primary categories still match it (REQ-003), and the
+// index's filter counts now count logical samples, not DOM clones (NFR-001).
+function primaryCategory(card, keyByKey) {
+  const categories = new Set();
+  for (const key of card.capabilities) {
+    const record = keyByKey.get(key);
+    categories.add(record ? record.category : OTHER_CATEGORY);
+  }
+  if (categories.size === 0) return OTHER_CATEGORY;
+  return [...categories].sort(compareCategoryNames)[0];
+}
+
+function compareCategoryNames(a, b) {
+  if (a === b) return 0;
+  if (a === OTHER_CATEGORY) return 1;
+  if (b === OTHER_CATEGORY) return -1;
+  return a.localeCompare(b);
+}
+
 function groupByCategory(cards, keyByKey) {
   const buckets = new Map();
   for (const card of cards) {
-    const categories = new Set();
-    for (const key of card.capabilities) {
-      const record = keyByKey.get(key);
-      categories.add(record ? record.category : OTHER_CATEGORY);
-    }
-    if (categories.size === 0) categories.add(OTHER_CATEGORY);
-    for (const category of categories) {
-      if (!buckets.has(category)) buckets.set(category, []);
-      buckets.get(category).push(card);
-    }
+    const category = primaryCategory(card, keyByKey);
+    if (!buckets.has(category)) buckets.set(category, []);
+    buckets.get(category).push(card);
   }
-  const categoryNames = Array.from(buckets.keys()).sort((a, b) => {
-    if (a === OTHER_CATEGORY) return 1;
-    if (b === OTHER_CATEGORY) return -1;
-    return a.localeCompare(b);
-  });
+  const categoryNames = Array.from(buckets.keys()).sort(compareCategoryNames);
   return categoryNames.map((name) => ({
     name,
-    cards: buckets.get(name).sort((a, b) => a.title.localeCompare(b.title)),
+    cards: buckets.get(name).sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id)),
   }));
 }
 
@@ -492,19 +611,23 @@ function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommi
 }
 
 function renderFilterPanel(categories, cards, keyByKey) {
-  const capHtml = categories
+  // Capability checkboxes are grouped by the KEY's own category across ALL
+  // cards -- deliberately not by card section: a card lives in exactly one
+  // (primary-category) section, but every capability it carries must remain
+  // filterable under that capability's own heading.
+  const keysByCategory = new Map();
+  for (const key of new Set(cards.flatMap((c) => c.capabilities))) {
+    const record = keyByKey.get(key);
+    const category = record ? record.category : OTHER_CATEGORY;
+    if (!keysByCategory.has(category)) keysByCategory.set(category, []);
+    keysByCategory.get(category).push(key);
+  }
+  const capHtml = Array.from(keysByCategory.keys())
+    .sort(compareCategoryNames)
     .map((category) => {
-      const allKeysInSection = new Set(category.cards.flatMap((c) => c.capabilities));
-      const keys = Array.from(allKeysInSection)
-        .filter((key) => {
-          const record = keyByKey.get(key);
-          const keyCategory = record ? record.category : OTHER_CATEGORY;
-          return keyCategory === category.name;
-        })
-        .sort();
-      if (keys.length === 0) return "";
+      const keys = keysByCategory.get(category).sort();
       return (
-        `<p class="subheading">${escapeHtml(category.name)}</p>` +
+        `<p class="subheading">${escapeHtml(category)}</p>` +
         keys
           .map((key) => {
             const record = keyByKey.get(key);
@@ -562,7 +685,8 @@ function renderCard(card) {
   const runnableBadge = runnable
     ? `<span class="badge runnable" title="Runs in the browser on this page">&#9654; Runnable</span>`
     : "";
-  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-source="${escapeAttr(card.sourceRepo)}" data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}">
+  const evidenceScope = card.kind === "sdk" ? ` data-evidence-scope="gallery-only"` : "";
+  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-source="${escapeAttr(card.sourceRepo)}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}">
   ${runnableBadge}
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
   <p class="summary">${escapeHtml(card.summary)}</p>
@@ -621,6 +745,9 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
   const lifecycleHtml = card.lifecycle
     ? `<span>Lifecycle: ${escapeHtml(card.lifecycle.state)}${card.lifecycle.reason ? ` — ${escapeHtml(card.lifecycle.reason)}` : ""}</span>`
     : "";
+  const qualificationHtml = card.qualification
+    ? `<span>Qualification: ${escapeHtml(card.qualification.state)}</span>`
+    : "";
   const runnablePanel = card.bundleStaged
     ? renderEmbedPanel(card)
     : renderNoBundlePanel(
@@ -630,7 +757,8 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
       );
   const bodyHtml = `
 <a class="back-link" href="../../">← All samples</a>
-<p class="empty-state">Projected from <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s sample catalog. Code is not vendored here -- follow the GitHub link below for the source.</p>
+<p class="empty-state">Projected from <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s versioned site-consumer handoff. Code is not vendored here -- follow the GitHub link below for the source. This card is gallery-only evidence: it is <strong>not</strong> counted in this repo's samples-coverage.v1.json, which is reserved for samples honua-samples executes in its own run-samples workflow (SDK qualification receipts flow to honua-evidence through honua-sdk-js's own coverage artifact).</p>
+${renderSdkLifecycleNotice(card.lifecycleNotice)}
 <h1>${escapeHtml(card.title)}</h1>
 <p>${escapeHtml(card.summary)}</p>
 <div class="detail-meta">
@@ -639,10 +767,12 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
   <span>Protocols: ${card.protocols.map(escapeHtml).join(", ") || "—"}</span>
   <span>Renderers: ${card.renderers.map(escapeHtml).join(", ") || "—"}</span>
   ${lifecycleHtml}
+  ${qualificationHtml}
 </div>
 ${runnablePanel}
 <h2>Capabilities</h2>
 ${capabilityChips(card.capabilities, keyByKey)}
+${renderSdkEvidenceSection(card)}
 <p>
   ${card.githubUrl ? `<a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a>` : ""}
   ${card.docsUrl ? ` · <a href="${card.docsUrl}" target="_blank" rel="noopener noreferrer">Docs ↗</a>` : ""}
@@ -659,6 +789,88 @@ ${capabilityChips(card.capabilities, keyByKey)}
   });
 }
 
+function renderSdkLifecycleNotice(notice) {
+  if (!notice) return "";
+  const replacement = notice.replacement
+    ? notice.replacement.url
+      ? ` Replacement: <a href="${escapeAttr(notice.replacement.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(notice.replacement.title ?? notice.replacement.id ?? "see producer notice")}</a>.`
+      : ` Replacement: ${escapeHtml(notice.replacement.title ?? notice.replacement.id ?? "see producer notice")}.`
+    : "";
+  return `<div class="no-bundle-panel"><p><strong>Lifecycle notice (${escapeHtml(notice.state)})</strong> — ${escapeHtml(notice.reason)}${notice.targetRelease ? ` Target release: ${escapeHtml(notice.targetRelease)}.` : ""}${replacement}</p></div>`;
+}
+
+// Provenance + evidence links carried over from the admitted handoff
+// (REQ-003: multiple evidence runs and routes stay card/detail METADATA,
+// never cloned cards). Screenshot/evidence paths link back to the producer
+// repo -- nothing is vendored or re-hosted here.
+function renderSdkEvidenceSection(card) {
+  const rows = [];
+  for (const journey of card.qualifiedJourneys ?? []) {
+    const ve = journey.visualEvidence ?? {};
+    const shots = (ve.screenshots ?? [])
+      .map(
+        (s) =>
+          `<a href="https://github.com/${SDKJS_REPO}/blob/trunk/${escapeAttr(s.sourcePath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.variant)} ↗</a>`,
+      )
+      .join(" · ");
+    rows.push(
+      `<li>Qualified journey <code>${escapeHtml(journey.journeyId)}</code> — evidence binding <code>${escapeHtml(journey.evidenceBindingId ?? "—")}</code>, observed ${escapeHtml(ve.observedAt ?? "unknown")}, window until ${escapeHtml(ve.expiresAt ?? "unknown")}${shots ? ` — screenshots: ${shots}` : ""}</li>`,
+    );
+  }
+  if (card.legacyPaths?.length > 0) {
+    rows.push(
+      `<li>Legacy producer routes redirecting to this sample: ${card.legacyPaths.map((p) => `<code>${escapeHtml(p)}</code>`).join(", ")}</li>`,
+    );
+  }
+  if (card.gaps?.length > 0) {
+    const gapItems = card.gaps
+      .map((g) => `<li><code>${escapeHtml(g.targetId)}</code> (${escapeHtml(g.coverageState)}): ${escapeHtml(g.reason)}</li>`)
+      .join("\n");
+    rows.push(`<li><details><summary>${card.gaps.length} explicit coverage gap(s) declared by the producer</summary><ul>${gapItems}</ul></details></li>`);
+  }
+  if (rows.length === 0) return "";
+  return `<h2>Provenance &amp; evidence</h2>\n<ul class="evidence-list">\n${rows.join("\n")}\n</ul>`;
+}
+
+// Status stub for internal fixture-track catalog entries the authoritative
+// handoff keeps out of the public projection (honua-io/honua-samples#16):
+// the historical /sdk/<id>/ URL keeps resolving, but as an explicit status
+// page, never as a public sample card.
+function renderSdkStatusStubPage(entry, generatedAt, sourceCommit, bundleNotice) {
+  const bodyHtml = `
+<a class="back-link" href="../../">← All samples</a>
+<h1>${escapeHtml(entry.title ?? entry.id)}</h1>
+<div class="no-bundle-panel"><p><strong>Internal SDK fixture — not a public sample.</strong>
+The authoritative honua-sdk-js site-consumer handoff does not publish this entry as a public card
+${entry.lifecycle?.reason ? `(${escapeHtml(entry.lifecycle.reason)})` : ""}, so it is not listed in the gallery.</p></div>
+${entry.sourcePath ? `<p><a href="https://github.com/${SDKJS_REPO}/tree/trunk/${escapeAttr(entry.sourcePath)}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a></p>` : ""}
+`;
+  return pageShell({
+    title: `${entry.title ?? entry.id} — Honua Samples`,
+    description: "Internal SDK fixture -- not a public sample.",
+    bodyHtml,
+    depth: 2,
+    generatedAt,
+    sourceCommit,
+    bundleNotice,
+  });
+}
+
+// Static build assertion on the RENDERED index (honua-io/honua-samples#16):
+// the shipped duplication was a rendering bug (one <article> per category a
+// card's capabilities spanned), which assertUniqueCardIdentities cannot see
+// because the card LIST was already unique. Guard the actual output.
+function assertNoDuplicateArticles(indexHtml) {
+  const counts = new Map();
+  for (const match of indexHtml.matchAll(/<article class="card[^"]*" data-id="([^"]+)"/g)) {
+    counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
+  }
+  const duplicated = [...counts.entries()].filter(([, n]) => n > 1).map(([id, n]) => `${id} (x${n})`);
+  if (duplicated.length > 0) {
+    throw new Error(`index.html renders duplicate card article(s) for: ${duplicated.sort().join(", ")}`);
+  }
+}
+
 // ---- misc ----------------------------------------------------------------
 
 async function copyAssets() {
@@ -670,7 +882,7 @@ async function copyAssets() {
   }
 }
 
-async function rmGeneratedDetailDirs(ownSamples, sdkRawEntries) {
+async function rmGeneratedDetailDirs(ownSamples) {
   for (const { dirName } of ownSamples) {
     await rm(path.join(SITE_DIR, dirName), { recursive: true, force: true });
   }
