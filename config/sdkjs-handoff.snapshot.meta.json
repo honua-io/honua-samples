@@ -1,0 +1,6 @@
+{
+  "_comment": "Provenance for the byte-exact snapshot pair config/sdkjs-handoff.snapshot.json (the honua-sdk-js site-consumer handoff artifact) and config/sdkjs-handoff-fixture.snapshot.json (its v3 consumer fixture, which content-binds the handoff by bytes+sha256). Both files are committed EXACTLY as fetched -- never reformat, re-serialize, or hand-edit them: the admission gate in scripts/lib/sdkjs-handoff.mjs verifies the handoff's bytes and sha256 against the fixture's input pin, so any local mutation (including pretty-printing) is rejected as a tampered/locally-reconstructed projection (honua-io/honua-samples#16). Refreshed automatically by scripts/build-gallery.mjs whenever the live fetch succeeds and the fetched pair passes admission.",
+  "handoffSourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v1.json",
+  "fixtureSourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/contract/v2/consumer-fixtures/honua-site-consumer.v3.json",
+  "fetchedAt": "2026-07-27T00:00:00.000Z"
+}

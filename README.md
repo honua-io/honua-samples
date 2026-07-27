@@ -262,32 +262,62 @@ from **two inputs**:
    `results/run-results.v1.json` for an honest run badge. A badge only ever
    says "runs green" when there's an actual passing run behind it; a `draft`
    sample or an `active` sample that hasn't run yet says so plainly instead.
-2. **honua-sdk-js's sample catalog** -- fetched live from
+2. **honua-sdk-js's versioned site-consumer handoff** -- the AUTHORITATIVE
+   SDK projection since
+   [honua-io/honua-samples#16](https://github.com/honua-io/honua-samples/issues/16),
+   fetched live from
+   [`samples/dist/honua-site-consumer-handoff.v1.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v1.json)
+   together with its v3 consumer fixture, which content-binds the handoff by
+   exact bytes + sha256. `scripts/lib/sdkjs-handoff.mjs` admits the pair
+   through a fail-closed gate (schema/version compatibility, fixture digest
+   binding, duplicate-stable-identity, referential-integrity, and
+   evidence-freshness checks) before a single card renders: **tampered,
+   stale, schema-incompatible, or locally reconstructed handoffs fail the
+   gallery build** -- no hand-authored SDK inventory is ever substituted.
+   Exactly one public card is rendered per stable sample identity (producer
+   repository + catalog sample id); lifecycle notices, legacy routes,
+   qualified-journey evidence, and explicit coverage gaps survive the merge
+   as card/detail metadata, never as cloned cards. Nothing is vendored:
+   every card links out to its GitHub source and docs in honua-sdk-js.
    [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/catalog.v2.json)
-   (32 entries as of this writing). Nothing is vendored: every entry links out
-   to its GitHub source (`sourcePath`) and docs (`docsPath`) in honua-sdk-js.
-   Canonical `capabilityKeys` are usually already materialized on each entry
+   is still consumed, but only to enrich each admitted card with its
+   materialized canonical `capabilityKeys`
    ([honua-io/honua-sdk-js#635](https://github.com/honua-io/honua-sdk-js/issues/635));
-   `scripts/lib/sdkjs-catalog.mjs` derives them from the entry's SDK-vocabulary
-   `capabilities` tags via the committed crosswalk
-   (`config/capability-crosswalk.v1.json` in honua-sdk-js) for any entry that
-   doesn't carry the field yet.
+   its immutable identity fields must agree with the handoff or generation
+   fails.
 
 Both inputs are validated against the same canonical capability key list
 `scripts/validate-manifests.mjs` uses (`scripts/lib/capability-keys.mjs`) --
-an sdk-js catalog entry referencing an unrecognized key fails the gallery
+an sdk-js card referencing an unrecognized key fails the gallery
 build exactly like an own-sample manifest would.
 
-### Resilience: the sdk-js catalog fetch never breaks a deploy
+**Evidence boundary (no double-count).** SDK-projected cards are
+gallery-only: display, provenance, and evidence links. They are excluded
+from `coverage/samples-coverage.v1.json` by
+`scripts/generate-samples-coverage.mjs`, which stays reserved for samples
+this repo executes in its own run-samples workflow -- sdk-js qualification
+claims already reach honua-evidence through sdk-js's own
+`config/sdk-coverage.v1.json`, and counting them here too would double-count
+one qualified artifact as two receipts per capability.
 
-If the live fetch of `catalog.v2.json` fails for any reason (network blip,
-rate limit, upstream outage), `scripts/lib/sdkjs-catalog.mjs` falls back to
-the committed offline snapshot,
+### Resilience: upstream fetches degrade to committed snapshots
+
+If the live fetch of the handoff pair fails (network blip, rate limit,
+upstream outage) *or* the live pair is rejected by admission, the build falls
+back to the committed byte-exact snapshot pair
+([`config/sdkjs-handoff.snapshot.json`](config/sdkjs-handoff.snapshot.json) +
+[`config/sdkjs-handoff-fixture.snapshot.json`](config/sdkjs-handoff-fixture.snapshot.json),
+provenance in `config/sdkjs-handoff.snapshot.meta.json`) -- which must itself
+pass the same admission gate, or the build fails. Never hand-edit or
+reformat those snapshots: the digest binding rejects any local mutation.
+Likewise, if the live fetch of `catalog.v2.json` fails,
+`scripts/lib/sdkjs-catalog.mjs` falls back to
 [`config/sdkjs-catalog.snapshot.json`](config/sdkjs-catalog.snapshot.json).
-When the live fetch *does* succeed, that snapshot is rewritten in place with
-the fresh payload -- run `node scripts/build-gallery.mjs` locally and commit
-the refreshed file occasionally so the offline fallback doesn't drift far
-behind honua-sdk-js's trunk.
+When live fetches succeed, the snapshots are rewritten in place with the
+fresh payloads -- run `node scripts/build-gallery.mjs` locally and commit the
+refreshed files occasionally so the offline fallbacks don't drift far behind
+honua-sdk-js's trunk (the handoff snapshot in particular carries
+evidence-freshness windows and goes stale if left unrefreshed).
 
 ### Embeds: the actual running sample on the detail page
 

@@ -16,6 +16,17 @@
 // `capabilities` map only contains keys with >=1 entry, so honua-evidence's
 // matrix renders missing coverage honestly instead of as a padded gap.
 //
+// Evidence boundary (honua-io/honua-samples#16): samples-coverage.v1.json is
+// reserved for samples THIS repo executes in its own run-samples workflow.
+// Cards projected from honua-sdk-js's site-consumer handoff are gallery-only
+// (display + provenance + evidence links) and are EXCLUDED here: sdk-js
+// qualification claims already reach honua-evidence through sdk-js's own
+// config/sdk-coverage.v1.json, so admitting them here as well would
+// double-count one qualified artifact as two receipts per capability in
+// capability-matrix.v1.json. Any samples/<id>/ manifest whose id collides
+// with an SDK-projected identity is dropped with a loud warning -- rename
+// the local sample rather than shadowing a projected identity.
+//
 // Env vars (all optional):
 //   SAMPLES_DIR       default "samples"
 //   RUN_RESULTS_PATH  default "results/run-results.v1.json" (scripts/run-samples.mjs's output;
@@ -27,6 +38,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCapabilityKeyList } from "./lib/capability-keys.mjs";
+import { listSdkProjectedIdentities, DEFAULT_HANDOFF_SNAPSHOT_PATH } from "./lib/sdkjs-handoff.mjs";
 import { validateAgainstSchema } from "./lib/mini-schema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -47,11 +59,22 @@ async function main() {
   const { keys: capabilityKeys, source: keyListSource } = await loadCapabilityKeyList();
   const manifests = await loadManifests();
   const resultsById = await loadLatestResults();
+  const sdkProjectedIds = await loadSdkProjectedIdentities();
 
   const capabilities = {};
   let droppedUnknownKeys = 0;
+  let excludedSdkProjections = 0;
 
   for (const { dirName, manifest } of manifests) {
+    if (sdkProjectedIds.has(manifest.id)) {
+      excludedSdkProjections++;
+      // Gallery-only SDK projection (honua-io/honua-samples#16) -- never a
+      // samples-coverage receipt. See the header comment.
+      console.warn(
+        `generate-samples-coverage: excluding samples/${dirName}/ -- id "${manifest.id}" is an SDK-projected gallery-only identity from the honua-sdk-js site-consumer handoff; samples-coverage.v1.json is reserved for samples this repo executes itself. Rename the local sample if it is genuinely independent.`,
+      );
+      continue;
+    }
     const result = resultsById.get(manifest.id);
     const entry = {
       id: manifest.id,
@@ -87,12 +110,34 @@ async function main() {
 
   const capCount = Object.keys(capabilities).length;
   console.log(
-    `generate-samples-coverage: wrote ${capCount} covered capability key(s) from ${manifests.length} sample(s) to ${path.relative(REPO_ROOT, OUT_PATH)} (keys validated against ${keyListSource})`,
+    `generate-samples-coverage: wrote ${capCount} covered capability key(s) from ${manifests.length - excludedSdkProjections} sample(s) to ${path.relative(REPO_ROOT, OUT_PATH)} (keys validated against ${keyListSource}` +
+      `${excludedSdkProjections ? `; ${excludedSdkProjections} gallery-only SDK projection(s) excluded` : ""})`,
   );
   if (droppedUnknownKeys > 0) {
     console.warn(
       `generate-samples-coverage: dropped ${droppedUnknownKeys} unknown capability key reference(s) -- see warnings above.`,
     );
+  }
+}
+
+/**
+ * The SDK-projected (gallery-only) identity set, read offline from the
+ * committed byte-exact handoff snapshot -- no network, so nightly coverage
+ * generation stays deterministic. A missing/unreadable snapshot yields an
+ * empty set with a warning: coverage generation must not hard-fail on the
+ * gallery input, but the exclusion then can't be enforced, which the warning
+ * makes visible. Overridable for tests via SDKJS_HANDOFF_SNAPSHOT_PATH.
+ */
+async function loadSdkProjectedIdentities() {
+  const snapshotPath = process.env.SDKJS_HANDOFF_SNAPSHOT_PATH?.trim() || DEFAULT_HANDOFF_SNAPSHOT_PATH;
+  try {
+    const handoff = JSON.parse(await readFile(snapshotPath, "utf8"));
+    return listSdkProjectedIdentities(handoff);
+  } catch (err) {
+    console.warn(
+      `generate-samples-coverage: could not load the sdk-js handoff snapshot at ${snapshotPath} (${err.message}) -- SDK-projection exclusion cannot be enforced this run`,
+    );
+    return new Set();
   }
 }
 
