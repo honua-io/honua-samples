@@ -123,9 +123,10 @@ async function main() {
   }
   console.log(`build-gallery: admitted sdk-js handoff from ${handoffSource} -- ${merge.records.length} card(s)`);
 
-  // Bundle staging never fails --check/the build on a fetch problem (see
-  // scripts/lib/sample-bundles.mjs) -- only on a genuine integrity mismatch,
-  // which is intentionally allowed to throw out of main() and fail the run.
+  // Local staging can degrade on a fetch problem (see
+  // scripts/lib/sample-bundles.mjs). Production sets a minimum runnable-app
+  // count, so either a genuine integrity mismatch or an empty/degraded result
+  // is intentionally allowed to throw out of main() and fail the run.
   const bundleState = await ensureSampleBundlesStaged({ refreshSnapshot: !CHECK_MODE });
   const bundleById = new Map((bundleState.manifest?.samples ?? []).map((s) => [s.id, s]));
   const stagedBundleIds = new Set(bundleState.stagedIds);
@@ -144,9 +145,9 @@ async function main() {
   // run receipts), then unbundled entries — so the gallery opens on things
   // a visitor can actually run instead of "no runnable build" panels.
   const cards = [
-    ...sdkCards.filter((c) => c.bundleStaged),
+    ...sdkCards.filter((c) => c.bundleRunnable),
     ...ownCards,
-    ...sdkCards.filter((c) => !c.bundleStaged),
+    ...sdkCards.filter((c) => !c.bundleRunnable),
   ];
 
   const categories = groupByCategory(cards, keyByKey);
@@ -189,7 +190,7 @@ async function main() {
   for (const card of sdkCards) {
     const dir = path.join(SITE_DIR, "sdk", card.id);
     await mkdir(dir, { recursive: true });
-    if (card.bundleStaged) {
+    if (card.bundleRunnable) {
       // Copy AFTER mkdir/rm above so this never races build-gallery's own
       // site/sdk/ cleanup -- the staging root (scripts/lib/sample-bundles.mjs)
       // lives outside site/ entirely for exactly this reason.
@@ -386,6 +387,8 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     // degraded run -- see the file header comment on scripts/lib/sample-bundles.mjs).
     bundleSample: bundleById.get(id) ?? null,
     bundleStaged: stagedBundleIds.has(id),
+    bundleRunnable:
+      stagedBundleIds.has(id) && bundleById.get(id)?.runnability === "standalone",
   };
 }
 
@@ -677,7 +680,7 @@ function renderCategorySection(category) {
 function renderCard(card) {
   const dataCaps = escapeAttr(card.capabilities.join(","));
   const dataSdks = escapeAttr(card.sdks.join(","));
-  const runnable = card.kind === "sdk" && card.bundleStaged;
+  const runnable = card.kind === "sdk" && card.bundleRunnable;
   const extra =
     card.kind === "own"
       ? runBadgeHtml(card.runBadge)
@@ -748,12 +751,14 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
   const qualificationHtml = card.qualification
     ? `<span>Qualification: ${escapeHtml(card.qualification.state)}</span>`
     : "";
-  const runnablePanel = card.bundleStaged
+  const runnablePanel = card.bundleRunnable
     ? renderEmbedPanel(card)
     : renderNoBundlePanel(
-        card.bundleSample
-          ? "A build was published for it before, but no verified bundle is staged for this deploy."
-          : "",
+        card.bundleStaged && card.bundleSample?.runnability === "requires-host-fixture-service"
+          ? "This build requires host fixture routes and is not a standalone gallery app."
+          : card.bundleSample
+            ? "A build was published for it before, but no verified bundle is staged for this deploy."
+            : "",
       );
   const bodyHtml = `
 <a class="back-link" href="../../">← All samples</a>

@@ -8,10 +8,9 @@ name: pages
 # The dedicated "Stage & verify sdk-js sample bundles" step below
 # (honua-io/honua-samples#11) runs BEFORE the gallery build so an
 # integrity-verification failure is attributed to its own clearly-named CI
-# step and fails the deploy outright -- a bundle *fetch* failure (network,
-# release missing) is NOT fatal there; it degrades to the committed snapshot
-# (config/sample-bundles.snapshot.json) and the gallery build renders a
-# visible footer notice instead. See scripts/lib/sample-bundles.mjs.
+# step and fails the deploy outright. Local builds can still degrade to the
+# committed snapshot on a fetch failure, but production sets a runnable-app
+# floor below, so Pages fails closed instead of deploying an empty gallery.
 on:
   push:
     branches: [trunk]
@@ -70,16 +69,15 @@ jobs:
       - name: Stage & verify sdk-js sample bundles
         # Fetches honua-sdk-js's sample-bundles-latest release, sha256-verifies
         # every file against its manifest, and stages verified files outside
-        # site/ (see scripts/lib/sample-bundles.mjs). Exits non-zero (failing
-        # this step and the deploy) ONLY on an integrity mismatch or a
-        # malformed manifest -- a plain fetch failure is logged and exits 0,
-        # degrading to the committed snapshot (config/sample-bundles.snapshot.json)
-        # so the gallery build below renders every sdk-js entry as "no
-        # runnable build published yet" plus a visible footer notice, rather
-        # than breaking the deploy.
+        # site/ (see scripts/lib/sample-bundles.mjs). Integrity or manifest
+        # errors fail immediately. The production runnable-app floor also
+        # makes a fetch failure fatal here; snapshot-only degraded mode stays
+        # available to local development without that floor.
         env:
           SAMPLE_BUNDLES_MANIFEST_URL: ${{ vars.SAMPLE_BUNDLES_MANIFEST_URL }}
           SAMPLE_BUNDLES_TARBALL_URL: ${{ vars.SAMPLE_BUNDLES_TARBALL_URL }}
+          # Production must never publish a gallery with zero runnable apps.
+          MIN_RUNNABLE_BUNDLES: "6"
         run: node scripts/lib/sample-bundles.mjs
 
       - name: Build gallery
@@ -94,7 +92,26 @@ jobs:
         # site/sdk/<id>/app/ and renders the embed/no-bundle/headless panels.
         env:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          MIN_RUNNABLE_BUNDLES: "6"
         run: node scripts/build-gallery.mjs
+
+      - name: Install gallery browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Smoke the exact gallery artifact
+        env:
+          MIN_RUNNABLE_BUNDLES: "6"
+        run: npm run test:gallery:browser
+
+      - name: Upload gallery browser evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: gallery-browser-smoke
+          path: .artifacts/gallery-browser-smoke
+          if-no-files-found: error
 
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:

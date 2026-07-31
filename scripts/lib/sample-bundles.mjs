@@ -4,8 +4,8 @@
 // honua-io/honua-sdk-js#642/#648's `sample-bundles-latest` GitHub Release).
 //
 // Contract consumed (honua-sdk-js's samples/contract/v2/schemas/sample-bundles.schema.json,
-// format "honua.sdk.sample-bundles.v1"): a manifest JSON asset
-// (sample-bundles.v1.json) listing, per included sample id, its entrypoint,
+// format "honua.sdk.sample-bundles.v2"): a manifest JSON asset
+// (sample-bundles.v2.json) listing, per included sample id, its entrypoint,
 // dataMode, configDefaults, builtFrom {commit, packageVersion}, and a
 // `files[]` array of {path, bytes, sha256, integrity, mediaType} -- plus a
 // tarball asset (sample-bundles.tar.gz) containing `<id>/<file.path>` for
@@ -37,8 +37,9 @@
 // CLI usage (used as a dedicated pages.yml step, run before the gallery
 // build so an integrity failure is attributed to its own CI step):
 //   node scripts/lib/sample-bundles.mjs
-// Exits 1 (and prints to stderr) only on integrity mismatch or a malformed
-// manifest -- a plain fetch failure prints a warning and exits 0 (degraded).
+// Without MIN_RUNNABLE_BUNDLES, exits 1 only on integrity mismatch or a
+// malformed manifest and degrades on a plain fetch failure. Production sets
+// a minimum, making an empty/degraded staging result fail closed.
 //
 // scripts/build-gallery.mjs calls ensureSampleBundlesStaged() itself too
 // (with forceRefetch left false), so a bare `node scripts/build-gallery.mjs`
@@ -61,12 +62,13 @@ export const RELEASE_TAG = "sample-bundles-latest";
 
 const RELEASE_BASE_URL = `https://github.com/${SDKJS_REPO}/releases/download/${RELEASE_TAG}`;
 
-export const DEFAULT_MANIFEST_URL = `${RELEASE_BASE_URL}/sample-bundles.v1.json`;
+export const DEFAULT_MANIFEST_URL = `${RELEASE_BASE_URL}/sample-bundles.v2.json`;
 export const DEFAULT_TARBALL_URL = `${RELEASE_BASE_URL}/sample-bundles.tar.gz`;
 export const DEFAULT_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sample-bundles.snapshot.json");
 export const DEFAULT_STAGING_ROOT = path.join(REPO_ROOT, ".sample-bundles-staging");
 
-const EXPECTED_FORMAT = "honua.sdk.sample-bundles.v1";
+const EXPECTED_FORMAT = "honua.sdk.sample-bundles.v2";
+const EXPECTED_SCHEMA_VERSION = 2;
 
 /**
  * Fetches, integrity-verifies, and stages honua-sdk-js's published sample
@@ -81,7 +83,7 @@ const EXPECTED_FORMAT = "honua.sdk.sample-bundles.v1";
  * @property {"live"|"snapshot"|"none"} source
  * @property {boolean} degraded -- true whenever no verified bundle files are staged this run
  * @property {string|null} degradedReason -- human-readable reason, only set when degraded
- * @property {object|null} manifest -- the honua.sdk.sample-bundles.v1 manifest (or null if none has ever been fetched)
+ * @property {object|null} manifest -- the honua.sdk.sample-bundles.v2 manifest (or null if none has ever been fetched)
  * @property {string[]} stagedIds -- sample ids with verified files under stagingRoot/<id>/
  * @property {string} stagingRoot
  */
@@ -92,42 +94,51 @@ export async function ensureSampleBundlesStaged({
   stagingRoot = DEFAULT_STAGING_ROOT,
   refreshSnapshot = true,
   forceRefetch = false,
+  minimumBundles = parseMinimumBundles(process.env.MIN_RUNNABLE_BUNDLES),
 } = {}) {
   const statusPath = path.join(stagingRoot, "status.json");
 
   if (!forceRefetch) {
     const cached = await readCachedStatus(statusPath);
-    if (cached) return cached;
+    if (cached) {
+      assertMinimumBundles(cached, minimumBundles);
+      return cached;
+    }
   }
 
   let manifest;
   try {
     manifest = await fetchManifest(manifestUrl);
   } catch (err) {
-    return finalizeDegraded({
+    const result = await finalizeDegraded({
       stagingRoot,
       statusPath,
       snapshotPath,
       reason: `manifest fetch failed (${err.message}) -- falling back to the committed snapshot`,
     });
+    assertMinimumBundles(result, minimumBundles);
+    return result;
   }
 
   let tarballBytes;
   try {
     tarballBytes = await fetchBytes(tarballUrl);
   } catch (err) {
-    return finalizeDegraded({
+    const result = await finalizeDegraded({
       stagingRoot,
       statusPath,
       snapshotPath,
       reason: `tarball fetch failed (${err.message}) -- falling back to the committed snapshot`,
     });
+    assertMinimumBundles(result, minimumBundles);
+    return result;
   }
 
   // Integrity mismatches below are NOT caught -- they must propagate and
   // fail whatever process called this (the pages.yml staging step, or a
   // local/CI build-gallery.mjs run). See the file header's honesty rules.
   const stagedIds = await verifyAndStage({ manifest, tarballBytes, stagingRoot });
+  assertMinimumBundles({ manifest, stagedIds, degradedReason: null }, minimumBundles);
 
   if (refreshSnapshot) {
     await writeSnapshot(snapshotPath, manifestUrl, manifest);
@@ -193,6 +204,11 @@ function validateManifestShape(manifest) {
   if (manifest?.format !== EXPECTED_FORMAT) {
     throw new Error(`unexpected manifest format ${JSON.stringify(manifest?.format)} (expected "${EXPECTED_FORMAT}")`);
   }
+  if (manifest?.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+    throw new Error(
+      `unexpected manifest schemaVersion ${JSON.stringify(manifest?.schemaVersion)} (expected ${EXPECTED_SCHEMA_VERSION})`,
+    );
+  }
   if (!Array.isArray(manifest.samples) || manifest.samples.length === 0) {
     throw new Error("manifest has no samples[]");
   }
@@ -201,6 +217,27 @@ function validateManifestShape(manifest) {
       throw new Error(`manifest sample ${JSON.stringify(sample.id)} is missing required fields`);
     }
   }
+}
+
+export { validateManifestShape };
+
+export function parseMinimumBundles(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return 0;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error(`MIN_RUNNABLE_BUNDLES must be a non-negative integer, received ${JSON.stringify(value)}`);
+  }
+  return parsed;
+}
+
+export function assertMinimumBundles(result, minimumBundles) {
+  const manifestById = new Map((result.manifest?.samples ?? []).map((sample) => [sample.id, sample]));
+  const runnableIds = result.stagedIds.filter((id) => manifestById.get(id)?.runnability === "standalone");
+  if (runnableIds.length >= minimumBundles) return;
+  const reason = result.degradedReason ? ` ${result.degradedReason}` : "";
+  throw new Error(
+    `runnable bundle gate requires at least ${minimumBundles} staged standalone bundle(s), found ${runnableIds.length}.${reason}`,
+  );
 }
 
 async function fetchBytes(url) {
