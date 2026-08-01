@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sample-bundles.mjs (via scripts/build-gallery.mjs / the pages.yml staging step) when the live fetch of honua-sdk-js's sample-bundles-latest release fails, so a samples.honua.io deploy degrades to an honest \"no runnable build published yet\" for every sdk-js sample rather than breaking the deploy. Only manifest metadata is recorded here -- the actual bundle *files* (~8MB+ of built JS/CSS/wasm) are never committed, so a degraded deploy never serves stale or unverified bytes, only the honest no-bundle panel plus this record's builtFrom provenance in the notice. Rewritten automatically whenever a live fetch + full integrity verification succeeds -- commit the change to keep the offline record current. See honua-io/honua-samples#11.",
   "sourceUrl": "https://github.com/honua-io/honua-sdk-js/releases/download/sample-bundles-latest/sample-bundles.v2.json",
-  "fetchedAt": "2026-07-31T23:04:52.429Z",
+  "fetchedAt": "2026-08-01T00:43:05.083Z",
   "manifest": {
     "format": "honua.sdk.sample-bundles.v2",
     "schemaVersion": 2,
@@ -28,7 +28,7 @@
           "reason": "North-star safe-agent flagship rebuilt around plan-bound approval and receipts."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -83,7 +83,7 @@
           "reason": "Qualified Imagery and Terrain journey with current packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and pinned public STAC/COG live receipts."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -298,7 +298,7 @@
           "reason": "Qualified First Map journey with immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and anonymous live receipts."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -413,7 +413,7 @@
           "reason": "Qualified ArcGIS Migration Workbench journey with immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and deterministic-CLI live receipts."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -516,18 +516,18 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index-CWe0hvAR.js",
-            "bytes": 33289,
-            "sha256": "549f4ba061e0920f0a927add79e82320798a1497cac1466c8deba6853ac883ba",
-            "integrity": "sha256-VJ9LoGHgkg8KknrdeegjIHmKFJfKwUZsjeumhTrIg7o=",
-            "mediaType": "text/javascript"
-          },
-          {
             "path": "assets/index-DuH7ryFn.css",
             "bytes": 56424,
             "sha256": "4a2b8d710a4bcb07f1894093d876e485c2f8596da53c12a2a9a9c72190919f5a",
             "integrity": "sha256-SiuNcQpLywfxiUCT2HbkhcL4WW2lPBKiqanHIZCRn1o=",
             "mediaType": "text/css"
+          },
+          {
+            "path": "assets/index-Q2kv--l5.js",
+            "bytes": 33292,
+            "sha256": "3a36df5f76bb5edd85f7907ee213f0bf624eeae0725e66fdc5e71cc6f2ac3e82",
+            "integrity": "sha256-OjbfX3a7Xt2F95B+4hPwv2JO6uByXmb9xeccxvKsPoI=",
+            "mediaType": "text/javascript"
           },
           {
             "path": "assets/migrated-main-dQ-uCBNO.js",
@@ -546,15 +546,15 @@
           {
             "path": "honua-sample-sdk-resolution.json",
             "bytes": 4840,
-            "sha256": "b1286bedfe2589d90e5cf66fb8914f5a429704d1e44d693c28c792d718912462",
-            "integrity": "sha256-sShr7f4lidkOXPZvuJFPWkKXBNHkTWk8KMeS1xiRJGI=",
+            "sha256": "6098320e4a6b4ed10ad9ef39b1652a2bbc335ae7cfb984cbddfcb658eed7741c",
+            "integrity": "sha256-YJgyDkprTtEK2e85sWUqK7wzWufPuYTL3fy2WO7XdBw=",
             "mediaType": "application/json"
           },
           {
             "path": "index.html",
             "bytes": 10934,
-            "sha256": "5ed19784f3a806eb2ad4b63602d705b60fe1ab710e75a02485f49e4e1a1bae26",
-            "integrity": "sha256-XtGXhPOoBusq1LY2AtcFtg/hq3EOdaAkhfSeThobriY=",
+            "sha256": "3969be71bb774c31e643cc45280f26463517b34e92d02fed28b14ecefcaf99b6",
+            "integrity": "sha256-OWm+cbt3TDHmQ8xFKA8mRjUXs06S0C/tKLFOzvyvmbY=",
             "mediaType": "text/html"
           }
         ]
@@ -577,7 +577,7 @@
           "reason": "Headline proof of the plan-first NL map-control layer (#500): BYO LLM, approval envelopes, and execution receipts on a live MapLibre map."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -629,7 +629,7 @@
           "reason": "Large-data flagship now shares one bounded semantic workflow across deterministic fixture and pinned AWS lanes."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -725,7 +725,7 @@
           "reason": "Maintain the fixture-first public SDK workflow and source/packed browser gates as the planned planning candidate; golden qualification and live evidence remain explicitly unclaimed."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -882,7 +882,7 @@
           "reason": "Preserve the smallest server-optional vector-tile recipe."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -1019,7 +1019,7 @@
           "reason": "Keep one focused React integration recipe without duplicating or redesigning First Map."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -1123,7 +1123,7 @@
           "reason": "Qualified Universal Service Explorer journey with immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and anonymous dual-protocol live receipts."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -1231,7 +1231,7 @@
           "reason": "Retain as the focused terra-draw drawing, snapping, undo, and edit-submission recipe; the planning journey owns the end-to-end planning workflow."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -1297,7 +1297,7 @@
           "reason": "Retain as the small credential-free STAC discovery recipe; the imagery journey owns full range, comparison, elevation, and terrain qualification."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
@@ -1342,7 +1342,7 @@
           "reason": "Canonical demo for first-class renderer objects + temporal playback (#497): renderer-driven styling, legend contracts, and filter-composed time windows."
         },
         "builtFrom": {
-          "commit": "f3f0f1720e07f5041d1f7dc47b749fb63b041500",
+          "commit": "30c78e7ebd24301f470cd4f10418c7bd802a0632",
           "packageVersion": "0.1.2-beta.0"
         },
         "files": [
