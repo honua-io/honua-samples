@@ -19,6 +19,8 @@ on:
       - "samples/**"
       - "scripts/**"
       - "config/**"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/pages.yml"
   workflow_dispatch: {}
 

@@ -45,21 +45,27 @@ async function main() {
 
   await mkdir(evidenceDir, { recursive: true });
   const server = createStaticServer();
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("gallery smoke server has no TCP address");
-  const origin = `http://127.0.0.1:${address.port}`;
-
-  const browser = await chromium.launch({ headless: true });
+  let browser;
   const results = [];
   try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("gallery smoke server has no TCP address");
+    const origin = `http://127.0.0.1:${address.port}`;
+
+    browser = await chromium.launch({ headless: true });
     for (const sample of published) results.push(await smokeSample(browser, origin, sample));
   } finally {
-    await browser.close();
-    await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    try {
+      if (browser) await browser.close();
+    } finally {
+      if (server.listening) {
+        await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+      }
+    }
   }
 
   const receipt = {
