@@ -82,6 +82,7 @@ export const DEFAULT_HANDOFF_FIXTURE_URL =
 export const DEFAULT_HANDOFF_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.snapshot.json");
 export const DEFAULT_FIXTURE_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff-fixture.snapshot.json");
 export const DEFAULT_SNAPSHOT_META_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.snapshot.meta.json");
+export const DEFAULT_CATALOG_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-catalog.snapshot.json");
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -94,10 +95,16 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
  * `now` is omitted.
  *
  * @param {{ handoffText: string, fixtureText: string, now?: Date }} input
+ * @param {{ handoffText: string, fixtureText: string, now?: Date, allowedCandidateSamples?: Set<string> }} input
  * @returns {{ ok: true, handoff: object, fixture: object, errors: [] } |
  *           { ok: false, handoff: object|null, fixture: object|null, errors: string[] }}
  */
-export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }) {
+export function admitSdkJsHandoff({
+  handoffText,
+  fixtureText,
+  now = new Date(),
+  allowedCandidateSamples = new Set(),
+}) {
   const errors = [];
   const reject = (handoff = null, fixture = null) => ({ ok: false, handoff, fixture, errors });
 
@@ -261,7 +268,7 @@ export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }
   }
   for (const gap of gaps) {
     for (const candidate of gap.candidateSampleIds ?? []) {
-      if (!ids.has(candidate)) {
+      if (!ids.has(candidate) && !allowedCandidateSamples.has(candidate)) {
         errors.push(`gap "${gap.targetId}" names unknown candidate sample "${candidate}"`);
       }
     }
@@ -444,13 +451,15 @@ export async function loadSdkJsHandoff({
   snapshotPath = DEFAULT_HANDOFF_SNAPSHOT_PATH,
   fixtureSnapshotPath = DEFAULT_FIXTURE_SNAPSHOT_PATH,
   metaPath = DEFAULT_SNAPSHOT_META_PATH,
+  catalogSnapshotPath = DEFAULT_CATALOG_SNAPSHOT_PATH,
   refreshSnapshot = true,
   now = new Date(),
 } = {}) {
+  const allowedCandidateSamples = await readFixtureCandidateSampleIds(catalogSnapshotPath);
   let liveFailure;
   try {
     const [handoffText, fixtureText] = await Promise.all([fetchText(handoffUrl), fetchText(fixtureUrl)]);
-    const admission = admitSdkJsHandoff({ handoffText, fixtureText, now });
+    const admission = admitSdkJsHandoff({ handoffText, fixtureText, now, allowedCandidateSamples });
     if (!admission.ok) {
       throw new Error(`live handoff pair rejected by admission:\n  - ${admission.errors.join("\n  - ")}`);
     }
@@ -472,7 +481,7 @@ export async function loadSdkJsHandoff({
     readFile(snapshotPath, "utf8"),
     readFile(fixtureSnapshotPath, "utf8"),
   ]);
-  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now });
+  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now, allowedCandidateSamples });
   if (!admission.ok) {
     throw new Error(
       `sdk-js handoff admission failed for BOTH sources -- refusing to render SDK cards from a rejected projection.\n` +
@@ -509,4 +518,10 @@ async function writeSnapshotMeta(metaPath, handoffSourceUrl, fixtureSourceUrl) {
     fetchedAt: new Date().toISOString(),
   };
   await writeFile(metaPath, JSON.stringify(meta, null, 2) + "\n", "utf8");
+}
+
+async function readFixtureCandidateSampleIds(catalogSnapshotPath) {
+  const catalog = JSON.parse(await readFile(catalogSnapshotPath, "utf8"));
+  const samples = catalog?.catalog?.samples ?? [];
+  return new Set(samples.filter((s) => s?.track === "fixture").map((s) => s.id).filter((id) => typeof id === "string"));
 }
