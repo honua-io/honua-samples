@@ -2,7 +2,7 @@
 
 Plain-REST sample: no SDK, just `fetch()`. Demonstrates the full
 import -> publish -> query loop against a composed Honua Server, then asserts
-the round trip instead of just eyeballing curl output.
+the round trip instead of just eyeballing a raw response.
 
 ## What it does
 

@@ -1,8 +1,8 @@
 # wms-getmap-check
 
-Plain bash+curl sample: no SDK, no scripting language beyond curl/jq/od.
-Demonstrates classic WMS `GetCapabilities`/`GetMap` the way a shell-scripted
-smoke test would actually be written.
+Zero-dependency Node.js sample using the platform `fetch()` API. Demonstrates
+classic WMS `GetCapabilities`/`GetMap` with assertions suitable for a headless
+smoke test.
 
 ## What it does
 
@@ -28,11 +28,10 @@ From the repo root, with a composed server already running (see the
 [top-level README](../../README.md#local-dev)):
 
 ```bash
-bash samples/wms-getmap-check/src/run.sh
+node samples/wms-getmap-check/src/run.mjs
 ```
 
-Requires `curl`, `jq`, and GNU/uutils `od` (all preinstalled on GitHub
-Actions `ubuntu-latest` runners).
+Requires Node.js 22 or later; there are no npm dependencies.
 
 Environment variables (all optional):
 

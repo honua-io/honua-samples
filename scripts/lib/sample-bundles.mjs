@@ -1,4 +1,4 @@
-// Fetches, integrity-verifies, and stages honua-sdk-js's published browser
+﻿// Fetches, integrity-verifies, and stages honua-sdk-js's published browser
 // sample bundles so scripts/build-gallery.mjs can embed the *actual running
 // app* on a gallery detail page (honua-io/honua-samples#11, consuming
 // honua-io/honua-sdk-js#642/#648's `sample-bundles-latest` GitHub Release).

@@ -159,7 +159,7 @@ test("merge yields exactly one card per stable identity plus fixture-only status
   // Internal fixture-track catalog entries stay OUT of the public card set.
   assert.deepEqual(
     merge.fixtureOnlyEntries.map((e) => e.id).sort(),
-    ["arcgis-source-app", "automatic-source-workflow"],
+    ["arcgis-source-app", "automatic-source-workflow", "offline-region-reference"],
   );
   // Identity is producer-repo qualified (REQ-001).
   assert.equal(merge.records[0].identity, `honua-io/honua-sdk-js#${ids[0]}`);
