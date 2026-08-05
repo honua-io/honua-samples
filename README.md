@@ -322,7 +322,8 @@ A detail page doesn't just describe an honua-sdk-js sample -- when a verified
 build exists, it runs it live in an iframe (honua-io/honua-samples#11),
 consuming honua-sdk-js's `sample-bundles-latest` GitHub Release
 ([honua-io/honua-sdk-js#642](https://github.com/honua-io/honua-sdk-js/issues/642)/[#648](https://github.com/honua-io/honua-sdk-js/issues/648)):
-a `sample-bundles.v1.json` manifest (per-sample entrypoint, data mode,
+a `sample-bundles.v2.json` manifest (with a compatibility fallback for legacy
+`sample-bundles.v1.json`), per-sample entrypoint, data mode,
 `builtFrom` commit/version, and per-file `{path, bytes, sha256, integrity}`)
 plus a `sample-bundles.tar.gz` of the built static files. This repo never
 builds sdk-js source itself -- only the already-built, already-CI-verified
@@ -428,12 +429,10 @@ Gallery embeds: [#11](https://github.com/honua-io/honua-samples/issues/11)
 (staging/integrity/embed pipeline implemented and verified end-to-end against
 a synthetic fixture release matching honua-sdk-js's manifest schema exactly --
 see that PR's description. Honest current state: honua-sdk-js's real
-`sample-bundles-latest` release does not exist yet, because its
-"Publish sample bundles release" job needs the "JS SDK" job, which has been
-failing on every honua-sdk-js trunk push since #648 merged (an unrelated
-evidence-neutral-checkout gate failure). Every gallery deploy therefore
-degrades honestly to "no runnable build published yet" for every sdk-js entry
-until that upstream job is fixed; nothing here is blocked on this repo).
+`sample-bundles-latest` release has moved to manifest schema v2 and is consumed
+by this repo. If either release publication or fetch fails for any reason,
+the gallery degrades honestly to "no runnable build published yet" for every
+sdk-js entry; that behavior remains by design.
 
 ## License
 

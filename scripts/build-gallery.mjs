@@ -195,6 +195,7 @@ async function main() {
       // site/sdk/ cleanup -- the staging root (scripts/lib/sample-bundles.mjs)
       // lives outside site/ entirely for exactly this reason.
       await cp(path.join(bundleState.stagingRoot, card.id), path.join(dir, "app"), { recursive: true });
+      await injectFixtureProxy({ appDir: path.join(dir, "app"), bundleSample: card.bundleSample });
       embeddedCount += 1;
     }
     await writeFile(
@@ -885,6 +886,80 @@ async function copyAssets() {
     const content = await readFile(path.join(ASSETS_SRC_DIR, name), "utf8");
     await writeFile(path.join(destDir, name), content, "utf8");
   }
+}
+
+async function injectFixtureProxy({ appDir, bundleSample }) {
+  if (!bundleSample || !bundleSample.hostFixtureRoutes?.length || bundleSample.runnability !== "requires-host-fixture-service") {
+    return;
+  }
+
+  const entrypoint = bundleSample.entrypoint || "index.html";
+  const entrypointPath = path.join(appDir, entrypoint);
+  const raw = await readFile(entrypointPath, "utf8").catch(() => null);
+  if (!raw) {
+    console.warn(
+      `build-gallery: skipped fixture-proxy injection for ${bundleSample.id ?? "sdk sample"} -- missing ${entrypointPath}`,
+    );
+    return;
+  }
+  if (raw.includes("__HONUA_DEMO_FIXTURE_PROXY__")) return;
+
+  const insertion = buildFixtureProxyInjectionScript(bundleSample.hostFixtureRoutes);
+  const marker = raw.match(/<head\b[^>]*>/i);
+  const updated = marker ? `${raw.slice(0, marker.index + marker[0].length)}${insertion}${raw.slice(marker.index + marker[0].length)}` : `${insertion}${raw}`;
+  await writeFile(entrypointPath, updated, "utf8");
+}
+
+function buildFixtureProxyInjectionScript(routes) {
+  const routesJson = JSON.stringify([...routes].sort((a, b) => b.length - a.length));
+  return `
+<script>
+(function(){
+  if (window.__HONUA_DEMO_FIXTURE_PROXY__) return;
+  window.__HONUA_DEMO_FIXTURE_PROXY__ = true;
+
+  const HONUA_DEMO_HOST = "https://demo.honua.io";
+  const HONUA_FIXTURE_ROUTES = ${routesJson};
+  const HONUA_FIXTURE_BASE = new URL(HONUA_DEMO_HOST);
+
+  function isFixtureRoute(pathname) {
+    return HONUA_FIXTURE_ROUTES.some((route) => {
+      if (pathname === route) return true;
+      return route.endsWith("/") ? pathname.startsWith(route) : pathname.startsWith(route + "/");
+    });
+  }
+
+  function rewriteUrl(raw) {
+    if (typeof raw !== "string" && !(raw instanceof URL) && !(raw instanceof Request)) return null;
+    const target = new URL(raw instanceof Request ? raw.url : raw, window.location.href);
+    if (target.origin !== window.location.origin || !isFixtureRoute(target.pathname)) return null;
+    return new URL(target.pathname + target.search + target.hash, HONUA_FIXTURE_BASE).toString();
+  }
+
+  const originalFetch = window.fetch;
+  if (typeof originalFetch === "function") {
+    window.fetch = (input, init) => {
+      if (input instanceof Request) {
+        const rewritten = rewriteUrl(input);
+        return originalFetch(rewritten ? new Request(rewritten, input) : input, init);
+      }
+      const rewritten = rewriteUrl(input);
+      return originalFetch(rewritten || input, init);
+    };
+  }
+
+  const OriginalXHR = window.XMLHttpRequest;
+  if (typeof OriginalXHR === "function") {
+    window.XMLHttpRequest = class extends OriginalXHR {
+      open(method, url, ...args) {
+        const rewritten = rewriteUrl(url);
+        super.open(method, rewritten || url, ...args);
+      }
+    };
+  }
+})();
+</script>
+`;
 }
 
 async function rmGeneratedDetailDirs(ownSamples) {
