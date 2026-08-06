@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sdkjs-catalog.mjs (via scripts/build-gallery.mjs) when the live fetch of samples/catalog.v2.json fails, so samples.honua.io deploys never break on an sdk-js-side hiccup. Rewritten automatically whenever the live fetch succeeds -- commit the change to keep the offline fallback current. See honua-io/honua-samples#3.",
   "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/catalog.v2.json",
-  "fetchedAt": "2026-08-06T17:37:51.799Z",
+  "fetchedAt": "2026-08-06T18:13:18.155Z",
   "catalog": {
     "$schema": "./contract/v2/schemas/sample-catalog.schema.json",
     "format": "honua.sdk.sample-catalog.v2",
