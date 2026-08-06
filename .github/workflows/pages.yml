@@ -44,6 +44,36 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Checkout local honua-sdk-js sample source for fallback
+        # Staging uses this local checkout to include otherwise-excluded runnable
+        # sample builds from examples/<id>/dist while still requiring every
+        # live bundle to be sha256-verified before embedding.
+        run: |
+          if [ -d ../honua-sdk-js ]; then
+            git -C ../honua-sdk-js pull --ff-only --depth 1 origin trunk
+          else
+            git clone --depth 1 https://github.com/honua-io/honua-sdk-js.git ../honua-sdk-js
+          fi
+
+      - name: Build local sdk-js sample bundles for gallery embedding
+        # Pages runs from a fresh checkout; local dist directories are not
+        # present by default. Build only the known production-facing IDs that
+        # require explicit local fallback to avoid runnable embed regressions.
+        run: |
+          set -euo pipefail
+          if [ ! -d ../honua-sdk-js/node_modules ]; then
+            npm --prefix ../honua-sdk-js ci --silent
+          fi
+          npm --prefix ../honua-sdk-js run demo:mcp-gis-assistant:build --silent
+          npm --prefix ../honua-sdk-js run demo:spatial-analytics:build --silent
+          npm --prefix ../honua-sdk-js run demo:edit-workflow:build --silent
+          npm --prefix ../honua-sdk-js run demo:geocoding:build --silent
+          npm --prefix ../honua-sdk-js run demo:oauth-signin:build --silent
+          if [ ! -d ../honua-sdk-js/examples/kepler-analytics/node_modules ]; then
+            npm install --prefix ../honua-sdk-js/examples/kepler-analytics --legacy-peer-deps --include=dev --silent
+          fi
+          npm --prefix ../honua-sdk-js/examples/kepler-analytics run build --silent
+
       - name: Download latest run-results artifact (best effort)
         # Feeds scripts/build-gallery.mjs's honest per-sample run badges. Not
         # fatal if absent (no run-samples.yml run yet, or its artifact
@@ -75,6 +105,8 @@ jobs:
         env:
           SAMPLE_BUNDLES_MANIFEST_URL: ${{ vars.SAMPLE_BUNDLES_MANIFEST_URL }}
           SAMPLE_BUNDLES_TARBALL_URL: ${{ vars.SAMPLE_BUNDLES_TARBALL_URL }}
+          SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT: ${{ github.workspace }}/../honua-sdk-js
+          SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,oauth-signin,kepler-analytics"
           # Production must never publish a gallery with zero runnable apps.
           MIN_RUNNABLE_BUNDLES: "6"
         run: node scripts/lib/sample-bundles.mjs

@@ -47,7 +47,7 @@
 // it just performs the fetch/verify/stage inline instead of re-reading a
 // status file a separate step already wrote.
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -66,6 +66,9 @@ export const DEFAULT_MANIFEST_URL = `${RELEASE_BASE_URL}/sample-bundles.v2.json`
 export const DEFAULT_TARBALL_URL = `${RELEASE_BASE_URL}/sample-bundles.tar.gz`;
 export const DEFAULT_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sample-bundles.snapshot.json");
 export const DEFAULT_STAGING_ROOT = path.join(REPO_ROOT, ".sample-bundles-staging");
+export const DEFAULT_LOCAL_SDKJS_ROOT = path.join(REPO_ROOT, "..", "honua-sdk-js");
+const DEFAULT_LOCAL_SAMPLE_IDS =
+  "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,oauth-signin,kepler-analytics";
 
 const EXPECTED_FORMAT = "honua.sdk.sample-bundles.v2";
 const EXPECTED_SCHEMA_VERSION = 2;
@@ -92,11 +95,14 @@ export async function ensureSampleBundlesStaged({
   tarballUrl = process.env.SAMPLE_BUNDLES_TARBALL_URL?.trim() || DEFAULT_TARBALL_URL,
   snapshotPath = DEFAULT_SNAPSHOT_PATH,
   stagingRoot = DEFAULT_STAGING_ROOT,
+  localSdkJsRoot = process.env.SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT?.trim() || DEFAULT_LOCAL_SDKJS_ROOT,
+  localSampleIds = process.env.SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS?.trim() || DEFAULT_LOCAL_SAMPLE_IDS,
   refreshSnapshot = true,
   forceRefetch = false,
   minimumBundles = parseMinimumBundles(process.env.MIN_RUNNABLE_BUNDLES),
 } = {}) {
   const statusPath = path.join(stagingRoot, "status.json");
+  const localSdkRootAvailable = await canUseLocalSdkJsRoot(localSdkJsRoot);
 
   if (!forceRefetch) {
     const cached = await readCachedStatus(statusPath);
@@ -138,10 +144,30 @@ export async function ensureSampleBundlesStaged({
   // fail whatever process called this (the pages.yml staging step, or a
   // local/CI build-gallery.mjs run). See the file header's honesty rules.
   const stagedIds = await verifyAndStage({ manifest, tarballBytes, stagingRoot });
-  assertMinimumBundles({ manifest, stagedIds, degradedReason: null }, minimumBundles);
+  const snapshotManifest = manifest;
+
+  const localEntries = await collectLocalSampleManifestEntries({
+    localRoot: localSdkRootAvailable,
+    explicitIds: localSampleIds,
+    liveManifest: manifest,
+  });
+  const localStagedIds = await stageLocalBundles(localEntries, stagingRoot);
+  const manifestAdditions = localEntries
+    .filter((entry) => !manifest.samples.some((s) => s.id === entry.manifest.id))
+    .map((entry) => entry.manifest.id);
+  const missingEntries = localEntries.filter((entry) => manifestAdditions.includes(entry.manifest.id));
+  if (missingEntries.length > 0) {
+    manifest = {
+      ...manifest,
+      samples: [...manifest.samples, ...missingEntries.map((entry) => entry.manifest)],
+    };
+  }
+
+  const allStagedIds = [...stagedIds, ...localStagedIds];
+  assertMinimumBundles({ manifest, stagedIds: allStagedIds, degradedReason: null }, minimumBundles);
 
   if (refreshSnapshot) {
-    await writeSnapshot(snapshotPath, manifestUrl, manifest);
+    await writeSnapshot(snapshotPath, manifestUrl, snapshotManifest);
   }
 
   const result = {
@@ -149,7 +175,7 @@ export async function ensureSampleBundlesStaged({
     degraded: false,
     degradedReason: null,
     manifest,
-    stagedIds,
+    stagedIds: allStagedIds,
     stagingRoot,
   };
   await writeStatus(statusPath, result);
@@ -183,6 +209,186 @@ async function finalizeDegraded({ stagingRoot, statusPath, snapshotPath, reason 
   };
   await writeStatus(statusPath, result);
   return result;
+}
+
+async function canUseLocalSdkJsRoot(localRoot) {
+  if (!localRoot) return null;
+  const normalized = path.resolve(localRoot);
+  try {
+    const entries = await readdir(path.join(normalized, "examples"), { withFileTypes: true });
+    return entries.some((entry) => entry.isDirectory()) ? normalized : null;
+  } catch {
+    return null;
+  }
+}
+
+async function collectLocalSampleManifestEntries({ localRoot, explicitIds, liveManifest }) {
+  if (!localRoot) return [];
+  const requestedIds = normalizeLocalIds(explicitIds, liveManifest);
+  if (requestedIds.length === 0) return [];
+
+  const packageJson = JSON.parse(await safeReadText(path.join(localRoot, "package.json"), "{}"));
+  const packageVersion = packageJson.version ?? null;
+  const builtFromCommit = readLocalGitCommit(localRoot);
+  const entries = [];
+  const seen = new Set();
+
+  for (const id of requestedIds) {
+    const distDir = path.join(localRoot, "examples", id, "dist");
+    if (!(await pathExists(distDir))) {
+      console.warn(`sample-bundles: local override requested for ${id} but no dist directory at ${path.relative(localRoot, distDir)}`);
+      continue;
+    }
+    const files = await collectManifestFiles(distDir);
+    if (!files.length) {
+      console.warn(`sample-bundles: local override for ${id} is empty at ${path.relative(localRoot, distDir)}; skipping`);
+      continue;
+    }
+    if (liveManifest.samples.some((sample) => sample.id === id) || seen.has(id)) continue;
+    const entrypoint = "index.html";
+    entries.push({
+      manifest: {
+        id,
+        entrypoint,
+        dataMode: "hybrid",
+        configDefaults: {},
+        runtimeHosting: "self-contained",
+        runnability: "standalone",
+        hostFixtureRoutes: [],
+        support: {
+          tier: "experimental",
+          track: "community",
+          validationProfile: "browser-lab",
+        },
+        lifecycle: {
+          state: "active",
+          reason: "Locally staged override from sibling honua-sdk-js checkout.",
+        },
+        builtFrom: {
+          commit: builtFromCommit,
+          ...(packageVersion ? { packageVersion } : {}),
+        },
+        files,
+      },
+      distDir,
+    });
+    seen.add(id);
+  }
+  return entries;
+}
+
+function normalizeLocalIds(rawIds, liveManifest) {
+  if (rawIds) {
+    const values = rawIds
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+    return [...new Set(values)];
+  }
+  const excluded = (liveManifest.excluded ?? [])
+    .map((entry) => entry?.id)
+    .filter((id) => Boolean(id));
+  return [...new Set(excluded)];
+}
+
+async function collectManifestFiles(distDir) {
+  const files = [];
+  await collectManifestFilesRecursive(distDir, distDir, files);
+  return files;
+}
+
+async function collectManifestFilesRecursive(rootDir, currentDir, files) {
+  const entries = await readdir(currentDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(currentDir, entry.name);
+    const relPath = path.relative(rootDir, fullPath).replace(/\\/gu, "/");
+    if (entry.isDirectory()) {
+      await collectManifestFilesRecursive(rootDir, fullPath, files);
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    const fileBytes = await readFile(fullPath);
+    const sha256 = createHash("sha256").update(fileBytes).digest("hex");
+    const integrityDigest = createHash("sha256").update(fileBytes).digest();
+    files.push({
+      path: relPath,
+      bytes: fileBytes.byteLength,
+      sha256,
+      integrity: `sha256-${integrityDigest.toString("base64")}`,
+      mediaType: mediaTypeFromPath(entry.name),
+    });
+  }
+}
+
+async function stageLocalBundles(localEntries, stagingRoot) {
+  if (localEntries.length === 0) return [];
+  const stagedIds = [];
+  for (const { manifest: sample, distDir } of localEntries) {
+    const destDir = path.join(stagingRoot, sample.id);
+    await rm(destDir, { recursive: true, force: true });
+    await mkdir(destDir, { recursive: true });
+    await copyDir(distDir, destDir);
+    await normalizeLocalBundleEntrypointPaths(path.join(destDir, sample.entrypoint), sample.entrypoint);
+    stagedIds.push(sample.id);
+  }
+  return stagedIds;
+}
+
+async function normalizeLocalBundleEntrypointPaths(destEntrypointPath, entrypoint) {
+  if (!entrypoint) return;
+  try {
+    const rawHtml = await readFile(destEntrypointPath, "utf8");
+    const rewritten = rawHtml
+      .replace(/((?:src|href)=["'])\/assets\//gu, "$1./assets/")
+      .replace(/(src|href)="\/__honua-quickstart__\//gu, "$1=\"./__honua-quickstart__/")
+      .replace(/(url\()\/__honua-quickstart__\//gu, "$1./__honua-quickstart__/");
+    if (rawHtml !== rewritten) {
+      await writeFile(destEntrypointPath, rewritten, "utf8");
+    }
+  } catch {
+    // Keep legacy behavior if the local entrypoint is non-HTML or missing.
+  }
+}
+
+async function pathExists(candidatePath) {
+  try {
+    await readdir(candidatePath, { withFileTypes: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function mediaTypeFromPath(fileName) {
+  const extension = path.extname(fileName).toLowerCase();
+  if (extension === ".css") return "text/css";
+  if (extension === ".html") return "text/html";
+  if (extension === ".js") return "text/javascript";
+  if (extension === ".json") return "application/json";
+  if (extension === ".mjs") return "text/javascript";
+  if (extension === ".svg") return "image/svg+xml";
+  if (extension === ".png") return "image/png";
+  if (extension === ".jpg" || extension === ".jpeg") return "image/jpeg";
+  if (extension === ".webp") return "image/webp";
+  if (extension === ".gif") return "image/gif";
+  if (extension === ".woff2") return "font/woff2";
+  return "application/octet-stream";
+}
+
+function readLocalGitCommit(localRoot) {
+  try {
+    return execSync("git rev-parse HEAD", { cwd: localRoot, encoding: "utf8" }).trim();
+  } catch {
+    return null;
+  }
+}
+
+async function safeReadText(filePath, fallback = "") {
+  try {
+    return await readFile(filePath, "utf8");
+  } catch {
+    return fallback;
+  }
 }
 
 function describeSnapshotCommit(manifest) {
