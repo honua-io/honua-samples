@@ -69,6 +69,18 @@ jobs:
           npm --prefix ../honua-sdk-js run demo:edit-workflow:build --silent
           npm --prefix ../honua-sdk-js run demo:geocoding:build --silent
           npm --prefix ../honua-sdk-js run demo:oauth-signin:build --silent
+          npm --prefix ../honua-sdk-js run demo:service-explorer:build --silent
+          npm --prefix ../honua-sdk-js run demo:incident:build --silent
+          npm --prefix ../honua-sdk-js run demo:pmtiles-static:build --silent
+          npm --prefix ../honua-sdk-js run demo:nl-map-control:build --silent
+          npm --prefix ../honua-sdk-js run demo:app-bootstrap:build --silent
+          npm --prefix ../honua-sdk-js run demo:gp-runner:build --silent
+          npm --prefix ../honua-sdk-js run demo:web-components:build --silent
+          npm --prefix ../honua-sdk-js run demo:runtime-parity:build --silent
+          npm --prefix ../honua-sdk-js run demo:25d:build --silent
+          npm --prefix ../honua-sdk-js run demo:terrain-elevation:build --silent
+          npm --prefix ../honua-sdk-js run demo:unified-ops:build --silent
+          npm --prefix ../honua-sdk-js run demo:planning-workbench:build --silent
           if [ ! -d ../honua-sdk-js/examples/kepler-analytics/node_modules ]; then
             npm install --prefix ../honua-sdk-js/examples/kepler-analytics --legacy-peer-deps --include=dev --silent
           fi
@@ -106,7 +118,7 @@ jobs:
           SAMPLE_BUNDLES_MANIFEST_URL: ${{ vars.SAMPLE_BUNDLES_MANIFEST_URL }}
           SAMPLE_BUNDLES_TARBALL_URL: ${{ vars.SAMPLE_BUNDLES_TARBALL_URL }}
           SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT: ${{ github.workspace }}/../honua-sdk-js
-          SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,oauth-signin,kepler-analytics"
+          SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,oauth-signin,kepler-analytics,app-bootstrap-basic,geoprocessing-job-runner,runtime-parity-showcase,storytelling-25d-map,terrain-rgb-elevation,unified-ops-workspace,web-components-basic,planning-permitting-workbench,service-explorer,nl-map-control,realtime-incident-dashboard,pmtiles-static"
           # Production must never publish a gallery with zero runnable apps.
           MIN_RUNNABLE_BUNDLES: "6"
         run: node scripts/lib/sample-bundles.mjs
