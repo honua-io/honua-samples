@@ -1,21 +1,32 @@
 {
-  "id": "browser-featureserver-query",
-  "title": "Hello FeatureServer (headless browser, plain fetch+DOM)",
-  "description": "The same import -> publish -> query loop as hello-featureserver-rest, but driven entirely from a static HTML page's browser-side fetch()/DOM -- no SDK, no Node -- proving the headless-browser runner lane (honua-io/honua-samples#2).",
-  "capabilities": [
-    "import.file",
-    "serve.geoservices-featureserver"
-  ],
-  "sdks": [
-    "rest"
-  ],
-  "protocols": [
-    "geoservices-rest"
-  ],
-  "edition": "community",
-  "entrypoint": {
-    "type": "browser",
-    "command": "src/index.html"
-  },
-  "status": "active"
+    "id":  "browser-featureserver-query",
+    "title":  "Hello FeatureServer (headless browser, plain fetch+DOM)",
+    "description":  "The same import -\u003e publish -\u003e query loop as hello-featureserver-rest, but driven entirely from a static HTML page\u0027s browser-side fetch()/DOM -- no SDK, no Node -- proving the headless-browser runner lane (honua-io/honua-samples#2).",
+    "learning":  {
+                     "goal":  "query-data",
+                     "level":  "intermediate",
+                     "estimatedMinutes":  8,
+                     "prerequisites":  [
+                                           "Modern web browser",
+                                           "Internet access"
+                                       ]
+                 },
+    "dataMode":  "public-live",
+    "auth":  "anonymous",
+    "capabilities":  [
+                         "import.file",
+                         "serve.geoservices-featureserver"
+                     ],
+    "sdks":  [
+                 "rest"
+             ],
+    "protocols":  [
+                      "geoservices-rest"
+                  ],
+    "edition":  "community",
+    "entrypoint":  {
+                       "type":  "browser",
+                       "command":  "src/index.html"
+                   },
+    "status":  "active"
 }

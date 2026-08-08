@@ -2,6 +2,14 @@
   "id": "geocode-single-line",
   "title": "Single-line forward geocode (plain REST)",
   "description": "Calls Honua's Esri-compatible GeocodeServer with a single-line address and asserts a real candidate -- address text, a location in the expected region, and a match score -- comes back.",
+  "learning": {
+    "goal": "query-data",
+    "level": "beginner",
+    "estimatedMinutes": 5,
+    "prerequisites": ["Node.js 20+", "Internet access"]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
   "capabilities": [
     "geocoding.forward"
   ],

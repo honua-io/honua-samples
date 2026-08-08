@@ -68,7 +68,7 @@ export const DEFAULT_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sample-bund
 export const DEFAULT_STAGING_ROOT = path.join(REPO_ROOT, ".sample-bundles-staging");
 export const DEFAULT_LOCAL_SDKJS_ROOT = path.join(REPO_ROOT, "..", "honua-sdk-js");
 const DEFAULT_LOCAL_SAMPLE_IDS =
-  "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,oauth-signin,kepler-analytics";
+  "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,oauth-signin,maplibre-quickstart,service-explorer,realtime-incident-dashboard,pmtiles-static,nl-map-control,imagery-cog-quickstart,kepler-analytics,app-bootstrap-basic,geoprocessing-job-runner,runtime-parity-showcase,storytelling-25d-map,terrain-rgb-elevation,unified-ops-workspace,web-components-basic,planning-permitting-workbench";
 
 const EXPECTED_FORMAT = "honua.sdk.sample-bundles.v2";
 const EXPECTED_SCHEMA_VERSION = 2;
@@ -152,10 +152,19 @@ export async function ensureSampleBundlesStaged({
     liveManifest: manifest,
   });
   const localStagedIds = await stageLocalBundles(localEntries, stagingRoot);
+  const localEntriesById = new Map(localEntries.map((entry) => [entry.manifest.id, entry]));
   const manifestAdditions = localEntries
-    .filter((entry) => !manifest.samples.some((s) => s.id === entry.manifest.id))
+    .filter((entry) => !manifest.samples.some((sample) => sample.id === entry.manifest.id))
     .map((entry) => entry.manifest.id);
   const missingEntries = localEntries.filter((entry) => manifestAdditions.includes(entry.manifest.id));
+  if (localEntriesById.size > 0) {
+    manifest = {
+      ...manifest,
+      samples: manifest.samples.map((sample) =>
+        localEntriesById.has(sample.id) ? localEntriesById.get(sample.id).manifest : sample,
+      ),
+    };
+  }
   if (missingEntries.length > 0) {
     manifest = {
       ...manifest,
@@ -163,7 +172,7 @@ export async function ensureSampleBundlesStaged({
     };
   }
 
-  const allStagedIds = [...stagedIds, ...localStagedIds];
+  const allStagedIds = [...new Set([...stagedIds, ...localStagedIds])];
   assertMinimumBundles({ manifest, stagedIds: allStagedIds, degradedReason: null }, minimumBundles);
 
   if (refreshSnapshot) {
@@ -244,25 +253,28 @@ async function collectLocalSampleManifestEntries({ localRoot, explicitIds, liveM
       console.warn(`sample-bundles: local override for ${id} is empty at ${path.relative(localRoot, distDir)}; skipping`);
       continue;
     }
-    if (liveManifest.samples.some((sample) => sample.id === id) || seen.has(id)) continue;
+    if (seen.has(id)) continue;
+    const existingManifest = (liveManifest.samples ?? []).find((sample) => sample.id === id);
     const entrypoint = "index.html";
     entries.push({
       manifest: {
+        ...existingManifest,
         id,
         entrypoint,
-        dataMode: "hybrid",
-        configDefaults: {},
-        runtimeHosting: "self-contained",
-        runnability: "standalone",
-        hostFixtureRoutes: [],
-        support: {
+        dataMode: existingManifest?.dataMode ?? "hybrid",
+        configDefaults: existingManifest?.configDefaults ?? {},
+        runtimeHosting: existingManifest?.runtimeHosting ?? "self-contained",
+        runnability: existingManifest?.runnability ?? "standalone",
+        hostFixtureRoutes: existingManifest?.hostFixtureRoutes ?? [],
+        support: existingManifest?.support ?? {
           tier: "experimental",
           track: "community",
           validationProfile: "browser-lab",
         },
         lifecycle: {
-          state: "active",
-          reason: "Locally staged override from sibling honua-sdk-js checkout.",
+          ...(existingManifest?.lifecycle ?? {}),
+          state: existingManifest?.lifecycle?.state ?? "active",
+          reason: existingManifest?.lifecycle?.reason ?? "Locally staged override from sibling honua-sdk-js checkout.",
         },
         builtFrom: {
           commit: builtFromCommit,

@@ -1,9 +1,16 @@
 {
   "id": "odata-query-rest",
-  "title": "OData v4 filtered query (plain REST)",
-  "description": "Imports a tiny GeoJSON dataset, publishes it, and walks Honua's OData v4 service -- service document, $metadata, and a $filter/$count query -- asserting the filtered result set is exactly the subset it should be.",
+  "title": "Read spatial features with OData v4",
+  "description": "Discovers a public layer and reads three spatial features plus the server-side count with plain fetch().",
+  "learning": {
+    "goal": "query-data",
+    "level": "beginner",
+    "estimatedMinutes": 8,
+    "prerequisites": ["Node.js 20+", "Internet access"]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
   "capabilities": [
-    "import.file",
     "serve.odata"
   ],
   "sdks": [

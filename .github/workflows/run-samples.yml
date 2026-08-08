@@ -51,6 +51,7 @@ env:
   HONUA_ADMIN_PASSWORD: quickstart-admin-password
   HONUA_ADMIN_API_KEY: quickstart-admin-password
   HONUA_BASE_URL: http://localhost:8080
+  HONUA_PUBLIC_BASE_URL: https://demo.honua.io
 
 jobs:
   run:
@@ -62,6 +63,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Install sample runner dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
 
       - name: Determine edition
         # Pro-edition samples are opt-in, gated on an optional repo secret --

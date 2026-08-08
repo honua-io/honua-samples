@@ -1,21 +1,33 @@
 {
-  "id": "wms-getmap-check",
-  "title": "WMS GetCapabilities + GetMap check (bash + curl)",
-  "description": "Plain bash+curl walkthrough of classic WMS: imports a tiny GeoJSON dataset, publishes it, requests GetCapabilities and GetMap, and asserts a real, correctly-sized PNG comes back -- not just a 200 status.",
-  "capabilities": [
-    "import.file",
-    "serve.wms"
-  ],
-  "sdks": [
-    "rest"
-  ],
-  "protocols": [
-    "wms"
-  ],
-  "edition": "community",
-  "entrypoint": {
-    "type": "script",
-    "command": "bash src/run.sh"
-  },
-  "status": "active"
+    "id":  "wms-getmap-check",
+    "title":  "WMS GetCapabilities + GetMap check (bash + curl)",
+    "description":  "Plain bash+curl walkthrough of classic WMS: imports a tiny GeoJSON dataset, publishes it, requests GetCapabilities and GetMap, and asserts a real, correctly-sized PNG comes back -- not just a 200 status.",
+    "learning":  {
+                     "goal":  "build-map",
+                     "level":  "advanced",
+                     "estimatedMinutes":  8,
+                     "prerequisites":  [
+                                           "Local Honua Server",
+                                           "Bash",
+                                           "curl"
+                                       ]
+                 },
+    "dataMode":  "local-integration",
+    "auth":  "admin-api-key",
+    "capabilities":  [
+                         "import.file",
+                         "serve.wms"
+                     ],
+    "sdks":  [
+                 "rest"
+             ],
+    "protocols":  [
+                      "wms"
+                  ],
+    "edition":  "community",
+    "entrypoint":  {
+                       "type":  "script",
+                       "command":  "bash src/run.sh"
+                   },
+    "status":  "active"
 }

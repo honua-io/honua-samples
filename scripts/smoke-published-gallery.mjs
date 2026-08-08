@@ -11,6 +11,7 @@ import { chromium } from "@playwright/test";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(repoRoot, "site");
 const snapshotPath = path.join(repoRoot, "config", "sample-bundles.snapshot.json");
+const stagedStatusPath = path.join(repoRoot, ".sample-bundles-staging", "status.json");
 const evidenceDir = path.join(repoRoot, ".artifacts", "gallery-browser-smoke");
 const evidencePath = path.join(evidenceDir, "browser-smoke.v1.json");
 const minimumApps = parseMinimum(process.env.MIN_RUNNABLE_BUNDLES ?? "1");
@@ -28,8 +29,18 @@ const mediaTypes = new Map([
 ]);
 
 async function main() {
-  const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
-  const standalone = snapshot.manifest.samples.filter((sample) => sample.runnability === "standalone");
+  let bundleState;
+  try {
+    bundleState = JSON.parse(await readFile(stagedStatusPath, "utf8"));
+  } catch {
+    bundleState = JSON.parse(await readFile(snapshotPath, "utf8"));
+  }
+  const standalone = bundleState.manifest.samples.filter(
+    (sample) =>
+      sample.runnability === "standalone" &&
+      sample.lifecycle?.state === "active" &&
+      !sample.lifecycle?.reason?.startsWith("Locally staged override"),
+  );
   const published = [];
   for (const sample of standalone) {
     try {

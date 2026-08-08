@@ -64,6 +64,7 @@ jobs:
           if [ ! -d ../honua-sdk-js/node_modules ]; then
             npm --prefix ../honua-sdk-js ci --silent
           fi
+          npm --prefix ../honua-sdk-js run demo:quickstart:build --silent
           npm --prefix ../honua-sdk-js run demo:mcp-gis-assistant:build --silent
           npm --prefix ../honua-sdk-js run demo:spatial-analytics:build --silent
           npm --prefix ../honua-sdk-js run demo:edit-workflow:build --silent
@@ -118,9 +119,9 @@ jobs:
           SAMPLE_BUNDLES_MANIFEST_URL: ${{ vars.SAMPLE_BUNDLES_MANIFEST_URL }}
           SAMPLE_BUNDLES_TARBALL_URL: ${{ vars.SAMPLE_BUNDLES_TARBALL_URL }}
           SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT: ${{ github.workspace }}/../honua-sdk-js
-          SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,oauth-signin,kepler-analytics,app-bootstrap-basic,geoprocessing-job-runner,runtime-parity-showcase,storytelling-25d-map,terrain-rgb-elevation,unified-ops-workspace,web-components-basic,planning-permitting-workbench,service-explorer,nl-map-control,realtime-incident-dashboard,pmtiles-static"
+          SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,maplibre-quickstart,oauth-signin,kepler-analytics,app-bootstrap-basic,geoprocessing-job-runner,runtime-parity-showcase,storytelling-25d-map,terrain-rgb-elevation,unified-ops-workspace,web-components-basic,planning-permitting-workbench,service-explorer,nl-map-control,realtime-incident-dashboard,pmtiles-static"
           # Production must never publish a gallery with zero runnable apps.
-          MIN_RUNNABLE_BUNDLES: "6"
+          MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/lib/sample-bundles.mjs
 
       - name: Build gallery
@@ -135,7 +136,7 @@ jobs:
         # site/sdk/<id>/app/ and renders the embed/no-bundle/headless panels.
         env:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
-          MIN_RUNNABLE_BUNDLES: "6"
+          MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/build-gallery.mjs
 
       - name: Install gallery browser
@@ -145,7 +146,7 @@ jobs:
 
       - name: Smoke the exact gallery artifact
         env:
-          MIN_RUNNABLE_BUNDLES: "6"
+          MIN_RUNNABLE_BUNDLES: "11"
         run: npm run test:gallery:browser
 
       - name: Upload gallery browser evidence

@@ -9,6 +9,9 @@
     "id",
     "title",
     "description",
+    "learning",
+    "dataMode",
+    "auth",
     "capabilities",
     "sdks",
     "protocols",
@@ -30,6 +33,44 @@
       "type": "string",
       "description": "One or two sentences describing what the sample demonstrates.",
       "minLength": 1
+    },
+    "learning": {
+      "type": "object",
+      "description": "Expectations a developer can evaluate before opening the sample.",
+      "additionalProperties": false,
+      "required": ["goal", "level", "estimatedMinutes", "prerequisites"],
+      "properties": {
+        "goal": {
+          "type": "string",
+          "description": "One primary developer outcome per sample.",
+          "enum": ["connect-data", "build-map", "query-data", "analyze-data", "operate-realtime", "explore-imagery-3d", "migrate-app", "automate-workflow"]
+        },
+        "level": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced"]
+        },
+        "estimatedMinutes": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 120
+        },
+        "prerequisites": {
+          "type": "array",
+          "description": "Concrete requirements visible before launch. Empty means no prerequisites.",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "dataMode": {
+      "type": "string",
+      "description": "Where the default run gets its data.",
+      "enum": ["public-live", "local-integration", "fixture"]
+    },
+    "auth": {
+      "type": "string",
+      "description": "Authentication required by the default run.",
+      "enum": ["anonymous", "admin-api-key", "none"]
     },
     "capabilities": {
       "type": "array",

@@ -121,7 +121,7 @@ async function main() {
       `sdk projection merge failed (${merge.errors.length} error(s)):\n  - ${merge.errors.join("\n  - ")}`,
     );
   }
-  console.log(`build-gallery: admitted sdk-js handoff from ${handoffSource} -- ${merge.records.length} card(s)`);
+  console.log(`build-gallery: validated sdk-js handoff from ${handoffSource} -- ${merge.records.length} projected card(s)`);
 
   // Local staging can degrade on a fetch problem (see
   // scripts/lib/sample-bundles.mjs). Production sets a minimum runnable-app
@@ -132,7 +132,17 @@ async function main() {
   const stagedBundleIds = new Set(bundleState.stagedIds);
 
   const ownCards = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
-  const sdkCards = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
+  const sdkCandidates = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
+  const sdkCards = sdkCandidates.filter(
+    (card) =>
+      card.bundleRunnable &&
+      card.bundleSample?.lifecycle?.state === "active" &&
+      !card.bundleSample?.lifecycle?.reason?.startsWith("Locally staged override") &&
+      card.evidence?.fixture?.status === "executed",
+  );
+  console.log(
+    `build-gallery: publishing ${sdkCards.length} verified standalone sdk-js sample(s); excluding ${sdkCandidates.length - sdkCards.length} metadata-only, hosted, lifecycle override, or unverified card(s)`,
+  );
   assertUniqueCardIdentities([...ownCards, ...sdkCards]);
   for (const bundleId of stagedBundleIds) {
     if (!sdkCards.some((c) => c.id === bundleId)) {
@@ -258,7 +268,20 @@ async function loadOwnSamples() {
     } catch {
       // No README.md -- the detail page renders a plain notice instead.
     }
-    samples.push({ dirName, manifest, readme });
+    let sourcePath = null;
+    let sourceText = null;
+    const command = manifest.entrypoint?.command;
+    if (typeof command === "string") {
+      sourcePath = manifest.entrypoint.type === "browser" ? command : command.trim().split(/\s+/).at(-1);
+      if (sourcePath && !sourcePath.includes("..")) {
+        try {
+          sourceText = await readFile(path.join(SAMPLES_DIR, dirName, sourcePath), "utf8");
+        } catch {
+          sourcePath = null;
+        }
+      }
+    }
+    samples.push({ dirName, manifest, readme, sourcePath, sourceText });
   }
   return samples;
 }
@@ -285,7 +308,7 @@ async function loadRunResults() {
 // ---- card normalization -------------------------------------------------
 
 function toOwnCard(sample, runResults, keyByKey, problems) {
-  const { dirName, manifest, readme } = sample;
+  const { dirName, manifest, readme, sourcePath, sourceText } = sample;
   const id = manifest.id ?? dirName;
   const capabilities = manifest.capabilities ?? [];
   for (const key of capabilities) {
@@ -307,11 +330,16 @@ function toOwnCard(sample, runResults, keyByKey, problems) {
     edition: manifest.edition ?? "community",
     status: manifest.status ?? "active",
     protocols: manifest.protocols ?? [],
+    learning: manifest.learning ?? null,
+    dataMode: manifest.dataMode ?? null,
+    auth: manifest.auth ?? null,
     sourceRepo: "honua-samples",
     detailUrl: `${GALLERY_BASE_URL}/${id}/`,
     detailPath: `/${id}/`,
     githubUrl: `https://github.com/${OWN_REPO}/tree/trunk/samples/${dirName}`,
     readmeHtml: readme ? renderMarkdown(readme) : null,
+    sourcePath,
+    sourceText,
     runBadge,
     entrypoint: manifest.entrypoint ?? null,
   };
@@ -368,6 +396,8 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     lifecycle: entry.lifecycle ?? null,
     protocols: entry.protocols ?? [],
     renderers: entry.renderers ?? [],
+    dataMode: entry.data?.mode ?? null,
+    auth: entry.data?.authMode ?? null,
     qualification: entry.qualification ?? null,
     evidence: entry.evidence ?? null,
     evidenceBindingId: entry.evidenceBindingId ?? null,
@@ -380,6 +410,7 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     detailUrl: `${GALLERY_BASE_URL}/sdk/${id}/`,
     detailPath: `/sdk/${id}/`,
     githubUrl: `https://github.com/${SDKJS_REPO}/tree/trunk/${entry.source.path}`,
+    sourcePath: entry.source.path,
     docsUrl: entry.source.docsPath ? `https://github.com/${SDKJS_REPO}/blob/trunk/${entry.source.docsPath}` : null,
     // Populated only when scripts/lib/sample-bundles.mjs's manifest has this
     // id AND this build actually staged sha256-verified files for it this
@@ -485,7 +516,7 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
 ${bodyHtml}
 </main>
 <footer class="site-footer">${renderFooter(generatedAt, sourceCommit, bundleNotice)}</footer>
-${depth === 0 ? `<script src="${assetPrefix}/gallery-filter.js"></script>` : ""}
+${depth === 0 ? `<script src="${assetPrefix}/gallery-filter.js"></script>` : `<script src="${assetPrefix}/source-preview.js"></script>`}
 </body>
 </html>
 `;
@@ -577,29 +608,47 @@ function renderHeadlessPanel(card) {
 function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }) {
   const ownCount = cards.filter((c) => c.kind === "own").length;
   const sdkCount = cards.filter((c) => c.kind === "sdk").length;
+  const starterSpecs = [
+    { id: "maplibre-quickstart", number: "01", eyebrow: "JavaScript + MapLibre", action: "Render a map" },
+    { id: "browser-featureserver-query", number: "02", eyebrow: "Browser + plain REST", action: "Query FeatureServer" },
+    { id: "ogc-features-python", number: "03", eyebrow: "Python standard library", action: "Walk OGC Features" },
+  ];
+  const starters = starterSpecs
+    .map((spec) => ({ ...spec, card: cards.find((card) => card.id === spec.id) }))
+    .filter((starter) => starter.card);
 
   const bodyHtml = `
 <section class="intro">
-  <h1>Honua Samples Gallery</h1>
-  <p>Runnable evidence, one gallery. ${ownCount} sample${ownCount === 1 ? "" : "s"} from
-     <a href="https://github.com/${OWN_REPO}" target="_blank" rel="noopener noreferrer">honua-samples</a>
-     (executed headless in CI against a real server) and ${sdkCount} entries from
-     <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s
-     sample catalog (client-side JS samples, linked to their GitHub source -- nothing is vendored here).
-     Every capability shown is a canonical key from the
-     <a href="${CAPABILITIES_CATALOG_URL}">Honua capability catalog</a>; deep links of the form
-     <code>?caps=key1,key2</code> interoperate with that page's filters.</p>
+  <div class="intro-copy">
+    <p class="eyebrow">Canonical code catalog / ${cards.length} maintained entries</p>
+    <h1>Make the first request. See the exact result.</h1>
+    <p>Small, reproducible examples across Honua Server and the JavaScript SDK. Run a verified browser build when one exists, then inspect the source and evidence.</p>
+    <div class="intro-actions"><a class="button primary" href="#catalog">Search the catalog</a><a class="button" href="https://honua.io/demos.html">Need an end-to-end demo?</a></div>
+  </div>
+  <dl class="catalog-stats" aria-label="Catalog composition">
+    <div><dt>${ownCount}</dt><dd>server samples executed by this repository</dd></div>
+    <div><dt>${sdkCount}</dt><dd>SDK entries admitted from the producer handoff</dd></div>
+    <div><dt>1</dt><dd>canonical inventory with no cloned source</dd></div>
+  </dl>
 </section>
+${starters.length ? `<section class="starter-section" aria-labelledby="starter-heading">
+  <div class="section-heading"><div><p class="eyebrow">Recommended starts</p><h2 id="starter-heading">Choose the client you already have.</h2></div><p>Each path produces a concrete result before it introduces the wider platform.</p></div>
+  <div class="starter-grid">${starters.map(renderStarterCard).join("\n")}</div>
+</section>` : ""}
+<section id="catalog" class="catalog-section" aria-labelledby="catalog-heading">
+  <div class="catalog-heading"><div><p class="eyebrow">Full catalog</p><h2 id="catalog-heading">Find one concept.</h2></div><div class="catalog-search"><label for="filter-search">Search samples</label><input id="filter-search" type="search" placeholder="Try: geocode, OGC, React..." autocomplete="off" /><kbd>/</kbd></div></div>
+  <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="catalog-filters">Filters <span id="filter-active-count">0</span></button>
 <div class="layout">
-  <aside class="filters">
+  <aside id="catalog-filters" class="filters">
     ${renderFilterPanel(categories, cards, keyByKey)}
   </aside>
   <div class="results">
-    <p id="filter-status">Showing all ${cards.length} sample(s).</p>
-    <div id="empty-state" class="empty-state" hidden>No samples match the current filters.</div>
+    <p id="filter-status" aria-live="polite">Showing all ${cards.length} samples.</p>
+    <div id="empty-state" class="empty-state" hidden><strong>No sample matches that combination.</strong><span>Clear a filter or search for a protocol, SDK, or capability.</span></div>
     ${categories.map((category) => renderCategorySection(category)).join("\n")}
   </div>
 </div>
+</section>
 `;
 
   return pageShell({
@@ -611,6 +660,15 @@ function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommi
     sourceCommit,
     bundleNotice,
   });
+}
+
+function renderStarterCard({ card, number, eyebrow, action }) {
+  const time = card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} min` : card.bundleRunnable ? "Run in browser" : "Source available";
+  return `<a class="starter-card" href="${card.detailPath}">
+  <span class="starter-number">${escapeHtml(number)}</span><span class="starter-eyebrow">${escapeHtml(eyebrow)}</span>
+  <h3>${escapeHtml(action)}</h3><p>${escapeHtml(card.summary)}</p>
+  <span class="starter-meta">${escapeHtml(time)} <b>Open sample &rarr;</b></span>
+</a>`;
 }
 
 function renderFilterPanel(categories, cards, keyByKey) {
@@ -647,6 +705,7 @@ function renderFilterPanel(categories, cards, keyByKey) {
   const sourceValues = Array.from(new Set(cards.map((c) => c.sourceRepo))).sort();
 
   return `
+<div class="filters-heading"><span>Refine</span><span>AND across groups</span></div>
 <h2>Capability</h2>
 <div class="filter-group">${capHtml}</div>
 <h2>SDK</h2>
@@ -670,7 +729,7 @@ function renderFilterPanel(categories, cards, keyByKey) {
 function renderCategorySection(category) {
   return `
 <section class="category">
-  <h2>${escapeHtml(category.name)}</h2>
+  <div class="category-heading"><h2>${escapeHtml(category.name)}</h2><span>${category.cards.length}</span></div>
   <div class="card-grid">
     ${category.cards.map((card) => renderCard(card)).join("\n")}
   </div>
@@ -680,7 +739,7 @@ function renderCategorySection(category) {
 function renderCard(card) {
   const dataCaps = escapeAttr(card.capabilities.join(","));
   const dataSdks = escapeAttr(card.sdks.join(","));
-  const runnable = card.kind === "sdk" && card.bundleRunnable;
+  const runnable = card.kind === "sdk" && card.bundleRunnable && card.evidence?.fixture?.status === "executed";
   const extra =
     card.kind === "own"
       ? runBadgeHtml(card.runBadge)
@@ -689,16 +748,24 @@ function renderCard(card) {
     ? `<span class="badge runnable" title="Runs in the browser on this page">&#9654; Runnable</span>`
     : "";
   const evidenceScope = card.kind === "sdk" ? ` data-evidence-scope="gallery-only"` : "";
-  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-source="${escapeAttr(card.sourceRepo)}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}">
-  ${runnableBadge}
+  const learningMeta = card.learning
+    ? `${card.learning.estimatedMinutes} min &middot; ${escapeHtml(card.learning.level)}`
+    : card.track
+      ? escapeHtml(card.track)
+      : "SDK example";
+  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-source="${escapeAttr(card.sourceRepo)}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")}`)}">
+  <div class="card-topline"><span class="sample-id">${escapeHtml(card.id)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
   <p class="summary">${escapeHtml(card.summary)}</p>
   <div class="chips">
     ${chip(card.sourceRepo, `source-${card.sourceRepo}`)}
     ${card.sdks.map((s) => chip(s)).join("")}
     ${chip(card.edition)}
+    ${card.dataMode ? chip(card.dataMode) : ""}
+    ${card.auth ? chip(card.auth) : ""}
   </div>
-  ${extra}
+  <div class="card-evidence">${runnableBadge}${extra}</div>
+  <div class="card-actions"><a class="card-open" href="${card.detailPath}">${runnable ? "Run sample" : "Open sample"} &rarr;</a><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Source &nearr;</a></div>
 </article>`;
 }
 
@@ -714,22 +781,23 @@ function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
     card.entrypoint?.type === "browser"
       ? renderNoBundlePanel("This repo does not yet publish a staged browser bundle for it.")
       : renderHeadlessPanel(card);
+  const prerequisites = card.learning?.prerequisites?.length ? card.learning.prerequisites.join(", ") : "None";
   const bodyHtml = `
 <a class="back-link" href="../">← All samples</a>
 <h1>${escapeHtml(card.title)}</h1>
 <p>${escapeHtml(card.summary)}</p>
-<div class="detail-meta">
-  <span>SDKs: ${card.sdks.map(escapeHtml).join(", ") || "—"}</span>
-  <span>Protocols: ${card.protocols.map(escapeHtml).join(", ") || "—"}</span>
-  <span>Edition: ${escapeHtml(card.edition)}</span>
-  <span>Status: ${escapeHtml(card.status)}</span>
-</div>
+<dl class="sample-facts">
+  <div><dt>Time</dt><dd>${escapeHtml(card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} minutes` : "Not stated")}</dd></div>
+  <div><dt>Level</dt><dd>${escapeHtml(card.learning?.level ?? "Not stated")}</dd></div>
+  <div><dt>Data</dt><dd>${escapeHtml(card.dataMode ?? "Not stated")}</dd></div>
+  <div><dt>Auth</dt><dd>${escapeHtml(card.auth ?? "Not stated")}</dd></div>
+</dl>
+<p class="prerequisites"><strong>Before you run it:</strong> ${escapeHtml(prerequisites)}</p>
 ${runBadgeHtml(card.runBadge)}
 ${runnablePanel}
-<h2>Capabilities</h2>
-${capabilityChips(card.capabilities, keyByKey)}
-<p><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a></p>
-${card.readmeHtml ? `<div class="readme">${card.readmeHtml}</div>` : `<p class="empty-state">No README.md found for this sample.</p>`}
+${renderInlineCodePanel(card)}
+<details class="background-notes"><summary>Background, configuration, and troubleshooting</summary>${card.readmeHtml ? `<div class="readme">${card.readmeHtml}</div>` : `<p>No README.md found for this sample.</p>`}</details>
+<div class="detail-footer"><div><h2>Capabilities</h2>${capabilityChips(card.capabilities, keyByKey)}</div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open repository source ↗</a></div>
 `;
   return pageShell({
     title: `${card.title} — Honua Samples`,
@@ -742,6 +810,14 @@ ${card.readmeHtml ? `<div class="readme">${card.readmeHtml}</div>` : `<p class="
   });
 }
 
+function renderInlineCodePanel(card) {
+  if (!card.sourceText || !card.sourcePath) return `<div class="no-bundle-panel"><p>Primary source file is not available in this catalog build.</p></div>`;
+  return `<section class="code-view" aria-labelledby="code-heading-${escapeAttr(card.id)}">
+  <div class="code-toolbar"><div><span>PRIMARY FILE</span><strong id="code-heading-${escapeAttr(card.id)}">${escapeHtml(card.sourcePath)}</strong></div><code>${escapeHtml(card.entrypoint?.command ?? "")}</code></div>
+  <pre tabindex="0"><code>${escapeHtml(card.sourceText)}</code></pre>
+</section>`;
+}
+
 // ---- rendering: sdk-js entry detail page --------------------------------
 
 function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice) {
@@ -751,9 +827,13 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
   const qualificationHtml = card.qualification
     ? `<span>Qualification: ${escapeHtml(card.qualification.state)}</span>`
     : "";
-  const runnablePanel = card.bundleRunnable
+  const previewVerified = card.bundleRunnable && card.evidence?.fixture?.status === "executed";
+  const runnablePanel = previewVerified
     ? renderEmbedPanel(card)
     : renderNoBundlePanel(
+        card.bundleRunnable
+          ? "A standalone build exists, but the handoff does not include a current executed fixture receipt. Open the code preview instead."
+          :
         card.bundleStaged && card.bundleSample?.runnability === "requires-host-fixture-service"
           ? "This build requires host fixture routes and is not a standalone gallery app."
           : card.bundleSample
@@ -775,6 +855,7 @@ ${renderSdkLifecycleNotice(card.lifecycleNotice)}
   ${qualificationHtml}
 </div>
 ${runnablePanel}
+${renderRemoteCodePanel(card)}
 <h2>Capabilities</h2>
 ${capabilityChips(card.capabilities, keyByKey)}
 ${renderSdkEvidenceSection(card)}
@@ -792,6 +873,15 @@ ${renderSdkEvidenceSection(card)}
     sourceCommit,
     bundleNotice,
   });
+}
+
+function renderRemoteCodePanel(card) {
+  const root = `https://raw.githubusercontent.com/${SDKJS_REPO}/trunk/${card.sourcePath}`;
+  return `<section class="code-view remote-code" data-source-root="${escapeAttr(root)}" data-source-path="${escapeAttr(card.sourcePath)}" data-github-url="${escapeAttr(card.githubUrl)}">
+  <div class="code-toolbar"><div><span>PRODUCER TRUNK PREVIEW</span><strong data-source-name>Finding the primary source file…</strong></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
+  <pre tabindex="0"><code data-source-code>Loading source from honua-sdk-js…</code></pre>
+  <p class="source-note" data-source-note>This preview follows producer trunk and is not the integrity-bound browser bundle shown above.</p>
+</section>`;
 }
 
 function renderSdkLifecycleNotice(notice) {
@@ -881,7 +971,7 @@ function assertNoDuplicateArticles(indexHtml) {
 async function copyAssets() {
   const destDir = path.join(SITE_DIR, "assets");
   await mkdir(destDir, { recursive: true });
-  for (const name of ["gallery.css", "gallery-filter.js"]) {
+  for (const name of ["gallery.css", "gallery-filter.js", "source-preview.js"]) {
     const content = await readFile(path.join(ASSETS_SRC_DIR, name), "utf8");
     await writeFile(path.join(destDir, name), content, "utf8");
   }

@@ -252,6 +252,15 @@ summary listing any sample that only passed on retry.
 
 ## Gallery
 
+This is the exhaustive developer code catalog, not the product demo center.
+Curated end-to-end evaluation stories live at
+[honua.io/demos.html](https://honua.io/demos.html). The cross-repository
+ownership and quality contract is documented in
+[the documentation, demo, and samples architecture](https://github.com/honua-io/honua-site/blob/trunk/docs/demo-samples-architecture.md).
+Repository-owned manifests declare a learning goal, level, estimated time, and
+prerequisites so the catalog can lead with developer intent instead of only
+internal capability metadata.
+
 Published at [samples.honua.io](https://samples.honua.io) -- **the single canonical Honua
 sample gallery** (decided on [honua-io/honua-samples#3](https://github.com/honua-io/honua-samples/issues/3)).
 Every deploy runs `node scripts/build-gallery.mjs`, which renders `site/` fresh

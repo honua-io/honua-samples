@@ -1,9 +1,16 @@
 {
   "id": "hello-featureserver-rest",
-  "title": "Hello FeatureServer (plain REST)",
-  "description": "Imports a tiny GeoJSON file, publishes it as a layer, and queries it back over the Esri-compatible GeoServices REST FeatureServer -- no SDK, just fetch().",
+  "title": "Query a public FeatureServer (plain REST)",
+  "description": "Discovers the first layer in the public Maui buildings service and queries three real features with plain fetch().",
+  "learning": {
+    "goal": "connect-data",
+    "level": "beginner",
+    "estimatedMinutes": 7,
+    "prerequisites": ["Node.js 20+", "Internet access"]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
   "capabilities": [
-    "import.file",
     "serve.geoservices-featureserver"
   ],
   "sdks": [

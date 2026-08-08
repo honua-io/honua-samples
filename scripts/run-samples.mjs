@@ -42,6 +42,7 @@ const RESULTS_PATH = path.join(RESULTS_DIR, "run-results.v1.json");
 const SCHEMA_PATH = path.join(REPO_ROOT, "schemas", "run-results.v1.schema.json");
 
 const BASE_URL = process.env.HONUA_BASE_URL ?? "http://localhost:8080";
+const PUBLIC_BASE_URL = process.env.HONUA_PUBLIC_BASE_URL ?? "https://demo.honua.io";
 const READY_TIMEOUT_MS = Number(process.env.HONUA_READY_TIMEOUT_MS ?? 120_000);
 const READY_POLL_INTERVAL_MS = 2_000;
 const MAX_ATTEMPTS = Math.max(1, Number(process.env.HONUA_SAMPLE_MAX_ATTEMPTS ?? 2));
@@ -81,7 +82,7 @@ async function main() {
   }
 
   console.log(
-    `run-samples: executing ${active.length} active sample(s) against ${BASE_URL} (server ${serverVersion}, runner edition "${RUNNER_EDITION}")`,
+    `run-samples: executing ${active.length} active sample(s) against local ${BASE_URL} and public ${PUBLIC_BASE_URL} (server ${serverVersion}, runner edition "${RUNNER_EDITION}")`,
   );
 
   const hasBrowserSample = active.some(
@@ -205,7 +206,7 @@ async function runSampleWithRetries(dirName, manifest, serverVersion, browserLan
 
 async function runBrowserAttempt(dirName, manifest, browserLane) {
   const sampleUrl = new URL(`${dirName}/${manifest.entrypoint.command}`, `http://localhost:${BROWSER_STATIC_PORT}/`);
-  sampleUrl.searchParams.set("baseUrl", BASE_URL);
+  sampleUrl.searchParams.set("baseUrl", targetBaseUrl(manifest));
   if (process.env.HONUA_ADMIN_API_KEY) {
     sampleUrl.searchParams.set("apiKey", process.env.HONUA_ADMIN_API_KEY);
   }
@@ -222,7 +223,7 @@ function runProcessAttempt(dirName, manifest) {
     // split(" ") breaks the first sample that needs one.
     const child = spawn(manifest.entrypoint.command, {
       cwd: sampleCwd,
-      env: process.env,
+      env: { ...process.env, HONUA_BASE_URL: targetBaseUrl(manifest) },
       stdio: "inherit",
       shell: true,
     });
@@ -235,6 +236,10 @@ function runProcessAttempt(dirName, manifest) {
       resolve(code === 0 ? { outcome: "pass" } : { outcome: "fail", error: `exit code ${code}` });
     });
   });
+}
+
+function targetBaseUrl(manifest) {
+  return manifest.dataMode === "public-live" ? PUBLIC_BASE_URL : BASE_URL;
 }
 
 async function listSampleDirs() {

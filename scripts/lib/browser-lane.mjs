@@ -1,38 +1,15 @@
 // Headless-browser lane for scripts/run-samples.mjs (honua-io/honua-samples#2,
 // deliverable 1: entrypoint.type "browser").
 //
-// Playwright is this repo's one allowed exception to the zero-npm-dependency
-// house style -- there is no way to execute a sample's real browser-side
-// JS/DOM code headlessly without a real browser engine. To keep it OUT of any
-// package.json (this repo has none, on purpose), the browser is installed
-// on demand into REPO_ROOT/node_modules via a pinned, explicit
-// `npm install --no-save` -- NOT tracked by any manifest, gitignored like
-// every other node_modules/ in this repo.
-//
-// Why not just shell out to `npx playwright@<pinned>` for everything (the
-// obvious zero-footprint option)? Because npx only puts the temp install's
-// node_modules/.bin on PATH for the CLI it launches -- it does NOT make the
-// installed package importable/requireable from an arbitrary script (no
-// NODE_PATH, no cwd change), which is a hard blocker for actually driving a
-// page (waiting for a selector, reading an attribute) rather than just
-// running a fixed CLI subcommand like `screenshot`. Installing into
-// REPO_ROOT/node_modules with a pinned version gets us a normal, resolvable
-// `import "playwright"` from any script under this repo (Node's standard
-// upward node_modules walk finds it), while still writing nothing to any
-// committed dependency manifest. `npx playwright@<pinned> install chromium`
-// (or the equivalent local invocation below) is still what actually
-// downloads the browser binary, matching the "prefer npx" guidance for that
-// one-off operation.
-//
-// Pin bumps: update PLAYWRIGHT_VERSION below (and re-run once locally so the
-// version check re-installs) -- there is no lockfile to bump instead.
+// Playwright is declared and locked in package.json. CI installs the package
+// and Chromium before invoking this lane; runtime code never mutates
+// node_modules, downgrades browsers, or performs network installation.
 
-import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-export const PLAYWRIGHT_VERSION = "1.48.2";
+export const PLAYWRIGHT_VERSION = "1.58.2";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -48,48 +25,21 @@ const MIME_TYPES = {
 };
 
 /**
- * Ensures a pinned `playwright` install is resolvable from REPO_ROOT, and
- * that its Chromium browser binary is downloaded. Idempotent and cheap on a
- * warm cache (both `npm install` and `playwright install` no-op quickly when
- * the pinned version/binary are already present).
+ * Resolves the lockfile-managed browser driver. Dependency and browser
+ * installation are explicit workflow responsibilities.
  *
  * @param {{ repoRoot: string, log: (msg: string) => void }} ctx
  */
-export async function ensureBrowserReady({ repoRoot, log }) {
-  const pkgPath = path.join(repoRoot, "node_modules", "playwright", "package.json");
-  let installedVersion;
+export async function ensureBrowserReady({ log }) {
   try {
-    installedVersion = JSON.parse(await readFile(pkgPath, "utf8")).version;
-  } catch {
-    installedVersion = undefined;
-  }
-
-  if (installedVersion !== PLAYWRIGHT_VERSION) {
-    log(
-      `run-samples: installing playwright@${PLAYWRIGHT_VERSION} into node_modules/ (found ${installedVersion ?? "none"}) -- one-time, not committed, not in any package.json`,
+    const { chromium } = await import("@playwright/test");
+    log(`run-samples: using lockfile-managed @playwright/test ${PLAYWRIGHT_VERSION}`);
+    return chromium;
+  } catch (error) {
+    throw new Error(
+      `Browser lane is not installed. Run \`npm ci\` and \`npx playwright install chromium\`: ${error.message}`,
     );
-    // shell: true so this resolves "npm" off PATH the same way a developer's
-    // or CI runner's shell would, rather than guessing at npm's install
-    // layout relative to the running node binary.
-    execFileSync("npm", ["install", "--no-save", "--no-audit", "--no-fund", `playwright@${PLAYWRIGHT_VERSION}`], {
-      cwd: repoRoot,
-      stdio: "inherit",
-      shell: true,
-    });
   }
-
-  log(`run-samples: ensuring Chromium (playwright@${PLAYWRIGHT_VERSION}) is installed...`);
-  execFileSync(
-    process.execPath,
-    [path.join(repoRoot, "node_modules", "playwright", "cli.js"), "install", "chromium"],
-    { cwd: repoRoot, stdio: "inherit" },
-  );
-
-  // Dynamic import: only resolvable once the install step above has run, and
-  // only ever needed at all when the sample set actually contains a
-  // "browser" entrypoint sample.
-  const { chromium } = await import(path.join(repoRoot, "node_modules", "playwright", "index.mjs"));
-  return chromium;
 }
 
 /**
