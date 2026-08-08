@@ -75,6 +75,29 @@ export const SUPPORTED_HANDOFF_SCHEMA_VERSION = 1;
 export const SUPPORTED_FIXTURE_FORMAT = "honua.site.sdk-sample-consumer-fixture.v3";
 export const SUPPORTED_FIXTURE_SCHEMA_VERSION = 3;
 
+export const NEXT_HANDOFF_FORMAT = "honua.site.sdk-sample-consumer-handoff.v2";
+export const NEXT_HANDOFF_SCHEMA_VERSION = 2;
+export const NEXT_FIXTURE_FORMAT = "honua.site.sdk-sample-consumer-fixture.v4";
+export const NEXT_FIXTURE_SCHEMA_VERSION = 4;
+
+const LEGACY_CONTRACT = Object.freeze({
+  id: "v1/v3",
+  handoffFormat: SUPPORTED_HANDOFF_FORMAT,
+  handoffSchemaVersion: SUPPORTED_HANDOFF_SCHEMA_VERSION,
+  fixtureFormat: SUPPORTED_FIXTURE_FORMAT,
+  fixtureSchemaVersion: SUPPORTED_FIXTURE_SCHEMA_VERSION,
+  siteProjectionFormat: "honua.site.sdk-sample-projection.v2",
+});
+const NEXT_CONTRACT = Object.freeze({
+  id: "v2/v4",
+  handoffFormat: NEXT_HANDOFF_FORMAT,
+  handoffSchemaVersion: NEXT_HANDOFF_SCHEMA_VERSION,
+  fixtureFormat: NEXT_FIXTURE_FORMAT,
+  fixtureSchemaVersion: NEXT_FIXTURE_SCHEMA_VERSION,
+  siteProjectionFormat: "honua.site.sdk-sample-projection.v3",
+});
+const SUPPORTED_CONTRACTS = Object.freeze([NEXT_CONTRACT, LEGACY_CONTRACT]);
+
 export const DEFAULT_HANDOFF_URL =
   "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v1.json";
 export const DEFAULT_HANDOFF_FIXTURE_URL =
@@ -82,6 +105,18 @@ export const DEFAULT_HANDOFF_FIXTURE_URL =
 export const DEFAULT_HANDOFF_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.snapshot.json");
 export const DEFAULT_FIXTURE_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff-fixture.snapshot.json");
 export const DEFAULT_SNAPSHOT_META_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.snapshot.meta.json");
+
+export const DEFAULT_HANDOFF_V2_URL =
+  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v2.json";
+export const DEFAULT_FIXTURE_V4_URL =
+  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json";
+export const DEFAULT_HANDOFF_V2_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.v2.snapshot.json");
+export const DEFAULT_FIXTURE_V4_SNAPSHOT_PATH = path.join(
+  REPO_ROOT,
+  "config",
+  "sdkjs-handoff-fixture.v4.snapshot.json",
+);
+export const DEFAULT_SNAPSHOT_V2_META_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.v2.snapshot.meta.json");
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -99,7 +134,13 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
  */
 export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }) {
   const errors = [];
-  const reject = (handoff = null, fixture = null) => ({ ok: false, handoff, fixture, errors });
+  const reject = (handoff = null, fixture = null, contract = null) => ({
+    ok: false,
+    handoff,
+    fixture,
+    contract,
+    errors,
+  });
 
   let fixture;
   try {
@@ -108,24 +149,32 @@ export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }
     errors.push(`consumer fixture is not valid JSON: ${err.message}`);
     return reject();
   }
-  if (fixture.format !== SUPPORTED_FIXTURE_FORMAT || fixture.schemaVersion !== SUPPORTED_FIXTURE_SCHEMA_VERSION) {
+  const contract = SUPPORTED_CONTRACTS.find(
+    (candidate) =>
+      fixture.format === candidate.fixtureFormat && fixture.schemaVersion === candidate.fixtureSchemaVersion,
+  );
+  if (!contract) {
     errors.push(
       `schema-incompatible consumer fixture: got format "${fixture.format}" schemaVersion ${fixture.schemaVersion}, ` +
-        `this consumer supports "${SUPPORTED_FIXTURE_FORMAT}" schemaVersion ${SUPPORTED_FIXTURE_SCHEMA_VERSION}`,
+        `this consumer supports ${SUPPORTED_CONTRACTS.map(
+          (candidate) => `"${candidate.fixtureFormat}" schemaVersion ${candidate.fixtureSchemaVersion}`,
+        ).join(" or ")}`,
     );
     return reject(null, fixture);
   }
   const accepts = fixture.accepts ?? {};
   if (
-    accepts.handoffFormat !== SUPPORTED_HANDOFF_FORMAT ||
-    accepts.handoffSchemaVersion !== SUPPORTED_HANDOFF_SCHEMA_VERSION
+    accepts.handoffFormat !== contract.handoffFormat ||
+    accepts.handoffSchemaVersion !== contract.handoffSchemaVersion ||
+    accepts.siteProjectionFormat !== contract.siteProjectionFormat
   ) {
     errors.push(
       `schema-incompatible fixture accepts block: producer emits "${accepts.handoffFormat}" ` +
-        `schemaVersion ${accepts.handoffSchemaVersion}, this consumer supports "${SUPPORTED_HANDOFF_FORMAT}" ` +
-        `schemaVersion ${SUPPORTED_HANDOFF_SCHEMA_VERSION} -- bump this consumer deliberately, never coerce`,
+        `schemaVersion ${accepts.handoffSchemaVersion} from "${accepts.siteProjectionFormat}", this consumer's ` +
+        `${contract.id} contract requires "${contract.handoffFormat}" schemaVersion ${contract.handoffSchemaVersion} ` +
+        `from "${contract.siteProjectionFormat}" -- bump this consumer deliberately, never coerce`,
     );
-    return reject(null, fixture);
+    return reject(null, fixture, contract);
   }
 
   // Content binding: the fixture pins the handoff's exact bytes + sha256.
@@ -139,7 +188,7 @@ export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }
       `handoff content does not match the producer fixture pin (tampered, stale, or locally reconstructed): ` +
         `got ${handoffBytes.length} bytes sha256 ${actualSha}, fixture pins ${pin.bytes} bytes sha256 ${pin.sha256}`,
     );
-    return reject(null, fixture);
+    return reject(null, fixture, contract);
   }
 
   let handoff;
@@ -147,14 +196,14 @@ export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }
     handoff = JSON.parse(handoffText);
   } catch (err) {
     errors.push(`handoff is not valid JSON: ${err.message}`);
-    return reject(null, fixture);
+    return reject(null, fixture, contract);
   }
   if (handoff.format !== accepts.handoffFormat || handoff.schemaVersion !== accepts.handoffSchemaVersion) {
     errors.push(
       `schema-incompatible handoff: declares format "${handoff.format}" schemaVersion ${handoff.schemaVersion}, ` +
         `fixture accepts "${accepts.handoffFormat}" schemaVersion ${accepts.handoffSchemaVersion}`,
     );
-    return reject(handoff, fixture);
+    return reject(handoff, fixture, contract);
   }
 
   const cards = Array.isArray(handoff.cards) ? handoff.cards : [];
@@ -311,8 +360,35 @@ export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }
     }
   }
 
-  if (errors.length > 0) return reject(handoff, fixture);
-  return { ok: true, handoff, fixture, errors: [] };
+  if (errors.length > 0) return reject(handoff, fixture, contract);
+  return {
+    ok: true,
+    handoff: normalizeSdkJsProjection(handoff),
+    fixture,
+    contract,
+    errors: [],
+  };
+}
+
+/**
+ * Removes producer-version transport metadata while preserving the complete
+ * card, route, lifecycle, qualification, filter, and evidence projection.
+ * Every downstream consumer operates on this one shape regardless of whether
+ * the admitted source pair was v1/v3 or v2/v4.
+ */
+export function normalizeSdkJsProjection(handoff) {
+  return structuredClone({
+    sdk: handoff.sdk,
+    ownership: handoff.ownership,
+    filters: handoff.filters,
+    counts: handoff.counts,
+    cards: handoff.cards,
+    qualifiedJourneys: handoff.qualifiedJourneys,
+    canonicalRoutes: handoff.canonicalRoutes,
+    legacyRoutes: handoff.legacyRoutes,
+    lifecycleNotices: handoff.lifecycleNotices,
+    gaps: handoff.gaps,
+  });
 }
 
 // ---- cross-source merge ----------------------------------------------------
@@ -433,18 +509,17 @@ export function listSdkProjectedIdentities(handoff) {
 // ---- loading ---------------------------------------------------------------
 
 /**
- * Loads and admits the handoff + fixture pair. Resolution order:
- *   1. live fetch of both files (env-overridable URLs); the pair must pass
- *      admission to be used, and on success the byte-exact snapshots are
- *      refreshed (unless refreshSnapshot: false, used by --check).
- *   2. the committed byte-exact snapshot pair, which must itself pass
- *      admission.
- * If neither source yields an admissible pair the returned promise rejects --
- * there is deliberately no third fallback and no local reconstruction.
- *
- * @returns {Promise<{ handoff: object, fixture: object, source: string }>}
+ * Loads and admits the handoff + fixture pair in this strict order:
+ * next live -> next snapshot -> legacy live -> legacy snapshot.
+ * A next-generation pair that is present but invalid fails closed immediately;
+ * only an unavailable next source advances to the following fallback.
  */
 export async function loadSdkJsHandoff({
+  nextHandoffUrl = process.env.SDKJS_HANDOFF_V2_URL?.trim() || DEFAULT_HANDOFF_V2_URL,
+  nextFixtureUrl = process.env.SDKJS_HANDOFF_FIXTURE_V4_URL?.trim() || DEFAULT_FIXTURE_V4_URL,
+  nextSnapshotPath = DEFAULT_HANDOFF_V2_SNAPSHOT_PATH,
+  nextFixtureSnapshotPath = DEFAULT_FIXTURE_V4_SNAPSHOT_PATH,
+  nextMetaPath = DEFAULT_SNAPSHOT_V2_META_PATH,
   handoffUrl = process.env.SDKJS_HANDOFF_URL?.trim() || DEFAULT_HANDOFF_URL,
   fixtureUrl = process.env.SDKJS_HANDOFF_FIXTURE_URL?.trim() || DEFAULT_HANDOFF_FIXTURE_URL,
   snapshotPath = DEFAULT_HANDOFF_SNAPSHOT_PATH,
@@ -452,45 +527,118 @@ export async function loadSdkJsHandoff({
   metaPath = DEFAULT_SNAPSHOT_META_PATH,
   refreshSnapshot = true,
   now = new Date(),
+  fetchTextFn = fetchText,
 } = {}) {
-  let liveFailure;
-  try {
-    const [handoffText, fixtureText] = await Promise.all([fetchText(handoffUrl), fetchText(fixtureUrl)]);
-    const admission = admitSdkJsHandoff({ handoffText, fixtureText, now });
-    if (!admission.ok) {
-      throw new Error(`live handoff pair rejected by admission:\n  - ${admission.errors.join("\n  - ")}`);
-    }
+  const nextLive = await acquireLivePair({
+    handoffUrl: nextHandoffUrl,
+    fixtureUrl: nextFixtureUrl,
+    now,
+    fetchTextFn,
+  });
+  if (nextLive.state === "invalid") {
+    throw presentInvalidError("next live", nextLive);
+  }
+  if (nextLive.state === "valid") {
     if (refreshSnapshot) {
-      await writeFile(snapshotPath, handoffText, "utf8");
-      await writeFile(fixtureSnapshotPath, fixtureText, "utf8");
-      await writeSnapshotMeta(metaPath, handoffUrl, fixtureUrl);
+      await writeSnapshotPair({
+        acquisition: nextLive,
+        snapshotPath: nextSnapshotPath,
+        fixtureSnapshotPath: nextFixtureSnapshotPath,
+        metaPath: nextMetaPath,
+        handoffSourceUrl: nextHandoffUrl,
+        fixtureSourceUrl: nextFixtureUrl,
+      });
     }
-    return { handoff: admission.handoff, fixture: admission.fixture, source: `live fetch (${handoffUrl})` };
-  } catch (err) {
-    liveFailure = err;
-    console.warn(
-      `build-gallery: live sdk-js handoff unusable (${err.message}) -- ` +
-        `falling back to the committed snapshot pair at ${path.relative(REPO_ROOT, snapshotPath)}`,
+    return admittedResult(nextLive, `next live fetch (${nextHandoffUrl})`);
+  }
+  console.warn(`build-gallery: next sdk-js handoff live pair unavailable (${nextLive.error.message})`);
+
+  const nextSnapshot = await acquireSnapshotPair({
+    snapshotPath: nextSnapshotPath,
+    fixtureSnapshotPath: nextFixtureSnapshotPath,
+    now,
+  });
+  if (nextSnapshot.state === "invalid") {
+    throw presentInvalidError(`next snapshot (${path.relative(REPO_ROOT, nextSnapshotPath)})`, nextSnapshot);
+  }
+  if (nextSnapshot.state === "valid") {
+    return admittedResult(nextSnapshot, `next committed snapshot (${path.relative(REPO_ROOT, nextSnapshotPath)})`);
+  }
+  console.warn(`build-gallery: next sdk-js handoff snapshot pair unavailable (${nextSnapshot.error.message})`);
+
+  const legacyLive = await acquireLivePair({ handoffUrl, fixtureUrl, now, fetchTextFn });
+  if (legacyLive.state === "valid") {
+    if (refreshSnapshot) {
+      await writeSnapshotPair({
+        acquisition: legacyLive,
+        snapshotPath,
+        fixtureSnapshotPath,
+        metaPath,
+        handoffSourceUrl: handoffUrl,
+        fixtureSourceUrl: fixtureUrl,
+      });
+    }
+    return admittedResult(legacyLive, `legacy live fetch (${handoffUrl})`);
+  }
+  const legacyLiveFailure =
+    legacyLive.state === "invalid"
+      ? `rejected by admission:\n  - ${legacyLive.admission.errors.join("\n  - ")}`
+      : `unavailable: ${legacyLive.error.message}`;
+  console.warn(`build-gallery: legacy sdk-js handoff live pair unusable (${legacyLiveFailure})`);
+
+  const legacySnapshot = await acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now });
+  if (legacySnapshot.state === "valid") {
+    return admittedResult(legacySnapshot, `legacy committed snapshot (${path.relative(REPO_ROOT, snapshotPath)})`);
+  }
+  if (legacySnapshot.state === "invalid") {
+    throw invalidTerminalError(
+      `legacy snapshot (${path.relative(REPO_ROOT, snapshotPath)})`,
+      legacySnapshot.admission.errors,
     );
+  }
+  const error = new Error(
+    `sdk-js handoff unavailable from all four sources; legacy snapshot read failed: ${legacySnapshot.error.message}`,
+  );
+  error.code = "SDKJS_HANDOFF_UNAVAILABLE";
+  throw error;
+}
+
+/** Offline resolver used by coverage generation so exclusion and gallery
+ * admission select the same normalized projection generation. */
+export async function loadSdkJsHandoffSnapshots({
+  nextSnapshotPath = DEFAULT_HANDOFF_V2_SNAPSHOT_PATH,
+  nextFixtureSnapshotPath = DEFAULT_FIXTURE_V4_SNAPSHOT_PATH,
+  snapshotPath = DEFAULT_HANDOFF_SNAPSHOT_PATH,
+  fixtureSnapshotPath = DEFAULT_FIXTURE_SNAPSHOT_PATH,
+  now = new Date(),
+} = {}) {
+  const nextSnapshot = await acquireSnapshotPair({
+    snapshotPath: nextSnapshotPath,
+    fixtureSnapshotPath: nextFixtureSnapshotPath,
+    now,
+  });
+  if (nextSnapshot.state === "valid") {
+    return admittedResult(nextSnapshot, `next committed snapshot (${path.relative(REPO_ROOT, nextSnapshotPath)})`);
+  }
+  if (nextSnapshot.state === "invalid") {
+    throw presentInvalidError(`next snapshot (${path.relative(REPO_ROOT, nextSnapshotPath)})`, nextSnapshot);
   }
 
-  const [handoffText, fixtureText] = await Promise.all([
-    readFile(snapshotPath, "utf8"),
-    readFile(fixtureSnapshotPath, "utf8"),
-  ]);
-  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now });
-  if (!admission.ok) {
-    throw new Error(
-      `sdk-js handoff admission failed for BOTH sources -- refusing to render SDK cards from a rejected projection.\n` +
-        `live: ${liveFailure.message}\n` +
-        `snapshot (${path.relative(REPO_ROOT, snapshotPath)}):\n  - ${admission.errors.join("\n  - ")}`,
+  const legacySnapshot = await acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now });
+  if (legacySnapshot.state === "valid") {
+    return admittedResult(legacySnapshot, `legacy committed snapshot (${path.relative(REPO_ROOT, snapshotPath)})`);
+  }
+  if (legacySnapshot.state === "invalid") {
+    throw invalidTerminalError(
+      `legacy snapshot (${path.relative(REPO_ROOT, snapshotPath)})`,
+      legacySnapshot.admission.errors,
     );
   }
-  return {
-    handoff: admission.handoff,
-    fixture: admission.fixture,
-    source: `committed snapshot (${path.relative(REPO_ROOT, snapshotPath)})`,
-  };
+  const error = new Error(
+    `next snapshot unavailable (${nextSnapshot.error.message}); legacy snapshot unavailable (${legacySnapshot.error.message})`,
+  );
+  error.code = "SDKJS_HANDOFF_UNAVAILABLE";
+  throw error;
 }
 
 async function fetchText(url) {
@@ -499,17 +647,105 @@ async function fetchText(url) {
   return await response.text();
 }
 
-async function writeSnapshotMeta(metaPath, handoffSourceUrl, fixtureSourceUrl) {
+async function acquireLivePair({ handoffUrl, fixtureUrl, now, fetchTextFn }) {
+  let handoffText;
+  let fixtureText;
+  try {
+    [handoffText, fixtureText] = await Promise.all([fetchTextFn(handoffUrl), fetchTextFn(fixtureUrl)]);
+  } catch (error) {
+    return { state: "unavailable", error };
+  }
+  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now });
+  return admission.ok
+    ? { state: "valid", admission, handoffText, fixtureText }
+    : { state: "invalid", admission, handoffText, fixtureText };
+}
+
+async function acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now }) {
+  let handoffText;
+  let fixtureText;
+  try {
+    [handoffText, fixtureText] = await Promise.all([
+      readFile(snapshotPath, "utf8"),
+      readFile(fixtureSnapshotPath, "utf8"),
+    ]);
+  } catch (error) {
+    return { state: "unavailable", error };
+  }
+  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now });
+  return admission.ok
+    ? { state: "valid", admission, handoffText, fixtureText }
+    : { state: "invalid", admission, handoffText, fixtureText };
+}
+
+function admittedResult(acquisition, source) {
+  return {
+    handoff: acquisition.admission.handoff,
+    fixture: acquisition.admission.fixture,
+    contract: acquisition.admission.contract.id,
+    source,
+  };
+}
+
+function presentInvalidError(label, acquisition) {
+  const error = new Error(
+    `${label} sdk-js handoff pair is present but rejected by admission; refusing fallback:\n  - ${acquisition.admission.errors.join("\n  - ")}`,
+  );
+  error.code = "SDKJS_NEXT_PRESENT_INVALID";
+  return error;
+}
+
+function invalidTerminalError(label, errors) {
+  const error = new Error(`${label} sdk-js handoff pair rejected by admission:\n  - ${errors.join("\n  - ")}`);
+  error.code = "SDKJS_HANDOFF_INVALID";
+  return error;
+}
+
+async function writeSnapshotPair({
+  acquisition,
+  snapshotPath,
+  fixtureSnapshotPath,
+  metaPath,
+  handoffSourceUrl,
+  fixtureSourceUrl,
+}) {
+  await Promise.all([
+    writeFile(snapshotPath, acquisition.handoffText, "utf8"),
+    writeFile(fixtureSnapshotPath, acquisition.fixtureText, "utf8"),
+  ]);
+  await writeSnapshotMeta({
+    metaPath,
+    contract: acquisition.admission.contract,
+    snapshotPath,
+    fixtureSnapshotPath,
+    handoffSourceUrl,
+    fixtureSourceUrl,
+  });
+}
+
+async function writeSnapshotMeta({
+  metaPath,
+  contract,
+  snapshotPath,
+  fixtureSnapshotPath,
+  handoffSourceUrl,
+  fixtureSourceUrl,
+}) {
   const meta = {
     _comment:
-      "Provenance for the byte-exact snapshot pair config/sdkjs-handoff.snapshot.json (the honua-sdk-js " +
-      "site-consumer handoff artifact) and config/sdkjs-handoff-fixture.snapshot.json (its v3 consumer fixture, " +
-      "which content-binds the handoff by bytes+sha256). Both files are committed EXACTLY as fetched -- never " +
+      `Provenance for the byte-exact ${contract.id} snapshot pair ${path.relative(REPO_ROOT, snapshotPath)} and ` +
+      `${path.relative(REPO_ROOT, fixtureSnapshotPath)}. Both files are committed EXACTLY as fetched -- never ` +
       "reformat, re-serialize, or hand-edit them: the admission gate in scripts/lib/sdkjs-handoff.mjs verifies " +
       "the handoff's bytes and sha256 against the fixture's input pin, so any local mutation (including " +
       "pretty-printing) is rejected as a tampered/locally-reconstructed projection (honua-io/honua-samples#16). " +
       "Refreshed automatically by scripts/build-gallery.mjs whenever the live fetch succeeds and the fetched " +
       "pair passes admission.",
+    contract: {
+      handoffFormat: contract.handoffFormat,
+      handoffSchemaVersion: contract.handoffSchemaVersion,
+      fixtureFormat: contract.fixtureFormat,
+      fixtureSchemaVersion: contract.fixtureSchemaVersion,
+    },
     handoffSourceUrl,
     fixtureSourceUrl,
     fetchedAt: new Date().toISOString(),

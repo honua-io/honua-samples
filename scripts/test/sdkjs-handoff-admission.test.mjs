@@ -14,6 +14,8 @@ import {
   admitSdkJsHandoff,
   listSdkProjectedIdentities,
   mergeSdkProjection,
+  DEFAULT_FIXTURE_V4_SNAPSHOT_PATH,
+  DEFAULT_HANDOFF_V2_SNAPSHOT_PATH,
   DEFAULT_FIXTURE_SNAPSHOT_PATH,
   DEFAULT_HANDOFF_SNAPSHOT_PATH,
 } from "../lib/sdkjs-handoff.mjs";
@@ -22,8 +24,14 @@ import { deriveCapabilityKeys } from "../lib/sdkjs-catalog.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
-const handoffText = await readFile(DEFAULT_HANDOFF_SNAPSHOT_PATH, "utf8");
-const fixtureText = await readFile(DEFAULT_FIXTURE_SNAPSHOT_PATH, "utf8");
+// Git's Windows checkout converts the protected historical JSON snapshots to
+// CRLF even though the producer fixture pins their LF bytes. Tests restore the
+// producer representation in memory; production admission never normalizes.
+const producerText = (text) => text.replaceAll("\r\n", "\n");
+const handoffText = producerText(await readFile(DEFAULT_HANDOFF_SNAPSHOT_PATH, "utf8"));
+const fixtureText = producerText(await readFile(DEFAULT_FIXTURE_SNAPSHOT_PATH, "utf8"));
+const nextHandoffText = producerText(await readFile(DEFAULT_HANDOFF_V2_SNAPSHOT_PATH, "utf8"));
+const nextFixtureText = producerText(await readFile(DEFAULT_FIXTURE_V4_SNAPSHOT_PATH, "utf8"));
 const catalogSnapshot = JSON.parse(
   await readFile(path.join(REPO_ROOT, "config", "sdkjs-catalog.snapshot.json"), "utf8"),
 );
@@ -69,6 +77,25 @@ test("pinned snapshot pair is admitted deterministically", () => {
   assert.equal(new Set(ids).size, ids.length);
 });
 
+test("preferred v2/v4 snapshot pair is admitted and normalized to the same stable identities and routes", () => {
+  const legacy = admitSdkJsHandoff({ handoffText, fixtureText, now: FRESH_NOW });
+  const next = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: FRESH_NOW });
+  assert.equal(legacy.ok, true, legacy.errors.join("; "));
+  assert.equal(next.ok, true, next.errors.join("; "));
+  assert.equal(legacy.contract.id, "v1/v3");
+  assert.equal(next.contract.id, "v2/v4");
+  assert.equal(next.handoff.format, undefined, "producer transport version is not exposed in the internal projection");
+  assert.deepEqual(
+    next.handoff.cards.map((card) => card.id),
+    legacy.handoff.cards.map((card) => card.id),
+  );
+  assert.deepEqual(next.handoff.canonicalRoutes, legacy.handoff.canonicalRoutes);
+  assert.deepEqual(
+    next.handoff.cards.map((card) => [card.id, card.source.path, card.source.docsPath]),
+    legacy.handoff.cards.map((card) => [card.id, card.source.path, card.source.docsPath]),
+  );
+});
+
 test("tampered handoff bytes are rejected by the fixture content binding", () => {
   const tampered = handoffText.replace("Safe Agent Workbench", "Safe Agent Workshop");
   assert.notEqual(tampered, handoffText);
@@ -91,6 +118,19 @@ test("schema-incompatible fixture accepts block is rejected", () => {
   const result = admitSdkJsHandoff({ handoffText, fixtureText: JSON.stringify(fixture), now: FRESH_NOW });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /schema-incompatible/);
+});
+
+test("unknown future fixture generation is rejected instead of coerced", () => {
+  const fixture = JSON.parse(nextFixtureText);
+  fixture.format = "honua.site.sdk-sample-consumer-fixture.v5";
+  fixture.schemaVersion = 5;
+  const result = admitSdkJsHandoff({
+    handoffText: nextHandoffText,
+    fixtureText: JSON.stringify(fixture),
+    now: FRESH_NOW,
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join("\n"), /schema-incompatible consumer fixture/);
 });
 
 test("handoff declaring a different format than the fixture accepts is rejected even with a matching digest", () => {

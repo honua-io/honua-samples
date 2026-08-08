@@ -275,8 +275,8 @@ from **two inputs**:
    SDK projection since
    [honua-io/honua-samples#16](https://github.com/honua-io/honua-samples/issues/16),
    fetched live from
-   [`samples/dist/honua-site-consumer-handoff.v1.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v1.json)
-   together with its v3 consumer fixture, which content-binds the handoff by
+   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v2.json)
+   together with its v4 consumer fixture, which content-binds the handoff by
    exact bytes + sha256. `scripts/lib/sdkjs-handoff.mjs` admits the pair
    through a fail-closed gate (schema/version compatibility, fixture digest
    binding, duplicate-stable-identity, referential-integrity, and
@@ -311,14 +311,16 @@ one qualified artifact as two receipts per capability.
 
 ### Resilience: upstream fetches degrade to committed snapshots
 
-If the live fetch of the handoff pair fails (network blip, rate limit,
-upstream outage) *or* the live pair is rejected by admission, the build falls
-back to the committed byte-exact snapshot pair
-([`config/sdkjs-handoff.snapshot.json`](config/sdkjs-handoff.snapshot.json) +
-[`config/sdkjs-handoff-fixture.snapshot.json`](config/sdkjs-handoff-fixture.snapshot.json),
-provenance in `config/sdkjs-handoff.snapshot.meta.json`) -- which must itself
-pass the same admission gate, or the build fails. Never hand-edit or
-reformat those snapshots: the digest binding rejects any local mutation.
+Resolution is additive and deterministic: next v2/v4 live pair, next v2/v4
+snapshot, legacy v1/v3 live pair, then legacy v1/v3 snapshot. A next pair that
+is present but invalid fails closed instead of silently downgrading. The
+preferred byte-exact snapshots are
+[`config/sdkjs-handoff.v2.snapshot.json`](config/sdkjs-handoff.v2.snapshot.json) +
+[`config/sdkjs-handoff-fixture.v4.snapshot.json`](config/sdkjs-handoff-fixture.v4.snapshot.json),
+with provenance in `config/sdkjs-handoff.v2.snapshot.meta.json`. The existing
+v1/v3 snapshots remain unchanged as the final compatibility fallback. Never
+hand-edit or reformat any pair: the fixture digest binding rejects local
+mutation.
 Likewise, if the live fetch of `catalog.v2.json` fails,
 `scripts/lib/sdkjs-catalog.mjs` falls back to
 [`config/sdkjs-catalog.snapshot.json`](config/sdkjs-catalog.snapshot.json).
