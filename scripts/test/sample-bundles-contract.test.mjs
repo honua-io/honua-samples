@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   DEFAULT_MANIFEST_URL,
   assertMinimumBundles,
+  mergeLocalManifestEntries,
   parseMinimumBundles,
   validateManifestShape,
 } from "../lib/sample-bundles.mjs";
@@ -60,4 +61,11 @@ test("parses and enforces the production runnable-bundle floor", () => {
       ),
     /requires at least 1 staged standalone bundle.*manifest unavailable/,
   );
+});
+
+test("local overrides replace release metadata while local additions append", () => {
+  const replacement = { ...validManifest.samples[0], files: [{ path: "index.html", bytes: 2, sha256: "1".repeat(64) }] };
+  const addition = { ...replacement, id: "new-local-sample" };
+  const merged = mergeLocalManifestEntries(validManifest, [{ manifest: replacement }, { manifest: addition }]);
+  assert.deepEqual(merged.samples, [replacement, addition]);
 });

@@ -97,6 +97,7 @@ export async function ensureSampleBundlesStaged({
   stagingRoot = DEFAULT_STAGING_ROOT,
   localSdkJsRoot = process.env.SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT?.trim() || DEFAULT_LOCAL_SDKJS_ROOT,
   localSampleIds = process.env.SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS?.trim() || DEFAULT_LOCAL_SAMPLE_IDS,
+  localOverrideIds = process.env.SAMPLE_BUNDLES_LOCAL_OVERRIDE_IDS?.trim() || "",
   refreshSnapshot = true,
   forceRefetch = false,
   minimumBundles = parseMinimumBundles(process.env.MIN_RUNNABLE_BUNDLES),
@@ -149,21 +150,13 @@ export async function ensureSampleBundlesStaged({
   const localEntries = await collectLocalSampleManifestEntries({
     localRoot: localSdkRootAvailable,
     explicitIds: localSampleIds,
+    explicitOverrideIds: localOverrideIds,
     liveManifest: manifest,
   });
   const localStagedIds = await stageLocalBundles(localEntries, stagingRoot);
-  const manifestAdditions = localEntries
-    .filter((entry) => !manifest.samples.some((s) => s.id === entry.manifest.id))
-    .map((entry) => entry.manifest.id);
-  const missingEntries = localEntries.filter((entry) => manifestAdditions.includes(entry.manifest.id));
-  if (missingEntries.length > 0) {
-    manifest = {
-      ...manifest,
-      samples: [...manifest.samples, ...missingEntries.map((entry) => entry.manifest)],
-    };
-  }
+  manifest = mergeLocalManifestEntries(manifest, localEntries);
 
-  const allStagedIds = [...stagedIds, ...localStagedIds];
+  const allStagedIds = [...new Set([...stagedIds, ...localStagedIds])];
   assertMinimumBundles({ manifest, stagedIds: allStagedIds, degradedReason: null }, minimumBundles);
 
   if (refreshSnapshot) {
@@ -222,9 +215,10 @@ async function canUseLocalSdkJsRoot(localRoot) {
   }
 }
 
-async function collectLocalSampleManifestEntries({ localRoot, explicitIds, liveManifest }) {
+async function collectLocalSampleManifestEntries({ localRoot, explicitIds, explicitOverrideIds, liveManifest }) {
   if (!localRoot) return [];
   const requestedIds = normalizeLocalIds(explicitIds, liveManifest);
+  const overrideIds = new Set(normalizeIdList(explicitOverrideIds));
   if (requestedIds.length === 0) return [];
 
   const packageJson = JSON.parse(await safeReadText(path.join(localRoot, "package.json"), "{}"));
@@ -234,6 +228,8 @@ async function collectLocalSampleManifestEntries({ localRoot, explicitIds, liveM
   const seen = new Set();
 
   for (const id of requestedIds) {
+    const liveSample = liveManifest.samples.find((sample) => sample.id === id);
+    if (liveSample && !overrideIds.has(id)) continue;
     const distDir = path.join(localRoot, "examples", id, "dist");
     if (!(await pathExists(distDir))) {
       console.warn(`sample-bundles: local override requested for ${id} but no dist directory at ${path.relative(localRoot, distDir)}`);
@@ -244,32 +240,35 @@ async function collectLocalSampleManifestEntries({ localRoot, explicitIds, liveM
       console.warn(`sample-bundles: local override for ${id} is empty at ${path.relative(localRoot, distDir)}; skipping`);
       continue;
     }
-    if (liveManifest.samples.some((sample) => sample.id === id) || seen.has(id)) continue;
+    if (seen.has(id)) continue;
     const entrypoint = "index.html";
+    const builtFrom = {
+      commit: builtFromCommit,
+      ...(packageVersion ? { packageVersion } : {}),
+    };
     entries.push({
-      manifest: {
-        id,
-        entrypoint,
-        dataMode: "hybrid",
-        configDefaults: {},
-        runtimeHosting: "self-contained",
-        runnability: "standalone",
-        hostFixtureRoutes: [],
-        support: {
-          tier: "experimental",
-          track: "community",
-          validationProfile: "browser-lab",
-        },
-        lifecycle: {
-          state: "active",
-          reason: "Locally staged override from sibling honua-sdk-js checkout.",
-        },
-        builtFrom: {
-          commit: builtFromCommit,
-          ...(packageVersion ? { packageVersion } : {}),
-        },
-        files,
-      },
+      manifest: liveSample
+        ? { ...liveSample, entrypoint, files, builtFrom }
+        : {
+            id,
+            entrypoint,
+            dataMode: "hybrid",
+            configDefaults: {},
+            runtimeHosting: "self-contained",
+            runnability: "standalone",
+            hostFixtureRoutes: [],
+            support: {
+              tier: "experimental",
+              track: "community",
+              validationProfile: "browser-lab",
+            },
+            lifecycle: {
+              state: "active",
+              reason: "Locally staged addition from sibling honua-sdk-js checkout.",
+            },
+            builtFrom,
+            files,
+          },
       distDir,
     });
     seen.add(id);
@@ -279,16 +278,36 @@ async function collectLocalSampleManifestEntries({ localRoot, explicitIds, liveM
 
 function normalizeLocalIds(rawIds, liveManifest) {
   if (rawIds) {
-    const values = rawIds
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean);
-    return [...new Set(values)];
+    return normalizeIdList(rawIds);
   }
   const excluded = (liveManifest.excluded ?? [])
     .map((entry) => entry?.id)
     .filter((id) => Boolean(id));
   return [...new Set(excluded)];
+}
+
+function normalizeIdList(rawIds) {
+  return [
+    ...new Set(
+      String(rawIds ?? "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+export function mergeLocalManifestEntries(manifest, localEntries) {
+  if (localEntries.length === 0) return manifest;
+  const localById = new Map(localEntries.map((entry) => [entry.manifest.id, entry.manifest]));
+  const remoteIds = new Set(manifest.samples.map((sample) => sample.id));
+  return {
+    ...manifest,
+    samples: [
+      ...manifest.samples.map((sample) => localById.get(sample.id) ?? sample),
+      ...localEntries.filter((entry) => !remoteIds.has(entry.manifest.id)).map((entry) => entry.manifest),
+    ],
+  };
 }
 
 async function collectManifestFiles(distDir) {

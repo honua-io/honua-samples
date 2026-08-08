@@ -148,6 +148,31 @@ async function smokeSample(browser, origin, sample) {
         if (body.includes(signal)) failures.push(`visible failure signal: ${signal}`);
       }
     }
+    if (sample.id === "maplibre-quickstart") {
+      const appFrame = page.frames().find((candidate) => {
+        try {
+          return new URL(candidate.url()).pathname === `/sdk/${sample.id}/app/`;
+        } catch {
+          return false;
+        }
+      });
+      if (!appFrame) {
+        failures.push("Quickstart app frame was not mounted");
+      } else {
+        await appFrame.waitForFunction(
+          () =>
+            window.__HONUA_QUICKSTART_RUNTIME__?.journeyComplete === true ||
+            Boolean(window.__HONUA_QUICKSTART_RUNTIME__?.lastError),
+          null,
+          { timeout: 30_000 },
+        );
+        const runtime = await appFrame.evaluate(() => window.__HONUA_QUICKSTART_RUNTIME__);
+        if (runtime?.lastError) failures.push(`Quickstart runtime error: ${runtime.lastError}`);
+        if (runtime?.mapReady !== true) failures.push("Quickstart runtime did not report mapReady");
+        if (runtime?.journeyComplete !== true) failures.push("Quickstart journey did not complete");
+        if ((await appFrame.locator("canvas").count()) < 1) failures.push("Quickstart did not mount a map canvas");
+      }
+    }
   } catch (error) {
     failures.push(`navigation: ${error instanceof Error ? error.message : String(error)}`);
   }
