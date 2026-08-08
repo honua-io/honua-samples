@@ -2,6 +2,7 @@
   "id": "stac-search-rest",
   "title": "Discover a public STAC catalog",
   "description": "Reads the public STAC root and collection list, then reports the available collection titles and item links.",
+  "contentKind": "example",
   "learning": {
     "goal": "explore-imagery-3d",
     "level": "beginner",

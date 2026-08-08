@@ -2,6 +2,7 @@
   "id": "ogc-features-python",
   "title": "Read OGC API Features with Python",
   "description": "Uses only Python's standard library to discover a public collection and read two real GeoJSON features.",
+  "contentKind": "example",
   "learning": {
     "goal": "connect-data",
     "level": "beginner",

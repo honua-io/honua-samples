@@ -9,12 +9,13 @@
   function stateFromControls() {
     var search = document.getElementById("filter-search");
     var runnable = document.getElementById("filter-runnable");
-    return { q: search ? search.value.trim() : "", caps: selected(".filter-cap"), sdk: selected(".filter-sdk"), edition: selected(".filter-edition"), source: selected(".filter-source"), run: !!(runnable && runnable.checked) };
+    return { q: search ? search.value.trim() : "", kind: selected(".filter-kind"), caps: selected(".filter-cap"), sdk: selected(".filter-sdk"), edition: selected(".filter-edition"), source: selected(".filter-source"), run: !!(runnable && runnable.checked) };
   }
 
   function stateUrl(state) {
     var url = new URL(window.location.href); url.search = "";
     if (state.q) url.searchParams.set("q", state.q);
+    if (state.kind.length) url.searchParams.set("kind", state.kind.join(","));
     if (state.caps.length) url.searchParams.set("caps", state.caps.join(","));
     if (state.sdk.length) url.searchParams.set("sdk", state.sdk.join(","));
     if (state.edition.length) url.searchParams.set("edition", state.edition.join(","));
@@ -31,6 +32,7 @@
         total++;
         var show =
           (!query || (card.getAttribute("data-search") || card.textContent || "").toLowerCase().indexOf(query) !== -1) &&
+          (!state.kind.length || state.kind.indexOf(card.getAttribute("data-content-kind") || "") !== -1) &&
           (!state.run || card.getAttribute("data-runnable") === "yes") &&
           (!state.caps.length || intersects(state.caps, csv(card.getAttribute("data-capabilities")))) &&
           (!state.sdk.length || intersects(state.sdk, csv(card.getAttribute("data-sdks")))) &&
@@ -42,7 +44,12 @@
       section.hidden = sectionVisible === 0;
     });
 
-    var count = (state.q ? 1 : 0) + state.caps.length + state.sdk.length + state.edition.length + state.source.length + (state.run ? 1 : 0);
+    var count = (state.q ? 1 : 0) + state.kind.length + state.caps.length + state.sdk.length + state.edition.length + state.source.length + (state.run ? 1 : 0);
+    all(".content-kind-section").forEach(function (section) {
+      var cards = all(".card[data-id]", section);
+      section.hidden = cards.length ? !cards.some(function (card) { return !card.hidden; }) : count > 0;
+    });
+
     var status = document.getElementById("filter-status"); if (status) status.textContent = count ? "Showing " + visible + " of " + total + " samples." : "Showing all " + total + " samples.";
     var active = document.getElementById("filter-active-count"); if (active) active.textContent = String(count);
     var empty = document.getElementById("empty-state"); if (empty) empty.hidden = visible !== 0;
@@ -56,14 +63,14 @@
   function readPreset() {
     var params = new URLSearchParams(location.search); var search = document.getElementById("filter-search"); var runnable = document.getElementById("filter-runnable");
     if (search) search.value = params.get("q") || "";
-    setChecked(".filter-cap", csv(params.get("caps"))); setChecked(".filter-sdk", csv(params.get("sdk"))); setChecked(".filter-edition", csv(params.get("edition"))); setChecked(".filter-source", csv(params.get("source")));
+    setChecked(".filter-kind", csv(params.get("kind"))); setChecked(".filter-cap", csv(params.get("caps"))); setChecked(".filter-sdk", csv(params.get("sdk"))); setChecked(".filter-edition", csv(params.get("edition"))); setChecked(".filter-source", csv(params.get("source")));
     if (runnable) runnable.checked = params.get("run") === "1";
   }
 
   function bind() {
-    all(".filter-cap, .filter-sdk, .filter-edition, .filter-source, #filter-runnable").forEach(function (input) { input.addEventListener("change", function () { safe(function () { applyFilters(true); }); }); });
+    all(".filter-kind, .filter-cap, .filter-sdk, .filter-edition, .filter-source, #filter-runnable").forEach(function (input) { input.addEventListener("change", function () { safe(function () { applyFilters(true); }); }); });
     var search = document.getElementById("filter-search"); if (search) search.addEventListener("input", function () { safe(function () { applyFilters(true); }); });
-    var clear = document.getElementById("filter-clear"); if (clear) clear.addEventListener("click", function () { all(".filter-cap, .filter-sdk, .filter-edition, .filter-source, #filter-runnable").forEach(function (input) { input.checked = false; }); if (search) search.value = ""; applyFilters(true); });
+    var clear = document.getElementById("filter-clear"); if (clear) clear.addEventListener("click", function () { all(".filter-kind, .filter-cap, .filter-sdk, .filter-edition, .filter-source, #filter-runnable").forEach(function (input) { input.checked = false; }); if (search) search.value = ""; applyFilters(true); });
     var toggle = document.getElementById("filter-toggle"); var filters = document.getElementById("catalog-filters"); if (toggle && filters) toggle.addEventListener("click", function () { var open = toggle.getAttribute("aria-expanded") === "true"; toggle.setAttribute("aria-expanded", String(!open)); filters.classList.toggle("is-open", !open); });
     document.addEventListener("keydown", function (event) { if (event.key === "/" && search && !/input|textarea|select/i.test(document.activeElement.tagName)) { event.preventDefault(); search.focus(); } });
     var copy = document.getElementById("cap-share-copy"); if (copy) copy.addEventListener("click", function () { var input = document.getElementById("cap-share-url"); var note = document.getElementById("cap-share-status"); if (!input) return; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(input.value).then(function () { if (note) note.textContent = "Link copied."; }); else input.select(); });

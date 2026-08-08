@@ -2,6 +2,7 @@
   "id": "hello-featureserver-rest",
   "title": "Query a public FeatureServer (plain REST)",
   "description": "Discovers the first layer in the public Maui buildings service and queries three real features with plain fetch().",
+  "contentKind": "example",
   "learning": {
     "goal": "connect-data",
     "level": "beginner",
