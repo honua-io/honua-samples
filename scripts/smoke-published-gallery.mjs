@@ -121,6 +121,16 @@ async function smokeSample(browser, origin, sample) {
   });
   page.on("response", (response) => {
     const url = new URL(response.url());
+    const framePath = (() => {
+      try {
+        return new URL(response.request().frame().url()).pathname;
+      } catch {
+        return "";
+      }
+    })();
+    if (framePath.startsWith(`/sdk/${sample.id}/app/`) && url.pathname.startsWith("/assets/")) {
+      failures.push(`root-relative app asset: ${response.request().method()} ${response.url()}`);
+    }
     if (response.status() >= 400 && url.pathname !== "/favicon.ico") {
       failures.push(`response: ${response.status()} ${response.request().method()} ${response.url()}`);
     }
