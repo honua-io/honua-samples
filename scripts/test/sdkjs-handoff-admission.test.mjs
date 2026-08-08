@@ -28,10 +28,19 @@ const catalogSnapshot = JSON.parse(
   await readFile(path.join(REPO_ROOT, "config", "sdkjs-catalog.snapshot.json"), "utf8"),
 );
 
-// Pinned validation clock: inside the snapshot's qualified-evidence windows
-// (observed 2026-07-25, expires 2026-08-01), so these tests never rot as wall
-// time advances past the snapshot's freshness horizon.
-const FRESH_NOW = new Date("2026-07-27T00:00:00.000Z");
+// Deterministic validation clock derived from the pinned handoff itself. A
+// refreshed byte-exact snapshot can move its evidence window forward; a
+// hardcoded date would then incorrectly classify valid observations as
+// future evidence.
+const pinnedHandoff = JSON.parse(handoffText);
+const newestObservation = Math.max(
+  ...pinnedHandoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt)),
+);
+const earliestExpiry = Math.min(
+  ...pinnedHandoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.expiresAt)),
+);
+const FRESH_NOW = new Date(newestObservation + 1);
+assert.ok(FRESH_NOW.getTime() < earliestExpiry, "pinned evidence windows do not overlap");
 
 /** Re-pins the fixture's content binding onto mutated handoff text, so a test
  * can prove a rule fires AFTER the digest gate passes (only the producer can
@@ -159,7 +168,7 @@ test("merge yields exactly one card per stable identity plus fixture-only status
   // Internal fixture-track catalog entries stay OUT of the public card set.
   assert.deepEqual(
     merge.fixtureOnlyEntries.map((e) => e.id).sort(),
-    ["arcgis-source-app", "automatic-source-workflow"],
+    ["arcgis-source-app", "automatic-source-workflow", "offline-region-reference"],
   );
   // Identity is producer-repo qualified (REQ-001).
   assert.equal(merge.records[0].identity, `honua-io/honua-sdk-js#${ids[0]}`);
@@ -247,7 +256,9 @@ test("multiple qualified journeys for one identity enrich one card, freshest evi
   const handoff = structuredClone(admitted.handoff);
   const journey = structuredClone(handoff.qualifiedJourneys[0]);
   journey.journeyId = "second-journey";
-  journey.visualEvidence.observedAt = "2026-07-26T00:00:00.000Z";
+  journey.visualEvidence.observedAt = new Date(
+    Date.parse(handoff.qualifiedJourneys[0].visualEvidence.observedAt) + 1,
+  ).toISOString();
   handoff.qualifiedJourneys.push(journey);
   const merge = mergeSdkProjection({ handoff, catalogEntries, crosswalk: {}, deriveCapabilityKeys });
   assert.deepEqual(merge.errors, []);
