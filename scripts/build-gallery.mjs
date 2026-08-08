@@ -110,6 +110,49 @@ const CONTENT_KINDS = [
   },
 ];
 const CONTENT_KIND_BY_ID = new Map(CONTENT_KINDS.map((kind) => [kind.id, kind]));
+const SDK_CONTENT_KIND_OVERRIDES = new Map([
+  ["ai-spatial-app-builder", "project"],
+  ["migration-workbench", "project"],
+  ["realtime-incident-dashboard", "project"],
+  ["service-explorer", "project"],
+  ["overture-geoparquet", "walkthrough"],
+  ["stac-imagery-browser", "walkthrough"],
+  ["sketch-editing", "walkthrough"],
+]);
+const WALKTHROUGH_GUIDES = new Map([
+  ["wms-getmap-check", {
+    steps: [
+      "Start a local Honua Server and import the included GeoJSON fixture.",
+      "Publish the layer, request WMS GetCapabilities, and confirm the advertised layer.",
+      "Request GetMap and assert that the response is a correctly sized PNG, not merely a successful status code.",
+    ],
+    outcome: "A verified WMS layer and map image produced through the complete import-to-render path.",
+  }],
+  ["overture-geoparquet", {
+    steps: [
+      "Open the configured Overture GeoParquet source and inspect its spatial metadata.",
+      "Run the sample's viewport-bounded query so only the relevant features are transferred.",
+      "Render the returned features and inspect the browser evidence for the bounded result.",
+    ],
+    outcome: "A map rendering queried Overture features from the GeoParquet workflow rather than a pre-converted copy.",
+  }],
+  ["stac-imagery-browser", {
+    steps: [
+      "Discover the configured STAC catalog and inspect the available collections.",
+      "Choose an item and its imagery asset using the sample browser.",
+      "Render the selected asset and confirm its item metadata remains available alongside the map.",
+    ],
+    outcome: "An imagery asset selected through STAC discovery and displayed with its catalog context intact.",
+  }],
+  ["sketch-editing", {
+    steps: [
+      "Initialize the map's sketch and editing controls against the configured feature source.",
+      "Create or modify a geometry using the sample's editing interaction.",
+      "Inspect the resulting feature state and the visual evidence emitted by the sample.",
+    ],
+    outcome: "A visible geometry edit completed through the SDK interaction and reflected in application state.",
+  }],
+]);
 
 const CHECK_MODE = process.argv.includes("--check");
 
@@ -417,7 +460,7 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     // The current producer handoff contains small standalone examples only.
     // Accept an explicit future value, but never infer "project" from size,
     // framework, or visual polish.
-    contentKind: CONTENT_KIND_BY_ID.has(entry.contentKind) ? entry.contentKind : "example",
+    contentKind: SDK_CONTENT_KIND_OVERRIDES.get(id) ?? (CONTENT_KIND_BY_ID.has(entry.contentKind) ? entry.contentKind : "example"),
     capabilities: record.capabilityKeys,
     sdks: ["js"],
     edition: "community", // sdk-js samples are client-side; none declare a Honua Server edition requirement.
@@ -849,7 +892,9 @@ function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
   const sourceFirst = card.contentKind === "project";
   const learningContent = sourceFirst
     ? `${renderProjectSourcePanel(card)}${runnablePanel}${renderOwnNotes(card, true)}`
-    : `${renderInlineCodePanel(card)}${runnablePanel}${renderOwnNotes(card, card.contentKind === "walkthrough")}`;
+    : card.contentKind === "walkthrough"
+      ? `${renderWalkthroughGuide(card)}${renderInlineCodePanel(card)}${runnablePanel}${renderOwnNotes(card, true)}`
+      : `${renderInlineCodePanel(card)}${runnablePanel}${renderOwnNotes(card, false)}`;
   const bodyHtml = `
 <a class="back-link" href="../">← All samples</a>
 ${renderContentKindLabel(card)}
@@ -891,7 +936,14 @@ function renderOwnNotes(card, expanded) {
 }
 
 function renderProjectSourcePanel(card) {
-  return `<section class="project-source-panel"><p class="eyebrow">Complete application source</p><h2>Work from the production-shaped repository.</h2><p>Projects span multiple files, configuration, and deployment concerns, so their complete source tree is the primary artifact.</p><a class="button primary" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open project on GitHub &nearr;</a></section>`;
+  const surfaces = [...new Set([...(card.protocols ?? []), ...(card.renderers ?? [])])];
+  return `<section class="project-source-panel"><p class="eyebrow">Complete application source</p><h2>Start with the application architecture.</h2><p>Projects span multiple files, state, configuration, and deployment concerns. The complete SDK example folder is the primary artifact; the embedded build is supporting runtime evidence.</p><dl class="project-architecture"><div><dt>Example folder</dt><dd><code>${escapeHtml(card.sourcePath ?? card.id)}</code></dd></div><div><dt>Integration surfaces</dt><dd>${escapeHtml(surfaces.join(", ") || "See project source")}</dd></div><div><dt>Support tier</dt><dd>${escapeHtml(card.supportTier ?? "See project source")}</dd></div></dl><a class="button primary" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open complete SDK example folder &nearr;</a></section>`;
+}
+
+function renderWalkthroughGuide(card) {
+  const guide = WALKTHROUGH_GUIDES.get(card.id);
+  if (!guide) return "";
+  return `<section class="walkthrough-guide" aria-labelledby="walkthrough-guide-${escapeAttr(card.id)}"><p class="eyebrow">Task walkthrough</p><h2 id="walkthrough-guide-${escapeAttr(card.id)}">Complete the workflow.</h2><ol>${guide.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol><p class="expected-outcome"><strong>Expected outcome</strong><span>${escapeHtml(guide.outcome)}</span></p></section>`;
 }
 
 function renderInlineCodePanel(card) {
@@ -926,7 +978,9 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
       );
   const primaryContent = card.contentKind === "project"
     ? `${renderProjectSourcePanel(card)}${runnablePanel}`
-    : `${renderRemoteCodePanel(card)}${runnablePanel}`;
+    : card.contentKind === "walkthrough"
+      ? `${renderWalkthroughGuide(card)}${renderRemoteCodePanel(card)}${runnablePanel}`
+      : `${renderRemoteCodePanel(card)}${runnablePanel}`;
   const bodyHtml = `
 <a class="back-link" href="../../">← All samples</a>
 <p class="empty-state">Projected from <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s versioned site-consumer handoff. Code is not vendored here -- follow the GitHub link below for the source. This card is gallery-only evidence: it is <strong>not</strong> counted in this repo's samples-coverage.v1.json, which is reserved for samples honua-samples executes in its own run-samples workflow (SDK qualification receipts flow to honua-evidence through honua-sdk-js's own coverage artifact).</p>
