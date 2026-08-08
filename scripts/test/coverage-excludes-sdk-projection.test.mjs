@@ -68,6 +68,8 @@ test("SDK-projected identities are excluded from samples-coverage output", async
       SAMPLES_DIR: samplesDir,
       OUT_PATH: outPath,
       RUN_RESULTS_PATH: path.join(workDir, "no-such-run-results.json"),
+      SDKJS_HANDOFF_SNAPSHOT_PATH: path.join(workDir, "no-such-legacy-handoff.json"),
+      SDKJS_HANDOFF_FIXTURE_SNAPSHOT_PATH: path.join(workDir, "no-such-legacy-fixture.json"),
     },
   });
 
@@ -108,7 +110,10 @@ test("coverage generation still works when the handoff snapshot is unavailable (
       SAMPLES_DIR: samplesDir,
       OUT_PATH: outPath,
       RUN_RESULTS_PATH: path.join(workDir, "no-such-run-results.json"),
+      SDKJS_HANDOFF_V2_SNAPSHOT_PATH: path.join(workDir, "no-such-next-handoff.json"),
+      SDKJS_HANDOFF_FIXTURE_V4_SNAPSHOT_PATH: path.join(workDir, "no-such-next-fixture.json"),
       SDKJS_HANDOFF_SNAPSHOT_PATH: path.join(workDir, "no-such-snapshot.json"),
+      SDKJS_HANDOFF_FIXTURE_SNAPSHOT_PATH: path.join(workDir, "no-such-fixture-snapshot.json"),
     },
   });
   assert.match(stderr, /SDK-projection exclusion cannot be enforced/);

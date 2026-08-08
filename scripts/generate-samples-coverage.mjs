@@ -38,7 +38,14 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCapabilityKeyList } from "./lib/capability-keys.mjs";
-import { listSdkProjectedIdentities, DEFAULT_HANDOFF_SNAPSHOT_PATH } from "./lib/sdkjs-handoff.mjs";
+import {
+  listSdkProjectedIdentities,
+  loadSdkJsHandoffSnapshots,
+  DEFAULT_FIXTURE_SNAPSHOT_PATH,
+  DEFAULT_FIXTURE_V4_SNAPSHOT_PATH,
+  DEFAULT_HANDOFF_SNAPSHOT_PATH,
+  DEFAULT_HANDOFF_V2_SNAPSHOT_PATH,
+} from "./lib/sdkjs-handoff.mjs";
 import { validateAgainstSchema } from "./lib/mini-schema.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -129,13 +136,21 @@ async function main() {
  * makes visible. Overridable for tests via SDKJS_HANDOFF_SNAPSHOT_PATH.
  */
 async function loadSdkProjectedIdentities() {
-  const snapshotPath = process.env.SDKJS_HANDOFF_SNAPSHOT_PATH?.trim() || DEFAULT_HANDOFF_SNAPSHOT_PATH;
   try {
-    const handoff = JSON.parse(await readFile(snapshotPath, "utf8"));
+    const { handoff } = await loadSdkJsHandoffSnapshots({
+      nextSnapshotPath:
+        process.env.SDKJS_HANDOFF_V2_SNAPSHOT_PATH?.trim() || DEFAULT_HANDOFF_V2_SNAPSHOT_PATH,
+      nextFixtureSnapshotPath:
+        process.env.SDKJS_HANDOFF_FIXTURE_V4_SNAPSHOT_PATH?.trim() || DEFAULT_FIXTURE_V4_SNAPSHOT_PATH,
+      snapshotPath: process.env.SDKJS_HANDOFF_SNAPSHOT_PATH?.trim() || DEFAULT_HANDOFF_SNAPSHOT_PATH,
+      fixtureSnapshotPath:
+        process.env.SDKJS_HANDOFF_FIXTURE_SNAPSHOT_PATH?.trim() || DEFAULT_FIXTURE_SNAPSHOT_PATH,
+    });
     return listSdkProjectedIdentities(handoff);
   } catch (err) {
+    if (err.code === "SDKJS_NEXT_PRESENT_INVALID" || err.code === "SDKJS_HANDOFF_INVALID") throw err;
     console.warn(
-      `generate-samples-coverage: could not load the sdk-js handoff snapshot at ${snapshotPath} (${err.message}) -- SDK-projection exclusion cannot be enforced this run`,
+      `generate-samples-coverage: could not load an sdk-js handoff snapshot pair (${err.message}) -- SDK-projection exclusion cannot be enforced this run`,
     );
     return new Set();
   }
