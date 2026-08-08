@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:gallery:browser": "node scripts/smoke-published-gallery.mjs"
+    "test:gallery:browser": "node scripts/smoke-published-gallery.mjs",
+    "test:gallery:live": "node scripts/smoke-live-gallery.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2"
