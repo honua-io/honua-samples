@@ -9,6 +9,7 @@
     "id",
     "title",
     "description",
+    "contentKind",
     "learning",
     "dataMode",
     "auth",
@@ -33,6 +34,11 @@
       "type": "string",
       "description": "One or two sentences describing what the sample demonstrates.",
       "minLength": 1
+    },
+    "contentKind": {
+      "type": "string",
+      "description": "Learning-content contract. Examples isolate one concept, walkthroughs guide a multi-step task, and projects are production-shaped applications whose complete repository source is the primary artifact.",
+      "enum": ["example", "walkthrough", "project"]
     },
     "learning": {
       "type": "object",
