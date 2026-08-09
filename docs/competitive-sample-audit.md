@@ -290,6 +290,9 @@ Every public route must declare these fields before admission:
 |---|---|
 | Identity and classification | Stable id, `contentKind`, `portfolioTrack`, `supportTier`, runtime classification, and canonical route. |
 | Job and server contract | Stable job id, server capability key, protocol family/version and alternatives, HTTP method, endpoint template, manifest service key or fixture URL, authentication, raw request/response examples, server documentation/manifest links, maturity, and server evidence reference. |
+| Console configuration | When the job has a meaningful Console workflow: console route/version, required role, annotated screenshot evidence, equivalent executable JSON/API/CLI configuration, sanitized data reference, source/server/console versions, service key, capture time/TTL, visual receipt, and panel owner. |
+| AI capability context | When AI is relevant: exact supported AI surface/tool, permitted tasks, manifest/schema/service context, provider/model/config/data boundary, safety policy, approval envelope, manual fallback, provenance, and deterministic receipt. |
+| Reference matrix | Exact raw HTTP operation/protocol docs, CLI command and `--help`, JS symbol, Python symbol, and .NET method with package/assembly, minimum version, support tier, owner, and auth/cancel/error semantics. Missing cells are explicit capability gaps. |
 | Source | `sourceOfTruth.repository`, path, immutable commit/tag, and the source artifact digest rendered inline. |
 | SDK | Package/version plus packed tarball or bundle SHA-256. Repository-source-only evidence is insufficient for a supported public claim. |
 | Server | Image reference pinned by digest and advertised server capability/protocol version. Moving `trunk` tags are not publication evidence. |
@@ -312,10 +315,13 @@ Every job page uses this order:
 
 1. Outcome, bounded inputs, prerequisites, and normalized expected result.
 2. Server-contract panel, before any language tab.
-3. Executable request/response inspector for the selected protocol alternative.
-4. JavaScript, Python, and .NET SDK mapping tabs with explicit support states.
-5. Normalized semantic receipt and equivalence comparison.
-6. Evidence, maturity, owner/blocker, references, and related jobs.
+3. `Configure in Console` panel when the job has a meaningful implemented Console workflow.
+4. `AI capability context` panel when an evidenced AI surface can assist the job.
+5. Executable request/response inspector for the selected protocol alternative.
+6. JavaScript, Python, and .NET SDK mapping tabs with explicit support states.
+7. Required Reference matrix.
+8. Normalized semantic receipt and equivalence comparison.
+9. Evidence, maturity, owner/blocker, and related jobs.
 
 The server-contract panel is mandatory and contains:
 
@@ -351,6 +357,62 @@ The request/response inspector must:
 - Offer Open Request only for safe idempotent requests whose credentials can remain out of the URL and browser history. Otherwise disable the action with the reason and provide a redacted copyable command.
 - Prevent secrets, bearer tokens, API keys, cookies, tenant identifiers, and oversized payloads from appearing in source, copied commands, URLs, screenshots, receipts, or telemetry.
 - Link the exact server docs/OpenAPI operation and the manifest service entry used by the run.
+
+#### Configure in Console panel
+
+Relevant job pages may include one `Configure in Console` panel after the server contract and before SDK tabs. The panel explains how an operator establishes the server-side configuration that the executable job consumes. It is not required for read-only jobs with no meaningful Console setup, and its absence must not create a duplicate Console-specific gallery card.
+
+The panel contract requires:
+
+- The exact Console route, route parameters, Console release/version, required role/permissions, server capability key, and demo manifest service key.
+- An annotated screenshot captured from the implemented screen with sanitized fixture/test data. Callouts identify the controls and values that correspond to the server contract; annotations must not obscure errors, maturity labels, or security warnings.
+- Equivalent copyable configuration as canonical JSON plus the supported raw API request and CLI command where available. The executable configuration, schema, and expected server receipt are primary; the screenshot never replaces them.
+- A safe-data statement identifying the fixture or sanitized test records used for capture. Secrets, tokens, cookies, account identifiers, internal hostnames, personal data, and production resource identifiers are redacted at capture and rejected by automated policy scanning.
+- Accessible alt text describing the purpose and state, ordered callout text that does not depend on color or image position alone, and a caption stating the task, product/version, maturity, and capture context.
+- A desktop capture for an implemented desktop workflow. Add a mobile capture only when the Console route is supported and the configuration task is meaningful on mobile; do not manufacture a mobile layout solely to satisfy a screenshot count.
+- Provenance binding the screenshot to source commit, server image digest/version, Console artifact/version, service key, fixture/demo manifest digest, capture timestamp, expiry/TTL, viewport/browser/theme/locale, and the exact configuration digest it depicts.
+- A Playwright interaction receipt proving the annotated screen was reached through the declared role and route, the configuration controls represented the expected values, save/apply produced the expected server receipt, and the screenshot bytes match the admitted golden visual artifact.
+
+Screenshots are evidence of an implemented UI state, not product mockups. If the Console screen is `planned` or otherwise lacks executable evidence, the panel shows a planned/partial status, the raw server configuration contract, owner, and blocker without a fabricated screenshot or disabled controls pretending the workflow exists.
+
+Console panels reuse one governed screenshot evidence system across Examples, Walkthroughs, Projects, product docs, and release receipts. The canonical screenshot and metadata live once under their declared `sourceOfTruth`; other surfaces project that evidence by immutable id/digest rather than copying image files independently.
+
+#### AI capability context panel
+
+Relevant job pages may include one optional `AI capability context` panel. AI is a bounded way to draft, explain, or plan the existing job; it does not create a duplicate AI gallery card or a new support claim for the underlying server/SDK operation.
+
+The panel contract requires:
+
+- The exact supported AI surface, tool name/schema/version, host product/version, capability key, and owner. A generic provider integration or prose prompt is not evidence that the job has an AI surface.
+- An allowlist of tasks such as explain capability, draft bounded input, draft configuration, draft code/scaffold, or propose an execution plan. Each task states whether it is read-only, draft-only, approval-required, or prohibited.
+- The exact demo manifest service key, server/SDK schema versions, input/output schemas, resource/maturity state, and evidence supplied as model/tool context. Context is structured and bounded rather than scraped from arbitrary page text.
+- Provider, model, endpoint, configuration, retention, residency, and data boundary. The page identifies which data and metadata may leave the product boundary and which provider/model settings produced the receipt.
+- Prompt-injection defenses, untrusted-data labeling, privacy/PII policy, secret redaction, tool-argument validation, output schema validation, and denial behavior for unsupported or malicious instructions.
+- Deterministic validation after model output: parse into a versioned schema, resolve capability and service ids, apply bounds/policy, dry-run or explain, compare with the canonical job contract, and reject fabricated endpoints, fields, symbols, or capabilities.
+- An approval envelope containing exact proposed actions, arguments, target service/resource, identity/scope, expiry, idempotency key, expected effects, rollback/cleanup, and the artifact/config digests being approved.
+- A prohibited-actions list. No AI path autonomously publishes, submits, cancels, deletes, mutates data/configuration, changes permissions/secrets, widens bounds, or approves its own plan.
+- A complete manual fallback that performs the same supported job without an AI provider and links the same server contract, SDK mappings, Reference matrix, expected result, and safety bounds.
+- Provenance and receipt binding prompt/template id and digest, structured context digest, provider/model/config, tool schema/version, draft/plan, validation results, approval actor/time/scope, executed action if any, normalized semantic result, and denial/fallback state.
+
+If the AI surface or job-specific tool is unimplemented, the panel is `planned` or `partial` and shows the proposed schema, owner, blocker, manual path, and prohibited actions. It must not show fabricated chat output, an unverified tool call, or an enabled approval/execution control.
+
+For Query Features, the supported AI flow is natural language to a bounded normalized query preview. The user sees the resolved service, protocol alternative, fields, filters, spatial predicate, ordering, limit, estimated/capability warnings, and concrete request derivation before approval. Execution uses the same validated query contract and semantic assertion as the manual page; the model never sends an unpreviewed query or silently broadens the bound.
+
+For the Python geoprocessing Walkthrough, AI may draft a scaffold, dependency/configuration proposal, typed input/output schema, or bounded authoring/execution plan only where that exact surface is evidenced. Registration/publish, job submit, cancel, result deletion/cleanup, image/artifact promotion, and any configuration/data mutation require explicit scoped approval after deterministic validation. The manual author/build/register/submit/observe/cancel/result/cleanup path remains primary and complete.
+
+#### Required Reference matrix
+
+Every public job page contains one generated Reference matrix. It identifies the exact supported implementation entrypoints for the job rather than approximate commands, likely symbol names, or pseudocode.
+
+| Cell | Required content |
+|---|---|
+| Raw HTTP | Deep link to the exact generated OpenAPI operation and protocol/version documentation; HTTP method, endpoint template, request/response schemas/media types, minimum server version, support tier, owner, and auth/cancel/error semantics. Include each protocol alternative inside the same cell group. |
+| CLI | Exact installed command and subcommand, package/tool name and minimum version, deep link to generated command reference, copyable invocation, and a runnable `--help` receipt proving the command exists. Include auth/profile, cancellation/interrupt, exit-code, and stderr/error semantics. |
+| JavaScript | Exact exported symbol deep link, package and minimum version, support tier, owner, authentication inputs, AbortSignal/cancellation, disposal, and typed-error semantics. |
+| Python | Exact importable symbol deep link, distribution/import package and minimum version, support tier, owner, authentication, cancellation, context/resource cleanup, and exception semantics. |
+| .NET | Exact public type/method deep link, package/assembly and minimum target/version, support tier, owner, authentication, `CancellationToken`, disposal, and exception/result semantics. |
+
+Every primary symbol called by an inline code tab deep-links to its generated reference entry. Generated validation proves the referenced package/version exports the symbol and that the displayed call compiles or loads. A missing implementation is an explicit `partial`, `unavailable`, or `not-applicable` capability-gap cell with owner and blocker; the page never invents a near-match, substitutes raw HTTP without labeling it, or presents a future signature as current.
 
 #### Query Features: first job and semantic-equivalence page
 
@@ -613,6 +675,8 @@ Show the current step, the code diff, the running checkpoint, expected output, a
 
 Lead with the running application and its user outcome. Show architecture, prerequisites, data provenance, and evidence before the full source tree. Resolve GitHub and download actions from `sourceOfTruth`; GitHub is an additional action, not the only way to inspect code.
 
+When server-side setup is part of the Project, link its governed `Configure in Console` panel and executable JSON/API/CLI configuration. Do not embed a separate or stale Project-only screenshot of the same Console state.
+
 ### Catalog filters
 
 Primary content filters: Examples, Walkthroughs, Projects.
@@ -670,6 +734,10 @@ Each published route must prove:
 - All supported language tabs for a cross-SDK task produce the same normalized semantic receipt for the canonical fixture and expected result. Language-specific request syntax and native object/exception shapes are not compared for equality.
 - Every job page renders the server-contract panel before language tabs and its inspector proves the selected protocol's actual redacted request/response, safe Copy behavior, conditional Open Request behavior, and exact docs/manifest links.
 - Generated catalog validation proves one public card per job id. Protocol, language, framework, and repository variants cannot emit duplicate cards or competing canonical routes.
+- Every rendered `Configure in Console` screenshot has a current Playwright interaction and golden-visual receipt, provenance/TTL, accessible alt/callouts/caption, sanitized-data and redaction proof, and byte/digest equality with the admitted screenshot artifact.
+- Console visual drift fails admission until an assigned owner accepts an intentional new golden or fixes the regression. Planned or unimplemented Console routes fail if they provide a fabricated screenshot instead of planned status and the executable raw contract.
+- Every rendered AI panel names an evidenced surface/tool, passes injection/privacy and deterministic schema/policy validation, keeps prohibited autonomous actions disabled, records approval before any protected action, and proves its manual fallback and provenance receipt.
+- Every Reference matrix cell deep-links a generated entry and passes existence/version/support/owner/auth/cancel/error validation. Missing SDK or CLI cells remain explicit gaps; approximate commands, symbols, and pseudocode fail admission.
 
 The gallery landing page must be generated only from samples that passed the exact artifact gate. Missing or stale run evidence is fatal in production; best-effort evidence is allowed only for local development. A failed new deployment must leave or restore the prior deployment intact.
 
@@ -696,6 +764,11 @@ Live service canaries belong in `honua-demo-infra`. Browser behavior, inline-sou
 | Promotion detection | Canonical-domain post-promotion synthetics begin within 5 minutes of promotion and complete within 10 minutes. |
 | Rollback | Restore the last known-good artifact within 10 minutes of a failed post-promotion gate and prove its root plus representative semantics. |
 | Evidence retention | Keep release manifest and machine-readable receipts for at least 90 days; keep failure screenshots/logs for at least 30 days. |
+| Governed Console visuals | Current Console screenshots and their provenance/interaction/golden receipts are retained for at least 90 days after replacement; superseded goldens retain their review decision and replacement link for at least 180 days. |
+| Visual drift review | Zero unreviewed visual diffs at promotion. Intentional updates require the named panel owner to approve the new golden with linked source/server/console/config versions and accessibility review. |
+| AI plan validity | 100% of admitted AI drafts/plans parse against the pinned tool schema, resolve only declared capabilities/services/fields, satisfy bounds/policy, and pass deterministic dry-run or explain validation before approval is offered. |
+| AI approval and evidence | 100% of approval-required actions have a valid scoped, unexpired human approval envelope and provenance receipt; zero prohibited autonomous actions execute. |
+| Reference integrity | 100% of non-gap HTTP/CLI/JS/Python/.NET cells deep-link an existing generated reference at the pinned minimum version; all code-tab primary symbols and CLI `--help` receipts validate. |
 | Alerting | Canary, drift, promotion, or rollback failures notify the named owner through the configured operational channel and create or update a durable incident record. |
 | First-map onboarding | In a quarterly clean-environment usability run, at least 90% of participants complete the supported First Map path in 5 minutes without opening Project-sized source. |
 | Cross-SDK task equivalence | 100% of supported JavaScript, Python, and .NET tabs compile/load and run against pinned SDK versions and match the canonical normalized semantic receipt; every non-supported tab has an explicit state, owner, and blocker. |
@@ -741,6 +814,8 @@ Exit: schema vocabulary, repository ownership, canonical routes, source location
 - Complete the byte-bound demo-manifest consumer and drift contract in [`honua-samples#20`](https://github.com/honua-io/honua-samples/issues/20).
 - Generate the capability-task matrix and bind every route to immutable SDK/server/fixture/manifest inputs.
 - Make evidence mandatory, add preview/staging verification, implement immutable promotion and last-known-good rollback, and wire alerting/retention dashboards.
+- Establish the governed screenshot evidence store and capture workflow once, including Playwright interaction proof, golden comparison, redaction scanning, accessibility metadata, TTL, owner review, and immutable projection into docs/catalog pages.
+- Generate the per-job Reference matrix from server, CLI, and SDK reference artifacts, and establish the AI context/validation/approval receipt schema without promoting planned AI tools.
 - Add an accurate `demo.honua.io` root response and path-preserving domain redirects, then verify them as release routes.
 - Resolve draft [`PR #28`](https://github.com/honua-io/honua-samples/pull/28) only after its recorded [`honua-sdk-js#1111`](https://github.com/honua-io/honua-sdk-js/pull/1111) bundle dependency and all admitted semantics pass against the byte-bound handoff.
 
@@ -799,6 +874,9 @@ Exit per workflow: deterministic chaos/error fixtures, safe live sandbox/reset e
 - Every public Project declares canonical source and links all composing Examples and Walkthroughs; no source is silently duplicated between `honua-samples` and `honua-sdk-js`.
 - Shared GIS jobs publish one canonical card with a server-contract/request-response panel followed by owned JavaScript, Python, and .NET tabs; protocol alternatives stay inside the job, each supported tab runs against pinned SDK bytes and produces the same normalized semantic receipt, and partial/unavailable states remain explicit.
 - The Python cloud-geoprocessing Walkthrough and Project expose separate authoring and execution planes, bind every current step to authoritative pinned evidence, keep unproven Studio authoring planned, and prove build-to-result provenance, cancellation, cleanup/TTL, and equivalent JS/.NET invocation semantics where supported.
+- Relevant jobs expose one governed `Configure in Console` panel whose implemented screenshot, accessible annotations, executable JSON/API/CLI configuration, provenance, interaction receipt, golden review, and retention all pass; planned UI is represented by planned status and raw contracts, never fabricated imagery.
+- Relevant jobs expose one bounded AI context panel with deterministic plan validation, explicit approvals, prohibited autonomous actions, manual fallback, and provenance; Query previews normalized bounded queries and geoprocessing keeps publish/submit/cancel/delete approval-gated.
+- Every job exposes an exact Reference matrix for HTTP, CLI, JavaScript, Python, and .NET; supported cells resolve to real generated symbols/commands at pinned versions and missing cells are explicit owned capability gaps.
 - `samples.honua.io` is canonical, `sample.honua.io` redirects path-for-path, `honua.io/samples` does not fork the catalog, and the `demo.honua.io` root advertises the exact live manifest and health/documentation links.
 - Promotion, detection, evidence retention, alerting, and automatic rollback meet the release SLO table, including a periodic rollback drill.
 - No public sample hard-codes a demo endpoint absent from its pinned manifest, labels fixture output as live, or promotes a partial/experimental capability as supported.
