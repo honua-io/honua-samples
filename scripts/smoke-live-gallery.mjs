@@ -175,6 +175,7 @@ async function discoverCards(browser, baseUrl) {
         id: node.getAttribute("data-id") ?? "",
         contentKind: node.getAttribute("data-content-kind") ?? "",
         source: node.getAttribute("data-source") ?? "",
+        jobPage: node.getAttribute("data-job-page") === "yes",
         runnable: node.getAttribute("data-runnable") === "yes",
         title: heading?.textContent?.trim() ?? "",
         detailHref: heading?.getAttribute("href") ?? "",
@@ -206,9 +207,11 @@ async function verifyCard(browser, baseUrl, card) {
     }
   };
   page.on("console", (message) => {
-    if (message.type() === "error" && isAppUrl(message.location().url)) appFailures.push(`console: ${message.text()}`);
+    if (message.type() !== "error") return;
+    if (isAppUrl(message.location().url)) appFailures.push(`console: ${message.text()}`);
+    else if (card.jobPage) failures.push(`console: ${message.text()}`);
   });
-  page.on("pageerror", (error) => appFailures.push(`pageerror: ${error.message}`));
+  page.on("pageerror", (error) => (card.jobPage ? failures : appFailures).push(`pageerror: ${error.message}`));
   page.on("requestfailed", (request) => {
     if (isAppRequest(request) && !isAllowedAbort(card.id, request)) appFailures.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ""}`);
   });
@@ -282,6 +285,17 @@ function validateRootCardContract(card, baseUrl, failures) {
   const [primary, secondary] = card.actions;
   const detailUrl = new URL(card.detailHref, `${baseUrl}/`);
   if (detailUrl.origin !== new URL(baseUrl).origin) failures.push("card detail route is not gallery-local");
+  if (card.jobPage) {
+    if (detailUrl.pathname !== `/jobs/${card.id}/`) failures.push("job card detail route is not canonical");
+    if (card.contentKind === "project") {
+      if (!isJobContract(primary?.href, card.id)) failures.push("job project primary action is not its governed contract");
+      if (new URL(secondary?.href ?? "", `${baseUrl}/`).pathname !== detailUrl.pathname) failures.push("job project secondary action is not its local overview");
+    } else {
+      if (new URL(primary?.href ?? "", `${baseUrl}/`).pathname !== detailUrl.pathname) failures.push("job primary action is not its local server-first route");
+      if (!isJobContract(secondary?.href, card.id)) failures.push("job secondary action is not its governed contract");
+    }
+    return;
+  }
   if (card.contentKind === "project") {
     if (!isSdkExampleFolder(primary?.href, card.id)) failures.push("project primary action is not its complete SDK example folder");
     if (new URL(secondary?.href ?? "", `${baseUrl}/`).pathname !== detailUrl.pathname) failures.push("project secondary action is not its local overview");
@@ -292,6 +306,10 @@ function validateRootCardContract(card, baseUrl, failures) {
 }
 
 async function validateDetailContract(page, card, failures) {
+  if (card.jobPage) {
+    await validateJobDetailContract(page, card, failures);
+    return;
+  }
   const position = async (selector) => page.locator("main").evaluate((main, value) => main.innerHTML.indexOf(value), selector);
   const embedPosition = await position('class="embed-panel"');
   if (card.contentKind === "example") {
@@ -315,12 +333,48 @@ async function validateDetailContract(page, card, failures) {
   }
 }
 
+async function validateJobDetailContract(page, card, failures) {
+  if ((await page.locator("main > .server-contract").count()) !== 1) failures.push("job detail has no direct server contract panel");
+  const serverLeads = await page.locator("main").evaluate((main) => {
+    const server = main.querySelector(".server-contract");
+    const task = main.querySelector(".job-language-section,.walkthrough-guide,.project-source-panel,.job-reference");
+    return Boolean(server && task && (server.compareDocumentPosition(task) & Node.DOCUMENT_POSITION_FOLLOWING));
+  });
+  if (!serverLeads) failures.push("job server contract does not lead task content");
+  const protocols = await page.locator(".server-protocol").count();
+  if (protocols < 1) failures.push("job detail has no raw protocol contract");
+  if ((await page.locator('.request-response-inspector[data-kind="request"]').count()) !== protocols) failures.push("job raw request inspector count does not match protocols");
+  if ((await page.locator('.request-response-inspector[data-kind="response"]').count()) !== protocols) failures.push("job raw response inspector count does not match protocols");
+  if ((await page.locator('.request-response-inspector[data-kind="request"] [data-copy-target]').count()) !== protocols) failures.push("job raw requests do not all expose copy");
+  if ((await page.locator('.request-response-inspector[data-kind="response"] [data-download-target]').count()) !== protocols) failures.push("job raw responses do not all expose download");
+  const surfaces = await page.locator(".job-reference tbody tr").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-reference-surface")));
+  if (JSON.stringify(surfaces) !== JSON.stringify(["http", "cli", "javascript", "python", "dotnet"])) failures.push("job reference matrix is not the exact five-surface contract");
+  if ((await page.locator('.job-tabs [role="tab"]').count()) !== 3 || (await page.locator('.job-tab-panels [role="tabpanel"]').count()) !== 3) failures.push("job language tabs are not exactly JavaScript, Python, and .NET");
+  if ((await page.locator("iframe").count()) !== 0) failures.push("job contract unexpectedly embeds a runnable frame");
+  if ((await page.locator('.job-console[data-console-state="planned"] .console-visual img').count()) !== 0) failures.push("planned Console state fabricates a screenshot");
+  if (card.contentKind === "example") {
+    if ((await page.locator(".job-language-section .job-code-view").count()) < 1) failures.push("job example has no inline SDK code");
+  } else if (card.contentKind === "walkthrough") {
+    if ((await page.locator(".job-walkthrough ol > li").count()) < 3) failures.push("job walkthrough has fewer than three ordered steps");
+    if ((await page.locator(".job-walkthrough .expected-outcome").count()) !== 1) failures.push("job walkthrough has no final semantic assertion");
+  } else if (card.contentKind === "project") {
+    if ((await page.locator(".project-source-panel.project-status-planned").count()) !== 1) failures.push("job project has no planned architecture/source panel");
+    if ((await page.locator(".code-view").count()) !== 0) failures.push("job project incorrectly presents a primary code file");
+    const href = await page.locator(".project-source-panel a.button.primary").getAttribute("href");
+    if (!isJobContract(href, card.id)) failures.push("job project primary detail action is not its governed contract");
+  }
+}
+
 function isAllowedAbort(sampleId, request) {
   return sampleId === "overture-geoparquet" && request.failure()?.errorText === "net::ERR_ABORTED" && /duckdb|eh\.wasm|mvp\.wasm/iu.test(request.url());
 }
 
 function isSdkExampleFolder(href, id) {
   return href === `https://github.com/honua-io/honua-sdk-js/tree/trunk/examples/${id}`;
+}
+
+function isJobContract(href, id) {
+  return href === `https://github.com/honua-io/honua-samples/blob/trunk/jobs/${id}.json`;
 }
 
 function normalizeText(value) {

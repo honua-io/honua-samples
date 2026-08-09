@@ -34,8 +34,16 @@ Run the structural and semantic admission check with:
 npm run test:job-pages
 ```
 
-Gallery integration should render these sources inside the existing
-Example/Walkthrough/Project detail route. It must add request/response inspect
-and copy controls, deep-link each code tab to its reference row, and keep any
-contract-only or planned project non-runnable until a pinned fixture and live
-semantic receipt are admitted.
+The gallery renders each contract once at `/jobs/<id>/` inside the existing
+Example/Walkthrough/Project taxonomy. The server panel always leads. Raw JSON
+has copy and download controls, with an external Open action only for a
+concrete HTTP(S) GET endpoint. JavaScript, Python, and .NET are tabs with exact
+reference links or explicit unavailable states; language and protocol variants
+never create duplicate cards. Contract-only and planned projects remain
+non-runnable until a pinned fixture and live semantic receipt are admitted.
+
+Run the focused rendered-route check after building `site/`:
+
+```bash
+npm run test:job-pages:browser
+```

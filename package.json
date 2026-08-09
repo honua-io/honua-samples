@@ -9,7 +9,8 @@
     "release:audit:check": "node scripts/release-certification.mjs check",
     "test:release-certification": "node --test scripts/test/release-certification.test.mjs scripts/test/release-gap-schema.test.mjs scripts/test/release-gap-issue-bindings.test.mjs",
     "test:gallery:live": "node scripts/smoke-live-gallery.mjs",
-    "test:job-pages": "node scripts/validate-job-pages.mjs"
+    "test:job-pages": "node scripts/validate-job-pages.mjs",
+    "test:job-pages:browser": "node scripts/smoke-job-pages-gallery.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2"

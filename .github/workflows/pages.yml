@@ -17,6 +17,8 @@ on:
     paths:
       - "site/**"
       - "samples/**"
+      - "jobs/**"
+      - "schemas/**"
       - "scripts/**"
       - "config/**"
       - "package.json"
@@ -154,6 +156,9 @@ jobs:
           # they demonstrate a product-grade result, so gate its own floor.
           MIN_PUBLISHED_RUNNABLE_APPS: "8"
         run: npm run test:gallery:browser
+
+      - name: Verify server-first job pages
+        run: npm run test:job-pages:browser
 
       - name: Upload gallery browser evidence
         if: always()

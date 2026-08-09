@@ -75,6 +75,7 @@ import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_
 import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
 import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
+import { loadJobPages } from "./validate-job-pages.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -164,6 +165,7 @@ async function main() {
   const keyByKey = new Map(keyRecords.map((r) => [r.key, r]));
 
   const ownSamples = await loadOwnSamples();
+  const jobPages = await loadJobPages({ root: REPO_ROOT });
   const runResults = await loadRunResults();
 
   // Consumer-admission boundary (honua-io/honua-samples#16): the versioned
@@ -204,6 +206,7 @@ async function main() {
   const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
   const ownPortfolioResult = applyGalleryPublicPortfolio(ownCandidates, portfolio);
   const ownCards = ownPortfolioResult.publicCards;
+  const jobCards = jobPages.map((job) => toJobCard(job, keyByKey, problems));
   const sdkCandidates = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
   const technicallyQualifiedSdkCards = sdkCandidates.filter(
     (card) =>
@@ -217,7 +220,7 @@ async function main() {
   console.log(
     `build-gallery: publishing ${sdkCards.length} product-admitted sdk-js and ${ownCards.length} owned sample(s); excluding ${sdkCandidates.length - technicallyQualifiedSdkCards.length} technically unqualified SDK, ${portfolioResult.excluded.length} product-withheld SDK, and ${ownPortfolioResult.excluded.length} product-withheld owned card(s)`,
   );
-  assertUniqueCardIdentities([...ownCards, ...sdkCards]);
+  assertUniqueCardIdentities([...ownCards, ...jobCards, ...sdkCards]);
   for (const bundleId of stagedBundleIds) {
     if (!sdkCards.some((c) => c.id === bundleId)) {
       console.warn(
@@ -231,6 +234,7 @@ async function main() {
   const cards = [
     ...sdkCards.filter((c) => c.bundleRunnable),
     ...ownCards,
+    ...jobCards,
     ...sdkCards.filter((c) => !c.bundleRunnable),
   ];
 
@@ -252,6 +256,7 @@ async function main() {
   }
 
   await rm(path.join(SITE_DIR, "assets"), { recursive: true, force: true });
+  await rm(path.join(SITE_DIR, "jobs"), { recursive: true, force: true });
   await rmGeneratedDetailDirs(ownSamples);
   await mkdir(SITE_DIR, { recursive: true });
 
@@ -266,6 +271,16 @@ async function main() {
     await writeFile(
       path.join(dir, "index.html"),
       renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice),
+      "utf8",
+    );
+  }
+
+  for (const card of jobCards) {
+    const dir = path.join(SITE_DIR, "jobs", card.id);
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "index.html"),
+      renderJobDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice),
       "utf8",
     );
   }
@@ -303,9 +318,9 @@ async function main() {
     );
   }
 
-  const pageCount = 1 + ownCards.length + sdkCards.length + merge.fixtureOnlyEntries.length;
+  const pageCount = 1 + ownCards.length + jobCards.length + sdkCards.length + merge.fixtureOnlyEntries.length;
   console.log(
-    `build-gallery: wrote ${pageCount} page(s) to site/ -- ${ownCards.length} from ${OWN_REPO}, ${sdkCards.length} from ${SDKJS_REPO}` +
+    `build-gallery: wrote ${pageCount} page(s) to site/ -- ${ownCards.length} runnable/source samples and ${jobCards.length} canonical job page(s) from ${OWN_REPO}, ${sdkCards.length} from ${SDKJS_REPO}` +
       ` (${embeddedCount} sdk-js sample(s) embedded with a verified running bundle` +
       `${merge.fixtureOnlyEntries.length ? `, ${merge.fixtureOnlyEntries.length} internal-fixture status stub(s)` : ""})` +
       (problems.length ? ` (${problems.length} problem(s) warned, see above)` : ""),
@@ -440,6 +455,48 @@ function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
   };
 }
 
+function toJobCard(job, keyByKey, problems) {
+  const capabilities = job.server.capabilityIds;
+  for (const key of capabilities) {
+    if (!keyByKey.has(key)) problems.push(`jobs/${job.id}.json references unknown capability key "${key}"`);
+  }
+  const sdkBySurface = new Map([
+    ["http", "rest"],
+    ["javascript", "js"],
+    ["python", "python"],
+    ["dotnet", "dotnet"],
+  ]);
+  const sdks = [...new Set(job.references
+    .filter((reference) => reference.availability !== "gap" && sdkBySurface.has(reference.surface))
+    .map((reference) => sdkBySurface.get(reference.surface)))];
+  const evidenceState = job.server.fixture.evidenceState;
+  return {
+    kind: "job",
+    identity: `${OWN_REPO}:job:${job.id}`,
+    id: job.id,
+    title: job.title,
+    summary: job.summary,
+    contentKind: job.kind,
+    capabilities,
+    sdks,
+    edition: job.maturity.state === "contract-only" || job.maturity.state === "planned" ? "not-admitted" : "community",
+    status: job.maturity.state,
+    protocols: job.server.protocols.map((protocol) => protocol.id),
+    learning: null,
+    track: "job-first",
+    supportTier: job.maturity.supportTier,
+    dataMode: evidenceState === "pinned-fixture" ? "fixture" : evidenceState === "live-receipt-required" ? "receipt-required" : "planned",
+    auth: "see server contract",
+    sourceRepo: "honua-samples",
+    detailUrl: `${GALLERY_BASE_URL}/jobs/${job.id}/`,
+    detailPath: `/jobs/${job.id}/`,
+    githubUrl: `https://github.com/${OWN_REPO}/blob/trunk/jobs/${job.id}.json`,
+    sourcePath: `jobs/${job.id}.json`,
+    bundleRunnable: false,
+    job,
+  };
+}
+
 function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
   const entry = record.card;
   const id = entry.id;
@@ -514,7 +571,7 @@ function assertUniqueCardIdentities(cards) {
   const seen = new Set();
   const duplicates = new Set();
   for (const card of cards) {
-    const key = `${card.kind}:${card.id}`;
+    const key = card.id;
     if (seen.has(key)) duplicates.add(key);
     seen.add(key);
   }
@@ -605,7 +662,7 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
 ${bodyHtml}
 </main>
 <footer class="site-footer">${renderFooter(generatedAt, sourceCommit, bundleNotice)}</footer>
-${depth === 0 ? `<script src="${assetPrefix}/gallery-filter.js"></script>` : `<script src="${assetPrefix}/source-preview.js"></script>`}
+${depth === 0 ? `<script src="${assetPrefix}/gallery-filter.js"></script>` : `<script src="${assetPrefix}/source-preview.js"></script><script src="${assetPrefix}/job-page.js"></script>`}
 </body>
 </html>
 `;
@@ -696,6 +753,7 @@ function renderHeadlessPanel(card) {
 
 function renderIndexPage({ contentSections, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }) {
   const ownCount = cards.filter((c) => c.kind === "own").length;
+  const jobCount = cards.filter((c) => c.kind === "job").length;
   const sdkCount = cards.filter((c) => c.kind === "sdk").length;
   const starterSpecs = [
     { id: "maplibre-quickstart", number: "01", eyebrow: "JavaScript + MapLibre", action: "Render a map" },
@@ -716,8 +774,8 @@ function renderIndexPage({ contentSections, cards, keyByKey, generatedAt, source
   </div>
   <dl class="catalog-stats" aria-label="Catalog composition">
     <div><dt>${ownCount}</dt><dd>server samples executed by this repository</dd></div>
+    <div><dt>${jobCount}</dt><dd>server-first tasks with cross-SDK references</dd></div>
     <div><dt>${sdkCount}</dt><dd>SDK entries admitted from the producer handoff</dd></div>
-    <div><dt>1</dt><dd>canonical inventory with no cloned source</dd></div>
   </dl>
 </section>
 <nav class="content-kind-nav" aria-label="Developer content types">
@@ -853,9 +911,9 @@ function renderCard(card) {
       ? escapeHtml(card.track)
       : "SDK example";
   const actions = card.contentKind === "project"
-    ? `<a class="card-open" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open project source &nearr;</a><a href="${card.detailPath}">Project overview &rarr;</a>`
+    ? `<a class="card-open" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">${card.kind === "job" ? "Open governed project contract" : "Open project source"} &nearr;</a><a href="${card.detailPath}">Project overview &rarr;</a>`
     : `<a class="card-open" href="${card.detailPath}">${runnable ? "Run and view code" : "View code"} &rarr;</a><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">GitHub &nearr;</a>`;
-  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")}`)}">
+  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")}`)}">
   <div class="card-topline"><span class="content-kind-label kind-${escapeAttr(card.contentKind)}">${escapeHtml(contentKind.singular)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
   <p class="summary">${escapeHtml(card.summary)}</p>
@@ -958,6 +1016,158 @@ function renderInlineCodePanel(card) {
   <div class="code-toolbar"><div><span>PRIMARY FILE</span><strong id="code-heading-${escapeAttr(card.id)}">${escapeHtml(card.sourcePath)}</strong></div><code>${escapeHtml(card.entrypoint?.command ?? "")}</code></div>
   <pre tabindex="0"><code>${escapeHtml(card.sourceText)}</code></pre>
 </section>`;
+}
+
+// ---- rendering: server-first job pages ---------------------------------
+
+function renderJobDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice) {
+  const job = card.job;
+  const taskContent = job.kind === "project"
+    ? `${renderJobProjectPanel(card)}${renderJobWalkthrough(job)}${renderJobLanguageTabs(job)}`
+    : job.kind === "walkthrough"
+      ? `${renderJobWalkthrough(job)}${renderJobLanguageTabs(job)}`
+      : renderJobLanguageTabs(job);
+  const bodyHtml = `
+<a class="back-link" href="../../">&larr; All samples</a>
+${renderContentKindLabel(card)}
+<h1>${escapeHtml(job.title)}</h1>
+<p class="job-summary">${escapeHtml(job.summary)}</p>
+${renderJobServerPanel(job, keyByKey)}
+${taskContent}
+${renderJobReferenceMatrix(job)}
+${renderJobConsolePanel(job)}
+${renderJobAiPanel(job)}
+<div class="detail-footer"><div><h2>Capabilities</h2>${capabilityChips(card.capabilities, keyByKey)}</div><a href="${escapeAttr(card.githubUrl)}" target="_blank" rel="noopener noreferrer">Open governed job contract &nearr;</a></div>`;
+  return pageShell({
+    title: `${job.title} - Honua Samples`,
+    description: job.summary,
+    bodyHtml,
+    depth: 2,
+    generatedAt,
+    sourceCommit,
+    bundleNotice,
+  });
+}
+
+function renderJobServerPanel(job, keyByKey) {
+  const fixture = job.server.fixture;
+  const evidence = job.maturity.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const limitations = job.maturity.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const docs = job.server.docs.map((url) => `<li><a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></li>`).join("");
+  return `<section class="server-contract" aria-labelledby="server-contract-${escapeAttr(job.id)}">
+  <div class="job-section-heading"><div><p class="eyebrow">Server contract first</p><h2 id="server-contract-${escapeAttr(job.id)}">${escapeHtml(job.server.operation)}</h2></div><span class="contract-state state-${escapeAttr(job.maturity.state)}">${escapeHtml(job.maturity.state)}</span></div>
+  <dl class="server-facts">
+    <div><dt>Fixture endpoint</dt><dd>${fixture.endpoint ? `<code>${escapeHtml(fixture.endpoint)}</code>` : "No runnable endpoint admitted"}</dd></div>
+    <div><dt>Service manifest key</dt><dd>${fixture.serviceManifestKey ? `<code>${escapeHtml(fixture.serviceManifestKey)}</code>` : "Not admitted"}</dd></div>
+    <div><dt>Evidence</dt><dd>${escapeHtml(fixture.evidenceState)} at ${escapeHtml(fixture.sourceCommit)}</dd></div>
+    <div><dt>Server version</dt><dd>${escapeHtml(fixture.serverVersion)}</dd></div>
+    <div><dt>Owner</dt><dd>${escapeHtml(job.server.owner)}</dd></div>
+    <div><dt>Support</dt><dd>${escapeHtml(job.maturity.supportTier)}</dd></div>
+  </dl>
+  <div class="server-boundary"><h3>Authentication</h3><p>${escapeHtml(job.server.auth)}</p><h3>Cancellation</h3><p>${escapeHtml(job.server.cancellation)}</p><h3>Errors</h3><p>${escapeHtml(job.server.errors)}</p></div>
+  <div class="job-capabilities"><h3>Server capability IDs</h3>${capabilityChips(job.server.capabilityIds, keyByKey)}</div>
+  <div class="protocol-stack">${job.server.protocols.map((protocol, index) => renderProtocolContract(job, protocol, index)).join("")}</div>
+  <section class="semantic-contract"><h3>Normalized semantics</h3><div class="semantic-grid">${renderJsonInspector(`${job.id}-normalized`, "Normalized request", "configuration", job.semantics.normalizedRequest)}${renderJsonInspector(`${job.id}-expected`, "Expected result", "configuration", job.semantics.expectedResult)}</div><p class="semantic-assertion"><strong>Semantic assertion</strong>${escapeHtml(job.semantics.assertion)}</p></section>
+  <div class="evidence-grid"><div><h3>Evidence</h3><ul>${evidence}</ul></div><div><h3>Limits and blockers</h3><ul>${limitations}</ul></div><div><h3>Server references</h3><ul>${docs}</ul></div></div>
+</section>`;
+}
+
+function renderProtocolContract(job, protocol, index) {
+  const request = { method: protocol.method, endpoint: protocol.concreteEndpoint ?? protocol.endpointTemplate, payload: protocol.request };
+  const open = /\bGET\b/u.test(protocol.method) && isSafeHttpUrl(protocol.concreteEndpoint)
+    ? `<a class="button protocol-open" href="${escapeAttr(protocol.concreteEndpoint)}" target="_blank" rel="noopener noreferrer">Open GET endpoint &nearr;</a>`
+    : "";
+  return `<article class="server-protocol" data-protocol="${escapeAttr(protocol.id)}" data-availability="${escapeAttr(protocol.availability)}">
+  <header><div><p class="eyebrow">${escapeHtml(protocol.availability)}</p><h3>${escapeHtml(protocol.id)}</h3></div><code>${escapeHtml(protocol.method)} ${escapeHtml(protocol.endpointTemplate)}</code></header>
+  <p>${escapeHtml(protocol.notes)}</p>${open}
+  <div class="inspector-grid">${renderJsonInspector(`${job.id}-protocol-${index}-request`, "Raw request", "request", request)}${renderJsonInspector(`${job.id}-protocol-${index}-response`, "Expected response", "response", protocol.response)}</div>
+</article>`;
+}
+
+function renderJsonInspector(id, title, kind, value) {
+  const targetId = `inspector-${domId(id)}`;
+  const filename = `${domId(id)}.json`;
+  return `<section class="request-response-inspector" data-kind="${escapeAttr(kind)}"><div class="inspector-toolbar"><strong>${escapeHtml(title)}</strong><span><button type="button" data-copy-target="${targetId}">Copy JSON</button><button type="button" data-download-target="${targetId}" data-filename="${filename}">Download</button></span></div><pre tabindex="0"><code id="${targetId}">${escapeHtml(JSON.stringify(value, null, 2))}</code></pre><p class="inspector-status" aria-live="polite"></p></section>`;
+}
+
+function renderJobLanguageTabs(job) {
+  const labels = new Map([["javascript", "JavaScript"], ["python", "Python"], ["dotnet", ".NET"]]);
+  const refs = new Map(job.references.map((reference) => [reference.surface, reference]));
+  const tabs = new Map(job.codeTabs.map((tab) => [tab.surface, tab]));
+  const surfaces = [...labels.keys()];
+  const tabButtons = surfaces.map((surface, index) => {
+    const ref = refs.get(surface);
+    return `<button type="button" role="tab" id="tab-${escapeAttr(job.id)}-${surface}" aria-controls="panel-${escapeAttr(job.id)}-${surface}" aria-selected="${index === 0 ? "true" : "false"}" tabindex="${index === 0 ? "0" : "-1"}" data-job-tab="${surface}" data-state="${escapeAttr(ref.availability)}">${labels.get(surface)} <small>${escapeHtml(ref.availability)}</small></button>`;
+  }).join("");
+  const panels = surfaces.map((surface, index) => {
+    const ref = refs.get(surface);
+    const tab = tabs.get(surface);
+    const symbol = ref.symbolOrCommand ? `<code>${escapeHtml(ref.symbolOrCommand)}</code>` : "No public symbol";
+    const link = isSafeHttpsUrl(ref.deepLink) ? `<a href="${escapeAttr(ref.deepLink)}" target="_blank" rel="noopener noreferrer">Exact API reference &nearr;</a>` : "";
+    const content = tab
+      ? `<section class="code-view job-code-view"><div class="code-toolbar"><div><span>${escapeHtml(tab.language.toUpperCase())}</span><strong>${escapeHtml(ref.label)}</strong></div>${link}</div><pre tabindex="0"><code>${escapeHtml(tab.code)}</code></pre></section>`
+      : `<div class="language-gap"><strong>Unavailable - no pseudocode shown.</strong><p>${escapeHtml(ref.gap ?? "No admitted implementation is available for this surface.")}</p></div>`;
+    return `<section role="tabpanel" id="panel-${escapeAttr(job.id)}-${surface}" aria-labelledby="tab-${escapeAttr(job.id)}-${surface}" data-language="${surface}" data-state="${escapeAttr(ref.availability)}"${index === 0 ? "" : " hidden"}><div class="language-reference"><span>${symbol}</span>${link}</div>${content}</section>`;
+  }).join("");
+  return `<section class="job-language-section" aria-labelledby="language-heading-${escapeAttr(job.id)}"><p class="eyebrow">Equivalent client surfaces</p><h2 id="language-heading-${escapeAttr(job.id)}">Choose a language without changing the job.</h2><div class="job-tabs" role="tablist" aria-label="SDK language">${tabButtons}</div><div class="job-tab-panels">${panels}</div></section>`;
+}
+
+function renderJobReferenceMatrix(job) {
+  const surfaceLabels = { http: "Raw HTTP", cli: "CLI", javascript: "JavaScript", python: "Python", dotnet: ".NET" };
+  const rows = job.references.map((ref) => {
+    const exact = ref.symbolOrCommand ? `<code>${escapeHtml(ref.symbolOrCommand)}</code>` : `<span class="reference-gap">Gap: ${escapeHtml(ref.gap)}</span>`;
+    const linked = isSafeHttpsUrl(ref.deepLink) ? `<a href="${escapeAttr(ref.deepLink)}" target="_blank" rel="noopener noreferrer">${exact}</a>` : exact;
+    return `<tr data-reference-surface="${escapeAttr(ref.surface)}" data-state="${escapeAttr(ref.availability)}"><th scope="row">${escapeHtml(surfaceLabels[ref.surface] ?? ref.surface)}<small>${escapeHtml(ref.availability)}</small></th><td>${linked}</td><td>${escapeHtml(ref.package ?? "Not applicable")}<br><small>min ${escapeHtml(ref.minVersion ?? "n/a")} - ${escapeHtml(ref.supportTier)}</small></td><td><strong>${escapeHtml(ref.owner)}</strong><br>Auth: ${escapeHtml(ref.auth)}<br>Cancel: ${escapeHtml(ref.cancellation)}<br>Errors: ${escapeHtml(ref.errors)}</td></tr>`;
+  }).join("");
+  return `<section class="job-reference" aria-labelledby="reference-heading-${escapeAttr(job.id)}"><p class="eyebrow">Exact reference matrix</p><h2 id="reference-heading-${escapeAttr(job.id)}">Raw contract and public symbols</h2><div class="reference-scroll"><table><thead><tr><th>Surface</th><th>Operation or symbol</th><th>Package and version</th><th>Ownership and behavior</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+}
+
+function renderJobWalkthrough(job) {
+  if (!job.walkthrough.length) return "";
+  const steps = job.walkthrough.map((step) => `<li data-state="${escapeAttr(step.state)}"><div><span>${escapeHtml(step.state)}</span><strong>${escapeHtml(step.title)}</strong></div><p>${escapeHtml(step.action)}</p><p><em>Expected:</em> ${escapeHtml(step.expectedOutcome)}</p></li>`).join("");
+  return `<section class="walkthrough-guide job-walkthrough" aria-labelledby="walkthrough-guide-${escapeAttr(job.id)}"><p class="eyebrow">Ordered job walkthrough</p><h2 id="walkthrough-guide-${escapeAttr(job.id)}">Complete the lifecycle deliberately.</h2><ol>${steps}</ol><p class="expected-outcome"><strong>Final assertion</strong><span>${escapeHtml(job.semantics.assertion)}</span></p></section>`;
+}
+
+function renderJobProjectPanel(card) {
+  return `<section class="project-source-panel project-status-planned"><p class="eyebrow">Governed project blueprint</p><h2>Architecture and admission gaps come before code.</h2><p>This is not a runnable application. It records the current server contract, ordered product gaps, approval boundaries, and the evidence required before runtime admission.</p><dl class="project-architecture"><div><dt>Contract source</dt><dd><code>${escapeHtml(card.sourcePath)}</code></dd></div><div><dt>Runtime</dt><dd>Not admitted</dd></div><div><dt>Evidence</dt><dd>${escapeHtml(card.job.server.fixture.evidenceState)}</dd></div></dl><a class="button primary" href="${escapeAttr(card.githubUrl)}" target="_blank" rel="noopener noreferrer">Open governed project contract &nearr;</a></section>`;
+}
+
+function renderJobConsolePanel(job) {
+  const consoleContract = job.console;
+  const visual = consoleContract.visual;
+  const image = visual.state === "captured" && visual.path
+    ? `<figure class="console-visual"><img src="../../${escapeAttr(visual.path)}" alt="${escapeAttr(visual.alt)}" /><figcaption>${escapeHtml(visual.viewport)} - ${escapeHtml(visual.redaction)}</figcaption></figure>`
+    : `<div class="governed-empty"><strong>No screenshot published.</strong><p>${escapeHtml(visual.alt)} This remains ${escapeHtml(visual.state)} until a real route and golden receipt exist.</p></div>`;
+  return `<section class="job-console" data-console-state="${escapeAttr(consoleContract.state)}"><p class="eyebrow">Console configuration</p><h2>${consoleContract.route ? "Equivalent UI, raw contract retained" : "Planned UI, raw contract only"}</h2><dl class="console-facts"><div><dt>Route</dt><dd>${escapeHtml(consoleContract.route ?? "Not implemented")}</dd></div><div><dt>Required role</dt><dd>${escapeHtml(consoleContract.requiredRole ?? "Not defined")}</dd></div><div><dt>Visual receipt</dt><dd>${escapeHtml(visual.goldenReceipt ?? "Not captured")}</dd></div></dl>${renderJsonInspector(`${job.id}-console-config`, "Searchable equivalent configuration", "configuration", consoleContract.equivalentConfig)}${image}</section>`;
+}
+
+function renderJobAiPanel(job) {
+  const ai = job.ai;
+  if (!ai) return "";
+  const list = (items) => `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+  return `<section class="job-ai" data-ai-state="${escapeAttr(ai.state)}"><p class="eyebrow">Optional AI context - ${escapeHtml(ai.state)}</p><h2>${ai.api ? escapeHtml(ai.api) : "No executable Honua AI surface admitted"}</h2><div class="ai-grid"><div><h3>Allowed drafting tasks</h3>${list(ai.allowedTasks)}<h3>Context inputs</h3>${list(ai.contextInputs)}</div><div><h3>Provider and data boundary</h3><p>${escapeHtml(ai.providerBoundary)}</p><h3>Injection and privacy boundary</h3><p>${escapeHtml(ai.security)}</p></div><div><h3>Deterministic validation</h3><p>${escapeHtml(ai.validation)}</p><h3>Approval boundary</h3><p>${escapeHtml(ai.approvalBoundary)}</p></div><div><h3>Prohibited autonomous actions</h3>${list(ai.prohibitedActions)}<h3>Fallback and provenance</h3><p>${escapeHtml(ai.fallback)}</p><p>${escapeHtml(ai.provenance)}</p></div></div></section>`;
+}
+
+function domId(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "");
+}
+
+function isSafeHttpUrl(value) {
+  if (!value) return false;
+  try {
+    return new Set(["http:", "https:"]).has(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
+
+function isSafeHttpsUrl(value) {
+  if (!value) return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 // ---- rendering: sdk-js entry detail page --------------------------------
@@ -1121,7 +1331,7 @@ function assertNoDuplicateArticles(indexHtml) {
 async function copyAssets() {
   const destDir = path.join(SITE_DIR, "assets");
   await mkdir(destDir, { recursive: true });
-  for (const name of ["gallery.css", "gallery-filter.js", "source-preview.js"]) {
+  for (const name of ["gallery.css", "gallery-filter.js", "source-preview.js", "job-page.js"]) {
     const content = await readFile(path.join(ASSETS_SRC_DIR, name), "utf8");
     await writeFile(path.join(destDir, name), content, "utf8");
   }

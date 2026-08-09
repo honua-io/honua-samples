@@ -7,8 +7,8 @@
   "maturity": {
     "state": "source-preview",
     "supportTier": "Community server; SDK maturity varies by language",
-    "evidence": ["process.ogc-api-processes: 10/10 operations implemented", "honua-server OGC process route contract tests", "honua-sdk-js OGC job runner tests", "honua-sdk-python geoprocessing tests", "honua-sdk-dotnet process client tests"],
-    "limitations": ["Python OGC Processes support is source preview and not yet published to PyPI.", ".NET exposes lifecycle methods but no bounded wait-to-terminal helper.", "DELETE is best-effort job cancellation; Honua Server does not claim the full OGC dismiss conformance class."]
+    "evidence": ["process.ogc-api-processes: 10/10 operations implemented", "honua-server OGC process route contract tests", "honua-sdk-js OGC job runner tests", "honua-sdk-python geoprocessing tests", "honua-sdk-dotnet process client tests", "Python SDK PR #192 staging-smoke receipt is blocked by a deployment-owned fixture binding that is absent from the public demo manifest; application-level validation remains separate from live environment evidence."],
+    "limitations": ["Python OGC Processes support is source preview and not yet published to PyPI.", ".NET exposes lifecycle methods but no bounded wait-to-terminal helper.", "DELETE is best-effort job cancellation; Honua Server does not claim the full OGC dismiss conformance class.", "The authenticated client-compat staging binding is stale and its current credential is rejected; demo/server operations owns fixture binding and credential rotation before this can become live semantic evidence."]
   },
   "server": {
     "operation": "geometry.buffer asynchronous job lifecycle",
