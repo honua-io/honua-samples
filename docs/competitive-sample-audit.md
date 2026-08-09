@@ -14,6 +14,7 @@ Research date: 2026-08-08
 6. Stop publishing qualification apps as beginner examples. A large SDK application may remain a tested Project, but it must link to focused Examples and an incremental Walkthrough that teach its supported parts.
 7. Publish only dependency-gated vertical slices. Fixture evidence, live evidence when claimed, exact SDK/server bytes, semantic assertions, and rollback readiness are release inputs, not follow-up polish.
 8. Prioritize SDK gaps that unlock already-shipping Honua Server capability and ordinary day-two mapping before copying the long tail of competitor renderer effects or proprietary domain workflows.
+9. Make developer `job` the primary information-architecture key. Use one canonical cross-SDK job page for a shared GIS outcome; protocol alternatives and JavaScript, Python, and .NET mappings live inside that page over one server contract, fixture, expected result, and semantic assertion. They do not create duplicate gallery cards.
 
 ## Research inventory
 
@@ -288,6 +289,7 @@ Every public route must declare these fields before admission:
 | Field | Required value |
 |---|---|
 | Identity and classification | Stable id, `contentKind`, `portfolioTrack`, `supportTier`, runtime classification, and canonical route. |
+| Job and server contract | Stable job id, server capability key, protocol family/version and alternatives, HTTP method, endpoint template, manifest service key or fixture URL, authentication, raw request/response examples, server documentation/manifest links, maturity, and server evidence reference. |
 | Source | `sourceOfTruth.repository`, path, immutable commit/tag, and the source artifact digest rendered inline. |
 | SDK | Package/version plus packed tarball or bundle SHA-256. Repository-source-only evidence is insufficient for a supported public claim. |
 | Server | Image reference pinned by digest and advertised server capability/protocol version. Moving `trunk` tags are not publication evidence. |
@@ -296,8 +298,79 @@ Every public route must declare these fields before admission:
 | Semantic assertion | Declarative assertion id, timeout, expected state, minimum/non-empty result, renderer surface, and allowed network origins. |
 | Receipts | Exact artifact/release id, fixture receipt, live receipt when claimed, produced-at time, expiry, and TTL policy. |
 | Ownership and dependencies | Maintainer/team, canonical repository, blocker issue/PR links, reset/quota owner for mutable samples, and retirement/replacement route. |
+| Cross-SDK snippets | Language, pinned SDK package/version and artifact digest, setup/auth/cancellation/error idioms, snippet `sourceOfTruth`, snippet owner, compile/run command, support state, and normalized semantic receipt schema. |
 
 The schema and generated catalog must validate this contract. A hard-coded assertion registry may implement an assertion adapter, but it is not the source of sample admission truth.
+
+### Unified cross-SDK job pages
+
+A developer job that has the same observable GIS outcome across protocols and SDKs gets one canonical gallery route and card, for example `/examples/query-features/`. The page may expose protocol alternatives and JavaScript, Python, and .NET mappings, but the gallery does not create per-protocol or per-language duplicates.
+
+`job` is the primary catalog and route identity. Capability, protocol, language, framework, and source repository are filters and implementation dimensions of that job. A protocol-specific page is justified only when the protocol behavior itself is the learning objective rather than an alternative way to complete the same job.
+
+Every job page uses this order:
+
+1. Outcome, bounded inputs, prerequisites, and normalized expected result.
+2. Server-contract panel, before any language tab.
+3. Executable request/response inspector for the selected protocol alternative.
+4. JavaScript, Python, and .NET SDK mapping tabs with explicit support states.
+5. Normalized semantic receipt and equivalence comparison.
+6. Evidence, maturity, owner/blocker, references, and related jobs.
+
+The server-contract panel is mandatory and contains:
+
+- Canonical server capability key and developer job id.
+- Selected protocol family and version plus every supported protocol alternative for the job.
+- Exact HTTP method, endpoint template, query/body schema, content negotiation, pagination/bounds, and response media type.
+- Concrete `demo-services.v1.json` service key and resolved live URL, or the pinned fixture id/digest and fixture URL. URLs are generated from the manifest/fixture contract, never hand-coded in the page.
+- Authentication and authorization requirements, including anonymous, API key, bearer/OAuth, admin, tenant, and backend-only constraints.
+- A redacted raw request and bounded raw response tied to the current run, with the normalized expected result shown separately.
+- Direct server OpenAPI/protocol documentation, demo manifest, conformance/evidence, maturity, and last verified server image/receipt links.
+
+The job page owns one language-neutral contract:
+
+- One job id, title, learning objective, server capability key, service key, protocol alternatives, fixture id/digest, bounded input, normalized expected result, semantic assertion id, and evidence TTL.
+- One canonical live service selected through the pinned demo manifest when the task makes a live claim.
+- One normalized receipt schema covering accepted source, normalized request intent, result count or raster/value summary, spatial reference, warnings/degradation, cancellation outcome when exercised, and assertion result.
+- One related-content graph, maturity state, and gallery card regardless of the number of language implementations.
+
+Each language tab maps the selected server contract through its language-specific contract:
+
+- Pinned SDK package/version and artifact digest, supported runtime/toolchain, install/import instructions, and a directly runnable snippet or smallest runnable file.
+- Idiomatic setup, authentication, cancellation, disposal, typed error handling, and result iteration. Task equivalence means the same normalized semantic outcome; it does not require identical method names, control flow, exception types, or syntax.
+- An explicit `supported`, `partial`, `unavailable`, or `not-applicable` state for that task and runtime. A missing SDK operation must show its blocker and nearest supported alternative; it must not be hidden, replaced by unlabelled raw REST, or represented as an empty successful result.
+- A snippet-level owner and `sourceOfTruth` repository/path/ref. The page may assemble tabs from multiple canonical repositories, but publication never forks or hand-copies a snippet without provenance.
+
+Raw REST is always inspectable through the server-contract request/response panel. It may also appear as a teaching tab when the wire contract is itself the lesson, but it does not count as Python or .NET SDK coverage. Framework variants belong inside the relevant language tab or a linked framework page, not as duplicate job cards.
+
+The request/response inspector must:
+
+- Show the actual redacted HTTP method, resolved URL, headers, query/body, status, response headers, and bounded response captured for the current run rather than a hand-written approximation.
+- Switch with the selected protocol alternative and language tab while preserving the one normalized expected-result comparison.
+- Copy the request as a safe URL or reproducible command and copy/download the bounded raw response and normalized receipt.
+- Offer Open Request only for safe idempotent requests whose credentials can remain out of the URL and browser history. Otherwise disable the action with the reason and provide a redacted copyable command.
+- Prevent secrets, bearer tokens, API keys, cookies, tenant identifiers, and oversized payloads from appearing in source, copied commands, URLs, screenshots, receipts, or telemetry.
+- Link the exact server docs/OpenAPI operation and the manifest service entry used by the run.
+
+#### Query Features: first job and semantic-equivalence page
+
+The first cross-SDK task page is a bounded feature query because it exercises connection, authentication, request construction, cancellation, errors, paging, and normalized results without requiring renderer parity.
+
+| Shared contract | Required value |
+|---|---|
+| Service and fixture | One manifest-selected Maui FeatureServer/OGC Features source and one byte-pinned local fixture representing the same records. |
+| Server capability | One canonical query capability key with the supported protocol mappings and evidence state generated from server truth. |
+| Protocol alternatives | GeoServices FeatureServer query, OGC API Features collection items/search behavior, and OData query are documented explicitly when supported. Each alternative shows its exact version, HTTP method, endpoint template, parameter/body mapping, media type, auth, raw request/response, and any semantic limitation. |
+| Input | One bounded attribute predicate, explicit field projection and ordering, spatial reference, and maximum result count. |
+| Expected result | The same normalized ordered feature ids, projected fields, geometry/spatial-reference summary, count, and no undeclared degradation. |
+| Assertion | Compare normalized semantic receipts, not serialized request text or language-native object shapes. |
+| JavaScript tab | Published JS SDK query path with AbortSignal-style cancellation and JS SDK typed-error handling. |
+| Python tab | Published Python SDK query path with Python environment/install steps, its cancellation mechanism, context/resource cleanup, and typed exception handling. |
+| .NET tab | Published .NET SDK query path with package/framework setup, `CancellationToken`, `await using`/disposal as applicable, and typed exception handling. |
+
+The page compares protocol semantics without claiming identical wire features: GeoServices `where`/field/order/paging, OGC API Features filter/query parameters and conformance, and OData `$filter`/`$select`/`$orderby`/`$top` are mapped to the same bounded query intent and their limitations are explicit. Unsupported filter, ordering, projection, paging, or spatial-reference behavior produces a partial/unavailable protocol state, never client-side sleight of hand presented as server equivalence.
+
+After the attribute-query page qualifies, reuse the model for bbox/spatial query, statistics, export, geometry operations, and geoprocessing. Do not create `query-features-js`, `query-features-python`, `query-features-dotnet`, `query-features-ogc`, or `query-features-odata` cards.
 
 ## Comprehensive curriculum
 
@@ -320,6 +393,8 @@ Project: Universal Service Explorer.
 ### Track 3: query and analyze
 
 Examples: SQL filter, bbox filter, geometry filter, paging, order, field projection, count, extent, statistics, grouped statistics, explain plan, worker execution, export GeoJSON, export CSV, export GeoParquet, export GeoArrow.
+
+Cross-SDK progression: qualify the Query Features job first with its server-contract/protocol inspector, JavaScript, Python, and .NET tabs, and one normalized receipt; then apply the same job-page model to bbox/spatial filtering, paging/order/projection, statistics, cancellation, and supported exports. Renderer-only tasks remain language/runtime-specific when no meaningful semantic equivalence exists.
 
 Walkthrough: Find and summarize flood-exposed parcels.
 
@@ -389,6 +464,18 @@ Walkthrough: Search for a place, route to it, and analyze nearby hazards.
 
 Project: Evacuation Planning.
 
+Python geoprocessing curriculum:
+
+1. Install and pin the Python SDK, configure endpoint/authentication safely, inspect GeometryServer, GPServer, and OGC API Processes capability, and report partial/unavailable operations explicitly.
+2. Execute one bounded synchronous geometry operation against a pinned fixture and compare its normalized result with the equivalent JavaScript and .NET task tabs.
+3. Submit one asynchronous geoprocessing/process job with stable input serialization and an idempotency/correlation identifier where supported.
+4. Poll typed progress with bounded backoff, surface server messages, retrieve the declared result artifact, and record execution timing and degradation in the normalized receipt.
+5. Cancel polling and server work using the Python SDK's actual cancellation contract; distinguish client wait cancellation from confirmed server-job cancellation.
+6. Handle authentication, validation, unsupported capability, timeout, partial result, failed job, and expired-result errors with Python-native exception/resource idioms.
+7. Dispose sessions/resources, redact a diagnostics bundle, and run the same fixture in CI against the pinned Python package artifact.
+
+Python pages do not claim parity merely because raw REST can reach the endpoint. Until a public Python SDK operation exists and passes its pinned compile/run and semantic receipt gate, the Python tab is `partial` or `unavailable` with the owning blocker.
+
 ### Track 11: authentication and deployment
 
 Examples: API key, OAuth/PKCE, bearer, client credentials in a backend, token refresh, request redaction, row-level security behavior, tenant headers, compatibility check, diagnostics bundle, CSP and worker/WASM hosting, base paths, CDN/cache headers, environment injection without secrets, source maps, and deployment health checks.
@@ -432,8 +519,8 @@ The initial increment proves the evidence and teaching system with one beginner 
 1. Display a MapLibre map.
 2. Install/create a Honua client and connect to the manifest-selected Maui FeatureServer layer.
 3. Inspect the selected source and its capabilities.
-4. Run one bounded SQL filter.
-5. Run one bounding-box query.
+4. Query Features with one bounded attribute filter through the unified job page: server contract and FeatureServer/OGC/OData alternatives first, then JavaScript/Python/.NET mappings.
+5. Run one bounding-box query through the same cross-SDK model after the Query Features page qualifies.
 6. Mount the accepted result and fit the camera.
 7. Style one category field with a legend.
 8. Show a popup and accessible detail panel.
@@ -519,6 +606,10 @@ Each published route must prove:
 - Keyboard, automated accessibility, CSP, cleanup, and declared bundle/performance budgets pass.
 - The exact artifact tested is the artifact uploaded.
 - The fixture and live receipts are unexpired and refer to the same source, SDK bytes, server image, fixture, demo manifest, and release artifact being promoted.
+- Every enabled language snippet compiles or loads and runs against its declared pinned SDK artifact; unavailable and partial tabs validate their explicit state and blocker instead of being skipped silently.
+- All supported language tabs for a cross-SDK task produce the same normalized semantic receipt for the canonical fixture and expected result. Language-specific request syntax and native object/exception shapes are not compared for equality.
+- Every job page renders the server-contract panel before language tabs and its inspector proves the selected protocol's actual redacted request/response, safe Copy behavior, conditional Open Request behavior, and exact docs/manifest links.
+- Generated catalog validation proves one public card per job id. Protocol, language, framework, and repository variants cannot emit duplicate cards or competing canonical routes.
 
 The gallery landing page must be generated only from samples that passed the exact artifact gate. Missing or stale run evidence is fatal in production; best-effort evidence is allowed only for local development. A failed new deployment must leave or restore the prior deployment intact.
 
@@ -547,6 +638,8 @@ Live service canaries belong in `honua-demo-infra`. Browser behavior, inline-sou
 | Evidence retention | Keep release manifest and machine-readable receipts for at least 90 days; keep failure screenshots/logs for at least 30 days. |
 | Alerting | Canary, drift, promotion, or rollback failures notify the named owner through the configured operational channel and create or update a durable incident record. |
 | First-map onboarding | In a quarterly clean-environment usability run, at least 90% of participants complete the supported First Map path in 5 minutes without opening Project-sized source. |
+| Cross-SDK task equivalence | 100% of supported JavaScript, Python, and .NET tabs compile/load and run against pinned SDK versions and match the canonical normalized semantic receipt; every non-supported tab has an explicit state, owner, and blocker. |
+| Job-card uniqueness and server transparency | Exactly one canonical card/route per public job; 100% of job pages expose a current server-contract panel and passing request/response inspector acceptance. |
 
 The current six-hour demo canary and Chromium gallery smoke are inputs to this design, not proof that all SLOs above are already met. Terraform drift detection must be enabled, fail or page according to policy rather than neutral-no-op indefinitely, and report known out-of-band resources until reconciled.
 
@@ -554,9 +647,9 @@ The current six-hour demo canary and Chromium gallery smoke are inputs to this d
 
 One generated matrix joins the server capability registry, SDK catalog, demo manifest, sample catalog, and current receipts. Its canonical row key is:
 
-`capability + developer task + protocol + runtime + support tier`
+`developer job + capability + protocol + runtime + support tier`
 
-The matrix is the denominator for completeness. It avoids the unbounded and low-value rule that every SDK method needs its own Example.
+The matrix is the denominator for completeness. The developer job is the public-card key; protocol and SDK/language implementations are matrix dimensions inside that job, not separate gallery rows. This avoids duplicate cards, protocol-first navigation, and the unbounded, low-value rule that every SDK method needs its own Example.
 
 | Metric | Calculation | Required target |
 |---|---|---|
@@ -565,6 +658,9 @@ The matrix is the denominator for completeness. It avoids the unbounded and low-
 | Reference coverage | Supported rows linked to exact SDK and protocol reference / all supported rows | 100% |
 | Project composition coverage | Public Projects linking all composing Examples and Walkthroughs / all public Projects | 100% |
 | Explicit gap coverage | Partial, preview, experimental, and planned rows with an evidence-backed status/gap card / all non-supported rows | 100% |
+| Cross-SDK semantic equivalence | Supported language implementations with pinned compile/run receipts matching the task's normalized semantic receipt / all supported language implementations | 100% |
+| Canonical job uniqueness | Public job ids with exactly one card and canonical route / all public job ids | 100% |
+| Server-contract transparency | Public job pages with a verified capability/protocol/endpoint/auth/request/response/docs/manifest panel / all public job pages | 100% |
 
 Rows change support tier only when the joined evidence changes. Search and filters expose the row state, owner, last receipt, and blocker so documentation gaps cannot be mistaken for product gaps.
 
@@ -593,6 +689,7 @@ Exit: the release substrate meets the SLO table with a deliberately failed stagi
 ### Stage 2: beginner vertical slice
 
 - Publish the 8 Examples, First Map Walkthrough, and Maui Data Explorer Project in the initial increment.
+- Make Query Features the first unified job page, with its server-contract and FeatureServer/OGC/OData inspector before JavaScript, Python, and .NET tabs over one fixture, service key, expected result, assertion, and normalized receipt.
 - Make canonical inline source, troubleshooting, API/reference links, fixture receipts, and manifest-backed live receipts visible on every route.
 - Measure the first-map onboarding SLO and treat excess ceremony as an SDK ergonomics defect.
 
@@ -612,6 +709,7 @@ Exit per slice: supported matrix rows have 100% executable/reference/live covera
 
 - Publish source/layer lifecycle, feature-state, expressions, projections, camera, geolocation, controls, print/export, OGC Maps/Records/Styles/Processes, analytics widgets, and common geometry tasks.
 - Publish the Start, Debug, Test, Deploy, Performance, and Reference foundations.
+- Extend the unified task-page model from query to spatial filters, statistics, exports, geometry, and Python-led geoprocessing, while preserving explicit per-language support states and owners.
 - Enforce accessibility, keyboard, CSP, cleanup, bundle, and performance gates across every supported route rather than treating them as optional examples.
 
 Exit: the generated matrix covers the ordinary competitor-baseline tasks with executable content or explicit evidence-backed gap cards.
@@ -638,6 +736,7 @@ Exit per workflow: deterministic chaos/error fixtures, safe live sandbox/reset e
 - The quarterly first-map onboarding SLO is met: at least 90% complete in 5 minutes from a clean supported environment without reading Project-sized source.
 - Every public route has an unexpired exact-artifact receipt bound to immutable source, packed SDK bytes, server image digest, fixture digest, demo manifest digest/service key when live, and its semantic assertion.
 - Every public Project declares canonical source and links all composing Examples and Walkthroughs; no source is silently duplicated between `honua-samples` and `honua-sdk-js`.
+- Shared GIS jobs publish one canonical card with a server-contract/request-response panel followed by owned JavaScript, Python, and .NET tabs; protocol alternatives stay inside the job, each supported tab runs against pinned SDK bytes and produces the same normalized semantic receipt, and partial/unavailable states remain explicit.
 - `samples.honua.io` is canonical, `sample.honua.io` redirects path-for-path, `honua.io/samples` does not fork the catalog, and the `demo.honua.io` root advertises the exact live manifest and health/documentation links.
 - Promotion, detection, evidence retention, alerting, and automatic rollback meet the release SLO table, including a periodic rollback drill.
 - No public sample hard-codes a demo endpoint absent from its pinned manifest, labels fixture output as live, or promotes a partial/experimental capability as supported.
