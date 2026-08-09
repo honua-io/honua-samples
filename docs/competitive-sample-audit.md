@@ -6,13 +6,14 @@ Research date: 2026-08-08
 
 ## Decision summary
 
-1. Keep `honua-samples`. Make it the public home for three clearly separated content types: Examples, Walkthroughs, and Projects.
-2. Rename `honua-demo` to `honua-demo-environment` or `honua-demo-infrastructure`. It contains Terraform, seed data, a service manifest, canaries, and runbooks. It does not contain demo application code.
-3. Keep `samples.honua.io` as the public developer gallery. Make `sample.honua.io` redirect to it.
-4. Keep `demo.honua.io` as the public API environment. Add a useful root landing response that explains the environment and links to its service manifest, health, documentation, and samples.
-5. Do not create one repository per content type. One catalog, one build, and one deployment gate are materially easier to keep working.
-6. Stop publishing qualification apps as if they were beginner examples. A large SDK app can remain a tested Project, but it must be paired with a small Example and an incremental Walkthrough.
-7. Prioritize SDK gaps that unlock already-shipping Honua Server capability before copying the long tail of competitor renderer effects or proprietary domain workflows.
+1. Keep `honua-samples` as the public catalog and deployment owner for three content kinds: Examples, Walkthroughs, and Projects.
+2. Keep the already-final `honua-demo-infra` repository name. It owns Terraform, seed provenance, the public service manifest, canaries, quotas, deployment operations, and runbooks. It does not own developer application source.
+3. Keep `samples.honua.io` as the canonical developer gallery. Make `sample.honua.io` redirect permanently to it. Treat `honua.io/samples` as a product-site projection or redirect, never a second catalog or source tree.
+4. Keep `demo.honua.io` as the public API environment. Its root response must identify the environment and link to the versioned service manifest, live/ready health, API documentation, and `samples.honua.io` without changing existing API routes.
+5. Use `contentKind` for public presentation shape. Add orthogonal `portfolioTrack`, `supportTier`, and `sourceOfTruth` fields so a Project can remain canonically sourced in `honua-sdk-js` without being mislabeled or duplicated in `honua-samples`.
+6. Stop publishing qualification apps as beginner examples. A large SDK application may remain a tested Project, but it must link to focused Examples and an incremental Walkthrough that teach its supported parts.
+7. Publish only dependency-gated vertical slices. Fixture evidence, live evidence when claimed, exact SDK/server bytes, semantic assertions, and rollback readiness are release inputs, not follow-up polish.
+8. Prioritize SDK gaps that unlock already-shipping Honua Server capability and ordinary day-two mapping before copying the long tail of competitor renderer effects or proprietary domain workflows.
 
 ## Research inventory
 
@@ -108,34 +109,45 @@ The result is a catalog that proves implementation but does not teach it efficie
 
 ### Demo environment
 
-`honua-demo` publishes `https://demo.honua.io/demo-services.v1.json`. Its current seed tells a coherent Maui story across parcels, zoning, roads, flood hazard, sea-level rise, place names, buildings, hillshade, terrain, imagery, PMTiles, and STAC.
+`honua-demo-infra` publishes `https://demo.honua.io/demo-services.v1.json`. Its current seed tells a coherent Maui story across parcels, zoning, roads, flood hazard, sea-level rise, place names, buildings, hillshade, terrain, imagery, PMTiles, and STAC.
 
-That manifest should become the only source for public live sample endpoints. Samples should not hand-code service URLs that drift independently from the environment.
+That manifest must become the only source for public live sample endpoints. Samples must not hand-code service URLs that drift independently from the environment. The consumer and byte-drift contract is tracked in [`honua-samples#20`](https://github.com/honua-io/honua-samples/issues/20).
 
 The demo environment does not currently advertise public geocoding, routing, realtime, writable editing, WCS/Coverages, Zarr, NetCDF, or GeoParquet/GeoArrow services. Those omissions limit which SDK walkthroughs can have a real anonymous live lane.
 
+### Evidence status at the research date
+
+Implemented evidence and planned gates must remain visibly separate:
+
+- The generated demo manifest, its stable URL, manifest-drift check, and a scheduled live service-family canary exist in `honua-demo-infra`. The manifest does not yet prove every server protocol or every planned sample target; that expansion remains open in [`honua-demo-infra#16`](https://github.com/honua-io/honua-demo-infra/issues/16).
+- The `honua-samples` branch in draft [`PR #28`](https://github.com/honua-io/honua-samples/pull/28) adds the information architecture and semantic gallery crawling. The PR description currently reports 17 of 18 admitted routes and 10 of 11 runnable semantics passing with its stale local SDK artifact. It must not be described as deployed or fully passing before its recorded SDK bundle blocker is resolved.
+- The current gallery workflow has Chromium exact-artifact smoke and a post-deploy live check. Cross-browser, mobile-viewport, accessibility, CSP, evidence-freshness, atomic promotion, and automatic rollback are planned gates below, not current implementation claims.
+- Realtime and columnar golden journeys retain explicit dependencies in [`honua-samples#22`](https://github.com/honua-io/honua-samples/issues/22) and [`honua-samples#23`](https://github.com/honua-io/honua-samples/issues/23). NetCDF/Zarr demo work remains open in [`honua-demo-infra#15`](https://github.com/honua-io/honua-demo-infra/issues/15).
+
 ## Repository naming and ownership
 
-### Recommended names
+### Final names and domain contract
 
-| Current name | Recommendation | Reason |
+| Name | Decision | Contract |
 |---|---|---|
-| `honua-samples` | Keep | The name is familiar and broad enough if the site navigation clearly separates Examples, Walkthroughs, and Projects. Renaming creates URL and workflow churn without fixing the information architecture. |
-| `honua-demo` | Rename to `honua-demo-environment` | The repository contains live environment infrastructure and operations, not application demos. The new name communicates the safety boundary. |
-| `demo.honua.io` | Keep, add a landing response | It is already an API base URL. A useful root response can explain that fact without breaking clients. |
-| `samples.honua.io` | Keep | It accurately describes the public developer gallery. |
+| `honua-samples` | Final | Owns the public learning catalog, gallery, publication policy, and sample evidence projection. |
+| `honua-demo-infra` | Final | Owns the live demo environment infrastructure and operations. Do not schedule another rename. |
+| `demo.honua.io` | Final API environment | Preserve existing API paths. Add an accurate root landing response generated from the same deployment and manifest truth. |
+| `samples.honua.io` | Canonical gallery | All public Example, Walkthrough, and Project routes resolve here. |
+| `sample.honua.io` | Permanent redirect | Redirect path-for-path to `samples.honua.io`; do not host an independent build. |
+| `honua.io/samples` | Product-site projection | Link or redirect to canonical gallery routes. It may showcase selected content but must not copy runnable source or invent support state. |
 
 ### Ownership contract
 
 | Repository | Owns | Does not own |
 |---|---|---|
-| `honua-samples` | Public examples, walkthrough source, project source, catalog metadata, gallery rendering, source viewer, live/fixture receipts, and deployment gates | Live cloud infrastructure or SDK implementation |
-| `honua-sdk-js` | SDK code, API reference, starter templates, contract tests, and qualification fixtures/apps | The public information architecture or production sample deployment |
-| `honua-demo-environment` | Terraform, seed provenance, `demo-services.v1.json`, endpoint canaries, quotas, and environment runbooks | Public application source |
+| `honua-samples` | Public information architecture, catalog metadata, gallery rendering, inline source projection, route compatibility, fixture/live receipt admission, and gallery deployment gates; canonical source only for artifacts whose `sourceOfTruth` points here | Live cloud infrastructure, SDK implementation, or silent copies of SDK-owned Project source |
+| `honua-sdk-js` | SDK code, API reference, starter templates, contract tests, qualification fixtures/apps, and canonical source for SDK-owned Projects until an explicit migration changes `sourceOfTruth` | The public information architecture or production gallery deployment |
+| `honua-demo-infra` | Terraform, seed provenance, `demo-services.v1.json`, endpoint canaries, quotas, deployment operations, and environment runbooks | Public application source or gallery presentation |
 | `honua-server` | Protocol and operation implementation, OpenAPI, seed contracts, conformance, and server guides | Browser sample presentation |
-| `honua-site` | Product documentation, conceptual guides, and links into the sample catalog | A second copy of runnable sample code |
+| `honua-site` | Product documentation, conceptual guides, selected showcases, and links or redirects into the canonical sample catalog | A second catalog, support matrix, or copy of runnable sample code |
 
-GitHub redirects make a repository rename manageable, but Terraform references, workflow allowlists, OIDC subjects, badges, and release metadata still need an explicit migration checklist. Do not rename the live DNS name or move application code into the environment repository.
+Existing references to the old `honua-demo` slug should be corrected through a bounded link and OIDC/workflow audit. GitHub redirects are compatibility aids, not the canonical name. Do not rename the live DNS names or move application code into the environment repository.
 
 ## SDK product gaps, prioritized
 
@@ -193,9 +205,12 @@ These are high priority even when no SDK code is missing:
 | Geometry and projection | API exists, but developers cannot quickly find common buffer, intersect, area, distance, and projection flows. | One operation per Example and one analysis Walkthrough. |
 | Query planner | Strong internal capability is hidden behind large apps. | SQL, spatial, paging, statistics, extent, cancellation, and explain-plan Examples. |
 | COG, STAC, PMTiles | Existing Projects are too large or fixture-centric. | Small source/connect/render Examples and end-to-end publishing Walkthroughs. |
+| Ordinary map mechanics | Source/layer add-update-remove, feature state, expression debugging, style JSON/imports, dynamic images/glyphs, projections, camera transitions, geolocation, navigation controls, and print/export are not a coherent curriculum. | Focused MapLibre recipes or explicit capability-gap cards; do not manufacture SDK wrappers where renderer APIs are the honest abstraction. |
+| OGC API Maps, Records, Styles, and Processes | Protocol names appear in inventories, but developers need task-shaped requests and unsupported-state behavior. | Discovery plus one concrete render, search, style, execute/poll/cancel, and error-handling Example for each supported task. |
 | Offline, collaboration, saved workspaces | Strong primitives have no coherent public journey. | Offline map Walkthrough and Field Operations Project. |
 | AI safety | Differentiated functionality is bundled into labs. | Inspect, tool schema, plan, approve, execute, receipt, and provider-adapter Examples. |
 | Migration | Workbench exists, but the small migration tasks are not teachable independently. | Web map conversion, renderer conversion, endpoint swap, and parity-check Examples. |
+| Start, debug, test, deploy, performance, and reference | API qualification does not teach installation, version selection, environment setup, diagnosis, automated verification, hosting, or production budgets. | Dedicated foundation tracks with copyable diagnostics, tests, deployment patterns, and exact API/protocol links. |
 
 ## Public information architecture
 
@@ -209,7 +224,7 @@ Contract:
 - Prefer 15-40 relevant lines.
 - Inline code is the primary source view.
 - Live result beside the code.
-- Copy, download, and open-in-StackBlitz actions.
+- Copy and download actions. Offer StackBlitz only when the runtime, licenses, network policy, and authentication model can actually run there; do not offer it for Python, secret-bearing backends, or local-integration-only content.
 - No unexplained project scaffolding.
 - Deterministic fixture lane plus a bounded live lane when possible.
 - A semantic browser assertion, not only a 200 response.
@@ -241,7 +256,7 @@ Contract:
 - Full application with its own README and architecture notes.
 - Live full-screen application.
 - File tree and multi-file source viewer.
-- GitHub, download, and local-run actions.
+- GitHub, download, and local-run actions resolved from the declared canonical `sourceOfTruth` repository, path, and immutable ref.
 - Explicit backend, authentication, license, and data prerequisites.
 - Desktop and mobile screenshots.
 - Fixture and live evidence receipts.
@@ -253,11 +268,42 @@ URL shape: `/projects/{slug}/`
 
 API reference pages may embed a compact playground, but the public catalog should point at the canonical Example. Do not fork the source into a second documentation tree.
 
+### Orthogonal catalog classification
+
+The public content shape and the portfolio lifecycle answer different questions and must not be overloaded into one field:
+
+| Field | Allowed values | Meaning |
+|---|---|---|
+| `contentKind` | `example`, `walkthrough`, `project` | How the developer learns from the artifact. |
+| `portfolioTrack` | `golden`, `recipe`, `lab`, `internal-fixture` | How the artifact participates in the maintained portfolio. Recipes normally render as Examples; golden journeys normally render as Walkthroughs or Projects. Internal fixtures are executable but not public routes. |
+| `supportTier` | `supported`, `preview`, `experimental`, `planned` | Product maturity justified by the generated capability matrix, never inferred from visual polish. |
+| `sourceOfTruth` | repository, path, immutable ref | Where canonical inspectable source lives. The gallery may project it but must not silently fork it. |
+
+The existing `wms-getmap-check` is a single executable verification script and should be reclassified as an Example/recipe unless it is expanded to the Walkthrough contract. [`PR #17`](https://github.com/honua-io/honua-samples/pull/17) modernizes its runner but does not by itself make it a multi-step Walkthrough.
+
+### Mandatory per-sample evidence contract
+
+Every public route must declare these fields before admission:
+
+| Field | Required value |
+|---|---|
+| Identity and classification | Stable id, `contentKind`, `portfolioTrack`, `supportTier`, runtime classification, and canonical route. |
+| Source | `sourceOfTruth.repository`, path, immutable commit/tag, and the source artifact digest rendered inline. |
+| SDK | Package/version plus packed tarball or bundle SHA-256. Repository-source-only evidence is insufficient for a supported public claim. |
+| Server | Image reference pinned by digest and advertised server capability/protocol version. Moving `trunk` tags are not publication evidence. |
+| Fixture | Fixture id, schema version, byte digest, seed procedure, and expected semantic result. |
+| Demo manifest | Manifest schema/version, byte digest, and exact `serviceKey`/protocol block used by each live lane. |
+| Semantic assertion | Declarative assertion id, timeout, expected state, minimum/non-empty result, renderer surface, and allowed network origins. |
+| Receipts | Exact artifact/release id, fixture receipt, live receipt when claimed, produced-at time, expiry, and TTL policy. |
+| Ownership and dependencies | Maintainer/team, canonical repository, blocker issue/PR links, reset/quota owner for mutable samples, and retirement/replacement route. |
+
+The schema and generated catalog must validate this contract. A hard-coded assertion registry may implement an assertion adapter, but it is not the source of sample admission truth.
+
 ## Comprehensive curriculum
 
 ### Track 1: start and connect
 
-Examples: display a map, create a client, connect from a URL, inspect capabilities, mount a source, fit to data, dispose cleanly, handle errors, cancel a request.
+Examples: choose a supported runtime and pinned SDK version, install and import the package, configure vanilla TypeScript, display a map, create a client, connect from a URL, inspect capabilities, understand connection/source/plan/receipt concepts, mount a source, fit to data, dispose cleanly, handle errors, and cancel a request.
 
 Walkthrough: First map from endpoint to inspected MapLibre layer.
 
@@ -265,7 +311,7 @@ Project: Maui Data Explorer.
 
 ### Track 2: sources and protocols
 
-Examples: FeatureServer, MapServer, ImageServer, GeometryServer discovery, OGC API Features, OGC API Tiles, OGC API Maps, OGC API Records, WFS, WMS, WMTS, WCS, OData, STAC, MVT/TileJSON, PMTiles, gRPC, MCP.
+Examples: FeatureServer, MapServer, ImageServer, GeometryServer discovery, OGC API Features query, OGC API Tiles render, OGC API Maps render, OGC API Records search, OGC API Styles retrieve/apply, OGC API Processes execute/poll/cancel, WFS, WMS, WMTS, WCS, OData, STAC, MVT/TileJSON, PMTiles, gRPC-web or server-side gRPC as applicable, and MCP.
 
 Walkthrough: One Maui parcels source through GeoServices, OGC API Features, OData, and OGC API Tiles.
 
@@ -281,7 +327,7 @@ Project: Coastal Risk Analytics Workbench.
 
 ### Track 4: map, style, and interact
 
-Examples: point/line/polygon layers, categorical style, class breaks, continuous color, size, labels, popup, side-panel details, hover, click, rectangle select, highlight, cluster, heatmap, legend, layer list, basemap switcher, swipe, camera bounds, synchronized views.
+Examples: point/line/polygon layers, source/layer add-update-remove lifecycle, feature state, categorical style, class breaks, continuous color, expressions and expression debugging, size, labels, symbols/images/glyphs, style JSON/imports, popup, side-panel details, hover, click, rectangle select, highlight, cluster, heatmap, legend, layer list, basemap switcher, projections, geolocation and navigation controls, camera fit/fly/ease/bounds, synchronized views, custom MapLibre layers, and print/export of current map state.
 
 Walkthrough: Build an interactive zoning and parcel map.
 
@@ -299,7 +345,9 @@ Project: Field Operations.
 
 Examples: STAC landing, STAC search, collection browse, asset roles, open a COG, range requests, MapLibre COG source, ImageServer export, ImageServer identify, WMS image, WMTS tiles, WCS metadata, Coverage subset, Terrain-RGB, elevation point, elevation profile.
 
-Preview Examples after product readiness: Zarr metadata, variable selection, time slice, elevation slice, NetCDF registration, NetCDF subset.
+Zarr Preview Examples only after the server public contract, docs, demo seed, SDK slice client, fixture evidence, and live receipt agree: metadata, variable/axis selection, time slice, and elevation slice.
+
+NetCDF, HDF5, and GRIB remain reference-only status and capability-gap pages while the server lacks production metadata extraction and subset readers. Registration alone is an admin operation, not a runnable client capability and not grounds for a public Example.
 
 Walkthrough: Discover a STAC scene, inspect its COG, and render it over Maui.
 
@@ -315,7 +363,7 @@ Project: Maui Offline Basemap Builder.
 
 ### Track 8: columnar and warehouse analytics
 
-Examples: request GeoParquet, request GeoArrow, decode Arrow, inspect geometry metadata, transfer to a worker, aggregate, reproject, cache in IndexedDB, render with Deck.gl, render with Kepler, accessible table, linked filters, viewport statistics.
+Examples: request GeoParquet, request GeoArrow, decode Arrow, inspect geometry metadata, transfer to a worker, aggregate, reproject, cache in IndexedDB, render with Deck.gl, render with Kepler, accessible table, linked filters, viewport statistics, formula, categories, histogram, range, and time-series models.
 
 Future Examples: H3 and Quadbin only when the server/source contract is real and not merely opaque fixture metadata.
 
@@ -343,7 +391,7 @@ Project: Evacuation Planning.
 
 ### Track 11: authentication and deployment
 
-Examples: API key, OAuth/PKCE, bearer, client credentials in a backend, token refresh, request redaction, row-level security behavior, tenant headers, compatibility check, diagnostics bundle.
+Examples: API key, OAuth/PKCE, bearer, client credentials in a backend, token refresh, request redaction, row-level security behavior, tenant headers, compatibility check, diagnostics bundle, CSP and worker/WASM hosting, base paths, CDN/cache headers, environment injection without secrets, source maps, and deployment health checks.
 
 Walkthrough: Secure a browser application without shipping a server secret.
 
@@ -369,60 +417,44 @@ Walkthrough: Build the same inspected map with vanilla TypeScript and React.
 
 Project: Component-Based Developer Portal.
 
-## First implementation wave
+### Track 14: debug, test, performance, and reference
 
-The first wave should demonstrate current, production-capable server and client surfaces. It should not wait for every SDK gap to close.
+Examples: diagnose CORS and mixed content, distinguish authentication from unsupported capability and empty data, inspect request/plan/receipt diagnostics, fix CRS/axis-order and tile-coordinate mistakes, debug PMTiles range requests, debug worker/WASM loading, inspect IndexedDB quota/cache state, detect lifecycle leaks, mock a connector, run a deterministic fixture, write a semantic Playwright assertion, test the packed SDK, measure bundle size, profile first render and interaction latency, and produce a redacted diagnostics bundle.
 
-### 24 Examples
+Reference contract: every public content route links the exact SDK symbols, wire-protocol request/response reference, support/maturity matrix cell, error codes, compatibility range, and related release or migration note. Reference pages link back to the smallest canonical Example.
+
+## Initial dependency-gated increment
+
+The initial increment proves the evidence and teaching system with one beginner vertical slice. It does not claim portfolio completeness and it does not wait for unrelated SDK gaps.
+
+### 8 Examples
 
 1. Display a MapLibre map.
-2. Connect to a FeatureServer layer.
-3. Inspect a source and its capabilities.
-4. Query with a SQL filter.
-5. Query with a bounding box.
-6. Page through features.
-7. Cancel a query.
-8. Mount a source to MapLibre.
-9. Style categories.
-10. Show a popup and accessible detail panel.
-11. Add a legend.
-12. Add a layer list.
-13. Query OGC API Features.
-14. Render OGC API Tiles.
-15. Render WMS.
-16. Render WMTS.
-17. Search STAC.
-18. Open and render a COG.
-19. Load PMTiles.
-20. Request GeoParquet.
-21. Decode GeoArrow in a worker.
-22. Subscribe with SSE and resume.
-23. Create an offline region.
-24. Dry-run and approve an agent plan.
+2. Install/create a Honua client and connect to the manifest-selected Maui FeatureServer layer.
+3. Inspect the selected source and its capabilities.
+4. Run one bounded SQL filter.
+5. Run one bounding-box query.
+6. Mount the accepted result and fit the camera.
+7. Style one category field with a legend.
+8. Show a popup and accessible detail panel.
 
-### 6 Walkthroughs
+### 1 Walkthrough
 
-1. First Map.
-2. Query and style Maui parcels.
-3. STAC to COG imagery.
-4. MVT to PMTiles delivery.
-5. Offline editing and replay.
-6. Plan-first AI map control.
+First Map: install, connect, inspect, explain, query, mount, interact, and dispose through named checkpoints. Its final checkpoint links to the Project below.
 
-### 6 Projects
+### 1 Project
 
-1. Maui Data Explorer.
-2. Planning and Permitting Workbench.
-3. Cloud-Native Imagery Lab.
-4. Building Analytics Workbench.
-5. Incident Command Dashboard.
-6. ArcGIS Migration Workbench.
+Maui Data Explorer, labeled in catalog metadata as the First Map Project. This is the one production-shaped composition for the initial slice; it is not counted as a second unnamed First Map Project.
+
+All ten routes require the mandatory evidence contract, exact packed-SDK and pinned-server fixture receipts, and fresh live receipts for their manifest-backed claims before admission. If a live target is unavailable, the route is `fixture-only` or remains unpublished; it is never silently labeled `works-now`.
+
+SSE/realtime, offline editing, agent execution, GeoParquet/GeoArrow live flows, MVT-to-PMTiles publishing, and the six-project uplift are not part of the initial increment. They enter only through the gated vertical slices below.
 
 ## Presentation requirements
 
 ### Example page
 
-Use a split layout with the running output and a syntax-highlighted code editor. Keep a file tab only when a second file is essential. Provide Copy, Reset, Open full screen, Download, and Open in StackBlitz actions.
+Use a split layout with the running output and a syntax-highlighted code editor. Keep a file tab only when a second file is essential. Provide Copy, Reset, Open full screen, and Download actions. Add Open in StackBlitz only when the declared runtime can run there without hidden services or secrets.
 
 The inline code must be canonical source from the repository artifact. Do not scrape GitHub at runtime and do not display a generated bundle as source.
 
@@ -432,11 +464,13 @@ Show the current step, the code diff, the running checkpoint, expected output, a
 
 ### Project page
 
-Lead with the running application and its user outcome. Show architecture, prerequisites, data provenance, and evidence before the full source tree. GitHub is an additional action, not the only way to inspect code.
+Lead with the running application and its user outcome. Show architecture, prerequisites, data provenance, and evidence before the full source tree. Resolve GitHub and download actions from `sourceOfTruth`; GitHub is an additional action, not the only way to inspect code.
 
 ### Catalog filters
 
 Primary content filters: Examples, Walkthroughs, Projects.
+
+Portfolio filters: Golden, Recipe, Lab. Internal fixtures are excluded from public navigation.
 
 Capability filters: Connect, Map, Query, Analyze, Edit, Offline, Realtime, Raster, Tiles, Columnar, AI, Auth, Migrate.
 
@@ -446,20 +480,22 @@ Maturity filters: Supported, Preview, Experimental.
 
 Runtime filters: Works now, Requires configuration, Requires backend, Fixture only.
 
+Source filters: `honua-samples`, `honua-sdk-js`, and any future explicitly admitted canonical repository.
+
 ## Live data strategy
 
 Use the Maui seed as a connected curriculum instead of selecting a different external dataset for every page.
 
-Build inputs must come from a pinned snapshot of `demo-services.v1.json`. The deployment lane must also fetch the current live manifest and prove that the pinned entries still exist before publishing.
+Build inputs must come from a byte-digested snapshot of `demo-services.v1.json`. The deployment lane must fetch the current live manifest, record its digest, and prove that every declared `serviceKey` and protocol block still exists and passes its semantic canary before promotion.
 
 Every live Example needs a deterministic fallback or a clear `Requires backend` classification. Never silently replace a dead endpoint with an empty map.
 
-Add these service families to the demo manifest in priority order:
+Add these service families to the demo manifest in dependency order. Their presence alone is insufficient; the server, SDK, reset/quota policy, manifest entry, canary, and sample receipt must agree:
 
-1. Writable feature layer for edit and attachment samples.
-2. Raster coverage layer exposed through ImageServer, WCS, and OGC API Coverages.
-3. Realtime incident feed.
-4. GeoParquet/GeoArrow-enabled feature query target.
+1. Raster coverage layer exposed through ImageServer, WCS, and OGC API Coverages.
+2. GeoParquet/GeoArrow-enabled feature query target.
+3. Writable sandbox feature layer for edit and attachment samples, with idempotent reset and quotas.
+4. Realtime incident feed with deterministic replay and resumable live canary.
 5. Quota-limited geocoding target.
 6. Quota-limited routing target.
 7. Zarr datacube only after its public contract is stable.
@@ -479,53 +515,131 @@ Each published route must prove:
 - The expected renderer surface exists, such as a MapLibre canvas.
 - The expected result is non-empty, such as a feature count or raster tile.
 - Desktop and mobile viewport checks pass.
+- Chromium, Firefox, and WebKit release lanes pass for the declared browser matrix.
+- Keyboard, automated accessibility, CSP, cleanup, and declared bundle/performance budgets pass.
 - The exact artifact tested is the artifact uploaded.
+- The fixture and live receipts are unexpired and refer to the same source, SDK bytes, server image, fixture, demo manifest, and release artifact being promoted.
 
-The gallery landing page must be generated only from samples that passed the exact artifact gate. A failed new deployment must leave the prior deployment intact.
+The gallery landing page must be generated only from samples that passed the exact artifact gate. Missing or stale run evidence is fatal in production; best-effort evidence is allowed only for local development. A failed new deployment must leave or restore the prior deployment intact.
 
-Live canaries belong in `honua-demo-environment`. Browser behavior and source/artifact assertions belong in `honua-samples`.
+Live service canaries belong in `honua-demo-infra`. Browser behavior, inline-source integrity, content contracts, and release-artifact assertions belong in `honua-samples`.
+
+### Immutable release and promotion flow
+
+1. Build once from immutable source, packed SDK bytes, pinned server image digest, fixture digest, and demo manifest snapshot. Assign a release id and artifact SHA-256.
+2. Deploy that exact artifact to a non-public preview/staging origin. Run all fixture semantics, route/source assertions, browser/viewports, accessibility, CSP, lifecycle, and performance gates there.
+3. Fetch the live demo manifest and require fresh semantic canaries for every live claim. The canary receipt must bind the live manifest digest and service keys to the same release candidate.
+4. Promote the already-tested immutable artifact through an atomic pointer or equivalent host-supported promotion. Do not rebuild during promotion.
+5. Run post-promotion synthetics against the canonical domains. On failure, automatically restore the recorded last-known-good release and rerun its root and representative semantic checks.
+6. Retain release manifests, receipts, screenshots on failure, and the last known-good artifact. Record promotion and rollback in an auditable release history.
+
+### Observability and release SLOs
+
+| Measure | Release requirement |
+|---|---|
+| Admitted route coverage | 100% of generated public routes pass exact-artifact fixture semantics before promotion. |
+| Supported live-claim coverage | 100% of matrix rows marked live-capable have an unexpired semantic canary bound to the promoted manifest digest and service key. |
+| Evidence freshness | Live receipts are at most 6 hours old at promotion; fixture receipts are produced from the release candidate itself. |
+| Browser and viewport coverage | 100% of declared Chromium, Firefox, and WebKit desktop lanes plus the declared mobile viewport lanes pass. |
+| Error budget | Zero unexpected request failures, page/console errors, unsupported-state masquerades, or unapproved off-origin requests on admitted routes. |
+| Promotion detection | Canonical-domain post-promotion synthetics begin within 5 minutes of promotion and complete within 10 minutes. |
+| Rollback | Restore the last known-good artifact within 10 minutes of a failed post-promotion gate and prove its root plus representative semantics. |
+| Evidence retention | Keep release manifest and machine-readable receipts for at least 90 days; keep failure screenshots/logs for at least 30 days. |
+| Alerting | Canary, drift, promotion, or rollback failures notify the named owner through the configured operational channel and create or update a durable incident record. |
+| First-map onboarding | In a quarterly clean-environment usability run, at least 90% of participants complete the supported First Map path in 5 minutes without opening Project-sized source. |
+
+The current six-hour demo canary and Chromium gallery smoke are inputs to this design, not proof that all SLOs above are already met. Terraform drift detection must be enabled, fail or page according to policy rather than neutral-no-op indefinitely, and report known out-of-band resources until reconciled.
+
+## Generated capability-task denominator
+
+One generated matrix joins the server capability registry, SDK catalog, demo manifest, sample catalog, and current receipts. Its canonical row key is:
+
+`capability + developer task + protocol + runtime + support tier`
+
+The matrix is the denominator for completeness. It avoids the unbounded and low-value rule that every SDK method needs its own Example.
+
+| Metric | Calculation | Required target |
+|---|---|---|
+| Supported executable coverage | Supported rows with a passing canonical Example or golden journey / all supported rows | 100% before a supported release claim |
+| Supported live compatibility | Live-capable supported rows with an unexpired live receipt / all live-capable supported rows | 100% at gallery promotion |
+| Reference coverage | Supported rows linked to exact SDK and protocol reference / all supported rows | 100% |
+| Project composition coverage | Public Projects linking all composing Examples and Walkthroughs / all public Projects | 100% |
+| Explicit gap coverage | Partial, preview, experimental, and planned rows with an evidence-backed status/gap card / all non-supported rows | 100% |
+
+Rows change support tier only when the joined evidence changes. Search and filters expose the row state, owner, last receipt, and blocker so documentation gaps cannot be mistaken for product gaps.
 
 ## Delivery sequence
 
-### Phase 0: capability truth and naming
+### Stage 0: canonical ownership and current-state correction
 
-- Decide and execute the `honua-demo` repository rename.
-- Add the `demo.honua.io` landing response.
-- Join server, SDK, demo manifest, and sample evidence into one capability projection.
-- Add `contentType` and maturity fields to the sample catalog.
+- Record `honua-demo-infra` as final and correct stale `honua-demo` links, workflow subjects, and owner metadata without another rename.
+- Lock the canonical domain/redirect contract and assign DNS, gallery, demo landing, and incident owners.
+- Add `portfolioTrack`, `supportTier`, `sourceOfTruth`, and the mandatory evidence fields alongside the existing `contentKind`.
+- Reclassify `wms-getmap-check` as an Example/recipe unless it is expanded to a real multi-step Walkthrough.
+- Reconcile the plan with the canonical portfolio and evidence epic in [`honua-samples#21`](https://github.com/honua-io/honua-samples/issues/21).
 
-### Phase 1: information architecture and first wave
+Exit: schema vocabulary, repository ownership, canonical routes, source locations, and blocker links agree in docs and generated catalog.
 
-- Add Examples, Walkthroughs, and Projects navigation.
-- Convert First Map into a small Example, a Walkthrough, and the existing qualified Project.
-- Publish the first 24 Examples, 6 Walkthroughs, and 6 Projects listed above.
-- Make inline repository source the default code view.
+### Stage 1: evidence, discovery, and release substrate
 
-### Phase 2: differentiated cloud-native curriculum
+- Complete the byte-bound demo-manifest consumer and drift contract in [`honua-samples#20`](https://github.com/honua-io/honua-samples/issues/20).
+- Generate the capability-task matrix and bind every route to immutable SDK/server/fixture/manifest inputs.
+- Make evidence mandatory, add preview/staging verification, implement immutable promotion and last-known-good rollback, and wire alerting/retention dashboards.
+- Add an accurate `demo.honua.io` root response and path-preserving domain redirects, then verify them as release routes.
+- Resolve draft [`PR #28`](https://github.com/honua-io/honua-samples/pull/28) only after its recorded [`honua-sdk-js#1111`](https://github.com/honua-io/honua-sdk-js/pull/1111) bundle dependency and all admitted semantics pass against the byte-bound handoff.
 
-- Publish STAC-to-COG, MVT-to-PMTiles, and GeoParquet/GeoArrow end-to-end tracks.
-- Seed and publish a live coverage target.
-- Add the OGC API Coverages/WCS SDK client.
-- Promote raster and columnar Projects.
+Exit: the release substrate meets the SLO table with a deliberately failed staging candidate and successful automatic preservation/restoration of the prior public release.
 
-### Phase 3: workflow completion
+### Stage 2: beginner vertical slice
 
-- Complete editing/offline sync, realtime, auth, geocoding, routing, and process execution.
-- Add Vue, Svelte, and Angular starters only after CI ownership exists.
-- Promote Zarr and multidimensional samples only after server and SDK maturity gates pass.
+- Publish the 8 Examples, First Map Walkthrough, and Maui Data Explorer Project in the initial increment.
+- Make canonical inline source, troubleshooting, API/reference links, fixture receipts, and manifest-backed live receipts visible on every route.
+- Measure the first-map onboarding SLO and treat excess ceremony as an SDK ergonomics defect.
 
-### Phase 4: selective advanced capability
+Exit: all ten routes meet the evidence contract, the Project links its composing content, and the exact promoted artifact passes the release SLOs.
+
+### Stage 3: differentiated read-only vertical slices
+
+- Ship STAC search to COG range/render after the manifest asset path, SDK session, fixture, and live canary agree.
+- Ship PMTiles consumption and styling before mutable publish/archive workflows.
+- Ship GeoParquet/GeoArrow query, worker, aggregation, and renderer slices after the demo query target and bounded public-object evidence exist.
+- Seed the coverage target, add the OGC API Coverages/WCS client, then publish metadata/subset/render slices.
+- Promote one Project only after its Examples and Walkthrough pass; do not batch-promote six Projects.
+
+Exit per slice: supported matrix rows have 100% executable/reference/live coverage and no hidden fixture-only production claim.
+
+### Stage 4: ordinary day-two mapping and developer operations
+
+- Publish source/layer lifecycle, feature-state, expressions, projections, camera, geolocation, controls, print/export, OGC Maps/Records/Styles/Processes, analytics widgets, and common geometry tasks.
+- Publish the Start, Debug, Test, Deploy, Performance, and Reference foundations.
+- Enforce accessibility, keyboard, CSP, cleanup, bundle, and performance gates across every supported route rather than treating them as optional examples.
+
+Exit: the generated matrix covers the ordinary competitor-baseline tasks with executable content or explicit evidence-backed gap cards.
+
+### Stage 5: mutable and partial workflows
+
+- Complete editing/offline sync, realtime, auth, geocoding, routing, process execution, PMTiles publishing, and AI approval/execution only after the SDK contracts and demo services qualify.
+- Require isolated run ids, quotas, idempotent reset, authorization boundaries, and reset canaries for every mutable live sample.
+- Keep experimental AI, offline, realtime, and collaboration paths out of supported golden status until their canonical matrix claims and live receipts agree.
+
+Exit per workflow: deterministic chaos/error fixtures, safe live sandbox/reset evidence, and an owned operational runbook all pass.
+
+### Stage 6: selective advanced capability
 
 - Add terrain and 3D buildings first.
+- Promote Zarr only after its server contract, docs, demo seed, SDK client, fixtures, and live evidence agree.
+- Keep NetCDF, HDF5, and GRIB reference-only until production metadata and subset readers ship; then expose them through the coverage-oriented client rather than format-specific UI.
+- Add Vue, Svelte, and Angular starters only after generated templates and CI ownership exist.
 - Use customer demand to choose any further scene, point-cloud, BIM, utility-network, or knowledge-graph work.
 
 ## Success measures
 
-- A developer can get a working map in under five minutes without reading a project-sized source file.
-- Every supported SDK entrypoint has at least one focused Example.
-- Every production server protocol has a client Example or an explicit SDK-gap card.
-- Every Project links to the Examples and Walkthroughs that compose it.
-- Every public sample has a current exact-artifact browser receipt.
-- No public sample hard-codes a demo service that is absent from the demo manifest.
-- Search results distinguish functionality gaps from documentation gaps.
-- Cloud-native formats are prominent, not buried behind competitor-shaped categories.
+- The generated capability-task matrix reports 100% supported executable coverage, 100% supported live compatibility for live-capable rows, 100% reference coverage, and 100% explicit non-supported gap coverage.
+- The quarterly first-map onboarding SLO is met: at least 90% complete in 5 minutes from a clean supported environment without reading Project-sized source.
+- Every public route has an unexpired exact-artifact receipt bound to immutable source, packed SDK bytes, server image digest, fixture digest, demo manifest digest/service key when live, and its semantic assertion.
+- Every public Project declares canonical source and links all composing Examples and Walkthroughs; no source is silently duplicated between `honua-samples` and `honua-sdk-js`.
+- `samples.honua.io` is canonical, `sample.honua.io` redirects path-for-path, `honua.io/samples` does not fork the catalog, and the `demo.honua.io` root advertises the exact live manifest and health/documentation links.
+- Promotion, detection, evidence retention, alerting, and automatic rollback meet the release SLO table, including a periodic rollback drill.
+- No public sample hard-codes a demo endpoint absent from its pinned manifest, labels fixture output as live, or promotes a partial/experimental capability as supported.
+- Search results expose capability-task state, content kind, portfolio track, support tier, runtime, canonical source, evidence freshness, owner, and blocker so product gaps and documentation gaps remain distinct.
+- COG, STAC, PMTiles, GeoParquet/GeoArrow, and Coverages/WCS have prominent gated vertical slices. Zarr appears only at its evidenced maturity, and NetCDF/HDF5/GRIB remain reference-only until real readers qualify.
