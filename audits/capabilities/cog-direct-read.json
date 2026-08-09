@@ -1,0 +1,448 @@
+{
+  "$schema": "../../schemas/capability-audit.v1.schema.json",
+  "format": "honua.release-capability-audit.v1",
+  "schemaVersion": "1.0.0",
+  "auditId": "cog-direct-read",
+  "auditSet": "2026-08-08",
+  "title": "Cloud Optimized GeoTIFF direct read",
+  "capabilityKey": "raster.cloud-cog-serving",
+  "jobId": "job.cog-direct-read",
+  "claim": {
+    "gaClaim": false,
+    "summary": "Discover a reviewed COG, enforce bounded ranges/decoded windows, and inspect or render the result.",
+    "scope": [
+      "COG metadata",
+      "HTTP Range",
+      "Bounded decoded window",
+      "STAC provenance"
+    ],
+    "exclusions": [
+      "Untrusted arbitrary TIFF",
+      "Browser UTM reprojection",
+      "Zarr/NetCDF/HDF5",
+      "External Element 84 proof as Honua proof"
+    ],
+    "publicClaims": [
+      {
+        "source": "honua-server capability matrix 61b7038e1887c98131aa217b6f0ae7869356a1f3",
+        "status": "implemented-count-derived",
+        "text": "raster.cloud-cog-serving has source/test entries; the matrix explicitly says this is not a GA signoff."
+      },
+      {
+        "source": "honua-site capabilities 718350adafbb519cd1bf8004b5f1014b45eebba9",
+        "status": "source-backed",
+        "text": "raster.cloud-cog-serving is published as source-backed without an immutable release artifact."
+      }
+    ]
+  },
+  "targetTier": "ga",
+  "owner": {
+    "team": "Developer Experience / Release Engineering",
+    "repository": "honua-io/honua-samples",
+    "contact": "release owner pending signoff"
+  },
+  "protocol": {
+    "names": [
+      "Cloud Optimized GeoTIFF",
+      "HTTP Range",
+      "GeoServices ImageServer"
+    ],
+    "versions": [
+      "COG profile not release-pinned",
+      "HTTP/1.1 Range"
+    ],
+    "endpoints": [
+      "/api/v1/admin/cloud-rasters",
+      "/rest/services/{serviceId}/ImageServer/tile/{z}/{y}/{x}"
+    ]
+  },
+  "server": {
+    "repository": "honua-io/honua-server",
+    "commit": "61b7038e1887c98131aa217b6f0ae7869356a1f3",
+    "image": {
+      "reference": null,
+      "digest": null,
+      "status": "missing"
+    },
+    "conformance": [
+      "5 entries / 11 proving tests; no CITE join."
+    ],
+    "limits": [
+      "SDK ceilings exist; server budget receipt missing."
+    ],
+    "errors": [
+      "Credential/CORS/range/CRS/format/nodata outcomes are structured in JS."
+    ],
+    "security": [
+      "Server hardening #3102 blocks untrusted-input GA."
+    ],
+    "performance": [
+      "External ranges do not prove Honua performance."
+    ],
+    "observability": [
+      "Release-bound trace/metric/log receipt missing."
+    ]
+  },
+  "clients": {
+    "javascript": {
+      "status": "beta",
+      "package": {
+        "name": "@honua/sdk-js",
+        "declaredVersion": "0.1.4-beta.0",
+        "publishedVersion": "0.1.2-beta.0",
+        "sourceCommit": "e0b4c21cfa17808a01f80d095c4ca5e9cda6b835"
+      },
+      "symbols": [
+        "StacCogAssetSession",
+        "openStacCogAsset",
+        "CogRangeTransport",
+        "mountStacCogAssetToMapLibre"
+      ],
+      "evidence": [
+        "config/support-manifest.v1.json",
+        "samples/evidence/imagery-cog-quickstart/live.v1.json"
+      ],
+      "exclusion": null
+    },
+    "python": {
+      "status": "absent",
+      "package": {
+        "name": "honua-sdk",
+        "declaredVersion": "0.1.10",
+        "publishedVersion": null,
+        "sourceCommit": "e28c67c8e3ef99bcc86c891ecc01a6940d7d7e59"
+      },
+      "symbols": [],
+      "evidence": [
+        "packages/honua-sdk/pyproject.toml raster optional dependencies"
+      ],
+      "exclusion": "No COG-specific covered symbol."
+    },
+    "dotnet": {
+      "status": "partial-source-preview",
+      "package": {
+        "name": "Honua.Sdk",
+        "declaredVersion": "1.6.0",
+        "publishedVersion": null,
+        "sourceCommit": "a88a7fbb3643cb046e70d6ef4d38ae70a025a2a4"
+      },
+      "symbols": [
+        "IHonuaRasterDataClient.GetCoverageStatisticsAsync"
+      ],
+      "evidence": [
+        "docs/capability-coverage.md"
+      ],
+      "exclusion": "Generic statistics are not COG range/decode parity."
+    },
+    "cli": {
+      "status": "absent",
+      "package": {
+        "name": "@honua/sdk-js",
+        "declaredVersion": "0.1.4-beta.0",
+        "publishedVersion": "0.1.2-beta.0",
+        "sourceCommit": "e0b4c21cfa17808a01f80d095c4ca5e9cda6b835"
+      },
+      "symbols": [],
+      "evidence": [
+        "honua-sdk-js/src/cli"
+      ],
+      "exclusion": "No COG command is published."
+    }
+  },
+  "demo": {
+    "manifestServiceKey": null,
+    "manifestProtocolKey": null,
+    "manifestCommit": "3cccf9b08a19e51619a0e6bec19b0e2afbb5ebde",
+    "liveCanary": {
+      "status": "missing",
+      "route": "https://demo.honua.io/rest/services/maui-imagery/ImageServer",
+      "evidenceId": null
+    },
+    "reset": {
+      "status": "missing",
+      "procedure": null,
+      "owner": "Demo Operations (receipt unassigned)"
+    }
+  },
+  "experience": {
+    "exampleRoutes": [
+      "https://samples.honua.io/?caps=raster.cloud-cog-serving"
+    ],
+    "walkthroughRoutes": [
+      "honua-sdk-js/docs/cog.md",
+      "honua-sdk-js/examples/imagery-cog-quickstart/README.md"
+    ],
+    "projectRoutes": [
+      "honua-sdk-js/examples/imagery-cog-quickstart"
+    ]
+  },
+  "evidence": {
+    "freshnessPolicy": {
+      "asOf": "2026-08-08T00:00:00Z",
+      "defaultTtlDays": 14
+    },
+    "required": [
+      "server-image",
+      "server-conformance",
+      "server-limits-errors",
+      "server-security",
+      "server-performance",
+      "server-observability",
+      "sdk-supported-surface",
+      "demo-manifest",
+      "demo-live-canary",
+      "demo-reset",
+      "fixture-semantic",
+      "live-semantic",
+      "accessibility",
+      "browser-platform",
+      "docs-troubleshooting",
+      "compatibility-support",
+      "rollback"
+    ],
+    "receipts": [
+      {
+        "id": "server-matrix",
+        "kind": "source-inventory",
+        "source": "https://github.com/honua-io/honua-server/blob/61b7038e1887c98131aa217b6f0ae7869356a1f3/docs/gis/data/capability-matrix.v1.json",
+        "capturedAt": "2026-08-05T18:38:08Z",
+        "expiresAt": "2026-09-04T18:38:08Z",
+        "digest": {
+          "algorithm": "git-blob-sha1",
+          "value": "200a3f61ad467b0b98f48d39a9813460a3634cc2"
+        },
+        "semanticAssertions": [
+          "raster.cloud-cog-serving is present in the canonical matrix.",
+          "5 entries / 11 proving tests",
+          "Implemented counts are not a GA signoff."
+        ]
+      },
+      {
+        "id": "cog-external-live",
+        "kind": "live-semantic",
+        "source": "https://github.com/honua-io/honua-sdk-js/blob/e0b4c21cfa17808a01f80d095c4ca5e9cda6b835/samples/evidence/imagery-cog-quickstart/live.v1.json",
+        "capturedAt": "2026-08-05T13:43:53.204Z",
+        "expiresAt": "2026-08-19T13:43:53.204Z",
+        "digest": {
+          "algorithm": "git-blob-sha1",
+          "value": "78fcc50e3f9d9e01a47fdd5b43e1d57a9784d4fe"
+        },
+        "semanticAssertions": [
+          "Pinned Element 84 STAC item/COG returned bounded HTTP 206 ranges.",
+          "Contract, sample, and artifact SHA-256 values are retained.",
+          "This proves a client path, not Honua COG delivery."
+        ]
+      }
+    ],
+    "missing": [
+      {
+        "kind": "server-image",
+        "reason": "No immutable candidate image reference/digest is attached.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "server-conformance",
+        "reason": "No release-bound conformance receipt names the candidate image.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "server-limits-errors",
+        "reason": "No candidate receipt proves limits and stable errors.",
+        "gapId": "SEC-001"
+      },
+      {
+        "kind": "server-security",
+        "reason": "No candidate-bound security receipt is attached.",
+        "gapId": "SEC-001"
+      },
+      {
+        "kind": "server-performance",
+        "reason": "No current candidate performance receipt is attached.",
+        "gapId": "RAST-001"
+      },
+      {
+        "kind": "server-observability",
+        "reason": "No trace/metric/log receipt is attached.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "sdk-supported-surface",
+        "reason": "Published packages do not form the claimed support window.",
+        "gapId": "SDK-001"
+      },
+      {
+        "kind": "demo-manifest",
+        "reason": "The demo manifest does not declare the exact service/protocol.",
+        "gapId": "GA-003"
+      },
+      {
+        "kind": "demo-live-canary",
+        "reason": "No fresh scheduled semantic canary is admitted.",
+        "gapId": "GA-003"
+      },
+      {
+        "kind": "demo-reset",
+        "reason": "No deterministic seed reset receipt is attached.",
+        "gapId": "GA-003"
+      },
+      {
+        "kind": "fixture-semantic",
+        "reason": "No digest-pinned fixture semantic receipt is admitted.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "accessibility",
+        "reason": "No release-bound accessibility receipt is attached.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "browser-platform",
+        "reason": "No release-bound browser/platform receipt is attached.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "docs-troubleshooting",
+        "reason": "Reference/troubleshooting coverage is incomplete.",
+        "gapId": "GA-001"
+      },
+      {
+        "kind": "compatibility-support",
+        "reason": "No published compatibility/deprecation/support window covers the claim.",
+        "gapId": "SDK-001"
+      },
+      {
+        "kind": "rollback",
+        "reason": "No tested rollback receipt is attached.",
+        "gapId": "GA-003"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "missing",
+    "evidenceIds": [],
+    "targets": [
+      "WCAG 2.2 AA"
+    ],
+    "note": "Release-bound accessibility evidence is missing."
+  },
+  "browserPlatform": {
+    "status": "missing",
+    "evidenceIds": [],
+    "targets": [
+      "Chromium",
+      "Firefox",
+      "WebKit",
+      "desktop",
+      "mobile"
+    ],
+    "note": "Release-bound browser/platform evidence is missing."
+  },
+  "documentation": {
+    "references": [
+      "honua-sdk-js/docs/cog.md",
+      "honua-sdk-js/examples/imagery-cog-quickstart/README.md"
+    ],
+    "troubleshooting": [
+      "Client degradation is documented; server operations escalation is incomplete."
+    ],
+    "status": "partial"
+  },
+  "compatibility": {
+    "policy": "No cross-repository GA compatibility window is published for this exact claim.",
+    "deprecation": "Producer repositories retain prerelease/source policies.",
+    "support": "Evaluation only until this dossier passes."
+  },
+  "operations": {
+    "rollbackProcedure": null,
+    "rollbackOwner": "unassigned",
+    "incidentOwner": "Honua release incident commander (assignment pending)"
+  },
+  "blockers": [
+    {
+      "gapId": "GA-002",
+      "evidenceKinds": [
+        "server-image",
+        "server-conformance",
+        "server-observability"
+      ],
+      "note": "Pin immutable server image, commit, and evidence lineage"
+    },
+    {
+      "gapId": "SEC-001",
+      "evidenceKinds": [
+        "server-limits-errors",
+        "server-security"
+      ],
+      "note": "Close bounded COG hardening and object-locality proof"
+    },
+    {
+      "gapId": "RAST-001",
+      "evidenceKinds": [
+        "server-performance"
+      ],
+      "note": "Publish raster/coverage limits, performance, and offload behavior"
+    },
+    {
+      "gapId": "SDK-001",
+      "evidenceKinds": [
+        "sdk-supported-surface",
+        "compatibility-support"
+      ],
+      "note": "Publish exact cross-SDK surfaces and version window"
+    },
+    {
+      "gapId": "GA-003",
+      "evidenceKinds": [
+        "demo-manifest",
+        "demo-live-canary",
+        "demo-reset",
+        "rollback"
+      ],
+      "note": "Add capability canaries, reset, rollback, and incident ownership"
+    },
+    {
+      "gapId": "GA-004",
+      "evidenceKinds": [
+        "fixture-semantic",
+        "accessibility",
+        "browser-platform"
+      ],
+      "note": "Admit fixture and live semantic receipts for every GA job"
+    },
+    {
+      "gapId": "GA-001",
+      "evidenceKinds": [
+        "docs-troubleshooting"
+      ],
+      "note": "Reconcile public GA vocabulary with release artifacts"
+    }
+  ],
+  "signoffs": [
+    {
+      "role": "capability-owner",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "security",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "release",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "support",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    }
+  ],
+  "expiry": "2026-08-22T00:00:00Z",
+  "decision": "blocked"
+}

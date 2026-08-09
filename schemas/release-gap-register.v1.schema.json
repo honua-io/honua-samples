@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://samples.honua.io/schemas/release-gap-register.v1.schema.json",
+  "title": "Honua generated release gap register",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "format",
+    "schemaVersion",
+    "asOf",
+    "generatedFrom",
+    "severityVocabulary",
+    "gaps"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "format": {
+      "const": "honua.release-gap-register.v1"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "asOf": {
+      "type": "string",
+      "format": "date"
+    },
+    "generatedFrom": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "severityVocabulary": {
+      "type": "object",
+      "required": [
+        "P0",
+        "P1",
+        "P2"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "P0": {
+          "type": "string"
+        },
+        "P1": {
+          "type": "string"
+        },
+        "P2": {
+          "type": "string"
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "classifications",
+          "title",
+          "affected",
+          "userCompetitiveImpact",
+          "risk",
+          "evidenceMissing",
+          "currentWorkaround",
+          "dependencyChain",
+          "owner",
+          "effort",
+          "recommendedSequence",
+          "exitEvidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "P0",
+              "P1",
+              "P2"
+            ]
+          },
+          "classifications": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "affected": {
+            "type": "array",
+            "minItems": 1
+          },
+          "userCompetitiveImpact": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "object",
+            "required": [
+              "security",
+              "dataLoss",
+              "compatibility"
+            ]
+          },
+          "evidenceMissing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "currentWorkaround": {
+            "type": "string"
+          },
+          "dependencyChain": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "owner": {
+            "type": "object",
+            "required": [
+              "team",
+              "repository"
+            ]
+          },
+          "existingIssue": {
+            "type": "string"
+          },
+          "issueNeeded": {
+            "const": true
+          },
+          "effort": {
+            "type": "object",
+            "required": [
+              "estimate",
+              "confidence"
+            ]
+          },
+          "recommendedSequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "exitEvidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "existingIssue"
+              ],
+              "not": {
+                "required": [
+                  "issueNeeded"
+                ]
+              }
+            },
+            {
+              "required": [
+                "issueNeeded"
+              ],
+              "not": {
+                "required": [
+                  "existingIssue"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

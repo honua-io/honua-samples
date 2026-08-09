@@ -1,0 +1,477 @@
+{
+  "$schema": "../schemas/release-gap-register.v1.schema.json",
+  "format": "honua.release-gap-triage.v1",
+  "schemaVersion": "1.0.0",
+  "asOf": "2026-08-08",
+  "gaps": [
+    {
+      "id": "GA-001",
+      "severity": "P0",
+      "classifications": [
+        "false-or-unsupported-ga-claim"
+      ],
+      "title": "Reconcile public GA vocabulary with release artifacts",
+      "userCompetitiveImpact": "Buyers can read 'GA-tier core' while the site says source evaluation and no immutable server release exists; production commitments are therefore unauditable.",
+      "risk": {
+        "security": "medium",
+        "dataLoss": "low",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Treat every audited row as evaluation/prerelease and use the generated matrix rather than inferring GA from Implemented, supported, covered, or stable.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-release/issues/58",
+        "https://github.com/honua-io/honua-release/issues/59",
+        "https://github.com/honua-io/honua-release/issues/60"
+      ],
+      "owner": {
+        "team": "Release Engineering",
+        "repository": "honua-io/honua-release"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-release/issues/58",
+      "effort": {
+        "estimate": "M",
+        "confidence": "high"
+      },
+      "recommendedSequence": 1,
+      "exitEvidence": [
+        "One authoritative vocabulary maps producer statuses to GA without implication.",
+        "The release gate rejects public GA keys outside the evidenced-GA set.",
+        "Site and server claims derive from the passed decision."
+      ]
+    },
+    {
+      "id": "GA-002",
+      "severity": "P0",
+      "classifications": [
+        "false-or-unsupported-ga-claim"
+      ],
+      "title": "Pin immutable server image, commit, and evidence lineage",
+      "userCompetitiveImpact": "Customers cannot reproduce or roll back a candidate when tests are not tied to an image digest and commit.",
+      "risk": {
+        "security": "high",
+        "dataLoss": "medium",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Run trunk/nightly images as evaluation-only and record commits manually.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-release/issues/58",
+        "https://github.com/honua-io/honua-release/issues/59",
+        "https://github.com/honua-io/honua-release/issues/60"
+      ],
+      "owner": {
+        "team": "Release Engineering",
+        "repository": "honua-io/honua-release"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-release/issues/58",
+      "effort": {
+        "estimate": "L",
+        "confidence": "high"
+      },
+      "recommendedSequence": 2,
+      "exitEvidence": [
+        "Candidate image digest resolves to the audited server commit.",
+        "Conformance, security, limits/errors, performance, and observability receipts name that digest.",
+        "A rollback drill restores the previous digest."
+      ]
+    },
+    {
+      "id": "GA-003",
+      "severity": "P0",
+      "classifications": [
+        "absent-live-proof",
+        "absent-rollback"
+      ],
+      "title": "Add capability canaries, reset, rollback, and incident ownership",
+      "userCompetitiveImpact": "Fixtures do not show that the deployed candidate serves the claim or can safely recover/reset.",
+      "risk": {
+        "security": "medium",
+        "dataLoss": "high",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Probe read-only routes manually and avoid stateful demonstrations.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-release/issues/61",
+        "https://github.com/honua-io/honua-evidence/issues/8",
+        "https://github.com/honua-io/honua-server/issues/2948"
+      ],
+      "owner": {
+        "team": "Demo Operations",
+        "repository": "honua-io/honua-demo-infra"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-release/issues/61",
+      "effort": {
+        "estimate": "L",
+        "confidence": "medium"
+      },
+      "recommendedSequence": 3,
+      "exitEvidence": [
+        "Scheduled canaries record image digest and semantic assertions.",
+        "Reset runs record before/after state digests.",
+        "Rollback drill and incident owner are attached."
+      ]
+    },
+    {
+      "id": "GA-004",
+      "severity": "P0",
+      "classifications": [
+        "absent-live-proof"
+      ],
+      "title": "Admit fixture and live semantic receipts for every GA job",
+      "userCompetitiveImpact": "Gallery/source success cannot establish the exact release job result across documented platforms.",
+      "risk": {
+        "security": "low",
+        "dataLoss": "medium",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Use fixture samples and retained external First Map/COG envelopes as evaluation evidence only.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-samples/issues/21",
+        "https://github.com/honua-io/honua-release/issues/59",
+        "https://github.com/honua-io/honua-evidence/issues/8"
+      ],
+      "owner": {
+        "team": "Developer Experience",
+        "repository": "honua-io/honua-samples"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-samples/issues/21",
+      "effort": {
+        "estimate": "L",
+        "confidence": "medium"
+      },
+      "recommendedSequence": 4,
+      "exitEvidence": [
+        "Each job has digest-pinned fixture and Honua-candidate live receipts with TTL.",
+        "Receipts assert geospatial semantics, not only status/UI shape.",
+        "Browser/platform and accessibility artifacts are admitted where claimed."
+      ]
+    },
+    {
+      "id": "SEC-001",
+      "severity": "P0",
+      "classifications": [
+        "security",
+        "data-integrity"
+      ],
+      "title": "Close bounded COG hardening and object-locality proof",
+      "userCompetitiveImpact": "Direct cloud raster serving is unsafe for GA while malicious TIFF, decompression-bound, and locality hardening remains open.",
+      "risk": {
+        "security": "high",
+        "dataLoss": "medium",
+        "compatibility": "medium"
+      },
+      "currentWorkaround": "Use reviewed bounded COGs and client transfer ceilings; reject untrusted raster inputs.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-server/issues/3102",
+        "https://github.com/honua-io/honua-server/issues/3101",
+        "https://github.com/honua-io/honua-sdk-js/issues/1117"
+      ],
+      "owner": {
+        "team": "Raster",
+        "repository": "honua-io/honua-server"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-server/issues/3102",
+      "effort": {
+        "estimate": "L",
+        "confidence": "high"
+      },
+      "recommendedSequence": 5,
+      "exitEvidence": [
+        "Adversarial COG suite passes on the candidate.",
+        "Range/decoded-byte/time ceilings fail closed with stable errors.",
+        "Live proof records object locality and bounded windows."
+      ]
+    },
+    {
+      "id": "PY-001",
+      "severity": "P0",
+      "classifications": [
+        "broken-core-job",
+        "absent-live-proof"
+      ],
+      "title": "Repair governed Python staging auth and service binding",
+      "userCompetitiveImpact": "The Python staging suite cannot certify its required typed query contract because its July 1 key is rejected and its service/image binding is stale; silently switching to public Maui data would weaken the objectid/name/status/count/ratio/uid contract.",
+      "risk": {
+        "security": "high",
+        "dataLoss": "low",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Keep Python staging non-GA and run fixture/source checks only; do not replace the protected typed fixture with a weaker anonymous dataset.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-sdk-python/issues/192",
+        "https://demo.honua.io/demo-services.v1.json"
+      ],
+      "owner": {
+        "team": "Python SDK / Demo Operations",
+        "repository": "honua-io/honua-sdk-python"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-sdk-python/issues/192",
+      "effort": {
+        "estimate": "M",
+        "confidence": "high"
+      },
+      "recommendedSequence": 6,
+      "exitEvidence": [
+        "A current authorized key is installed through governed rotation.",
+        "Current server commit/image and service/layer binding are updated atomically.",
+        "A governed protected-fixture manifest records the typed schema without exposing credentials.",
+        "The #192 staging run is green and its semantic receipt is admitted."
+      ]
+    },
+    {
+      "id": "SDK-001",
+      "severity": "P1",
+      "classifications": [
+        "cross-sdk",
+        "compatibility",
+        "documentation"
+      ],
+      "title": "Publish exact cross-SDK surfaces and version window",
+      "userCompetitiveImpact": "JS is beta while Python/.NET are source previews; source coverage is not a supported multi-language rollout.",
+      "risk": {
+        "security": "low",
+        "dataLoss": "medium",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Pin source commits and use only dossier symbols; do not infer parity from labels.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-sdk-js/issues/1113",
+        "https://github.com/honua-io/honua-sdk-js/issues/1115",
+        "https://github.com/honua-io/honua-sdk-js/issues/1116",
+        "https://github.com/honua-io/honua-sdk-js/issues/1117",
+        "https://github.com/honua-io/honua-sdk-js/issues/1118"
+      ],
+      "owner": {
+        "team": "SDK",
+        "repository": "honua-io/honua-release"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-sdk-js/issues/1113",
+      "effort": {
+        "estimate": "XL",
+        "confidence": "medium"
+      },
+      "recommendedSequence": 6,
+      "exitEvidence": [
+        "Published package versions exist or lanes are explicitly excluded.",
+        "Server/SDK compatibility and deprecation windows are public.",
+        "Cross-language semantic fixtures prove claimed parity."
+      ]
+    },
+    {
+      "id": "RAST-001",
+      "severity": "P1",
+      "classifications": [
+        "performance",
+        "day-two",
+        "protocol"
+      ],
+      "title": "Publish raster/coverage limits, performance, and offload behavior",
+      "userCompetitiveImpact": "Functionally correct coverage APIs remain operationally unsafe without budgets, streaming limits, and a durable-job boundary.",
+      "risk": {
+        "security": "medium",
+        "dataLoss": "medium",
+        "compatibility": "medium"
+      },
+      "currentWorkaround": "Use bounded subsets, cached tiles, and external byte/time ceilings.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-server/issues/3101",
+        "https://github.com/honua-io/honua-server/issues/3085"
+      ],
+      "owner": {
+        "team": "Raster",
+        "repository": "honua-io/honua-server"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-server/issues/3101",
+      "effort": {
+        "estimate": "L",
+        "confidence": "high"
+      },
+      "recommendedSequence": 7,
+      "exitEvidence": [
+        "Enforced request/memory/response ceilings are public.",
+        "Candidate benchmarks cover COG/Coverages/WCS subsets.",
+        "Excessive work has deterministic error or durable-job behavior."
+      ]
+    },
+    {
+      "id": "PMT-001",
+      "severity": "P1",
+      "classifications": [
+        "day-two",
+        "protocol",
+        "cross-sdk"
+      ],
+      "title": "Finish PMTiles managed lifecycle and live proxy proof",
+      "userCompetitiveImpact": "Static reads work, but archive/publish lifecycle and cleanup are not a supported trunk SDK surface.",
+      "risk": {
+        "security": "low",
+        "dataLoss": "medium",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Use static PMTiles and the demo proxy; manage retention outside the SDK.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-sdk-js/issues/1118",
+        "https://github.com/honua-io/honua-sdk-js/issues/1129",
+        "https://github.com/honua-io/honua-sdk-js/pull/1132"
+      ],
+      "owner": {
+        "team": "SDK and Tiles",
+        "repository": "honua-io/honua-sdk-js"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-sdk-js/issues/1118",
+      "effort": {
+        "estimate": "M",
+        "confidence": "high"
+      },
+      "recommendedSequence": 8,
+      "exitEvidence": [
+        "Published lifecycle symbols match archive/publish/status/cancel without claiming register/delete.",
+        "A Maui proxy canary proves HEAD and bounded Range GET.",
+        "Retention/overwrite cleanup is documented and tested."
+      ]
+    },
+    {
+      "id": "FMT-001",
+      "severity": "P1",
+      "classifications": [
+        "cross-sdk",
+        "protocol",
+        "documentation"
+      ],
+      "title": "Define GeoParquet/GeoArrow server-output semantic parity",
+      "userCompetitiveImpact": "The JS runtime is strong, but canonical keying and cross-SDK output semantics do not support GA interoperability.",
+      "risk": {
+        "security": "low",
+        "dataLoss": "medium",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Use beta client-only GeoParquet and inspect server output manually.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-sdk-js/issues/1113",
+        "https://github.com/honua-io/honua-server/issues/2893"
+      ],
+      "owner": {
+        "team": "Formats",
+        "repository": "honua-io/honua-server"
+      },
+      "issueNeeded": true,
+      "effort": {
+        "estimate": "M",
+        "confidence": "medium"
+      },
+      "recommendedSequence": 9,
+      "exitEvidence": [
+        "Canonical keys separate client-only and server-output claims.",
+        "Goldens cover CRS, geometry, nulls, dictionaries, and int64.",
+        "A tracked issue owns remaining parity work."
+      ]
+    },
+    {
+      "id": "JOB-001",
+      "severity": "P1",
+      "classifications": [
+        "cross-sdk",
+        "day-two",
+        "protocol"
+      ],
+      "title": "Normalize OGC process lifecycle semantics across SDKs",
+      "userCompetitiveImpact": "Users cannot rely on one job lifecycle when .NET lacks a bounded waiter, Python is source preview, CLI is absent, and server DELETE is best-effort cancellation.",
+      "risk": {
+        "security": "low",
+        "dataLoss": "medium",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Use JS bounded wait, implement an application loop in .NET, and call Python source APIs only in evaluation environments.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-samples/issues/29",
+        "https://github.com/honua-io/honua-sdk-python/issues/192"
+      ],
+      "owner": {
+        "team": "SDK",
+        "repository": "honua-io/honua-samples"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-samples/issues/29",
+      "effort": {
+        "estimate": "M",
+        "confidence": "high"
+      },
+      "recommendedSequence": 10,
+      "exitEvidence": [
+        "One cross-SDK job fixture asserts submit/poll/results/cancel semantics.",
+        ".NET has a bounded wait helper or a documented intentional exclusion.",
+        "CLI lifecycle absence is explicitly supported or filled."
+      ]
+    },
+    {
+      "id": "MD-001",
+      "severity": "P2",
+      "classifications": [
+        "planned",
+        "protocol"
+      ],
+      "title": "Keep Zarr, NetCDF, and HDF5 outside GA",
+      "userCompetitiveImpact": "Premature GA would imply production slicing/security/performance not established by source implementation and partial metadata coverage.",
+      "risk": {
+        "security": "medium",
+        "dataLoss": "medium",
+        "compatibility": "high"
+      },
+      "currentWorkaround": "Use preview-only bounded reviewed datasets; use WCS GeoTIFF/PNG/JPEG for the GA candidate.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-server/issues/3103",
+        "https://github.com/honua-io/honua-server/issues/3101"
+      ],
+      "owner": {
+        "team": "Raster",
+        "repository": "honua-io/honua-server"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-server/issues/3103",
+      "effort": {
+        "estimate": "XL",
+        "confidence": "high"
+      },
+      "recommendedSequence": 11,
+      "exitEvidence": [
+        "Format-specific bounded/security/performance suites pass.",
+        "A deployed preview canary proves bounded slices.",
+        "Promotion requires a new dossier decision."
+      ]
+    },
+    {
+      "id": "JOB-002",
+      "severity": "P2",
+      "classifications": [
+        "planned",
+        "day-two",
+        "documentation"
+      ],
+      "title": "Keep cloud custom-code authoring and execution out of GA",
+      "userCompetitiveImpact": "The AWS Batch server contract exists, but Studio author/publish UX, SDK wrappers, resources/retries/idempotency, bindings, log streaming, cleanup, and live proof do not.",
+      "risk": {
+        "security": "high",
+        "dataLoss": "high",
+        "compatibility": "medium"
+      },
+      "currentWorkaround": "Use the server contract/design and source fixtures only; do not advertise an executable Studio walkthrough.",
+      "dependencyChain": [
+        "https://github.com/honua-io/honua-samples/issues/29",
+        "https://github.com/honua-io/honua-sdk-python/issues/192",
+        "https://github.com/honua-io/honua-server/blob/trunk/docs/architecture/adr-0063-custom-code-execution.md"
+      ],
+      "owner": {
+        "team": "Geoprocessing",
+        "repository": "honua-io/honua-samples"
+      },
+      "existingIssue": "https://github.com/honua-io/honua-samples/issues/29",
+      "effort": {
+        "estimate": "XL",
+        "confidence": "medium"
+      },
+      "recommendedSequence": 12,
+      "exitEvidence": [
+        "Studio author/publish UX and sanctioned SDK submission wrapper exist.",
+        "CPU/memory/retry/idempotency/log/TTL contracts are enforced and evidenced.",
+        "A live demo proves safe submission, output, logs, and cleanup."
+      ]
+    }
+  ]
+}

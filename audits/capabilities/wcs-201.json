@@ -1,0 +1,429 @@
+{
+  "$schema": "../../schemas/capability-audit.v1.schema.json",
+  "format": "honua.release-capability-audit.v1",
+  "schemaVersion": "1.0.0",
+  "auditId": "wcs-201",
+  "auditSet": "2026-08-08",
+  "title": "WCS 2.0.1",
+  "capabilityKey": "serve.wcs",
+  "jobId": "job.wcs-getcoverage",
+  "claim": {
+    "gaClaim": false,
+    "summary": "Run GetCapabilities, DescribeCoverage, and bounded GetCoverage with explicit output and CRS.",
+    "scope": [
+      "WCS 2.0.1 core",
+      "GetCapabilities",
+      "DescribeCoverage",
+      "Bounded GetCoverage",
+      "GeoTIFF/PNG/JPEG"
+    ],
+    "exclusions": [
+      "RANGESUBSET/scaling/interpolation/MEDIATYPE/XML POST/polygon trims",
+      "NetCDF output",
+      "Temporal/multidimensional slicing",
+      "Zarr/HDF5"
+    ],
+    "publicClaims": [
+      {
+        "source": "honua-server capability matrix 61b7038e1887c98131aa217b6f0ae7869356a1f3",
+        "status": "implemented-count-derived",
+        "text": "serve.wcs has source/test entries; the matrix explicitly says this is not a GA signoff."
+      },
+      {
+        "source": "honua-site capabilities 718350adafbb519cd1bf8004b5f1014b45eebba9",
+        "status": "source-backed",
+        "text": "serve.wcs is published as source-backed without an immutable release artifact."
+      }
+    ]
+  },
+  "targetTier": "ga",
+  "owner": {
+    "team": "Developer Experience / Release Engineering",
+    "repository": "honua-io/honua-samples",
+    "contact": "release owner pending signoff"
+  },
+  "protocol": {
+    "names": [
+      "OGC WCS"
+    ],
+    "versions": [
+      "2.0.1 core"
+    ],
+    "endpoints": [
+      "/ogc/services/{serviceId}/wcs",
+      "/rest/services/{serviceId}/ImageServer/WCS"
+    ]
+  },
+  "server": {
+    "repository": "honua-io/honua-server",
+    "commit": "61b7038e1887c98131aa217b6f0ae7869356a1f3",
+    "image": {
+      "reference": null,
+      "digest": null,
+      "status": "missing"
+    },
+    "conformance": [
+      "WCS 2.0 core CITE 82/82 on 2026-07-27.",
+      "1 entry / 5 proving tests."
+    ],
+    "limits": [
+      "Unsupported extensions return 501; unknown parameters 400.",
+      "Large-raster streaming/multidimensional slicing excluded."
+    ],
+    "errors": [
+      "OWS ExceptionReport documented."
+    ],
+    "security": [
+      "Release-bound security receipt missing."
+    ],
+    "performance": [
+      "Ad hoc trims opt out of output cache; performance receipt missing."
+    ],
+    "observability": [
+      "Release-bound trace/metric/log receipt missing."
+    ]
+  },
+  "clients": {
+    "javascript": {
+      "status": "absent",
+      "package": {
+        "name": "@honua/sdk-js",
+        "declaredVersion": "0.1.4-beta.0",
+        "publishedVersion": "0.1.2-beta.0",
+        "sourceCommit": "e0b4c21cfa17808a01f80d095c4ca5e9cda6b835"
+      },
+      "symbols": [],
+      "evidence": [
+        "https://github.com/honua-io/honua-sdk-js/issues/1115"
+      ],
+      "exclusion": "WCS client not on audited trunk."
+    },
+    "python": {
+      "status": "absent",
+      "package": {
+        "name": "honua-sdk",
+        "declaredVersion": "0.1.10",
+        "publishedVersion": null,
+        "sourceCommit": "e28c67c8e3ef99bcc86c891ecc01a6940d7d7e59"
+      },
+      "symbols": [],
+      "evidence": [
+        "compatibility/sdk-coverage.v1.json"
+      ],
+      "exclusion": "No WCS capability/client row."
+    },
+    "dotnet": {
+      "status": "absent",
+      "package": {
+        "name": "Honua.Sdk",
+        "declaredVersion": "1.6.0",
+        "publishedVersion": null,
+        "sourceCommit": "a88a7fbb3643cb046e70d6ef4d38ae70a025a2a4"
+      },
+      "symbols": [],
+      "evidence": [
+        "docs/capability-coverage.md"
+      ],
+      "exclusion": "No WCS client."
+    },
+    "cli": {
+      "status": "absent",
+      "package": {
+        "name": "@honua/sdk-js",
+        "declaredVersion": "0.1.4-beta.0",
+        "publishedVersion": "0.1.2-beta.0",
+        "sourceCommit": "e0b4c21cfa17808a01f80d095c4ca5e9cda6b835"
+      },
+      "symbols": [],
+      "evidence": [
+        "honua-sdk-js/src/cli"
+      ],
+      "exclusion": "No WCS command."
+    }
+  },
+  "demo": {
+    "manifestServiceKey": null,
+    "manifestProtocolKey": null,
+    "manifestCommit": "3cccf9b08a19e51619a0e6bec19b0e2afbb5ebde",
+    "liveCanary": {
+      "status": "missing",
+      "route": "https://demo.honua.io/ogc/services/maui-hillshade/wcs?SERVICE=WCS&REQUEST=GetCapabilities",
+      "evidenceId": null
+    },
+    "reset": {
+      "status": "missing",
+      "procedure": null,
+      "owner": "Demo Operations (receipt unassigned)"
+    }
+  },
+  "experience": {
+    "exampleRoutes": [],
+    "walkthroughRoutes": [
+      "honua-server/docs/archive/specifications/wcs-2.0.1-coverage.md",
+      "https://honua.io/evidence-serve-wcs.html"
+    ],
+    "projectRoutes": []
+  },
+  "evidence": {
+    "freshnessPolicy": {
+      "asOf": "2026-08-08T00:00:00Z",
+      "defaultTtlDays": 14
+    },
+    "required": [
+      "server-image",
+      "server-conformance",
+      "server-limits-errors",
+      "server-security",
+      "server-performance",
+      "server-observability",
+      "sdk-supported-surface",
+      "demo-manifest",
+      "demo-live-canary",
+      "demo-reset",
+      "fixture-semantic",
+      "live-semantic",
+      "accessibility",
+      "browser-platform",
+      "docs-troubleshooting",
+      "compatibility-support",
+      "rollback"
+    ],
+    "receipts": [
+      {
+        "id": "server-matrix",
+        "kind": "source-inventory",
+        "source": "https://github.com/honua-io/honua-server/blob/61b7038e1887c98131aa217b6f0ae7869356a1f3/docs/gis/data/capability-matrix.v1.json",
+        "capturedAt": "2026-08-05T18:38:08Z",
+        "expiresAt": "2026-09-04T18:38:08Z",
+        "digest": {
+          "algorithm": "git-blob-sha1",
+          "value": "200a3f61ad467b0b98f48d39a9813460a3634cc2"
+        },
+        "semanticAssertions": [
+          "serve.wcs is present in the canonical matrix.",
+          "1 entry / 5 proving tests / CITE 82/82",
+          "Implemented counts are not a GA signoff."
+        ]
+      },
+      {
+        "id": "wcs-cite",
+        "kind": "server-conformance",
+        "source": "https://github.com/honua-io/honua-server/blob/61b7038e1887c98131aa217b6f0ae7869356a1f3/docs/gis/data/capability-matrix.v1.json",
+        "capturedAt": "2026-07-27T00:00:00Z",
+        "expiresAt": "2026-08-10T00:00:00Z",
+        "digest": {
+          "algorithm": "git-blob-sha1",
+          "value": "200a3f61ad467b0b98f48d39a9813460a3634cc2"
+        },
+        "semanticAssertions": [
+          "WCS 2.0 core CITE passed 82/82.",
+          "Candidate image lineage and live proof remain missing."
+        ]
+      }
+    ],
+    "missing": [
+      {
+        "kind": "server-image",
+        "reason": "No immutable candidate image reference/digest is attached.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "server-limits-errors",
+        "reason": "No candidate receipt proves limits and stable errors.",
+        "gapId": "RAST-001"
+      },
+      {
+        "kind": "server-security",
+        "reason": "No candidate-bound security receipt is attached.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "server-performance",
+        "reason": "No current candidate performance receipt is attached.",
+        "gapId": "RAST-001"
+      },
+      {
+        "kind": "server-observability",
+        "reason": "No trace/metric/log receipt is attached.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "sdk-supported-surface",
+        "reason": "Published packages do not form the claimed support window.",
+        "gapId": "SDK-001"
+      },
+      {
+        "kind": "demo-manifest",
+        "reason": "The demo manifest does not declare the exact service/protocol.",
+        "gapId": "GA-003"
+      },
+      {
+        "kind": "demo-live-canary",
+        "reason": "No fresh scheduled semantic canary is admitted.",
+        "gapId": "GA-003"
+      },
+      {
+        "kind": "demo-reset",
+        "reason": "No deterministic seed reset receipt is attached.",
+        "gapId": "GA-003"
+      },
+      {
+        "kind": "fixture-semantic",
+        "reason": "No digest-pinned fixture semantic receipt is admitted.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "live-semantic",
+        "reason": "No fresh Honua-candidate semantic receipt is attached.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "accessibility",
+        "reason": "No release-bound accessibility receipt is attached.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "browser-platform",
+        "reason": "No release-bound browser/platform receipt is attached.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "docs-troubleshooting",
+        "reason": "Reference/troubleshooting coverage is incomplete.",
+        "gapId": "GA-001"
+      },
+      {
+        "kind": "compatibility-support",
+        "reason": "No published compatibility/deprecation/support window covers the claim.",
+        "gapId": "SDK-001"
+      },
+      {
+        "kind": "rollback",
+        "reason": "No tested rollback receipt is attached.",
+        "gapId": "GA-003"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "not-applicable",
+    "evidenceIds": [],
+    "targets": [
+      "API-only claim"
+    ],
+    "note": "No UI is in scope; client platforms still require proof."
+  },
+  "browserPlatform": {
+    "status": "missing",
+    "evidenceIds": [],
+    "targets": [
+      "Chromium",
+      "Firefox",
+      "WebKit",
+      "desktop",
+      "mobile"
+    ],
+    "note": "Release-bound browser/platform evidence is missing."
+  },
+  "documentation": {
+    "references": [
+      "honua-server/docs/archive/specifications/wcs-2.0.1-coverage.md",
+      "honua-site/evidence-serve-wcs.html"
+    ],
+    "troubleshooting": [
+      "Unsupported extensions documented; release operations escalation incomplete."
+    ],
+    "status": "partial"
+  },
+  "compatibility": {
+    "policy": "No cross-repository GA compatibility window is published for this exact claim.",
+    "deprecation": "Producer repositories retain prerelease/source policies.",
+    "support": "Evaluation only until this dossier passes."
+  },
+  "operations": {
+    "rollbackProcedure": null,
+    "rollbackOwner": "unassigned",
+    "incidentOwner": "Honua release incident commander (assignment pending)"
+  },
+  "blockers": [
+    {
+      "gapId": "GA-002",
+      "evidenceKinds": [
+        "server-image",
+        "server-security",
+        "server-observability"
+      ],
+      "note": "Pin immutable server image, commit, and evidence lineage"
+    },
+    {
+      "gapId": "RAST-001",
+      "evidenceKinds": [
+        "server-limits-errors",
+        "server-performance"
+      ],
+      "note": "Publish raster/coverage limits, performance, and offload behavior"
+    },
+    {
+      "gapId": "SDK-001",
+      "evidenceKinds": [
+        "sdk-supported-surface",
+        "compatibility-support"
+      ],
+      "note": "Publish exact cross-SDK surfaces and version window"
+    },
+    {
+      "gapId": "GA-003",
+      "evidenceKinds": [
+        "demo-manifest",
+        "demo-live-canary",
+        "demo-reset",
+        "rollback"
+      ],
+      "note": "Add capability canaries, reset, rollback, and incident ownership"
+    },
+    {
+      "gapId": "GA-004",
+      "evidenceKinds": [
+        "fixture-semantic",
+        "live-semantic",
+        "accessibility",
+        "browser-platform"
+      ],
+      "note": "Admit fixture and live semantic receipts for every GA job"
+    },
+    {
+      "gapId": "GA-001",
+      "evidenceKinds": [
+        "docs-troubleshooting"
+      ],
+      "note": "Reconcile public GA vocabulary with release artifacts"
+    }
+  ],
+  "signoffs": [
+    {
+      "role": "capability-owner",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "security",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "release",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "support",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    }
+  ],
+  "expiry": "2026-08-22T00:00:00Z",
+  "decision": "blocked"
+}
