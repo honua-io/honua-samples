@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "honua.job-page/v1",
+  "id": "geoprocessing-job-lifecycle",
+  "title": "Submit, observe, cancel, and collect a process job",
+  "kind": "walkthrough",
+  "summary": "A bounded OGC API Processes lifecycle with one raw server contract and truthful language-specific lifecycle differences.",
+  "maturity": {
+    "state": "source-preview",
+    "supportTier": "Community server; SDK maturity varies by language",
+    "evidence": ["process.ogc-api-processes: 10/10 operations implemented", "honua-server OGC process route contract tests", "honua-sdk-js OGC job runner tests", "honua-sdk-python geoprocessing tests", "honua-sdk-dotnet process client tests"],
+    "limitations": ["Python OGC Processes support is source preview and not yet published to PyPI.", ".NET exposes lifecycle methods but no bounded wait-to-terminal helper.", "DELETE is best-effort job cancellation; Honua Server does not claim the full OGC dismiss conformance class."]
+  },
+  "server": {
+    "operation": "geometry.buffer asynchronous job lifecycle",
+    "capabilityIds": ["process.ogc-api-processes"],
+    "fixture": { "endpoint": "http://127.0.0.1:8080/ogc/processes/processes/geometry.buffer/execution", "serviceManifestKey": "job-page-fixture:geometry-buffer-v1", "sourceCommit": "honua-server:trunk", "serverVersion": "current trunk OGC Processes contract", "evidenceState": "live-receipt-required" },
+    "auth": "API key or bearer token when configured; fixture transports use a non-secret local endpoint.",
+    "protocols": [
+      {
+        "id": "ogc-api-processes",
+        "availability": "available",
+        "method": "POST then GET/DELETE",
+        "endpointTemplate": "/ogc/processes/processes/{processId}/execution; /ogc/processes/jobs/{jobId}; /ogc/processes/jobs/{jobId}/results",
+        "concreteEndpoint": "http://127.0.0.1:8080/ogc/processes/processes/geometry.buffer/execution",
+        "request": { "headers": { "Prefer": "respond-async", "Content-Type": "application/json" }, "body": { "inputs": { "inputGeoJson": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"id\":1},\"geometry\":{\"type\":\"Point\",\"coordinates\":[-157.8583,21.3069]}}]}", "distance": 100 } } },
+        "response": { "submit": { "jobID": "fixture-buffer-1", "processID": "geometry.buffer", "status": "accepted" }, "statusSequence": ["accepted", "running", "successful"], "resultsContain": "outputFeatureLayer" },
+        "notes": "The gallery fixture must pin all four exchanges and verify paths, status progression, cancellation behavior, and result key."
+      }
+    ],
+    "docs": ["https://github.com/honua-io/honua-server/blob/trunk/docs/capabilities.md", "https://github.com/honua-io/honua-sdk-dotnet/blob/trunk/docs/console-client-contracts.md#process-and-job-contracts"],
+    "owner": "honua-server process data plane",
+    "cancellation": "DELETE /ogc/processes/jobs/{jobId} is best-effort cancellation; caller-side abort only stops the in-flight HTTP request.",
+    "errors": "Non-success terminal state, polling deadline/attempt exhaustion, auth failure, invalid process input, and transport failure remain distinct outcomes."
+  },
+  "semantics": {
+    "normalizedRequest": { "processId": "geometry.buffer", "mode": "async", "inputs": ["inputGeoJson", "distance"], "poll": { "deadlineSeconds": 30, "maxAttempts": 20 }, "cancel": "explicit operator action only" },
+    "expectedResult": { "statusSequence": ["accepted", "running", "successful"], "resultKey": "outputFeatureLayer", "jobIdRequired": true },
+    "assertion": "Require a Location/jobID receipt, only legal status transitions, a successful terminal state before result retrieval, outputFeatureLayer in results, and a DELETE receipt when the cancellation path is exercised."
+  },
+  "references": [
+    { "surface": "http", "availability": "available", "label": "OGC API Processes execution and jobs", "symbolOrCommand": "POST /ogc/processes/processes/{processId}/execution; GET|DELETE /ogc/processes/jobs/{jobId}; GET /results", "deepLink": "https://github.com/honua-io/honua-server/blob/trunk/docs/capabilities.md", "package": "Honua Server", "minVersion": "current trunk contract", "supportTier": "Community", "owner": "honua-server process data plane", "auth": "API key or bearer token where configured.", "cancellation": "DELETE is best-effort cancellation; request abort is transport-only.", "errors": "OGC problem response and terminal failed/dismissed status.", "gap": null },
+    { "surface": "cli", "availability": "gap", "label": "Honua CLI process jobs", "symbolOrCommand": null, "deepLink": null, "package": null, "minVersion": null, "supportTier": "Unavailable", "owner": "SDK/CLI", "auth": "Not applicable.", "cancellation": "Not applicable.", "errors": "Not applicable.", "gap": "The current honua CLI has no process submit, status, results, cancel, or related --help command." },
+    { "surface": "javascript", "availability": "available", "label": "HonuaOgcProcesses.execute", "symbolOrCommand": "HonuaClient.ogcProcesses().execute<T>(OgcProcessExecuteRequest): Promise<IJobRun<T>>", "deepLink": "https://honua-io.github.io/honua-sdk-js/api/classes/HonuaOgcProcesses.html#execute", "package": "@honua/sdk-js", "minVersion": "0.1.4-beta.0", "supportTier": "Stable root process contract", "owner": "honua-sdk-js", "auth": "HonuaClient apiKey/auth and interceptors.", "cancellation": "AbortSignal plus IJobRun.cancel(); results() supports deadlineMs/maxAttempts.", "errors": "HonuaJobPollTimeoutError, HonuaJobFailedError, HonuaCapabilityNotSupportedError, typed transport errors.", "gap": null },
+    { "surface": "python", "availability": "source-preview", "label": "HonuaGeoprocessing lifecycle", "symbolOrCommand": "HonuaClient.geoprocessing().submit_inputs()/wait()/results()/dismiss()", "deepLink": "https://honua-io.github.io/honua-sdk-python/latest/reference/honua-sdk/clients/#honua_sdk.geoprocessing.HonuaGeoprocessing", "package": "honua-sdk", "minVersion": "0.1.10 source preview", "supportTier": "Unreleased source preview", "owner": "honua-sdk-python", "auth": "HonuaClient api_key, bearer_token, or auth_provider.", "cancellation": "wait timeout best-effort dismisses; async task cancellation also dismisses; dismiss(job_id) is explicit.", "errors": "GeoprocessingJobError, TimeoutError, HonuaHttpError subclasses, HonuaTransportError.", "gap": null },
+    { "surface": "dotnet", "availability": "available", "label": "IHonuaProcessesClient lifecycle", "symbolOrCommand": "SubmitJobAsync/GetJobAsync/GetJobResultsAsync/DismissJobAsync", "deepLink": "https://honua-io.github.io/honua-sdk-dotnet/api/Honua.Sdk.Processes.IHonuaProcessesClient.html", "package": "Honua.Sdk.Processes", "minVersion": "1.2.1", "supportTier": "Supported", "owner": "honua-sdk-dotnet", "auth": "HonuaProcessesClientOptions API key/bearer provider and HttpClient pipeline.", "cancellation": "CancellationToken per operation; DismissJobAsync for server cancellation. No built-in bounded waiter.", "errors": "HonuaProcessesException and HttpClient transport/cancellation exceptions.", "gap": null }
+  ],
+  "codeTabs": [
+    { "surface": "javascript", "referenceSurface": "javascript", "language": "ts", "code": "const controller = new AbortController();\nconst processes = client.ogcProcesses({ capabilityPolicy: 'strict' });\nconst run = await processes.execute({ processId: 'geometry.buffer', mode: 'async', inputs, signal: controller.signal });\nfor await (const snapshot of run.watch({ signal: controller.signal })) console.log(snapshot.status, snapshot.progress);\nconst results = await run.results({ signal: controller.signal, deadlineMs: 30_000, maxAttempts: 20 });\n// Operator cancellation path only: await run.cancel();" },
+    { "surface": "python", "referenceSurface": "python", "language": "python", "code": "from honua_sdk import HonuaClient\n\nwith HonuaClient('http://127.0.0.1:8080', timeout=10.0) as client:\n    gp = client.geoprocessing()\n    job = gp.submit_inputs('geometry.buffer', inputs)\n    terminal = gp.wait(job, poll_interval=0.5, timeout=30.0)\n    result = gp.results(terminal.job_id)\n    # Operator cancellation path only: gp.dismiss(job.job_id)" },
+    { "surface": "dotnet", "referenceSurface": "dotnet", "language": "csharp", "code": "var job = await processes.SubmitJobAsync(\"geometry.buffer\", inputs, cancellationToken);\nvar deadline = DateTimeOffset.UtcNow.AddSeconds(30);\nwhile (job.Status is \"accepted\" or \"running\") {\n    if (DateTimeOffset.UtcNow >= deadline) throw new TimeoutException(\"process job deadline exceeded\");\n    await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);\n    job = await processes.GetJobAsync(job.JobId, cancellationToken);\n}\nif (job.Status != \"successful\") throw new InvalidOperationException($\"job ended {job.Status}\");\nvar result = await processes.GetJobResultsAsync(job.JobId, cancellationToken);\n// Operator cancellation path only: await processes.DismissJobAsync(job.JobId, cancellationToken);" }
+  ],
+  "walkthrough": [
+    { "order": 1, "title": "Inspect the server contract", "state": "available", "action": "Review the process id, raw request, authentication, bounds, and pinned fixture before choosing a language.", "expectedOutcome": "The exact POST and lifecycle routes are visible and copyable." },
+    { "order": 2, "title": "Submit asynchronously", "state": "available", "action": "POST geometry.buffer with Prefer: respond-async and capture both Location and jobID.", "expectedOutcome": "A non-empty job identity with accepted status." },
+    { "order": 3, "title": "Observe bounded progress", "state": "available", "action": "Poll or watch with a cancellation primitive, 30-second deadline, and 20-attempt ceiling.", "expectedOutcome": "Only accepted, running, and a legal terminal status are observed." },
+    { "order": 4, "title": "Approve cancellation when needed", "state": "available", "action": "Invoke DELETE/dismiss only from an explicit operator action; do not treat request abort as server cancellation.", "expectedOutcome": "A cancellation receipt or a truthful best-effort failure." },
+    { "order": 5, "title": "Collect and assert results", "state": "available", "action": "Fetch results only after successful status and verify outputFeatureLayer.", "expectedOutcome": "A result artifact tied to the submitted job receipt." }
+  ],
+  "console": {
+    "state": "available",
+    "route": "/operate/geoprocessing",
+    "requiredRole": "operator with process/job read; cancellation requires the deployment's job-control permission",
+    "equivalentConfig": { "source": "raw OGC request and lifecycle routes above", "rule": "The page must remain fully usable without the Console visual." },
+    "visual": { "state": "planned", "path": null, "alt": "Honua Console geoprocessing operations view with callouts for job id, status, progress, and explicit cancel control.", "callouts": ["job identity", "status and progress", "explicit cancel action", "result artifact link"], "viewport": "desktop 1440x900", "redaction": "Redact credentials, tenant identifiers, user identifiers, input payloads, and signed artifact URLs.", "sourceCommit": null, "serverVersion": null, "fixtureKey": "job-page-fixture:geometry-buffer-v1", "goldenReceipt": null }
+  },
+  "ai": {
+    "state": "planned",
+    "api": null,
+    "allowedTasks": ["discover processes", "explain input schemas", "draft process configuration", "plan a bounded lifecycle"],
+    "contextInputs": ["capability manifest", "process description", "input/output schema", "service metadata"],
+    "providerBoundary": "No verified Honua AI API currently scaffolds or submits this job; any future provider must be caller-configured with an explicit data boundary.",
+    "security": "Treat process descriptions and asset metadata as untrusted, exclude credentials and signed URLs, and validate generated configuration against the published schema.",
+    "validation": "A future AI draft must normalize to the same raw process request and bounds shown in the server panel before approval.",
+    "approvalBoundary": "Submission, cancellation, deletion, publication, and cleanup always require explicit human approval; planning alone has no effect.",
+    "prohibitedActions": ["execute without required human approval", "submit a job", "cancel or delete a job", "publish a process", "read or emit secrets"],
+    "fallback": "Use the raw HTTP inspector and explicit SDK lifecycle tabs.",
+    "provenance": "Future execution must bind provider/model, normalized plan, approval, job id, status transitions, result digest, and cleanup receipt."
+  }
+}

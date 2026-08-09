@@ -1,0 +1,213 @@
+{
+  "schemaVersion": "honua.job-page/v1",
+  "id": "feature-query",
+  "title": "Query two operations sites",
+  "kind": "example",
+  "summary": "One bounded feature query, shown server-first and then through equivalent JavaScript, Python, and .NET calls against the same FeatureServer fixture.",
+  "maturity": {
+    "state": "supported",
+    "supportTier": "Community",
+    "evidence": [
+      "honua-server/tests/seed/admin-sample-feature-server.yaml",
+      "serve.geoservices-featureserver: 49/49 operations implemented",
+      "serve.ogc-api-features: 21/21 operations implemented",
+      "serve.odata: 30/30 operations implemented"
+    ],
+    "limitations": [
+      "The pinned semantic receipt is FeatureServer-first; OGC and OData variants require their own route receipts before the gallery labels them equivalent.",
+      "Python OData support is read/query only, not write parity."
+    ]
+  },
+  "server": {
+    "operation": "Bounded feature query",
+    "capabilityIds": ["serve.geoservices-featureserver", "serve.ogc-api-features", "serve.odata"],
+    "fixture": {
+      "endpoint": "http://127.0.0.1:8080/rest/services/admin_sample/FeatureServer/3000/query",
+      "serviceManifestKey": "server-fixture:tests/seed/admin-sample-feature-server.yaml#admin_sample/3000",
+      "sourceCommit": "honua-server:trunk",
+      "serverVersion": "current trunk fixture contract",
+      "evidenceState": "pinned-fixture"
+    },
+    "auth": "Anonymous for the seeded local fixture; deployments may require X-API-Key or Authorization and must not embed credentials in the page.",
+    "protocols": [
+      {
+        "id": "geoservices-featureserver",
+        "availability": "available",
+        "method": "GET or POST",
+        "endpointTemplate": "/rest/services/{serviceId}/FeatureServer/{layerId}/query",
+        "concreteEndpoint": "http://127.0.0.1:8080/rest/services/admin_sample/FeatureServer/3000/query",
+        "request": {
+          "f": "json",
+          "where": "status = 'online'",
+          "outFields": "objectid,name,status,priority",
+          "geometry": "-157.95,21.28,-157.70,21.41",
+          "geometryType": "esriGeometryEnvelope",
+          "spatialRel": "esriSpatialRelIntersects",
+          "inSR": 4326,
+          "outSR": 4326,
+          "orderByFields": "objectid ASC",
+          "resultRecordCount": 2,
+          "returnGeometry": true
+        },
+        "response": { "objectIds": [300001, 300003], "featureCount": 2 },
+        "notes": "This is the admitted cross-language route and fixture receipt."
+      },
+      {
+        "id": "ogc-api-features",
+        "availability": "partial",
+        "method": "GET",
+        "endpointTemplate": "/ogc/features/collections/{collectionId}/items",
+        "concreteEndpoint": null,
+        "request": { "filter": "status = 'online'", "bbox": [-157.95, 21.28, -157.7, 21.41], "properties": ["objectid", "name", "status", "priority"], "sortby": "+objectid", "limit": 2 },
+        "response": { "requiredSemanticIds": [300001, 300003] },
+        "notes": "The server route and parameters are real. The admin_sample collection identifier is not pinned by the FeatureServer seed contract, so this variant is not labeled equivalent until an OGC fixture receipt binds it."
+      },
+      {
+        "id": "odata-v4",
+        "availability": "partial",
+        "method": "GET",
+        "endpointTemplate": "/odata/Features",
+        "concreteEndpoint": null,
+        "request": { "$filter": "LayerId eq 3000 and status eq 'online'", "$select": "objectid,name,status,priority,Geometry", "$orderby": "objectid asc", "$top": 2 },
+        "response": { "requiredSemanticIds": [300001, 300003] },
+        "notes": "The OData read/query route is real, but this request intentionally lacks a claimed equivalent spatial predicate and fixture binding; those are explicit admission gaps."
+      }
+    ],
+    "docs": [
+      "https://github.com/honua-io/honua-server/blob/trunk/docs/capabilities.md",
+      "https://github.com/honua-io/honua-server/blob/trunk/tests/seed/admin-sample-feature-server.yaml"
+    ],
+    "owner": "honua-server data plane",
+    "cancellation": "Abort the HTTP request. No server job is created by this bounded query.",
+    "errors": "HTTP problem/GeoServices error envelopes are surfaced by each SDK's typed transport error; unsupported semantic compilation must fail closed."
+  },
+  "semantics": {
+    "normalizedRequest": {
+      "filter": { "field": "status", "operator": "eq", "value": "online" },
+      "fields": ["objectid", "name", "status", "priority"],
+      "limit": 2,
+      "spatial": { "relation": "intersects", "bbox": [-157.95, 21.28, -157.7, 21.41], "crs": "EPSG:4326" },
+      "returnGeometry": true
+    },
+    "expectedResult": { "featureCount": 2, "objectIds": [300001, 300003], "allStatuses": "online" },
+    "assertion": "Sort returned objectid values numerically and require exactly [300001, 300003], two features, status=online on every feature, and non-null point geometry."
+  },
+  "references": [
+    {
+      "surface": "http",
+      "availability": "available",
+      "label": "FeatureServer query",
+      "symbolOrCommand": "GET|POST /rest/services/{serviceId}/FeatureServer/{layerId}/query",
+      "deepLink": "https://github.com/honua-io/honua-server/blob/trunk/src/Honua.Server/Features/FeatureServer/QueryFeaturesHandler.cs",
+      "package": "Honua Server",
+      "minVersion": "current trunk fixture contract",
+      "supportTier": "Community",
+      "owner": "honua-server data plane",
+      "auth": "Anonymous fixture; API key or bearer token where configured.",
+      "cancellation": "Client disconnect/request abort.",
+      "errors": "GeoServices JSON error envelope plus HTTP status.",
+      "gap": null
+    },
+    {
+      "surface": "cli",
+      "availability": "gap",
+      "label": "Honua CLI query",
+      "symbolOrCommand": null,
+      "deepLink": null,
+      "package": null,
+      "minVersion": null,
+      "supportTier": "Unavailable",
+      "owner": "SDK/CLI",
+      "auth": "Not applicable.",
+      "cancellation": "Not applicable.",
+      "errors": "Not applicable.",
+      "gap": "The current Python honua CLI exposes services, layers, style apply, and doctor; it has no query subcommand or --help reference."
+    },
+    {
+      "surface": "javascript",
+      "availability": "available",
+      "label": "Source.query",
+      "symbolOrCommand": "Source<T>.query(Query<T>)",
+      "deepLink": "https://honua-io.github.io/honua-sdk-js/api/interfaces/Source.html#query",
+      "package": "@honua/sdk-js",
+      "minVersion": "0.1.4-beta.0",
+      "supportTier": "Stable root contract",
+      "owner": "honua-sdk-js",
+      "auth": "HonuaClient apiKey/auth and request interceptors.",
+      "cancellation": "Query.signal: AbortSignal.",
+      "errors": "HonuaCapabilityNotSupportedError and typed transport errors.",
+      "gap": null
+    },
+    {
+      "surface": "python",
+      "availability": "available",
+      "label": "Source.query",
+      "symbolOrCommand": "honua_sdk.source.Source.query",
+      "deepLink": "https://honua-io.github.io/honua-sdk-python/latest/reference/honua-sdk/source-facade/#honua_sdk.source.Source.query",
+      "package": "honua-sdk",
+      "minVersion": "0.1.10",
+      "supportTier": "Alpha",
+      "owner": "honua-sdk-python",
+      "auth": "HonuaClient api_key, bearer_token, or auth_provider.",
+      "cancellation": "Sync calls use timeout; AsyncSource.query participates in asyncio task cancellation.",
+      "errors": "HonuaHttpError subclasses, HonuaAuthenticationError, HonuaTransportError, and HonuaTimeoutError.",
+      "gap": null
+    },
+    {
+      "surface": "dotnet",
+      "availability": "available",
+      "label": "IHonuaFeatureServerClient.QueryAsync",
+      "symbolOrCommand": "IHonuaFeatureServerClient.QueryAsync(string, int, FeatureServerQueryParams, CancellationToken)",
+      "deepLink": "https://honua-io.github.io/honua-sdk-dotnet/api/Honua.Sdk.GeoServices.FeatureServer.IHonuaFeatureServerClient.html",
+      "package": "Honua.Sdk.GeoServices",
+      "minVersion": "1.2.1",
+      "supportTier": "Supported",
+      "owner": "honua-sdk-dotnet",
+      "auth": "HonuaGeoServicesClientOptions bearer/API-key provider and HttpClient handler pipeline.",
+      "cancellation": "CancellationToken on QueryAsync.",
+      "errors": "Honua GeoServices typed exception plus HttpClient transport exceptions.",
+      "gap": null
+    }
+  ],
+  "codeTabs": [
+    {
+      "surface": "javascript",
+      "referenceSurface": "javascript",
+      "language": "ts",
+      "code": "import { HonuaClient, createDataset, envelope, queryFilter } from '@honua/sdk-js';\n\nconst controller = new AbortController();\nconst client = new HonuaClient({ baseUrl: 'http://127.0.0.1:8080' });\nconst source = createDataset({\n  id: 'operations', client, capabilityPolicy: 'strict',\n  sources: [{ id: 'operations-sites', protocol: 'geoservices-feature-service', locator: { serviceId: 'admin_sample', layerId: 3000 }, capabilities: ['query'] }]\n}).source('operations-sites');\nconst result = await source.query({\n  filter: queryFilter.eq('status', 'online'),\n  spatialFilter: envelope(-157.95, 21.28, -157.70, 21.41, { wkid: 4326 }),\n  outFields: ['objectid', 'name', 'status', 'priority'],\n  pagination: { limit: 2 }, returnGeometry: true, signal: controller.signal\n});"
+    },
+    {
+      "surface": "python",
+      "referenceSurface": "python",
+      "language": "python",
+      "code": "from honua_sdk import HonuaClient, SourceDescriptor, SourceLocator\n\nwith HonuaClient('http://127.0.0.1:8080', timeout=10.0) as client:\n    source = client.source(SourceDescriptor(id='operations-sites', protocol='geoservices-feature-service', locator=SourceLocator(service_id='admin_sample', layer_id=3000)))\n    result = source.query(where=\"status = 'online'\", out_fields=['objectid', 'name', 'status', 'priority'], bbox=(-157.95, 21.28, -157.70, 21.41), limit=2, return_geometry=True)"
+    },
+    {
+      "surface": "dotnet",
+      "referenceSurface": "dotnet",
+      "language": "csharp",
+      "code": "using Honua.Sdk.GeoServices.FeatureServer.Models;\n\nvar page = await features.QueryAsync(\n    \"admin_sample\", 3000,\n    new FeatureServerQueryParams { Where = \"status = 'online'\", OutFields = \"objectid,name,status,priority\", ResultRecordCount = 2, ReturnGeometry = true, SpatialFilter = new FeatureServerSpatialFilter { Geometry = \"{\\\"xmin\\\":-157.95,\\\"ymin\\\":21.28,\\\"xmax\\\":-157.70,\\\"ymax\\\":21.41,\\\"spatialReference\\\":{\\\"wkid\\\":4326}}\", GeometryType = \"esriGeometryEnvelope\", SpatialRel = \"esriSpatialRelIntersects\" } },\n    cancellationToken);"
+    }
+  ],
+  "walkthrough": [],
+  "console": {
+    "state": "not-applicable",
+    "route": null,
+    "requiredRole": null,
+    "equivalentConfig": { "copyable": "The complete raw HTTP query is the primary configuration." },
+    "visual": { "state": "not-applicable", "path": null, "alt": null, "callouts": [], "viewport": null, "redaction": null, "sourceCommit": null, "serverVersion": null, "fixtureKey": null, "goldenReceipt": null }
+  },
+  "ai": {
+    "state": "experimental",
+    "api": "@honua/sdk-js/nl-map-control createNlMapControl().propose()/execute()",
+    "allowedTasks": ["discover capabilities", "explain the schema", "draft a bounded normalized query plan"],
+    "contextInputs": ["capability manifest", "source descriptor", "schema", "service metadata", "bounded tool schemas"],
+    "providerBoundary": "Bring-your-own LLM callback; the SDK sends bounded tool schemas and semantic map context, depends on no provider SDK, and persists no prompt/model output.",
+    "security": "Treat service metadata as untrusted context, reject credential/cursor/endpoint-bearing plans, bound retries and effects, and never place secrets in prompts or approval envelopes.",
+    "validation": "propose() must render the normalized NlMapPlan, query-plan IR, limits, fields, spatial envelope, and fingerprint before execute(); fixture replay verifies deterministic plan and receipt digests.",
+    "approvalBoundary": "Planning never executes. Read-only auto-execution is policy-controlled; MCP protected-source reads and all effectful plans require a signed, single-use approval.",
+    "prohibitedActions": ["execute without required human approval", "silently widen a filter", "invent a source capability", "send credentials to a model"],
+    "fallback": "Use the raw request inspector or one of the three explicit SDK tabs without AI.",
+    "provenance": "Show provider/model digests, plan fingerprint, approval digest when used, result digest, and signed execution receipt; omit raw prompts and result payloads from audit events."
+  }
+}
