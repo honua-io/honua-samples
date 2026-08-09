@@ -476,6 +476,66 @@ Python geoprocessing curriculum:
 
 Python pages do not claim parity merely because raw REST can reach the endpoint. Until a public Python SDK operation exists and passes its pinned compile/run and semantic receipt gate, the Python tab is `partial` or `unavailable` with the owning blocker.
 
+#### Walkthrough: Author and run a cloud-native Python geoprocessing job in Honua Studio
+
+This is one job-centered Walkthrough, not separate Studio, Python, OGC Processes, GPServer, JavaScript, or .NET cards. Its canonical route is `/walkthroughs/python-cloud-geoprocessing-job/`. It links one production Project, `Cloud-Native Python Geoprocessing Job`, at `/projects/python-cloud-geoprocessing-job/`.
+
+The Walkthrough must not imply that Honua Studio provides a Python authoring, build, packaging, or publishing surface until the generated capability matrix links authoritative implementation and executable evidence for that exact contract. A planned outline may be visible as a roadmap/reference page, but it cannot be marked runnable, supported, or live.
+
+Every named step carries a generated `current`, `partial`, or `planned` state, evidence link, owner, and blocker. `current` requires passing fixture evidence against pinned product bytes and, when the step claims the public environment, a fresh live receipt. Code presence, a raw endpoint, or a neighboring product feature is insufficient.
+
+##### Authoring-plane panel
+
+The authoring-plane panel appears before execution instructions and treats Studio as a distinct product boundary:
+
+| Step | Research-date state | Required contract and evidence to advance |
+|---|---|---|
+| Studio project and scaffold | `planned` | A versioned Studio project type, canonical scaffold, save/reopen lifecycle, source ownership, and executable fixture evidence. No authoritative Studio Python authoring contract is established by the evidence summarized in this plan. |
+| Python runtime and dependencies | `planned` | Supported Python/runtime versions, dependency declaration and lock format, permitted native/system dependencies, deterministic install, package policy, and offline build evidence. |
+| Input/output data contracts | `partial` | Typed parameter, feature/table/raster/file, CRS, schema, size/bounds, media type, validation, and result contracts aligned with server process metadata and SDK models. Current server process exposure does not by itself prove the complete authoring contract. |
+| Identity and secrets | `partial` | Author identity, build identity, runtime service identity, tenant scope, secret references, least privilege, redaction, rotation, and proof that secrets never enter source, images, logs, receipts, or result artifacts. Generic auth primitives are not proof of a Studio job-secret lifecycle. |
+| Resource, time, retry, and idempotency bounds | `partial` | CPU/memory/storage/network limits, maximum duration, concurrency, retry/backoff, idempotency/correlation keys, duplicate-submission behavior, cancellation deadline, quota errors, and deterministic limit fixtures. |
+| Build, package, image, and artifact | `planned` | Reproducible build command, lockfile, source digest, SBOM/provenance, package or OCI image digest, signing/admission policy, vulnerability/license gate, immutable artifact storage, and rollback/retention contract. |
+| Server process registration and publish | `planned` | Versioned registration/publish API, capability key, process id/version, input/output metadata, artifact digest binding, authorization, dry-run/validation, atomic activation, prior-version rollback, audit receipt, and exact OpenAPI/server-doc links. |
+
+##### Execution-plane panel
+
+The execution-plane panel begins with the published server contract and keeps raw protocol behavior inspectable before SDK mappings:
+
+| Step | Research-date state | Required contract and evidence to advance |
+|---|---|---|
+| Discover the published process | `partial` | Exact OGC API Processes, GeoServices GPServer, or other supported discovery operation, protocol/version, method, endpoint template, manifest service key, auth, raw response, server docs, and capability evidence. Server exposure exists, but the client and demo contracts are not yet complete. |
+| Submit the job | `partial` | Bounded request, synchronous/asynchronous mode, process/artifact version, idempotency key, accepted response, job id, retry classification, and normalized submission receipt. |
+| Observe logs and progress | `partial` | Authorized structured logs, server messages, progress/state model, timestamps, correlation id, polling or subscription bounds, redaction, retention, and terminal-state semantics. |
+| Cancel | `partial` | Distinguish cancellation of the client wait from confirmed server-job cancellation; prove idempotent cancel, race with completion, timeout, and terminal receipt behavior. |
+| Retrieve results and provenance | `partial` | Typed inline or artifact result, media type/schema/CRS, checksums, generating code/package/image/process versions, input provenance, warnings/degradation, signed URL behavior, and normalized semantic assertion. |
+| Cleanup and TTL | `planned` | Job, logs, intermediate data, output artifact, image, and secret-reference retention; expiry visibility; explicit cleanup; safe repeated cleanup; quota reclamation; and retention-policy receipt. |
+| Local and CI fixture | `planned` | Pinned local runner or service fixture exercising author, build/admit, register, submit, observe, cancel, result, provenance, and cleanup without network or live credentials. General Python sample execution is not evidence for this end-to-end job. |
+| Public live receipt | `planned` | Manifest-advertised sandbox process target, immutable published artifact, bounded anonymous or scoped test identity, reset/cleanup owner, fresh semantic receipt, quotas, and canary. The current demo manifest does not establish this target. |
+
+##### Required page mappings
+
+The Walkthrough and Project link the exact raw server operations for authoring/registration, process discovery, submission, status/log/progress, cancellation, results, and cleanup. Methods and endpoint templates are generated from the pinned OpenAPI/server manifest rather than invented in prose.
+
+The Python tab is primary for authoring and implementation. It links the exact pinned Python SDK job/package APIs for project creation where supported, registration/publish, submit, observe, cancel, retrieve, and cleanup. Any missing operation is visibly `partial` or `unavailable` with its source owner and blocker; raw REST does not silently substitute for SDK support.
+
+JavaScript and .NET tabs cover invocation of the same published process where their public SDKs support discovery, submit, progress, cancellation, and result retrieval. They share the execution-plane service, fixture, expected result, assertion, and normalized receipt, but do not duplicate the authoring Walkthrough or claim identical syntax. If authoring is Python-only, JS/.NET authoring is `not-applicable`; invocation support is evaluated independently.
+
+##### Walkthrough acceptance criteria
+
+- The page renders separate Authoring plane and Execution plane panels, with every step showing `current`, `partial`, or `planned`, authoritative evidence, owner, and blocker.
+- Every `current` code step compiles/loads and runs against pinned Studio, Python SDK, server image, package/image, fixture, and manifest bytes as applicable.
+- The local/CI run and live run, when live is claimed, produce the same normalized expected result and a receipt binding source, inputs, process version, code/package/image digest, server version, result checksum, provenance, timings, warnings, cancellation state, and cleanup/expiry state.
+- The request/response inspector exposes redacted actual registration and execution operations with safe Copy and conditional Open behavior and exact server-doc/OpenAPI links.
+- Failure fixtures cover invalid inputs, missing capability, unauthorized secret access, resource/time limit, duplicate/idempotent submission, build/admission failure, job failure, cancellation races, expired result, and repeated cleanup.
+- The Walkthrough is not promoted to `supported` while a required authoring or execution step remains `partial` or `planned`. A narrower execution-only page may qualify independently only if it is labeled as a different job outcome.
+
+##### Production Project contract
+
+`Cloud-Native Python Geoprocessing Job` is the single production-shaped Project composed by the Walkthrough. It includes the canonical Studio project/scaffold when that surface exists, Python source and lockfile, typed input/output schemas, deterministic fixture, build/package/image definition, SBOM/provenance, deployment/registration manifest, least-privilege identity and secret references, resource/retry/idempotency policy, client invocation examples, logs/progress dashboards, result storage/TTL policy, rollback and cleanup runbooks, and exact fixture/live receipts.
+
+The Project is not a second tutorial card and does not fork code from the Walkthrough. The Walkthrough links milestone diffs into the Project's immutable `sourceOfTruth`; the Project links back to its focused query, process invocation, cancellation, result, and diagnostics Examples. It cannot be published as a production Project until both panels' required steps are `current` and the project passes exact packed-artifact, fixture, live, security, provenance, cleanup, rollback, and observability gates.
+
 ### Track 11: authentication and deployment
 
 Examples: API key, OAuth/PKCE, bearer, client credentials in a backend, token refresh, request redaction, row-level security behavior, tenant headers, compatibility check, diagnostics bundle, CSP and worker/WASM hosting, base paths, CDN/cache headers, environment injection without secrets, source maps, and deployment health checks.
@@ -717,6 +777,7 @@ Exit: the generated matrix covers the ordinary competitor-baseline tasks with ex
 ### Stage 5: mutable and partial workflows
 
 - Complete editing/offline sync, realtime, auth, geocoding, routing, process execution, PMTiles publishing, and AI approval/execution only after the SDK contracts and demo services qualify.
+- Deliver `Author and run a cloud-native Python geoprocessing job in Honua Studio` as one Walkthrough plus the `Cloud-Native Python Geoprocessing Job` Project only after the authoring-plane and execution-plane evidence gates qualify; until then retain the per-step planned/partial roadmap without a runnable Studio claim.
 - Require isolated run ids, quotas, idempotent reset, authorization boundaries, and reset canaries for every mutable live sample.
 - Keep experimental AI, offline, realtime, and collaboration paths out of supported golden status until their canonical matrix claims and live receipts agree.
 
@@ -737,6 +798,7 @@ Exit per workflow: deterministic chaos/error fixtures, safe live sandbox/reset e
 - Every public route has an unexpired exact-artifact receipt bound to immutable source, packed SDK bytes, server image digest, fixture digest, demo manifest digest/service key when live, and its semantic assertion.
 - Every public Project declares canonical source and links all composing Examples and Walkthroughs; no source is silently duplicated between `honua-samples` and `honua-sdk-js`.
 - Shared GIS jobs publish one canonical card with a server-contract/request-response panel followed by owned JavaScript, Python, and .NET tabs; protocol alternatives stay inside the job, each supported tab runs against pinned SDK bytes and produces the same normalized semantic receipt, and partial/unavailable states remain explicit.
+- The Python cloud-geoprocessing Walkthrough and Project expose separate authoring and execution planes, bind every current step to authoritative pinned evidence, keep unproven Studio authoring planned, and prove build-to-result provenance, cancellation, cleanup/TTL, and equivalent JS/.NET invocation semantics where supported.
 - `samples.honua.io` is canonical, `sample.honua.io` redirects path-for-path, `honua.io/samples` does not fork the catalog, and the `demo.honua.io` root advertises the exact live manifest and health/documentation links.
 - Promotion, detection, evidence retention, alerting, and automatic rollback meet the release SLO table, including a periodic rollback drill.
 - No public sample hard-codes a demo endpoint absent from its pinned manifest, labels fixture output as live, or promotes a partial/experimental capability as supported.
