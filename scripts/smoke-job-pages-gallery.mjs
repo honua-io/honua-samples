@@ -123,7 +123,9 @@ function createStaticServer() {
       response.writeHead(200, { "content-type": type, "content-length": body.length });
       response.end(body);
     } catch (error) {
-      send(response, error?.code === "ENOENT" ? 404 : 500, error instanceof Error ? error.message : String(error));
+      if (error?.code === "ENOENT") return send(response, 404, "Not found");
+      console.error(`job gallery static server error: ${error instanceof Error ? error.message : String(error)}`);
+      send(response, 500, "Internal server error");
     }
   });
 }
