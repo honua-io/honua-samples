@@ -2,7 +2,7 @@
   "$schema": "../schemas/release-gap-register.v1.schema.json",
   "format": "honua.release-gap-register.v1",
   "schemaVersion": "1.0.0",
-  "asOf": "2026-08-08",
+  "asOf": "2026-08-09",
   "generatedFrom": [
     "audits/capabilities/*.json",
     "audits/release-gaps.v1.json"
@@ -458,60 +458,6 @@
         "Adversarial COG suite passes on the candidate.",
         "Range/decoded-byte/time ceilings fail closed with stable errors.",
         "Live proof records object locality and bounded windows."
-      ]
-    },
-    {
-      "id": "PY-001",
-      "severity": "P0",
-      "classifications": [
-        "broken-core-job",
-        "absent-live-proof"
-      ],
-      "title": "Repair governed Python staging auth and service binding",
-      "affected": [
-        {
-          "auditId": "feature-query-first-map",
-          "jobId": "job.first-map",
-          "capabilityKey": "serve.geoservices-featureserver",
-          "gaClaim": false,
-          "targetTier": "ga",
-          "claim": "Connect an anonymous endpoint, inspect it, run a bounded feature query, and render an accessible first map."
-        }
-      ],
-      "userCompetitiveImpact": "The required Python live compatibility lane cannot prove its typed-field contract, while reseeding from contradictory infrastructure sources can silently expose the protected fixture or change consumer semantics.",
-      "risk": {
-        "security": true,
-        "dataLoss": false,
-        "compatibility": true
-      },
-      "evidenceMissing": [
-        "sdk-supported-surface"
-      ],
-      "currentWorkaround": "The seeded local fallback is deterministic but is not deployed live proof. Switching to a public Maui service would weaken the required objectid/name/status/count/ratio/uid contract and is not acceptable.",
-      "dependencyChain": [
-        "https://github.com/honua-io/honua-demo-infra/issues/28",
-        "https://github.com/honua-io/honua-demo-infra/issues/19",
-        "https://github.com/honua-io/honua-demo-infra/pull/20",
-        "https://github.com/honua-io/honua-sdk-python/issues/53",
-        "https://github.com/honua-io/honua-sdk-python/pull/160",
-        "https://github.com/honua-io/honua-sdk-python/pull/192"
-      ],
-      "owner": {
-        "team": "Demo environment operations",
-        "repository": "honua-io/honua-demo-infra"
-      },
-      "existingIssue": "https://github.com/honua-io/honua-demo-infra/issues/28",
-      "effort": {
-        "estimate": "M",
-        "confidence": "high"
-      },
-      "recommendedSequence": 6,
-      "exitEvidence": [
-        "Seed script, seed manifest, runbook, and generated public-manifest exclusion agree on protected allowAnonymous:false policy.",
-        "A versioned governed client-compat descriptor records current service/layer, typed-field contract, server commit, immutable image, seed version, owner, generated time, and expiry without secrets.",
-        "Atomic credential and SDK binding rotation/sync completes with rollback and incident ownership recorded.",
-        "A fresh canary proves authenticated metadata/query success for objectid, name, status, count, ratio, and uid plus anonymous denial for the same binding.",
-        "A current Python SDK Staging Integration run is green with local_stack=false and links its semantic receipt and descriptor/server/image lineage."
       ]
     },
     {

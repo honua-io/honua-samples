@@ -107,12 +107,12 @@
       "exclusion": null
     },
     "python": {
-      "status": "source-preview-staging-broken",
+      "status": "source-preview-staging-proven",
       "package": {
         "name": "honua-sdk",
         "declaredVersion": "0.1.10",
         "publishedVersion": null,
-        "sourceCommit": "e28c67c8e3ef99bcc86c891ecc01a6940d7d7e59"
+        "sourceCommit": "e2be24ddf3d1c3423e2284ac1ce9f407986138e0"
       },
       "symbols": [
         "Source.query(Query | **kwargs)",
@@ -121,9 +121,13 @@
       ],
       "evidence": [
         "compatibility/sdk-coverage.v1.json",
-        "honua-sdk-python#192"
+        "honua-sdk-python#192",
+        "honua-demo-infra#32",
+        "honua-sdk-python#193",
+        "honua-demo-infra/actions/runs/31294158324",
+        "honua-sdk-python/actions/runs/31294424169"
       ],
-      "exclusion": "Staging still binds retired protected test_service/68823 and a rejected 2026-07-01 API key; public Maui data cannot substitute for its typed-field contract."
+      "exclusion": "Governed protected staging proof is green at honua-sdk-python commit e2be24ddf3d1c3423e2284ac1ce9f407986138e0, but honua-sdk 0.1.10 remains source-preview and unpublished; this evidence does not establish a GA compatibility or support window."
     },
     "dotnet": {
       "status": "source-preview",
@@ -185,7 +189,7 @@
   },
   "evidence": {
     "freshnessPolicy": {
-      "asOf": "2026-08-08T00:00:00Z",
+      "asOf": "2026-08-09T00:00:00Z",
       "defaultTtlDays": 14
     },
     "required": [
@@ -254,6 +258,27 @@
           "Plan fingerprint and artifact SHA-256 values are retained.",
           "This does not prove a Honua candidate image."
         ]
+      },
+      {
+        "id": "python-protected-staging-trunk-31294424169",
+        "kind": "sdk-supported-surface",
+        "source": "https://github.com/honua-io/honua-sdk-python/actions/runs/31294424169",
+        "capturedAt": "2026-08-09T04:23:01.912081Z",
+        "expiresAt": "2026-08-16T04:15:11.694Z",
+        "digest": {
+          "algorithm": "sha256",
+          "value": "8e0707e2981cd6b831fa9d9e59d7e583a63b87d7b417935317dd8be34ad4c690"
+        },
+        "semanticAssertions": [
+          "honua-demo-infra PR #32 merged as b5c1dc20eafd28cfa30678ab4b67d9b72c013b86; trunk run 31294158324 passed public 26/26 and protected 3/3 checks.",
+          "Demo artifact 9032382392 has digest sha256:0ede9066ee5087cd12435ea1b7c6e263034ee9f23c0da23402ae90dbf97ac06b; protected receipt SHA-256 is 85d7dbb5de0c053c1a2686ee4d6658e2b1dae36fd18bf28c33126d99402802f0.",
+          "Deployment evidence SHA-256 fe9716d7fe76eab91d13694457d061f656291a41bfcb6027aff19f05d2d32be9 binds descriptor SHA-256 b7bbd52a47e17c454a37e760cee42c1c24acb20bed3f265a59036037add7599a, allowAnonymous=false, credentialRecorded=false, owner honua-io/honua-demo-infra, and expiry 2026-08-16T04:15:11.694Z.",
+          "The deployment binding pins server e58532138377006960516ba23333185be55040b2, image 585192672263.dkr.ecr.us-west-2.amazonaws.com/honua-server@sha256:4fb503be4eace130ed218c8f940382e824ab43016aa5aa4edcfbf4b2f81ed2c9, service/layer test_service/68823, and seed client-compat.",
+          "honua-sdk-python PR #193 merged as e2be24ddf3d1c3423e2284ac1ce9f407986138e0; trunk run 31294424169 passed all five required probes with local_stack=false.",
+          "Python artifact 9032467529 has digest sha256:7aa155f6f6bce35523820be9605d382a1770be5b97c2b2f5a17b6d0a22f053c2 and staging-smoke-results.json SHA-256 8e0707e2981cd6b831fa9d9e59d7e583a63b87d7b417935317dd8be34ad4c690; it records the same descriptor/deployment digests, expiry, owner, policy target, and full immutable lineage.",
+          "honua-demo-infra issue #28 closed completed at 2026-08-09T04:25:00Z after both trunk receipts were admitted.",
+          "This resolves only the broken governed Python staging binding; published-package and cross-SDK support-window evidence remains missing under SDK-001."
+        ]
       }
     ],
     "missing": [
@@ -286,11 +311,6 @@
         "kind": "server-observability",
         "reason": "No trace/metric/log receipt is attached.",
         "gapId": "GA-002"
-      },
-      {
-        "kind": "sdk-supported-surface",
-        "reason": "Published packages do not form the claimed support window.",
-        "gapId": "PY-001"
       },
       {
         "kind": "demo-live-canary",
@@ -399,14 +419,6 @@
       ],
       "note": "Admit fixture and live semantic receipts for every GA job",
       "issue": "https://github.com/honua-io/honua-sdk-js/issues/543"
-    },
-    {
-      "gapId": "PY-001",
-      "evidenceKinds": [
-        "sdk-supported-surface"
-      ],
-      "note": "Repair governed Python staging auth and service binding",
-      "issue": "https://github.com/honua-io/honua-demo-infra/issues/28"
     },
     {
       "gapId": "GA-003",
