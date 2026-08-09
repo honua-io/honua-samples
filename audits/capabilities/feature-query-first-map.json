@@ -1,0 +1,478 @@
+{
+  "$schema": "../../schemas/capability-audit.v1.schema.json",
+  "format": "honua.release-capability-audit.v1",
+  "schemaVersion": "1.0.0",
+  "auditId": "feature-query-first-map",
+  "auditSet": "2026-08-08",
+  "title": "Feature query / First Map",
+  "capabilityKey": "serve.geoservices-featureserver",
+  "jobId": "job.first-map",
+  "claim": {
+    "gaClaim": false,
+    "summary": "Connect an anonymous endpoint, inspect it, run a bounded feature query, and render an accessible first map.",
+    "scope": [
+      "GeoServices FeatureServer read/query",
+      "OGC API Features read/query",
+      "JavaScript MapLibre First Map"
+    ],
+    "exclusions": [
+      "Feature editing",
+      "OData spatial/write equivalence",
+      "CLI query command",
+      "External Esri proof as Honua server proof"
+    ],
+    "publicClaims": [
+      {
+        "source": "honua-server capability matrix 61b7038e1887c98131aa217b6f0ae7869356a1f3",
+        "status": "implemented-count-derived",
+        "text": "serve.geoservices-featureserver has source/test entries; the matrix explicitly says this is not a GA signoff."
+      },
+      {
+        "source": "honua-site capabilities 718350adafbb519cd1bf8004b5f1014b45eebba9",
+        "status": "source-backed",
+        "text": "serve.geoservices-featureserver is published as source-backed without an immutable release artifact."
+      },
+      {
+        "source": "honua-sdk-js e0b4c21cfa17808a01f80d095c4ca5e9cda6b835",
+        "status": "beta",
+        "text": "First Map is qualified in source, but @honua/sdk-js remains beta."
+      }
+    ]
+  },
+  "targetTier": "ga",
+  "owner": {
+    "team": "Developer Experience / Release Engineering",
+    "repository": "honua-io/honua-samples",
+    "contact": "release owner pending signoff"
+  },
+  "protocol": {
+    "names": [
+      "GeoServices REST FeatureServer",
+      "OGC API Features"
+    ],
+    "versions": [
+      "GeoServices REST unversioned",
+      "OGC API Features 1.0"
+    ],
+    "endpoints": [
+      "/rest/services/{serviceId}/FeatureServer/{layerId}/query",
+      "/ogc/features/collections/{collectionId}/items"
+    ]
+  },
+  "server": {
+    "repository": "honua-io/honua-server",
+    "commit": "61b7038e1887c98131aa217b6f0ae7869356a1f3",
+    "image": {
+      "reference": null,
+      "digest": null,
+      "status": "missing"
+    },
+    "conformance": [
+      "49 entries / 417 proving tests.",
+      "GeoServices parity is partial; JS/CLI interop is unknown and ArcGIS-stub evidence stale."
+    ],
+    "limits": [
+      "Bounded query required; release limit receipt missing."
+    ],
+    "errors": [
+      "Protocol filter dialects differ; release error receipt missing."
+    ],
+    "security": [
+      "Release-bound security receipt missing."
+    ],
+    "performance": [
+      "Release-bound performance receipt missing."
+    ],
+    "observability": [
+      "Release-bound trace/metric/log receipt missing."
+    ]
+  },
+  "clients": {
+    "javascript": {
+      "status": "beta",
+      "package": {
+        "name": "@honua/sdk-js",
+        "declaredVersion": "0.1.4-beta.0",
+        "publishedVersion": "0.1.2-beta.0",
+        "sourceCommit": "e0b4c21cfa17808a01f80d095c4ca5e9cda6b835"
+      },
+      "symbols": [
+        "connect(url)",
+        "Source<T>.query(Query<T>)"
+      ],
+      "evidence": [
+        "config/support-manifest.v1.json",
+        "examples/maplibre-quickstart/src/workflow.ts"
+      ],
+      "exclusion": null
+    },
+    "python": {
+      "status": "source-preview-staging-proven",
+      "package": {
+        "name": "honua-sdk",
+        "declaredVersion": "0.1.10",
+        "publishedVersion": null,
+        "sourceCommit": "e2be24ddf3d1c3423e2284ac1ce9f407986138e0"
+      },
+      "symbols": [
+        "Source.query(Query | **kwargs)",
+        "GeoServicesFeatureServerClient.query",
+        "AsyncGeoServicesFeatureServerClient.query"
+      ],
+      "evidence": [
+        "compatibility/sdk-coverage.v1.json",
+        "honua-sdk-python#192",
+        "honua-demo-infra#32",
+        "honua-sdk-python#193",
+        "honua-demo-infra/actions/runs/31294158324",
+        "honua-sdk-python/actions/runs/31294424169"
+      ],
+      "exclusion": "Governed protected staging proof is green at honua-sdk-python commit e2be24ddf3d1c3423e2284ac1ce9f407986138e0, but honua-sdk 0.1.10 remains source-preview and unpublished; this evidence does not establish a GA compatibility or support window."
+    },
+    "dotnet": {
+      "status": "source-preview",
+      "package": {
+        "name": "Honua.Sdk",
+        "declaredVersion": "1.6.0",
+        "publishedVersion": null,
+        "sourceCommit": "a88a7fbb3643cb046e70d6ef4d38ae70a025a2a4"
+      },
+      "symbols": [
+        "IHonuaSource.QueryAsync(SourceQuery, CancellationToken)",
+        "IHonuaFeatureServerClient.QueryAsync(...)"
+      ],
+      "evidence": [
+        "docs/capability-coverage.md"
+      ],
+      "exclusion": "No published NuGet version or map UI claim."
+    },
+    "cli": {
+      "status": "absent",
+      "package": {
+        "name": "@honua/sdk-js",
+        "declaredVersion": "0.1.4-beta.0",
+        "publishedVersion": "0.1.2-beta.0",
+        "sourceCommit": "e0b4c21cfa17808a01f80d095c4ca5e9cda6b835"
+      },
+      "symbols": [],
+      "evidence": [
+        "honua-sdk-js/src/cli"
+      ],
+      "exclusion": "No feature-query CLI command was found; raw HTTP is the workaround."
+    }
+  },
+  "demo": {
+    "manifestServiceKey": "maui-buildings",
+    "manifestProtocolKey": "featureServer",
+    "manifestCommit": "3cccf9b08a19e51619a0e6bec19b0e2afbb5ebde",
+    "liveCanary": {
+      "status": "missing",
+      "route": "https://demo.honua.io/rest/services/maui-buildings/FeatureServer/13/query",
+      "evidenceId": null
+    },
+    "reset": {
+      "status": "missing",
+      "procedure": null,
+      "owner": "Demo Operations (receipt unassigned)"
+    }
+  },
+  "experience": {
+    "exampleRoutes": [
+      "https://samples.honua.io/?caps=serve.geoservices-featureserver"
+    ],
+    "walkthroughRoutes": [
+      "honua-sdk-js/examples/maplibre-quickstart/README.md"
+    ],
+    "projectRoutes": [
+      "honua-sdk-js/examples/maplibre-quickstart"
+    ]
+  },
+  "evidence": {
+    "freshnessPolicy": {
+      "asOf": "2026-08-09T00:00:00Z",
+      "defaultTtlDays": 14
+    },
+    "required": [
+      "server-image",
+      "server-conformance",
+      "server-limits-errors",
+      "server-security",
+      "server-performance",
+      "server-observability",
+      "sdk-supported-surface",
+      "demo-manifest",
+      "demo-live-canary",
+      "demo-reset",
+      "fixture-semantic",
+      "live-semantic",
+      "accessibility",
+      "browser-platform",
+      "docs-troubleshooting",
+      "compatibility-support",
+      "rollback"
+    ],
+    "receipts": [
+      {
+        "id": "server-matrix",
+        "kind": "source-inventory",
+        "source": "https://github.com/honua-io/honua-server/blob/61b7038e1887c98131aa217b6f0ae7869356a1f3/docs/gis/data/capability-matrix.v1.json",
+        "capturedAt": "2026-08-05T18:38:08Z",
+        "expiresAt": "2026-09-04T18:38:08Z",
+        "digest": {
+          "algorithm": "git-blob-sha1",
+          "value": "200a3f61ad467b0b98f48d39a9813460a3634cc2"
+        },
+        "semanticAssertions": [
+          "serve.geoservices-featureserver is present in the canonical matrix.",
+          "49 entries / 417 proving tests / partial parity",
+          "Implemented counts are not a GA signoff."
+        ]
+      },
+      {
+        "id": "demo-manifest",
+        "kind": "demo-manifest",
+        "source": "https://github.com/honua-io/honua-demo-infra/blob/3cccf9b08a19e51619a0e6bec19b0e2afbb5ebde/manifest/demo-services.v1.json",
+        "capturedAt": "2026-08-08T20:13:38Z",
+        "expiresAt": "2026-08-22T20:13:38Z",
+        "digest": {
+          "algorithm": "git-blob-sha1",
+          "value": "eed6c05ca7d6a3456e5eb8711695402f97c3434e"
+        },
+        "semanticAssertions": [
+          "maui-buildings declares featureServer.",
+          "This is deterministic inventory, not a live canary."
+        ]
+      },
+      {
+        "id": "first-map-external-live",
+        "kind": "live-semantic",
+        "source": "https://github.com/honua-io/honua-sdk-js/blob/e0b4c21cfa17808a01f80d095c4ca5e9cda6b835/samples/evidence/maplibre-quickstart/live.v1.json",
+        "capturedAt": "2026-08-05T13:41:42.493Z",
+        "expiresAt": "2026-08-19T13:41:42.493Z",
+        "digest": {
+          "algorithm": "git-blob-sha1",
+          "value": "946144a5929246c2b4eb29881ea05dd37c9711a5"
+        },
+        "semanticAssertions": [
+          "External Esri FeatureServer query executed with @honua/sdk-js 0.1.4-beta.0 at SDK commit 79127ec58e7397c5615eb4682a7314232e43048f.",
+          "Plan fingerprint and artifact SHA-256 values are retained.",
+          "This does not prove a Honua candidate image."
+        ]
+      },
+      {
+        "id": "python-protected-staging-trunk-31294424169",
+        "kind": "sdk-supported-surface",
+        "source": "https://github.com/honua-io/honua-sdk-python/actions/runs/31294424169",
+        "capturedAt": "2026-08-09T04:23:01.912081Z",
+        "expiresAt": "2026-08-16T04:15:11.694Z",
+        "digest": {
+          "algorithm": "sha256",
+          "value": "8e0707e2981cd6b831fa9d9e59d7e583a63b87d7b417935317dd8be34ad4c690"
+        },
+        "semanticAssertions": [
+          "honua-demo-infra PR #32 merged as b5c1dc20eafd28cfa30678ab4b67d9b72c013b86; trunk run 31294158324 passed public 26/26 and protected 3/3 checks.",
+          "Demo artifact 9032382392 has digest sha256:0ede9066ee5087cd12435ea1b7c6e263034ee9f23c0da23402ae90dbf97ac06b; protected receipt SHA-256 is 85d7dbb5de0c053c1a2686ee4d6658e2b1dae36fd18bf28c33126d99402802f0.",
+          "Deployment evidence SHA-256 fe9716d7fe76eab91d13694457d061f656291a41bfcb6027aff19f05d2d32be9 binds descriptor SHA-256 b7bbd52a47e17c454a37e760cee42c1c24acb20bed3f265a59036037add7599a, allowAnonymous=false, credentialRecorded=false, owner honua-io/honua-demo-infra, and expiry 2026-08-16T04:15:11.694Z.",
+          "The deployment binding pins server e58532138377006960516ba23333185be55040b2, image 585192672263.dkr.ecr.us-west-2.amazonaws.com/honua-server@sha256:4fb503be4eace130ed218c8f940382e824ab43016aa5aa4edcfbf4b2f81ed2c9, service/layer test_service/68823, and seed client-compat.",
+          "honua-sdk-python PR #193 merged as e2be24ddf3d1c3423e2284ac1ce9f407986138e0; trunk run 31294424169 passed all five required probes with local_stack=false.",
+          "Python artifact 9032467529 has digest sha256:7aa155f6f6bce35523820be9605d382a1770be5b97c2b2f5a17b6d0a22f053c2 and staging-smoke-results.json SHA-256 8e0707e2981cd6b831fa9d9e59d7e583a63b87d7b417935317dd8be34ad4c690; it records the same descriptor/deployment digests, expiry, owner, policy target, and full immutable lineage.",
+          "honua-demo-infra issue #28 closed completed at 2026-08-09T04:25:00Z after both trunk receipts were admitted.",
+          "This resolves only the broken governed Python staging binding; published-package and cross-SDK support-window evidence remains missing under SDK-001."
+        ]
+      }
+    ],
+    "missing": [
+      {
+        "kind": "server-image",
+        "reason": "No immutable candidate image reference/digest is attached.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "server-conformance",
+        "reason": "No release-bound conformance receipt names the candidate image.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "server-limits-errors",
+        "reason": "No candidate receipt proves limits and stable errors.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "server-security",
+        "reason": "No candidate-bound security receipt is attached.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "server-performance",
+        "reason": "No current candidate performance receipt is attached.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "server-observability",
+        "reason": "No trace/metric/log receipt is attached.",
+        "gapId": "GA-002"
+      },
+      {
+        "kind": "demo-live-canary",
+        "reason": "No fresh scheduled semantic canary is admitted.",
+        "gapId": "GA-003"
+      },
+      {
+        "kind": "demo-reset",
+        "reason": "No deterministic seed reset receipt is attached.",
+        "gapId": "GA-003"
+      },
+      {
+        "kind": "fixture-semantic",
+        "reason": "No digest-pinned fixture semantic receipt is admitted.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "accessibility",
+        "reason": "No release-bound accessibility receipt is attached.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "browser-platform",
+        "reason": "No release-bound browser/platform receipt is attached.",
+        "gapId": "GA-004"
+      },
+      {
+        "kind": "docs-troubleshooting",
+        "reason": "Reference/troubleshooting coverage is incomplete.",
+        "gapId": "GA-001"
+      },
+      {
+        "kind": "compatibility-support",
+        "reason": "No published compatibility/deprecation/support window covers the claim.",
+        "gapId": "SDK-001"
+      },
+      {
+        "kind": "rollback",
+        "reason": "No tested rollback receipt is attached.",
+        "gapId": "GA-003"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "documented-not-admitted",
+    "evidenceIds": [],
+    "targets": [
+      "WCAG 2.2 AA",
+      "keyboard",
+      "mobile"
+    ],
+    "note": "README describes Axe/keyboard/mobile checks; no release receipt is admitted."
+  },
+  "browserPlatform": {
+    "status": "missing",
+    "evidenceIds": [],
+    "targets": [
+      "Chromium",
+      "Firefox",
+      "WebKit",
+      "desktop",
+      "mobile"
+    ],
+    "note": "Release-bound browser/platform evidence is missing."
+  },
+  "documentation": {
+    "references": [
+      "honua-server/docs/get-started/first-map.md",
+      "honua-sdk-js/examples/maplibre-quickstart/README.md"
+    ],
+    "troubleshooting": [
+      "Filter dialect/live endpoint boundaries exist; release escalation is incomplete."
+    ],
+    "status": "partial"
+  },
+  "compatibility": {
+    "policy": "No cross-repository GA compatibility window is published for this exact claim.",
+    "deprecation": "Producer repositories retain prerelease/source policies.",
+    "support": "Evaluation only until this dossier passes."
+  },
+  "operations": {
+    "rollbackProcedure": null,
+    "rollbackOwner": "unassigned",
+    "incidentOwner": "Honua release incident commander (assignment pending)"
+  },
+  "blockers": [
+    {
+      "gapId": "GA-002",
+      "evidenceKinds": [
+        "server-image",
+        "server-conformance",
+        "server-security",
+        "server-observability"
+      ],
+      "note": "Pin immutable server image, commit, and evidence lineage",
+      "issue": "https://github.com/honua-io/honua-release/issues/60"
+    },
+    {
+      "gapId": "GA-004",
+      "evidenceKinds": [
+        "server-limits-errors",
+        "server-performance",
+        "fixture-semantic",
+        "accessibility",
+        "browser-platform"
+      ],
+      "note": "Admit fixture and live semantic receipts for every GA job",
+      "issue": "https://github.com/honua-io/honua-sdk-js/issues/543"
+    },
+    {
+      "gapId": "GA-003",
+      "evidenceKinds": [
+        "demo-live-canary",
+        "demo-reset",
+        "rollback"
+      ],
+      "note": "Add capability canaries, reset, rollback, and incident ownership",
+      "issue": "https://github.com/honua-io/honua-release/issues/61"
+    },
+    {
+      "gapId": "GA-001",
+      "evidenceKinds": [
+        "docs-troubleshooting"
+      ],
+      "note": "Reconcile public GA vocabulary with release artifacts",
+      "issue": "https://github.com/honua-io/honua-release/issues/59"
+    },
+    {
+      "gapId": "SDK-001",
+      "evidenceKinds": [
+        "compatibility-support"
+      ],
+      "note": "Publish exact cross-SDK surfaces and version window",
+      "issue": "https://github.com/honua-io/honua-release/issues/31"
+    }
+  ],
+  "signoffs": [
+    {
+      "role": "capability-owner",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "security",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "release",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    },
+    {
+      "role": "support",
+      "owner": "unassigned",
+      "status": "pending",
+      "signedAt": null
+    }
+  ],
+  "expiry": "2026-08-22T00:00:00Z",
+  "decision": "blocked"
+}

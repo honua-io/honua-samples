@@ -3,7 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:gallery:browser": "node scripts/smoke-published-gallery.mjs"
+    "test:gallery:browser": "node scripts/smoke-published-gallery.mjs",
+    "release:audit:validate": "node scripts/release-certification.mjs validate",
+    "release:audit:generate": "node scripts/release-certification.mjs generate",
+    "release:audit:check": "node scripts/release-certification.mjs check",
+    "test:release-certification": "node --test scripts/test/release-certification.test.mjs scripts/test/release-gap-schema.test.mjs scripts/test/release-gap-issue-bindings.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2"

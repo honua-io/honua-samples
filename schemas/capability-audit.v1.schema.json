@@ -1,0 +1,720 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://samples.honua.io/schemas/capability-audit.v1.schema.json",
+  "title": "Honua capability release certification dossier",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "format",
+    "schemaVersion",
+    "auditId",
+    "auditSet",
+    "title",
+    "capabilityKey",
+    "jobId",
+    "claim",
+    "targetTier",
+    "owner",
+    "protocol",
+    "server",
+    "clients",
+    "demo",
+    "experience",
+    "evidence",
+    "accessibility",
+    "browserPlatform",
+    "documentation",
+    "compatibility",
+    "operations",
+    "blockers",
+    "signoffs",
+    "expiry",
+    "decision"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "format": {
+      "const": "honua.release-capability-audit.v1"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "auditId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]+$"
+    },
+    "auditSet": {
+      "type": "string",
+      "format": "date"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capabilityKey": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]+$"
+    },
+    "jobId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]+$"
+    },
+    "claim": {
+      "$ref": "#/$defs/claim"
+    },
+    "targetTier": {
+      "enum": [
+        "ga",
+        "preview",
+        "experimental",
+        "planned"
+      ]
+    },
+    "owner": {
+      "$ref": "#/$defs/owner"
+    },
+    "protocol": {
+      "$ref": "#/$defs/protocol"
+    },
+    "server": {
+      "$ref": "#/$defs/server"
+    },
+    "clients": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "javascript",
+        "python",
+        "dotnet",
+        "cli"
+      ],
+      "properties": {
+        "javascript": {
+          "$ref": "#/$defs/client"
+        },
+        "python": {
+          "$ref": "#/$defs/client"
+        },
+        "dotnet": {
+          "$ref": "#/$defs/client"
+        },
+        "cli": {
+          "$ref": "#/$defs/client"
+        }
+      }
+    },
+    "demo": {
+      "$ref": "#/$defs/demo"
+    },
+    "experience": {
+      "$ref": "#/$defs/experience"
+    },
+    "evidence": {
+      "$ref": "#/$defs/evidence"
+    },
+    "accessibility": {
+      "$ref": "#/$defs/qualification"
+    },
+    "browserPlatform": {
+      "$ref": "#/$defs/qualification"
+    },
+    "documentation": {
+      "$ref": "#/$defs/documentation"
+    },
+    "compatibility": {
+      "$ref": "#/$defs/compatibility"
+    },
+    "operations": {
+      "$ref": "#/$defs/operations"
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/blocker"
+      }
+    },
+    "signoffs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/signoff"
+      }
+    },
+    "expiry": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "decision": {
+      "enum": [
+        "pass",
+        "conditional",
+        "blocked"
+      ]
+    }
+  },
+  "$defs": {
+    "strings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gaClaim",
+        "summary",
+        "scope",
+        "exclusions",
+        "publicClaims"
+      ],
+      "properties": {
+        "gaClaim": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/strings"
+        },
+        "exclusions": {
+          "$ref": "#/$defs/strings"
+        },
+        "publicClaims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "status",
+              "text"
+            ],
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "team",
+        "repository",
+        "contact"
+      ],
+      "properties": {
+        "team": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "contact": {
+          "type": "string"
+        }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "names",
+        "versions",
+        "endpoints"
+      ],
+      "properties": {
+        "names": {
+          "$ref": "#/$defs/strings"
+        },
+        "versions": {
+          "$ref": "#/$defs/strings"
+        },
+        "endpoints": {
+          "$ref": "#/$defs/strings"
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "commit",
+        "image",
+        "conformance",
+        "limits",
+        "errors",
+        "security",
+        "performance",
+        "observability"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reference",
+            "digest",
+            "status"
+          ],
+          "properties": {
+            "reference": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "digest": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "enum": [
+                "verified",
+                "missing",
+                "unverified"
+              ]
+            }
+          }
+        },
+        "conformance": {
+          "$ref": "#/$defs/strings"
+        },
+        "limits": {
+          "$ref": "#/$defs/strings"
+        },
+        "errors": {
+          "$ref": "#/$defs/strings"
+        },
+        "security": {
+          "$ref": "#/$defs/strings"
+        },
+        "performance": {
+          "$ref": "#/$defs/strings"
+        },
+        "observability": {
+          "$ref": "#/$defs/strings"
+        }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "declaredVersion",
+        "publishedVersion",
+        "sourceCommit"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "declaredVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "publishedVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceCommit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{40}$"
+        }
+      }
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "package",
+        "symbols",
+        "evidence",
+        "exclusion"
+      ],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "package": {
+          "$ref": "#/$defs/package"
+        },
+        "symbols": {
+          "$ref": "#/$defs/strings"
+        },
+        "evidence": {
+          "$ref": "#/$defs/strings"
+        },
+        "exclusion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "demo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifestServiceKey",
+        "manifestProtocolKey",
+        "manifestCommit",
+        "liveCanary",
+        "reset"
+      ],
+      "properties": {
+        "manifestServiceKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "manifestProtocolKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "manifestCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "liveCanary": {
+          "type": "object",
+          "required": [
+            "status",
+            "route",
+            "evidenceId"
+          ]
+        },
+        "reset": {
+          "type": "object",
+          "required": [
+            "status",
+            "procedure",
+            "owner"
+          ]
+        }
+      }
+    },
+    "experience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exampleRoutes",
+        "walkthroughRoutes",
+        "projectRoutes"
+      ],
+      "properties": {
+        "exampleRoutes": {
+          "$ref": "#/$defs/strings"
+        },
+        "walkthroughRoutes": {
+          "$ref": "#/$defs/strings"
+        },
+        "projectRoutes": {
+          "$ref": "#/$defs/strings"
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "source",
+        "capturedAt",
+        "expiresAt",
+        "digest",
+        "semanticAssertions"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "digest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "enum": [
+                "git-blob-sha1",
+                "sha256"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^([a-f0-9]{40}|[a-f0-9]{64})$"
+            }
+          }
+        },
+        "semanticAssertions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "freshnessPolicy",
+        "required",
+        "receipts",
+        "missing"
+      ],
+      "properties": {
+        "freshnessPolicy": {
+          "type": "object",
+          "required": [
+            "asOf",
+            "defaultTtlDays"
+          ]
+        },
+        "required": {
+          "$ref": "#/$defs/strings"
+        },
+        "receipts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/receipt"
+          }
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "reason",
+              "gapId"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "gapId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidenceIds",
+        "targets",
+        "note"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "verified",
+            "missing",
+            "not-applicable",
+            "documented-not-admitted"
+          ]
+        },
+        "evidenceIds": {
+          "$ref": "#/$defs/strings"
+        },
+        "targets": {
+          "$ref": "#/$defs/strings"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "documentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "references",
+        "troubleshooting",
+        "status"
+      ],
+      "properties": {
+        "references": {
+          "$ref": "#/$defs/strings"
+        },
+        "troubleshooting": {
+          "$ref": "#/$defs/strings"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial",
+            "missing"
+          ]
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy",
+        "deprecation",
+        "support"
+      ],
+      "properties": {
+        "policy": {
+          "type": "string"
+        },
+        "deprecation": {
+          "type": "string"
+        },
+        "support": {
+          "type": "string"
+        }
+      }
+    },
+    "operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rollbackProcedure",
+        "rollbackOwner",
+        "incidentOwner"
+      ],
+      "properties": {
+        "rollbackProcedure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rollbackOwner": {
+          "type": "string"
+        },
+        "incidentOwner": {
+          "type": "string"
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gapId",
+        "evidenceKinds",
+        "note",
+        "issue"
+      ],
+      "properties": {
+        "gapId": {
+          "type": "string"
+        },
+        "evidenceKinds": {
+          "$ref": "#/$defs/strings"
+        },
+        "note": {
+          "type": "string"
+        },
+        "issue": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "signoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "owner",
+        "status",
+        "signedAt"
+      ],
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ]
+        },
+        "signedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

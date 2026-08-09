@@ -8,6 +8,9 @@ on:
       - "scripts/**"
       - "site/**"
       - "config/**"
+      - "audits/**"
+      - "generated/**"
+      - "docs/release-certification.md"
       - ".github/workflows/validate.yml"
   push:
     branches: [trunk]
@@ -17,6 +20,9 @@ on:
       - "scripts/**"
       - "site/**"
       - "config/**"
+      - "audits/**"
+      - "generated/**"
+      - "docs/release-certification.md"
       - ".github/workflows/validate.yml"
 
 jobs:
@@ -40,6 +46,9 @@ jobs:
         env:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
         run: node scripts/validate-manifests.mjs
+
+      - name: Validate release certification dossiers and generated outputs
+        run: node scripts/release-certification.mjs check
 
   consumer-admission-tests:
     name: consumer admission and coverage boundary tests
