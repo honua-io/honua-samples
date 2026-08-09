@@ -355,7 +355,8 @@ function createStaticServer() {
       await sendFile(request, response, filePath);
     } catch (error) {
       if (error?.code === "ENOENT") return sendStatus(response, 404, "Not found");
-      sendStatus(response, 500, error instanceof Error ? error.message : String(error));
+      console.error(`gallery static server error: ${error instanceof Error ? error.message : String(error)}`);
+      sendStatus(response, 500, "Internal server error");
     }
   });
 }
