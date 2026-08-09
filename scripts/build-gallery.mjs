@@ -74,6 +74,7 @@ import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs"
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
 import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
+import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -199,17 +200,22 @@ async function main() {
   const bundleById = new Map((bundleState.manifest?.samples ?? []).map((s) => [s.id, s]));
   const stagedBundleIds = new Set(bundleState.stagedIds);
 
-  const ownCards = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
+  const portfolio = await loadGalleryPublicPortfolio();
+  const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
+  const ownPortfolioResult = applyGalleryPublicPortfolio(ownCandidates, portfolio);
+  const ownCards = ownPortfolioResult.publicCards;
   const sdkCandidates = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
-  const sdkCards = sdkCandidates.filter(
+  const technicallyQualifiedSdkCards = sdkCandidates.filter(
     (card) =>
       card.bundleRunnable &&
       card.bundleSample?.lifecycle?.state === "active" &&
       !card.bundleSample?.lifecycle?.reason?.startsWith("Locally staged override") &&
       card.evidence?.fixture?.status === "executed",
   );
+  const portfolioResult = applyGalleryPublicPortfolio(technicallyQualifiedSdkCards, portfolio);
+  const sdkCards = portfolioResult.publicCards;
   console.log(
-    `build-gallery: publishing ${sdkCards.length} verified standalone sdk-js sample(s); excluding ${sdkCandidates.length - sdkCards.length} metadata-only, hosted, lifecycle override, or unverified card(s)`,
+    `build-gallery: publishing ${sdkCards.length} product-admitted sdk-js and ${ownCards.length} owned sample(s); excluding ${sdkCandidates.length - technicallyQualifiedSdkCards.length} technically unqualified SDK, ${portfolioResult.excluded.length} product-withheld SDK, and ${ownPortfolioResult.excluded.length} product-withheld owned card(s)`,
   );
   assertUniqueCardIdentities([...ownCards, ...sdkCards]);
   for (const bundleId of stagedBundleIds) {
@@ -891,15 +897,16 @@ function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
   const prerequisites = card.learning?.prerequisites?.length ? card.learning.prerequisites.join(", ") : "None";
   const sourceFirst = card.contentKind === "project";
   const learningContent = sourceFirst
-    ? `${renderProjectSourcePanel(card)}${runnablePanel}${renderOwnNotes(card, true)}`
+    ? `${runnablePanel}${renderOwnNotes(card, true)}`
     : card.contentKind === "walkthrough"
-      ? `${renderWalkthroughGuide(card)}${renderInlineCodePanel(card)}${runnablePanel}${renderOwnNotes(card, true)}`
-      : `${renderInlineCodePanel(card)}${runnablePanel}${renderOwnNotes(card, false)}`;
+      ? `${runnablePanel}${renderWalkthroughGuide(card)}${renderInlineCodePanel(card)}${renderOwnNotes(card, true)}`
+      : `${runnablePanel}${renderInlineCodePanel(card)}${renderOwnNotes(card, false)}`;
   const bodyHtml = `
 <a class="back-link" href="../">← All samples</a>
 ${renderContentKindLabel(card)}
 <h1>${escapeHtml(card.title)}</h1>
 <p>${escapeHtml(card.summary)}</p>
+${learningContent}
 <dl class="sample-facts">
   <div><dt>Time</dt><dd>${escapeHtml(card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} minutes` : "Not stated")}</dd></div>
   <div><dt>Level</dt><dd>${escapeHtml(card.learning?.level ?? "Not stated")}</dd></div>
@@ -908,7 +915,6 @@ ${renderContentKindLabel(card)}
 </dl>
 <p class="prerequisites"><strong>Before you run it:</strong> ${escapeHtml(prerequisites)}</p>
 ${runBadgeHtml(card.runBadge)}
-${learningContent}
 <div class="detail-footer"><div><h2>Capabilities</h2>${capabilityChips(card.capabilities, keyByKey)}</div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open repository source ↗</a></div>
 `;
   return pageShell({
@@ -977,17 +983,22 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
             : "",
       );
   const primaryContent = card.contentKind === "project"
-    ? `${renderProjectSourcePanel(card)}${runnablePanel}`
+    ? runnablePanel
     : card.contentKind === "walkthrough"
-      ? `${renderWalkthroughGuide(card)}${renderRemoteCodePanel(card)}${runnablePanel}`
-      : `${renderRemoteCodePanel(card)}${runnablePanel}`;
+      ? `${runnablePanel}${renderWalkthroughGuide(card)}${renderRemoteCodePanel(card)}`
+      : `${runnablePanel}${renderRemoteCodePanel(card)}`;
   const bodyHtml = `
 <a class="back-link" href="../../">← All samples</a>
-<p class="empty-state">Projected from <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s versioned site-consumer handoff. Code is not vendored here -- follow the GitHub link below for the source. This card is gallery-only evidence: it is <strong>not</strong> counted in this repo's samples-coverage.v1.json, which is reserved for samples honua-samples executes in its own run-samples workflow (SDK qualification receipts flow to honua-evidence through honua-sdk-js's own coverage artifact).</p>
-${renderSdkLifecycleNotice(card.lifecycleNotice)}
 ${renderContentKindLabel(card)}
 <h1>${escapeHtml(card.title)}</h1>
 <p>${escapeHtml(card.summary)}</p>
+${primaryContent}
+<details class="background-notes"><summary>Producer provenance and lifecycle</summary>
+  <p>Projected from <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s versioned site-consumer handoff. Code is not vendored here. This gallery-only evidence is not counted in this repository's samples coverage.</p>
+  ${renderSdkLifecycleNotice(card.lifecycleNotice)}
+</details>
+<h2>Capabilities</h2>
+${capabilityChips(card.capabilities, keyByKey)}
 <div class="detail-meta">
   <span>Support tier: ${escapeHtml(card.supportTier)}</span>
   ${card.track ? `<span>Track: ${escapeHtml(card.track)}</span>` : ""}
@@ -996,10 +1007,8 @@ ${renderContentKindLabel(card)}
   ${lifecycleHtml}
   ${qualificationHtml}
 </div>
-${primaryContent}
-<h2>Capabilities</h2>
-${capabilityChips(card.capabilities, keyByKey)}
 ${renderSdkEvidenceSection(card)}
+${card.contentKind === "project" ? renderProjectSourcePanel(card) : ""}
 <p>
   ${card.githubUrl ? `<a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a>` : ""}
   ${card.docsUrl ? ` · <a href="${card.docsUrl}" target="_blank" rel="noopener noreferrer">Docs ↗</a>` : ""}

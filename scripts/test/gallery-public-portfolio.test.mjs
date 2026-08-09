@@ -1,0 +1,32 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "../lib/gallery-public-portfolio.mjs";
+
+test("the gallery portfolio classifies the 30 SDK and seven owned cards", async () => {
+  const portfolio = await loadGalleryPublicPortfolio();
+  const counts = portfolio.entries.reduce((result, entry) => {
+    result[entry.disposition] = (result[entry.disposition] ?? 0) + 1;
+    return result;
+  }, {});
+  assert.equal(portfolio.entries.length, 37);
+  assert.deepEqual(counts, { "internal-qualification": 17, "rework-map-first": 13, public: 7 });
+});
+
+test("only explicitly public technically qualified cards are admitted", async () => {
+  const portfolio = await loadGalleryPublicPortfolio();
+  const result = applyGalleryPublicPortfolio([
+    { sourceRepo: "honua-sdk-js", id: "pmtiles-static" },
+    { sourceRepo: "honua-sdk-js", id: "maplibre-quickstart" },
+    { sourceRepo: "honua-samples", id: "odata-query-rest" }
+  ], portfolio);
+  assert.deepEqual(result.publicCards.map((card) => card.id), ["pmtiles-static"]);
+  assert.deepEqual(result.excluded.map((entry) => [entry.id, entry.disposition]), [
+    ["maplibre-quickstart", "rework-map-first"],
+    ["odata-query-rest", "internal-qualification"]
+  ]);
+});
+
+test("an unclassified technically qualified card fails closed", async () => {
+  const portfolio = await loadGalleryPublicPortfolio();
+  assert.throws(() => applyGalleryPublicPortfolio([{ sourceRepo: "honua-sdk-js", id: "new-unreviewed-app" }], portfolio), /lack a product disposition: honua-sdk-js:new-unreviewed-app/);
+});
