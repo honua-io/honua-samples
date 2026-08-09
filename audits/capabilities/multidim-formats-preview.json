@@ -280,7 +280,8 @@
         "docs-troubleshooting",
         "compatibility-support"
       ],
-      "note": "Keep Zarr, NetCDF, and HDF5 outside GA"
+      "note": "Keep Zarr, NetCDF, and HDF5 outside GA",
+      "issue": "https://github.com/honua-io/honua-server/issues/3103"
     }
   ],
   "signoffs": [

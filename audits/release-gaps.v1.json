@@ -19,15 +19,15 @@
       },
       "currentWorkaround": "Treat every audited row as evaluation/prerelease and use the generated matrix rather than inferring GA from Implemented, supported, covered, or stable.",
       "dependencyChain": [
-        "https://github.com/honua-io/honua-release/issues/58",
         "https://github.com/honua-io/honua-release/issues/59",
+        "https://github.com/honua-io/honua-release/issues/58",
         "https://github.com/honua-io/honua-release/issues/60"
       ],
       "owner": {
         "team": "Release Engineering",
         "repository": "honua-io/honua-release"
       },
-      "existingIssue": "https://github.com/honua-io/honua-release/issues/58",
+      "existingIssue": "https://github.com/honua-io/honua-release/issues/59",
       "effort": {
         "estimate": "M",
         "confidence": "high"
@@ -54,15 +54,15 @@
       },
       "currentWorkaround": "Run trunk/nightly images as evaluation-only and record commits manually.",
       "dependencyChain": [
+        "https://github.com/honua-io/honua-release/issues/60",
         "https://github.com/honua-io/honua-release/issues/58",
-        "https://github.com/honua-io/honua-release/issues/59",
-        "https://github.com/honua-io/honua-release/issues/60"
+        "https://github.com/honua-io/honua-release/issues/59"
       ],
       "owner": {
         "team": "Release Engineering",
         "repository": "honua-io/honua-release"
       },
-      "existingIssue": "https://github.com/honua-io/honua-release/issues/58",
+      "existingIssue": "https://github.com/honua-io/honua-release/issues/60",
       "effort": {
         "estimate": "L",
         "confidence": "high"
@@ -125,6 +125,7 @@
       },
       "currentWorkaround": "Use fixture samples and retained external First Map/COG envelopes as evaluation evidence only.",
       "dependencyChain": [
+        "https://github.com/honua-io/honua-sdk-js/issues/543",
         "https://github.com/honua-io/honua-samples/issues/21",
         "https://github.com/honua-io/honua-release/issues/59",
         "https://github.com/honua-io/honua-evidence/issues/8"
@@ -133,7 +134,7 @@
         "team": "Developer Experience",
         "repository": "honua-io/honua-samples"
       },
-      "existingIssue": "https://github.com/honua-io/honua-samples/issues/21",
+      "existingIssue": "https://github.com/honua-io/honua-sdk-js/issues/543",
       "effort": {
         "estimate": "L",
         "confidence": "medium"
@@ -189,32 +190,44 @@
         "absent-live-proof"
       ],
       "title": "Repair governed Python staging auth and service binding",
-      "userCompetitiveImpact": "The Python staging suite cannot certify its required typed query contract because its July 1 key is rejected and its service/image binding is stale; silently switching to public Maui data would weaken the objectid/name/status/count/ratio/uid contract.",
+      "userCompetitiveImpact": "The required Python live compatibility lane cannot prove its typed-field contract, while reseeding from contradictory infrastructure sources can silently expose the protected fixture or change consumer semantics.",
       "risk": {
-        "security": "high",
-        "dataLoss": "low",
-        "compatibility": "high"
+        "security": true,
+        "dataLoss": false,
+        "compatibility": true
       },
-      "currentWorkaround": "Keep Python staging non-GA and run fixture/source checks only; do not replace the protected typed fixture with a weaker anonymous dataset.",
+      "currentWorkaround": "The seeded local fallback is deterministic but is not deployed live proof. Switching to a public Maui service would weaken the required objectid/name/status/count/ratio/uid contract and is not acceptable.",
       "dependencyChain": [
-        "https://github.com/honua-io/honua-sdk-python/issues/192",
-        "https://demo.honua.io/demo-services.v1.json"
+        "https://github.com/honua-io/honua-demo-infra/issues/28",
+        "https://github.com/honua-io/honua-demo-infra/issues/19",
+        "https://github.com/honua-io/honua-demo-infra/pull/20",
+        "https://github.com/honua-io/honua-sdk-python/issues/53",
+        "https://github.com/honua-io/honua-sdk-python/pull/160",
+        "https://github.com/honua-io/honua-sdk-python/pull/192"
       ],
       "owner": {
-        "team": "Python SDK / Demo Operations",
-        "repository": "honua-io/honua-sdk-python"
+        "team": "Demo environment operations",
+        "repository": "honua-io/honua-demo-infra"
       },
-      "existingIssue": "https://github.com/honua-io/honua-sdk-python/issues/192",
+      "existingIssue": "https://github.com/honua-io/honua-demo-infra/issues/28",
       "effort": {
         "estimate": "M",
         "confidence": "high"
       },
       "recommendedSequence": 6,
       "exitEvidence": [
-        "A current authorized key is installed through governed rotation.",
-        "Current server commit/image and service/layer binding are updated atomically.",
-        "A governed protected-fixture manifest records the typed schema without exposing credentials.",
-        "The #192 staging run is green and its semantic receipt is admitted."
+        "Seed script, seed manifest, runbook, and generated public-manifest exclusion agree on protected allowAnonymous:false policy.",
+        "A versioned governed client-compat descriptor records current service/layer, typed-field contract, server commit, immutable image, seed version, owner, generated time, and expiry without secrets.",
+        "Atomic credential and SDK binding rotation/sync completes with rollback and incident ownership recorded.",
+        "A fresh canary proves authenticated metadata/query success for objectid, name, status, count, ratio, and uid plus anonymous denial for the same binding.",
+        "A current Python SDK Staging Integration run is green with local_stack=false and links its semantic receipt and descriptor/server/image lineage."
+      ],
+      "evidenceMissing": [
+        "Reconciled seed script, seed manifest, runbook, and public-manifest exclusion enforcing allowAnonymous:false.",
+        "Governed non-secret client-compat descriptor with current service/layer, typed schema, server commit, immutable image, seed version, owner, generated time, and expiry.",
+        "Atomic demo credential plus SDK environment binding rotation/sync evidence with rollback ownership.",
+        "Fresh canary receipt proving authenticated typed-field success and anonymous denial against the same immutable binding.",
+        "Green honua-sdk-python staging run with local_stack=false and descriptor/server/image lineage."
       ]
     },
     {
@@ -234,6 +247,7 @@
       },
       "currentWorkaround": "Pin source commits and use only dossier symbols; do not infer parity from labels.",
       "dependencyChain": [
+        "https://github.com/honua-io/honua-release/issues/31",
         "https://github.com/honua-io/honua-sdk-js/issues/1113",
         "https://github.com/honua-io/honua-sdk-js/issues/1115",
         "https://github.com/honua-io/honua-sdk-js/issues/1116",
@@ -244,7 +258,7 @@
         "team": "SDK",
         "repository": "honua-io/honua-release"
       },
-      "existingIssue": "https://github.com/honua-io/honua-sdk-js/issues/1113",
+      "existingIssue": "https://github.com/honua-io/honua-release/issues/31",
       "effort": {
         "estimate": "XL",
         "confidence": "medium"
@@ -346,6 +360,7 @@
       },
       "currentWorkaround": "Use beta client-only GeoParquet and inspect server output manually.",
       "dependencyChain": [
+        "https://github.com/honua-io/honua-sdk-js/issues/1119",
         "https://github.com/honua-io/honua-sdk-js/issues/1113",
         "https://github.com/honua-io/honua-server/issues/2893"
       ],
@@ -353,7 +368,6 @@
         "team": "Formats",
         "repository": "honua-io/honua-server"
       },
-      "issueNeeded": true,
       "effort": {
         "estimate": "M",
         "confidence": "medium"
@@ -363,7 +377,8 @@
         "Canonical keys separate client-only and server-output claims.",
         "Goldens cover CRS, geometry, nulls, dictionaries, and int64.",
         "A tracked issue owns remaining parity work."
-      ]
+      ],
+      "existingIssue": "https://github.com/honua-io/honua-sdk-js/issues/1119"
     },
     {
       "id": "JOB-001",
@@ -382,6 +397,7 @@
       },
       "currentWorkaround": "Use JS bounded wait, implement an application loop in .NET, and call Python source APIs only in evaluation environments.",
       "dependencyChain": [
+        "https://github.com/honua-io/honua-samples/pull/29",
         "https://github.com/honua-io/honua-samples/issues/29",
         "https://github.com/honua-io/honua-sdk-python/issues/192"
       ],
@@ -389,7 +405,7 @@
         "team": "SDK",
         "repository": "honua-io/honua-samples"
       },
-      "existingIssue": "https://github.com/honua-io/honua-samples/issues/29",
+      "existingIssue": "https://github.com/honua-io/honua-samples/pull/29",
       "effort": {
         "estimate": "M",
         "confidence": "high"

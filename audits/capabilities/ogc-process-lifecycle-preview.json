@@ -279,7 +279,8 @@
         "live-semantic",
         "compatibility-support"
       ],
-      "note": "Normalize OGC process lifecycle semantics across SDKs"
+      "note": "Normalize OGC process lifecycle semantics across SDKs",
+      "issue": "https://github.com/honua-io/honua-samples/pull/29"
     }
   ],
   "signoffs": [

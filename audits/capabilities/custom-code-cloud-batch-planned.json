@@ -273,7 +273,8 @@
         "docs-troubleshooting",
         "compatibility-support"
       ],
-      "note": "Keep cloud custom-code authoring and execution out of GA"
+      "note": "Keep cloud custom-code authoring and execution out of GA",
+      "issue": "https://github.com/honua-io/honua-samples/issues/29"
     }
   ],
   "signoffs": [

@@ -358,7 +358,8 @@
         "server-security",
         "server-observability"
       ],
-      "note": "Pin immutable server image, commit, and evidence lineage"
+      "note": "Pin immutable server image, commit, and evidence lineage",
+      "issue": "https://github.com/honua-io/honua-release/issues/60"
     },
     {
       "gapId": "GA-004",
@@ -368,7 +369,8 @@
         "accessibility",
         "browser-platform"
       ],
-      "note": "Admit fixture and live semantic receipts for every GA job"
+      "note": "Admit fixture and live semantic receipts for every GA job",
+      "issue": "https://github.com/honua-io/honua-sdk-js/issues/543"
     },
     {
       "gapId": "FMT-001",
@@ -378,7 +380,8 @@
         "live-semantic",
         "compatibility-support"
       ],
-      "note": "Define GeoParquet/GeoArrow server-output semantic parity"
+      "note": "Define GeoParquet/GeoArrow server-output semantic parity",
+      "issue": "https://github.com/honua-io/honua-sdk-js/issues/1119"
     },
     {
       "gapId": "GA-003",
@@ -388,14 +391,16 @@
         "demo-reset",
         "rollback"
       ],
-      "note": "Add capability canaries, reset, rollback, and incident ownership"
+      "note": "Add capability canaries, reset, rollback, and incident ownership",
+      "issue": "https://github.com/honua-io/honua-release/issues/61"
     },
     {
       "gapId": "GA-001",
       "evidenceKinds": [
         "docs-troubleshooting"
       ],
-      "note": "Reconcile public GA vocabulary with release artifacts"
+      "note": "Reconcile public GA vocabulary with release artifacts",
+      "issue": "https://github.com/honua-io/honua-release/issues/59"
     }
   ],
   "signoffs": [

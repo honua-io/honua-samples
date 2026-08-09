@@ -665,7 +665,8 @@
       "required": [
         "gapId",
         "evidenceKinds",
-        "note"
+        "note",
+        "issue"
       ],
       "properties": {
         "gapId": {
@@ -676,6 +677,10 @@
         },
         "note": {
           "type": "string"
+        },
+        "issue": {
+          "type": "string",
+          "format": "uri"
         }
       }
     },

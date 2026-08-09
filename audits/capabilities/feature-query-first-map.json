@@ -385,7 +385,8 @@
         "server-security",
         "server-observability"
       ],
-      "note": "Pin immutable server image, commit, and evidence lineage"
+      "note": "Pin immutable server image, commit, and evidence lineage",
+      "issue": "https://github.com/honua-io/honua-release/issues/60"
     },
     {
       "gapId": "GA-004",
@@ -396,14 +397,16 @@
         "accessibility",
         "browser-platform"
       ],
-      "note": "Admit fixture and live semantic receipts for every GA job"
+      "note": "Admit fixture and live semantic receipts for every GA job",
+      "issue": "https://github.com/honua-io/honua-sdk-js/issues/543"
     },
     {
       "gapId": "PY-001",
       "evidenceKinds": [
         "sdk-supported-surface"
       ],
-      "note": "Repair governed Python staging auth and service binding"
+      "note": "Repair governed Python staging auth and service binding",
+      "issue": "https://github.com/honua-io/honua-demo-infra/issues/28"
     },
     {
       "gapId": "GA-003",
@@ -412,21 +415,24 @@
         "demo-reset",
         "rollback"
       ],
-      "note": "Add capability canaries, reset, rollback, and incident ownership"
+      "note": "Add capability canaries, reset, rollback, and incident ownership",
+      "issue": "https://github.com/honua-io/honua-release/issues/61"
     },
     {
       "gapId": "GA-001",
       "evidenceKinds": [
         "docs-troubleshooting"
       ],
-      "note": "Reconcile public GA vocabulary with release artifacts"
+      "note": "Reconcile public GA vocabulary with release artifacts",
+      "issue": "https://github.com/honua-io/honua-release/issues/59"
     },
     {
       "gapId": "SDK-001",
       "evidenceKinds": [
         "compatibility-support"
       ],
-      "note": "Publish exact cross-SDK surfaces and version window"
+      "note": "Publish exact cross-SDK surfaces and version window",
+      "issue": "https://github.com/honua-io/honua-release/issues/31"
     }
   ],
   "signoffs": [

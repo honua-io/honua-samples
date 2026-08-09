@@ -352,7 +352,8 @@
         "server-security",
         "server-observability"
       ],
-      "note": "Pin immutable server image, commit, and evidence lineage"
+      "note": "Pin immutable server image, commit, and evidence lineage",
+      "issue": "https://github.com/honua-io/honua-release/issues/60"
     },
     {
       "gapId": "RAST-001",
@@ -360,7 +361,8 @@
         "server-limits-errors",
         "server-performance"
       ],
-      "note": "Publish raster/coverage limits, performance, and offload behavior"
+      "note": "Publish raster/coverage limits, performance, and offload behavior",
+      "issue": "https://github.com/honua-io/honua-server/issues/3101"
     },
     {
       "gapId": "SDK-001",
@@ -368,7 +370,8 @@
         "sdk-supported-surface",
         "compatibility-support"
       ],
-      "note": "Publish exact cross-SDK surfaces and version window"
+      "note": "Publish exact cross-SDK surfaces and version window",
+      "issue": "https://github.com/honua-io/honua-release/issues/31"
     },
     {
       "gapId": "GA-003",
@@ -378,7 +381,8 @@
         "demo-reset",
         "rollback"
       ],
-      "note": "Add capability canaries, reset, rollback, and incident ownership"
+      "note": "Add capability canaries, reset, rollback, and incident ownership",
+      "issue": "https://github.com/honua-io/honua-release/issues/61"
     },
     {
       "gapId": "GA-004",
@@ -388,14 +392,16 @@
         "accessibility",
         "browser-platform"
       ],
-      "note": "Admit fixture and live semantic receipts for every GA job"
+      "note": "Admit fixture and live semantic receipts for every GA job",
+      "issue": "https://github.com/honua-io/honua-sdk-js/issues/543"
     },
     {
       "gapId": "GA-001",
       "evidenceKinds": [
         "docs-troubleshooting"
       ],
-      "note": "Reconcile public GA vocabulary with release artifacts"
+      "note": "Reconcile public GA vocabulary with release artifacts",
+      "issue": "https://github.com/honua-io/honua-release/issues/59"
     }
   ],
   "signoffs": [
