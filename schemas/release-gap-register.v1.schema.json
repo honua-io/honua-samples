@@ -153,30 +153,30 @@
             "items": {
               "type": "string"
             }
-          },
-          "oneOf": [
-            {
-              "required": [
-                "existingIssue"
-              ],
-              "not": {
-                "required": [
-                  "issueNeeded"
-                ]
-              }
-            },
-            {
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "existingIssue"
+            ],
+            "not": {
               "required": [
                 "issueNeeded"
-              ],
-              "not": {
-                "required": [
-                  "existingIssue"
-                ]
-              }
+              ]
             }
-          ]
-        }
+          },
+          {
+            "required": [
+              "issueNeeded"
+            ],
+            "not": {
+              "required": [
+                "existingIssue"
+              ]
+            }
+          }
+        ]
       }
     }
   }
