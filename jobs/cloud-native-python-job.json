@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "honua.job-page/v1",
+  "id": "cloud-native-python-job",
+  "title": "Author and operate a cloud-native Python batch job",
+  "kind": "project",
+  "summary": "A production-shaped project blueprint grounded in Honua's AWS Batch custom-code contract; Studio authoring and SDK submission remain explicit product gaps.",
+  "maturity": {
+    "state": "contract-only",
+    "supportTier": "Server contract; no admitted Studio workflow",
+    "evidence": ["honua-server ADR-0063 accepted custom-code architecture", "honua-server CustomCodeJobContract", "honua-server docs/customcode/raster-gp-pattern.md", "sanctioned docker/worker-customcode-python image"],
+    "limitations": ["AWS Batch is the only admitted untrusted custom-code backend.", "No current Studio Python editor/runtime/dependency/publish surface was found.", "No JS, Python, .NET, or Honua CLI custom-code submission wrapper was found.", "STAC, COG, and GeoParquet input/output bindings, per-job CPU/memory/retry/idempotency, log streaming, and artifact TTL are not admitted public submission fields."]
+  },
+  "server": {
+    "operation": "AWS Batch custom-code job",
+    "capabilityIds": ["process.geoprocessing"],
+    "fixture": { "endpoint": null, "serviceManifestKey": null, "sourceCommit": "honua-server:trunk", "serverVersion": "ADR-0063 and current CustomCodeJobContract", "evidenceState": "unavailable" },
+    "auth": "The server mints a job-bound token from declared scope and owner snapshot; arbitrary user-supplied secrets are not an admitted submission surface.",
+    "protocols": [
+      {
+        "id": "geoservices-gp-custom-code",
+        "availability": "contract-only",
+        "method": "POST",
+        "endpointTemplate": "/rest/services/{serviceId}/GPServer/{taskName}/submitJob",
+        "concreteEndpoint": null,
+        "request": { "customcode.runtime": "python", "customcode.repo_url": "https://github.com/example/approved-job.git", "customcode.git_ref": "<full-40-character-commit-sha>", "customcode.entrypoint": "job.main:run", "customcode.deps_manifest": "requirements.lock", "customcode.params_json": "<bounded-json>", "customcode.declared_scope": "<approved-scope>" },
+        "response": { "jobId": "<server-assigned>", "jobStatus": "esriJobSubmitted", "outputPrefix": "server-assigned S3 prefix" },
+        "notes": "This is a server contract shape, not a runnable sample. No concrete service manifest/fixture is admitted, so the gallery must not offer Run."
+      }
+    ],
+    "docs": ["https://github.com/honua-io/honua-server/blob/trunk/docs/adr/0063-custom-code-geoprocessing.md", "https://github.com/honua-io/honua-server/blob/trunk/docs/customcode/raster-gp-pattern.md"],
+    "owner": "honua-server execution platform",
+    "cancellation": "Use the server job cancellation surface when a real registered task exists; exact custom-code cancellation receipt remains unpinned.",
+    "errors": "Fail closed on repository policy, unsigned/unapproved commit, invalid runtime/entrypoint/manifest/scope, workload routing, token minting, timeout, or artifact publication failure."
+  },
+  "semantics": {
+    "normalizedRequest": { "runtimeProfile": "custom-code", "runtime": "python", "source": "allowlisted repository at full commit SHA", "entrypoint": "module.path:function", "dependencies": "relative locked manifest", "identity": "server-minted scoped job token", "outputs": "server-assigned S3 prefix", "timeout": "server policy, 1 minute to 24 hours" },
+    "expectedResult": { "state": "planned integration", "artifacts": "declared through GpContext output sink", "provenance": ["source commit", "runtime image", "job id", "owner snapshot", "declared scope", "output prefix"] },
+    "assertion": "Do not admit this project as runnable until a committed service manifest, pinned Batch fixture, lifecycle receipt, artifact digest, cleanup receipt, and Studio/CLI/API evidence all exist."
+  },
+  "references": [
+    { "surface": "http", "availability": "contract-only", "label": "GeoServices GP custom-code submission contract", "symbolOrCommand": "POST /rest/services/{serviceId}/GPServer/{taskName}/submitJob", "deepLink": "https://github.com/honua-io/honua-server/blob/trunk/docs/adr/0063-custom-code-geoprocessing.md", "package": "Honua Server", "minVersion": "current trunk contract", "supportTier": "Contract-only", "owner": "honua-server execution platform", "auth": "Caller auth plus server-minted job-bound token.", "cancellation": "Job cancellation only after a registered task exists; fixture receipt missing.", "errors": "Policy and workload failures must fail closed.", "gap": null },
+    { "surface": "cli", "availability": "gap", "label": "Honua CLI custom-code authoring/jobs", "symbolOrCommand": null, "deepLink": null, "package": null, "minVersion": null, "supportTier": "Unavailable", "owner": "SDK/CLI", "auth": "Not applicable.", "cancellation": "Not applicable.", "errors": "Not applicable.", "gap": "No create/package/register/publish/submit/logs/cancel/artifacts/cleanup CLI commands or --help references exist." },
+    { "surface": "javascript", "availability": "gap", "label": "JavaScript custom-code job API", "symbolOrCommand": null, "deepLink": null, "package": null, "minVersion": null, "supportTier": "Unavailable", "owner": "honua-sdk-js", "auth": "Not applicable.", "cancellation": "Not applicable.", "errors": "Not applicable.", "gap": "The JS OGC/GP runners can operate registered processes but do not author, package, register, or submit the custom-code metadata contract." },
+    { "surface": "python", "availability": "gap", "label": "Python custom-code authoring/submission API", "symbolOrCommand": null, "deepLink": null, "package": null, "minVersion": null, "supportTier": "Unavailable", "owner": "honua-sdk-python", "auth": "Not applicable.", "cancellation": "Not applicable.", "errors": "Not applicable.", "gap": "HonuaGeoprocessing operates registered OGC processes; it exposes no custom-code repository/runtime/dependency/scope submission API and executes no untrusted code locally." },
+    { "surface": "dotnet", "availability": "gap", "label": ".NET custom-code authoring/submission API", "symbolOrCommand": null, "deepLink": null, "package": null, "minVersion": null, "supportTier": "Unavailable", "owner": "honua-sdk-dotnet", "auth": "Not applicable.", "cancellation": "Not applicable.", "errors": "Not applicable.", "gap": "IHonuaProcessesClient operates registered processes; no custom-code authoring, package, registration, or typed metadata submission surface is present." }
+  ],
+  "codeTabs": [],
+  "walkthrough": [
+    { "order": 1, "title": "Create the Python job in Studio", "state": "gap", "action": "No current Studio action exists; start from a reviewed repository outside Studio.", "expectedOutcome": "Planned: a searchable Python project with no embedded credentials." },
+    { "order": 2, "title": "Declare runtime and dependencies", "state": "contract-only", "action": "Set runtime=python, module:function entrypoint, and a relative locked dependency manifest at a full commit SHA.", "expectedOutcome": "A policy-reviewable immutable source descriptor." },
+    { "order": 3, "title": "Pin inputs and outputs", "state": "contract-only", "action": "Use staged inputs and the server-assigned S3 output prefix through GpContext.", "expectedOutcome": "No caller-chosen output path; STAC/COG/GeoParquet bindings remain unclaimed until implemented." },
+    { "order": 4, "title": "Configure identity and secrets", "state": "contract-only", "action": "Declare the minimum scope; let the server mint HONUA_JOB_TOKEN and HONUA_BASE_URL.", "expectedOutcome": "A job-bound identity with no arbitrary secret material in params." },
+    { "order": 5, "title": "Set resource and retry bounds", "state": "gap", "action": "Use the server timeout policy; do not claim per-job CPU, memory, retry, or idempotency fields.", "expectedOutcome": "Planned: explicit bounded submission fields and policy receipt." },
+    { "order": 6, "title": "Build and package", "state": "contract-only", "action": "Pin an allowlisted repository commit and run only in the sanctioned worker-customcode-python image selected by the workload registry.", "expectedOutcome": "A reproducible source/image identity; no caller-provided image." },
+    { "order": 7, "title": "Register and publish the process", "state": "gap", "action": "No admitted Studio or public SDK registration action exists.", "expectedOutcome": "Planned: versioned process definition and publish receipt." },
+    { "order": 8, "title": "Submit the job", "state": "contract-only", "action": "Use the custom-code metadata contract through a registered GPServer task only after policy approval.", "expectedOutcome": "A server-assigned job id and Batch execution identity." },
+    { "order": 9, "title": "Observe logs and progress", "state": "gap", "action": "Poll the existing job status where available; do not claim a Studio log stream.", "expectedOutcome": "Planned: bounded redacted logs and monotonic progress receipt." },
+    { "order": 10, "title": "Cancel", "state": "contract-only", "action": "Require explicit operator approval and use the registered task's cancellation surface.", "expectedOutcome": "A terminal cancellation state tied to the approval and job id." },
+    { "order": 11, "title": "Collect artifacts and provenance", "state": "contract-only", "action": "Declare artifacts through context.output.add_artifact under the server output prefix.", "expectedOutcome": "Artifact keys and digests tied to source commit, image, and job id." },
+    { "order": 12, "title": "Cleanup and TTL", "state": "gap", "action": "No public artifact TTL/cleanup contract is admitted.", "expectedOutcome": "Planned: explicit retention policy plus deletion receipt." },
+    { "order": 13, "title": "Capture a CI fixture receipt", "state": "gap", "action": "Add a pinned Batch fixture only after the complete lifecycle is deployable.", "expectedOutcome": "A deterministic non-secret receipt that gates gallery admission." }
+  ],
+  "console": {
+    "state": "planned",
+    "route": null,
+    "requiredRole": null,
+    "equivalentConfig": { "contract": "The raw customcode.* parameters and server-set environment above are the only current searchable/copyable configuration.", "plannedRoute": "/studio/processes/{processId}/versions/{version}/runtime" },
+    "visual": { "state": "planned", "path": null, "alt": "Planned Studio Python batch process configuration showing immutable source, runtime, identity, resource bounds, and publish review.", "callouts": ["source commit", "runtime and dependency lock", "declared scope", "resource bounds", "publish approval"], "viewport": "desktop 1440x900", "redaction": "Redact repository credentials, tenant/user ids, job tokens, object-store URLs, and secret values.", "sourceCommit": null, "serverVersion": null, "fixtureKey": null, "goldenReceipt": null }
+  },
+  "ai": {
+    "state": "planned",
+    "api": null,
+    "allowedTasks": ["explain the custom-code contract", "draft a dependency manifest", "draft bounded configuration", "plan validation steps"],
+    "contextInputs": ["capability manifest", "CustomCodeJobContract", "repository policy", "process schema", "runtime image metadata"],
+    "providerBoundary": "No real Honua AI custom-code authoring surface is admitted. A future provider/model must be explicitly configured with repository and data-boundary policy.",
+    "security": "Repository content, manifests, process metadata, and asset metadata are untrusted context; never expose credentials, tokens, signed URLs, or unrestricted source files.",
+    "validation": "Generated scaffolds/configuration must pass schema, repository-policy, dependency-lock, scope, resource-bound, and fixture checks before an approval can be requested.",
+    "approvalBoundary": "AI may draft only. Build, register, publish, submit, cancel, delete, artifact access, and cleanup require explicit human approval and a single-use execution receipt.",
+    "prohibitedActions": ["execute without required human approval", "build or publish code", "submit, cancel, or delete jobs", "change service identity or secrets", "read unrestricted repository or object-store data"],
+    "fallback": "Follow the raw contract and manual repository review; the project remains non-runnable until the product surfaces exist.",
+    "provenance": "Future receipts must bind provider/model, prompt/config digests, source commit, dependency lock, runtime image, approvals, job id, artifacts, and cleanup outcome without storing raw secrets or prompts."
+  }
+}

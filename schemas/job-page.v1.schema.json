@@ -1,0 +1,189 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://honua.io/schemas/job-page.v1.schema.json",
+  "title": "Honua job-first developer page v1",
+  "description": "Canonical source for one server-first task page. Languages are tabs and unavailable surfaces are explicit gaps.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "title", "kind", "summary", "maturity", "server", "semantics", "references", "codeTabs", "walkthrough", "console", "ai"],
+  "properties": {
+    "schemaVersion": { "const": "honua.job-page/v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["example", "walkthrough", "project"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "maturity": { "$ref": "#/$defs/maturity" },
+    "server": { "$ref": "#/$defs/server" },
+    "semantics": { "$ref": "#/$defs/semantics" },
+    "references": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/reference" }
+    },
+    "codeTabs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/codeTab" }
+    },
+    "walkthrough": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/step" }
+    },
+    "console": { "$ref": "#/$defs/console" },
+    "ai": { "$ref": "#/$defs/ai" }
+  },
+  "$defs": {
+    "maturity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "supportTier", "evidence", "limitations"],
+      "properties": {
+        "state": { "enum": ["supported", "source-preview", "contract-only", "planned"] },
+        "supportTier": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "limitations": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "capabilityIds", "fixture", "auth", "protocols", "docs", "owner", "cancellation", "errors"],
+      "properties": {
+        "operation": { "type": "string", "minLength": 1 },
+        "capabilityIds": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "fixture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["endpoint", "serviceManifestKey", "sourceCommit", "serverVersion", "evidenceState"],
+          "properties": {
+            "endpoint": { "type": ["string", "null"] },
+            "serviceManifestKey": { "type": ["string", "null"] },
+            "sourceCommit": { "type": "string", "minLength": 1 },
+            "serverVersion": { "type": "string", "minLength": 1 },
+            "evidenceState": { "enum": ["pinned-fixture", "live-receipt-required", "unavailable"] }
+          }
+        },
+        "auth": { "type": "string", "minLength": 1 },
+        "protocols": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/protocol" } },
+        "docs": { "type": "array", "minItems": 1, "items": { "type": "string", "format": "uri" } },
+        "owner": { "type": "string", "minLength": 1 },
+        "cancellation": { "type": "string", "minLength": 1 },
+        "errors": { "type": "string", "minLength": 1 }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "availability", "method", "endpointTemplate", "concreteEndpoint", "request", "response", "notes"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "availability": { "enum": ["available", "partial", "contract-only", "gap"] },
+        "method": { "type": "string", "minLength": 1 },
+        "endpointTemplate": { "type": "string", "minLength": 1 },
+        "concreteEndpoint": { "type": ["string", "null"] },
+        "request": {},
+        "response": {},
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["normalizedRequest", "expectedResult", "assertion"],
+      "properties": {
+        "normalizedRequest": { "type": "object" },
+        "expectedResult": { "type": "object" },
+        "assertion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface", "availability", "label", "symbolOrCommand", "deepLink", "package", "minVersion", "supportTier", "owner", "auth", "cancellation", "errors", "gap"],
+      "properties": {
+        "surface": { "enum": ["http", "cli", "javascript", "python", "dotnet"] },
+        "availability": { "enum": ["available", "source-preview", "contract-only", "gap"] },
+        "label": { "type": "string", "minLength": 1 },
+        "symbolOrCommand": { "type": ["string", "null"] },
+        "deepLink": { "type": ["string", "null"] },
+        "package": { "type": ["string", "null"] },
+        "minVersion": { "type": ["string", "null"] },
+        "supportTier": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "auth": { "type": "string", "minLength": 1 },
+        "cancellation": { "type": "string", "minLength": 1 },
+        "errors": { "type": "string", "minLength": 1 },
+        "gap": { "type": ["string", "null"] }
+      }
+    },
+    "codeTab": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface", "referenceSurface", "language", "code"],
+      "properties": {
+        "surface": { "enum": ["javascript", "python", "dotnet"] },
+        "referenceSurface": { "enum": ["javascript", "python", "dotnet"] },
+        "language": { "type": "string", "minLength": 1 },
+        "code": { "type": "string", "minLength": 1 }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["order", "title", "state", "action", "expectedOutcome"],
+      "properties": {
+        "order": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "state": { "enum": ["available", "contract-only", "planned", "gap"] },
+        "action": { "type": "string", "minLength": 1 },
+        "expectedOutcome": { "type": "string", "minLength": 1 }
+      }
+    },
+    "console": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "route", "requiredRole", "equivalentConfig", "visual"],
+      "properties": {
+        "state": { "enum": ["available", "planned", "not-applicable"] },
+        "route": { "type": ["string", "null"] },
+        "requiredRole": { "type": ["string", "null"] },
+        "equivalentConfig": {},
+        "visual": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "path", "alt", "callouts", "viewport", "redaction", "sourceCommit", "serverVersion", "fixtureKey", "goldenReceipt"],
+          "properties": {
+            "state": { "enum": ["captured", "planned", "not-applicable"] },
+            "path": { "type": ["string", "null"] },
+            "alt": { "type": ["string", "null"] },
+            "callouts": { "type": "array", "items": { "type": "string" } },
+            "viewport": { "type": ["string", "null"] },
+            "redaction": { "type": ["string", "null"] },
+            "sourceCommit": { "type": ["string", "null"] },
+            "serverVersion": { "type": ["string", "null"] },
+            "fixtureKey": { "type": ["string", "null"] },
+            "goldenReceipt": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "api", "allowedTasks", "contextInputs", "providerBoundary", "security", "validation", "approvalBoundary", "prohibitedActions", "fallback", "provenance"],
+      "properties": {
+        "state": { "enum": ["available", "experimental", "planned", "not-applicable"] },
+        "api": { "type": ["string", "null"] },
+        "allowedTasks": { "type": "array", "items": { "type": "string" } },
+        "contextInputs": { "type": "array", "items": { "type": "string" } },
+        "providerBoundary": { "type": "string", "minLength": 1 },
+        "security": { "type": "string", "minLength": 1 },
+        "validation": { "type": "string", "minLength": 1 },
+        "approvalBoundary": { "type": "string", "minLength": 1 },
+        "prohibitedActions": { "type": "array", "items": { "type": "string" } },
+        "fallback": { "type": "string", "minLength": 1 },
+        "provenance": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
