@@ -264,7 +264,7 @@ async function collectLocalSampleManifestEntries({ localRoot, explicitIds, expli
             },
             lifecycle: {
               state: "active",
-              reason: "Locally staged addition from sibling honua-sdk-js checkout.",
+              reason: "Locally staged override from sibling honua-sdk-js checkout.",
             },
             builtFrom,
             files,

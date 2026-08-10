@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
+import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT, resultTimeoutMs, viewportFailure, visibleViewportRatio } from "./lib/gallery-visual-contract.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(repoRoot, "site");
@@ -14,7 +15,7 @@ const snapshotPath = path.join(repoRoot, "config", "sample-bundles.snapshot.json
 const stagedStatusPath = path.join(repoRoot, ".sample-bundles-staging", "status.json");
 const evidenceDir = path.join(repoRoot, ".artifacts", "gallery-browser-smoke");
 const evidencePath = path.join(evidenceDir, "browser-smoke.v1.json");
-const minimumApps = parseMinimum(process.env.MIN_RUNNABLE_BUNDLES ?? "1");
+const minimumApps = parseMinimum(process.env.MIN_PUBLISHED_RUNNABLE_APPS ?? "1");
 
 const mediaTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -101,7 +102,7 @@ async function main() {
 }
 
 async function smokeSample(browser, origin, sample) {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ viewport: DESKTOP_VIEWPORT });
   const failures = [];
   const observedRequests = new Set();
   page.on("console", (message) => {
@@ -121,6 +122,16 @@ async function smokeSample(browser, origin, sample) {
   });
   page.on("response", (response) => {
     const url = new URL(response.url());
+    const framePath = (() => {
+      try {
+        return new URL(response.request().frame().url()).pathname;
+      } catch {
+        return "";
+      }
+    })();
+    if (framePath.startsWith(`/sdk/${sample.id}/app/`) && url.pathname.startsWith("/assets/")) {
+      failures.push(`root-relative app asset: ${response.request().method()} ${response.url()}`);
+    }
     if (response.status() >= 400 && url.pathname !== "/favicon.ico") {
       failures.push(`response: ${response.status()} ${response.request().method()} ${response.url()}`);
     }
@@ -137,6 +148,39 @@ async function smokeSample(browser, origin, sample) {
     if (!response || response.status() !== 200) failures.push(`navigation status: ${response?.status() ?? "none"}`);
     const iframe = page.locator("iframe[title$='-- running sample']");
     if ((await iframe.count()) !== 1) failures.push("detail page does not contain exactly one running-sample iframe");
+    if ((await iframe.count()) === 1) {
+      await iframe.waitFor({ state: "visible", timeout: resultTimeoutMs(sample) });
+      const desktopRatio = visibleViewportRatio(await iframe.boundingBox(), DESKTOP_VIEWPORT);
+      const desktopFailure = viewportFailure("desktop", desktopRatio, 0.55);
+      if (desktopFailure) failures.push(desktopFailure);
+
+      const visualFrame = iframe.contentFrame();
+      if (visualFrame) {
+        try {
+          const body = visualFrame.locator("body");
+          const timeout = resultTimeoutMs(sample);
+          await body.waitFor({ state: "visible", timeout });
+          const deadline = Date.now() + timeout;
+          let rendered = false;
+          while (!rendered && Date.now() < deadline) {
+            rendered = await body.evaluate((element) => {
+              const hasVisual = Boolean(element.querySelector("canvas, svg, img, video, [role='img']"));
+              return element.scrollWidth > 0 && element.scrollHeight > 0 && (hasVisual || Boolean(element.innerText.trim()));
+            });
+            if (!rendered) await page.waitForTimeout(100);
+          }
+          if (!rendered) throw new Error("render timeout");
+        } catch {
+          failures.push(`nonzero result did not appear within ${resultTimeoutMs(sample)}ms`);
+        }
+      }
+
+      await page.setViewportSize(MOBILE_VIEWPORT);
+      const mobileRatio = visibleViewportRatio(await iframe.boundingBox(), MOBILE_VIEWPORT);
+      const mobileFailure = viewportFailure("mobile", mobileRatio, 0.4);
+      if (mobileFailure) failures.push(mobileFailure);
+      await page.setViewportSize(DESKTOP_VIEWPORT);
+    }
     await page.waitForLoadState("networkidle", { timeout: 30_000 });
     await page.waitForTimeout(500);
     title = await page.title();
@@ -251,7 +295,7 @@ function parseRange(header, size) {
 function parseMinimum(value) {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 1) {
-    throw new Error(`MIN_RUNNABLE_BUNDLES must be a positive integer, received ${JSON.stringify(value)}`);
+    throw new Error(`MIN_PUBLISHED_RUNNABLE_APPS must be a positive integer, received ${JSON.stringify(value)}`);
   }
   return parsed;
 }

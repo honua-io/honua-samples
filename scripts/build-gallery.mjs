@@ -74,6 +74,7 @@ import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs"
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
 import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
+import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -85,6 +86,74 @@ const RUN_RESULTS_PATH = path.resolve(REPO_ROOT, process.env.RUN_RESULTS_PATH ??
 const GALLERY_BASE_URL = "https://samples.honua.io";
 const OWN_REPO = "honua-io/honua-samples";
 const CAPABILITIES_CATALOG_URL = "https://honua.io/capabilities.html";
+
+const CONTENT_KINDS = [
+  {
+    id: "example",
+    slug: "examples",
+    label: "Examples",
+    singular: "Example",
+    description: "Focused, runnable code that teaches one API or protocol concept.",
+  },
+  {
+    id: "walkthrough",
+    slug: "walkthroughs",
+    label: "Walkthroughs",
+    singular: "Walkthrough",
+    description: "Task-oriented sequences that explain the decisions between each working step.",
+  },
+  {
+    id: "project",
+    slug: "projects",
+    label: "Projects",
+    singular: "Project",
+    description: "Production-shaped applications where the complete GitHub repository is the primary artifact.",
+  },
+];
+const CONTENT_KIND_BY_ID = new Map(CONTENT_KINDS.map((kind) => [kind.id, kind]));
+const SDK_CONTENT_KIND_OVERRIDES = new Map([
+  ["ai-spatial-app-builder", "project"],
+  ["migration-workbench", "project"],
+  ["realtime-incident-dashboard", "project"],
+  ["service-explorer", "project"],
+  ["overture-geoparquet", "walkthrough"],
+  ["stac-imagery-browser", "walkthrough"],
+  ["sketch-editing", "walkthrough"],
+]);
+const WALKTHROUGH_GUIDES = new Map([
+  ["wms-getmap-check", {
+    steps: [
+      "Start a local Honua Server and import the included GeoJSON fixture.",
+      "Publish the layer, request WMS GetCapabilities, and confirm the advertised layer.",
+      "Request GetMap and assert that the response is a correctly sized PNG, not merely a successful status code.",
+    ],
+    outcome: "A verified WMS layer and map image produced through the complete import-to-render path.",
+  }],
+  ["overture-geoparquet", {
+    steps: [
+      "Open the configured Overture GeoParquet source and inspect its spatial metadata.",
+      "Run the sample's viewport-bounded query so only the relevant features are transferred.",
+      "Render the returned features and inspect the browser evidence for the bounded result.",
+    ],
+    outcome: "A map rendering queried Overture features from the GeoParquet workflow rather than a pre-converted copy.",
+  }],
+  ["stac-imagery-browser", {
+    steps: [
+      "Discover the configured STAC catalog and inspect the available collections.",
+      "Choose an item and its imagery asset using the sample browser.",
+      "Render the selected asset and confirm its item metadata remains available alongside the map.",
+    ],
+    outcome: "An imagery asset selected through STAC discovery and displayed with its catalog context intact.",
+  }],
+  ["sketch-editing", {
+    steps: [
+      "Initialize the map's sketch and editing controls against the configured feature source.",
+      "Create or modify a geometry using the sample's editing interaction.",
+      "Inspect the resulting feature state and the visual evidence emitted by the sample.",
+    ],
+    outcome: "A visible geometry edit completed through the SDK interaction and reflected in application state.",
+  }],
+]);
 
 const CHECK_MODE = process.argv.includes("--check");
 
@@ -131,17 +200,22 @@ async function main() {
   const bundleById = new Map((bundleState.manifest?.samples ?? []).map((s) => [s.id, s]));
   const stagedBundleIds = new Set(bundleState.stagedIds);
 
-  const ownCards = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
+  const portfolio = await loadGalleryPublicPortfolio();
+  const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
+  const ownPortfolioResult = applyGalleryPublicPortfolio(ownCandidates, portfolio);
+  const ownCards = ownPortfolioResult.publicCards;
   const sdkCandidates = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
-  const sdkCards = sdkCandidates.filter(
+  const technicallyQualifiedSdkCards = sdkCandidates.filter(
     (card) =>
       card.bundleRunnable &&
       card.bundleSample?.lifecycle?.state === "active" &&
       !card.bundleSample?.lifecycle?.reason?.startsWith("Locally staged override") &&
       card.evidence?.fixture?.status === "executed",
   );
+  const portfolioResult = applyGalleryPublicPortfolio(technicallyQualifiedSdkCards, portfolio);
+  const sdkCards = portfolioResult.publicCards;
   console.log(
-    `build-gallery: publishing ${sdkCards.length} verified standalone sdk-js sample(s); excluding ${sdkCandidates.length - sdkCards.length} metadata-only, hosted, lifecycle override, or unverified card(s)`,
+    `build-gallery: publishing ${sdkCards.length} product-admitted sdk-js and ${ownCards.length} owned sample(s); excluding ${sdkCandidates.length - technicallyQualifiedSdkCards.length} technically unqualified SDK, ${portfolioResult.excluded.length} product-withheld SDK, and ${ownPortfolioResult.excluded.length} product-withheld owned card(s)`,
   );
   assertUniqueCardIdentities([...ownCards, ...sdkCards]);
   for (const bundleId of stagedBundleIds) {
@@ -160,7 +234,7 @@ async function main() {
     ...sdkCards.filter((c) => !c.bundleRunnable),
   ];
 
-  const categories = groupByCategory(cards, keyByKey);
+  const contentSections = groupByContentKind(cards, keyByKey);
   const generatedAt = new Date().toISOString();
   const sourceCommit = resolveSourceCommit();
   const bundleNotice = bundleState.degraded
@@ -182,7 +256,7 @@ async function main() {
   await mkdir(SITE_DIR, { recursive: true });
 
   await copyAssets();
-  const indexHtml = renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit, bundleNotice });
+  const indexHtml = renderIndexPage({ contentSections, cards, keyByKey, generatedAt, sourceCommit, bundleNotice });
   assertNoDuplicateArticles(indexHtml);
   await writeFile(path.join(SITE_DIR, "index.html"), indexHtml, "utf8");
 
@@ -325,6 +399,7 @@ function toOwnCard(sample, runResults, keyByKey, problems) {
     id,
     title: manifest.title ?? id,
     summary: manifest.description ?? "",
+    contentKind: manifest.contentKind,
     capabilities,
     sdks: manifest.sdks ?? [],
     edition: manifest.edition ?? "community",
@@ -388,6 +463,10 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     evidenceScope: "gallery-only",
     title: entry.title ?? id,
     summary: entry.summary ?? "",
+    // The current producer handoff contains small standalone examples only.
+    // Accept an explicit future value, but never infer "project" from size,
+    // framework, or visual polish.
+    contentKind: SDK_CONTENT_KIND_OVERRIDES.get(id) ?? (CONTENT_KIND_BY_ID.has(entry.contentKind) ? entry.contentKind : "example"),
     capabilities: record.capabilityKeys,
     sdks: ["js"],
     edition: "community", // sdk-js samples are client-side; none declare a Honua Server edition requirement.
@@ -491,6 +570,13 @@ function groupByCategory(cards, keyByKey) {
 
 // ---- rendering: shared chrome -----------------------------------------
 
+function groupByContentKind(cards, keyByKey) {
+  return CONTENT_KINDS.map((kind) => {
+    const kindCards = cards.filter((card) => card.contentKind === kind.id);
+    return { ...kind, cards: kindCards, categories: groupByCategory(kindCards, keyByKey) };
+  });
+}
+
 function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCommit, bundleNotice }) {
   const assetPrefix = depth === 0 ? "assets" : "../".repeat(depth) + "assets";
   const homeHref = depth === 0 ? "./" : "../".repeat(depth);
@@ -506,7 +592,10 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
 <body>
 <header class="site-header">
   <a class="brand" href="${homeHref}">Honua Samples</a>
-  <nav>
+  <nav aria-label="Primary navigation">
+    <a href="${homeHref}#examples">Examples</a>
+    <a href="${homeHref}#walkthroughs">Walkthroughs</a>
+    <a href="${homeHref}#projects">Projects</a>
     <a href="${CAPABILITIES_CATALOG_URL}">Capability catalog</a>
     <a href="https://github.com/${OWN_REPO}" target="_blank" rel="noopener noreferrer">honua-samples ↗</a>
     <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js ↗</a>
@@ -605,7 +694,7 @@ function renderHeadlessPanel(card) {
 
 // ---- rendering: index ---------------------------------------------------
 
-function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }) {
+function renderIndexPage({ contentSections, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }) {
   const ownCount = cards.filter((c) => c.kind === "own").length;
   const sdkCount = cards.filter((c) => c.kind === "sdk").length;
   const starterSpecs = [
@@ -623,7 +712,7 @@ function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommi
     <p class="eyebrow">Canonical code catalog / ${cards.length} maintained entries</p>
     <h1>Make the first request. See the exact result.</h1>
     <p>Small, reproducible examples across Honua Server and the JavaScript SDK. Run a verified browser build when one exists, then inspect the source and evidence.</p>
-    <div class="intro-actions"><a class="button primary" href="#catalog">Search the catalog</a><a class="button" href="https://honua.io/demos.html">Need an end-to-end demo?</a></div>
+    <div class="intro-actions"><a class="button primary" href="#examples">Start with examples</a><a class="button" href="#catalog">Search all content</a></div>
   </div>
   <dl class="catalog-stats" aria-label="Catalog composition">
     <div><dt>${ownCount}</dt><dd>server samples executed by this repository</dd></div>
@@ -631,6 +720,9 @@ function renderIndexPage({ categories, cards, keyByKey, generatedAt, sourceCommi
     <div><dt>1</dt><dd>canonical inventory with no cloned source</dd></div>
   </dl>
 </section>
+<nav class="content-kind-nav" aria-label="Developer content types">
+  ${contentSections.map(renderContentKindNavItem).join("\n")}
+</nav>
 ${starters.length ? `<section class="starter-section" aria-labelledby="starter-heading">
   <div class="section-heading"><div><p class="eyebrow">Recommended starts</p><h2 id="starter-heading">Choose the client you already have.</h2></div><p>Each path produces a concrete result before it introduces the wider platform.</p></div>
   <div class="starter-grid">${starters.map(renderStarterCard).join("\n")}</div>
@@ -640,12 +732,12 @@ ${starters.length ? `<section class="starter-section" aria-labelledby="starter-h
   <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="catalog-filters">Filters <span id="filter-active-count">0</span></button>
 <div class="layout">
   <aside id="catalog-filters" class="filters">
-    ${renderFilterPanel(categories, cards, keyByKey)}
+    ${renderFilterPanel(cards, keyByKey)}
   </aside>
   <div class="results">
     <p id="filter-status" aria-live="polite">Showing all ${cards.length} samples.</p>
     <div id="empty-state" class="empty-state" hidden><strong>No sample matches that combination.</strong><span>Clear a filter or search for a protocol, SDK, or capability.</span></div>
-    ${categories.map((category) => renderCategorySection(category)).join("\n")}
+    ${contentSections.map((section) => renderContentKindSection(section)).join("\n")}
   </div>
 </div>
 </section>
@@ -662,6 +754,10 @@ ${starters.length ? `<section class="starter-section" aria-labelledby="starter-h
   });
 }
 
+function renderContentKindNavItem(section) {
+  return `<a href="#${escapeAttr(section.slug)}"><span>${escapeHtml(section.label)}</span><strong>${section.cards.length}</strong><small>${escapeHtml(section.description)}</small></a>`;
+}
+
 function renderStarterCard({ card, number, eyebrow, action }) {
   const time = card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} min` : card.bundleRunnable ? "Run in browser" : "Source available";
   return `<a class="starter-card" href="${card.detailPath}">
@@ -671,7 +767,7 @@ function renderStarterCard({ card, number, eyebrow, action }) {
 </a>`;
 }
 
-function renderFilterPanel(categories, cards, keyByKey) {
+function renderFilterPanel(cards, keyByKey) {
   // Capability checkboxes are grouped by the KEY's own category across ALL
   // cards -- deliberately not by card section: a card lives in exactly one
   // (primary-category) section, but every capability it carries must remain
@@ -706,6 +802,8 @@ function renderFilterPanel(categories, cards, keyByKey) {
 
   return `
 <div class="filters-heading"><span>Refine</span><span>AND across groups</span></div>
+<h2>Content type</h2>
+<div class="filter-group">${CONTENT_KINDS.map((kind) => `<label><input type="checkbox" class="filter-kind" value="${escapeAttr(kind.id)}" /> ${escapeHtml(kind.label)}</label>`).join("")}</div>
 <h2>Capability</h2>
 <div class="filter-group">${capHtml}</div>
 <h2>SDK</h2>
@@ -748,16 +846,21 @@ function renderCard(card) {
     ? `<span class="badge runnable" title="Runs in the browser on this page">&#9654; Runnable</span>`
     : "";
   const evidenceScope = card.kind === "sdk" ? ` data-evidence-scope="gallery-only"` : "";
+  const contentKind = CONTENT_KIND_BY_ID.get(card.contentKind);
   const learningMeta = card.learning
     ? `${card.learning.estimatedMinutes} min &middot; ${escapeHtml(card.learning.level)}`
     : card.track
       ? escapeHtml(card.track)
       : "SDK example";
-  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-source="${escapeAttr(card.sourceRepo)}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")}`)}">
-  <div class="card-topline"><span class="sample-id">${escapeHtml(card.id)}</span><span class="learning-meta">${learningMeta}</span></div>
+  const actions = card.contentKind === "project"
+    ? `<a class="card-open" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open project source &nearr;</a><a href="${card.detailPath}">Project overview &rarr;</a>`
+    : `<a class="card-open" href="${card.detailPath}">${runnable ? "Run and view code" : "View code"} &rarr;</a><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">GitHub &nearr;</a>`;
+  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")}`)}">
+  <div class="card-topline"><span class="content-kind-label kind-${escapeAttr(card.contentKind)}">${escapeHtml(contentKind.singular)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
   <p class="summary">${escapeHtml(card.summary)}</p>
   <div class="chips">
+    ${chip(card.id, "sample-id")}
     ${chip(card.sourceRepo, `source-${card.sourceRepo}`)}
     ${card.sdks.map((s) => chip(s)).join("")}
     ${chip(card.edition)}
@@ -765,8 +868,18 @@ function renderCard(card) {
     ${card.auth ? chip(card.auth) : ""}
   </div>
   <div class="card-evidence">${runnableBadge}${extra}</div>
-  <div class="card-actions"><a class="card-open" href="${card.detailPath}">${runnable ? "Run sample" : "Open sample"} &rarr;</a><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Source &nearr;</a></div>
+  <div class="card-actions">${actions}</div>
 </article>`;
+}
+
+function renderContentKindSection(section) {
+  const body = section.cards.length
+    ? section.categories.map((category) => renderCategorySection(category)).join("\n")
+    : `<div class="content-kind-empty"><strong>No maintained ${escapeHtml(section.label.toLowerCase())} yet.</strong><span>A repository will appear here only after it meets the ${escapeHtml(section.singular.toLowerCase())} content contract.</span></div>`;
+  return `<section id="${escapeAttr(section.slug)}" class="content-kind-section" data-kind-section="${escapeAttr(section.id)}">
+  <div class="content-kind-heading"><div><p class="eyebrow">${escapeHtml(section.singular)} contract</p><h2>${escapeHtml(section.label)}</h2></div><p>${escapeHtml(section.description)}</p><span>${section.cards.length}</span></div>
+  ${body}
+</section>`;
 }
 
 // ---- rendering: own sample detail page ----------------------------------
@@ -782,10 +895,18 @@ function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
       ? renderNoBundlePanel("This repo does not yet publish a staged browser bundle for it.")
       : renderHeadlessPanel(card);
   const prerequisites = card.learning?.prerequisites?.length ? card.learning.prerequisites.join(", ") : "None";
+  const sourceFirst = card.contentKind === "project";
+  const learningContent = sourceFirst
+    ? `${runnablePanel}${renderOwnNotes(card, true)}`
+    : card.contentKind === "walkthrough"
+      ? `${runnablePanel}${renderWalkthroughGuide(card)}${renderInlineCodePanel(card)}${renderOwnNotes(card, true)}`
+      : `${runnablePanel}${renderInlineCodePanel(card)}${renderOwnNotes(card, false)}`;
   const bodyHtml = `
 <a class="back-link" href="../">← All samples</a>
+${renderContentKindLabel(card)}
 <h1>${escapeHtml(card.title)}</h1>
 <p>${escapeHtml(card.summary)}</p>
+${learningContent}
 <dl class="sample-facts">
   <div><dt>Time</dt><dd>${escapeHtml(card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} minutes` : "Not stated")}</dd></div>
   <div><dt>Level</dt><dd>${escapeHtml(card.learning?.level ?? "Not stated")}</dd></div>
@@ -794,9 +915,6 @@ function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
 </dl>
 <p class="prerequisites"><strong>Before you run it:</strong> ${escapeHtml(prerequisites)}</p>
 ${runBadgeHtml(card.runBadge)}
-${runnablePanel}
-${renderInlineCodePanel(card)}
-<details class="background-notes"><summary>Background, configuration, and troubleshooting</summary>${card.readmeHtml ? `<div class="readme">${card.readmeHtml}</div>` : `<p>No README.md found for this sample.</p>`}</details>
 <div class="detail-footer"><div><h2>Capabilities</h2>${capabilityChips(card.capabilities, keyByKey)}</div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open repository source ↗</a></div>
 `;
   return pageShell({
@@ -808,6 +926,30 @@ ${renderInlineCodePanel(card)}
     sourceCommit,
     bundleNotice,
   });
+}
+
+function renderContentKindLabel(card) {
+  const kind = CONTENT_KIND_BY_ID.get(card.contentKind);
+  return `<p class="content-kind-label kind-${escapeAttr(kind.id)}">${escapeHtml(kind.singular)}</p>`;
+}
+
+function renderOwnNotes(card, expanded) {
+  const heading = card.contentKind === "walkthrough" ? "Walkthrough steps and troubleshooting" : "Background, configuration, and troubleshooting";
+  const content = card.readmeHtml ? `<div class="readme">${card.readmeHtml}</div>` : `<p>No README.md found for this content.</p>`;
+  return expanded
+    ? `<section class="walkthrough-notes"><h2>${escapeHtml(heading)}</h2>${content}</section>`
+    : `<details class="background-notes"><summary>${escapeHtml(heading)}</summary>${content}</details>`;
+}
+
+function renderProjectSourcePanel(card) {
+  const surfaces = [...new Set([...(card.protocols ?? []), ...(card.renderers ?? [])])];
+  return `<section class="project-source-panel"><p class="eyebrow">Complete application source</p><h2>Start with the application architecture.</h2><p>Projects span multiple files, state, configuration, and deployment concerns. The complete SDK example folder is the primary artifact; the embedded build is supporting runtime evidence.</p><dl class="project-architecture"><div><dt>Example folder</dt><dd><code>${escapeHtml(card.sourcePath ?? card.id)}</code></dd></div><div><dt>Integration surfaces</dt><dd>${escapeHtml(surfaces.join(", ") || "See project source")}</dd></div><div><dt>Support tier</dt><dd>${escapeHtml(card.supportTier ?? "See project source")}</dd></div></dl><a class="button primary" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open complete SDK example folder &nearr;</a></section>`;
+}
+
+function renderWalkthroughGuide(card) {
+  const guide = WALKTHROUGH_GUIDES.get(card.id);
+  if (!guide) return "";
+  return `<section class="walkthrough-guide" aria-labelledby="walkthrough-guide-${escapeAttr(card.id)}"><p class="eyebrow">Task walkthrough</p><h2 id="walkthrough-guide-${escapeAttr(card.id)}">Complete the workflow.</h2><ol>${guide.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol><p class="expected-outcome"><strong>Expected outcome</strong><span>${escapeHtml(guide.outcome)}</span></p></section>`;
 }
 
 function renderInlineCodePanel(card) {
@@ -840,12 +982,23 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
             ? "A build was published for it before, but no verified bundle is staged for this deploy."
             : "",
       );
+  const primaryContent = card.contentKind === "project"
+    ? runnablePanel
+    : card.contentKind === "walkthrough"
+      ? `${runnablePanel}${renderWalkthroughGuide(card)}${renderRemoteCodePanel(card)}`
+      : `${runnablePanel}${renderRemoteCodePanel(card)}`;
   const bodyHtml = `
 <a class="back-link" href="../../">← All samples</a>
-<p class="empty-state">Projected from <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s versioned site-consumer handoff. Code is not vendored here -- follow the GitHub link below for the source. This card is gallery-only evidence: it is <strong>not</strong> counted in this repo's samples-coverage.v1.json, which is reserved for samples honua-samples executes in its own run-samples workflow (SDK qualification receipts flow to honua-evidence through honua-sdk-js's own coverage artifact).</p>
-${renderSdkLifecycleNotice(card.lifecycleNotice)}
+${renderContentKindLabel(card)}
 <h1>${escapeHtml(card.title)}</h1>
 <p>${escapeHtml(card.summary)}</p>
+${primaryContent}
+<details class="background-notes"><summary>Producer provenance and lifecycle</summary>
+  <p>Projected from <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js</a>'s versioned site-consumer handoff. Code is not vendored here. This gallery-only evidence is not counted in this repository's samples coverage.</p>
+  ${renderSdkLifecycleNotice(card.lifecycleNotice)}
+</details>
+<h2>Capabilities</h2>
+${capabilityChips(card.capabilities, keyByKey)}
 <div class="detail-meta">
   <span>Support tier: ${escapeHtml(card.supportTier)}</span>
   ${card.track ? `<span>Track: ${escapeHtml(card.track)}</span>` : ""}
@@ -854,11 +1007,8 @@ ${renderSdkLifecycleNotice(card.lifecycleNotice)}
   ${lifecycleHtml}
   ${qualificationHtml}
 </div>
-${runnablePanel}
-${renderRemoteCodePanel(card)}
-<h2>Capabilities</h2>
-${capabilityChips(card.capabilities, keyByKey)}
 ${renderSdkEvidenceSection(card)}
+${card.contentKind === "project" ? renderProjectSourcePanel(card) : ""}
 <p>
   ${card.githubUrl ? `<a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a>` : ""}
   ${card.docsUrl ? ` · <a href="${card.docsUrl}" target="_blank" rel="noopener noreferrer">Docs ↗</a>` : ""}

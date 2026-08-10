@@ -14,6 +14,8 @@ import {
   admitSdkJsHandoff,
   listSdkProjectedIdentities,
   mergeSdkProjection,
+  DEFAULT_FIXTURE_V4_SNAPSHOT_PATH,
+  DEFAULT_HANDOFF_V2_SNAPSHOT_PATH,
   DEFAULT_FIXTURE_SNAPSHOT_PATH,
   DEFAULT_HANDOFF_SNAPSHOT_PATH,
 } from "../lib/sdkjs-handoff.mjs";
@@ -22,8 +24,14 @@ import { deriveCapabilityKeys } from "../lib/sdkjs-catalog.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
-const handoffText = await readFile(DEFAULT_HANDOFF_SNAPSHOT_PATH, "utf8");
-const fixtureText = await readFile(DEFAULT_FIXTURE_SNAPSHOT_PATH, "utf8");
+// Git's Windows checkout converts the protected historical JSON snapshots to
+// CRLF even though the producer fixture pins their LF bytes. Tests restore the
+// producer representation in memory; production admission never normalizes.
+const producerText = (text) => text.replaceAll("\r\n", "\n");
+const handoffText = producerText(await readFile(DEFAULT_HANDOFF_SNAPSHOT_PATH, "utf8"));
+const fixtureText = producerText(await readFile(DEFAULT_FIXTURE_SNAPSHOT_PATH, "utf8"));
+const nextHandoffText = producerText(await readFile(DEFAULT_HANDOFF_V2_SNAPSHOT_PATH, "utf8"));
+const nextFixtureText = producerText(await readFile(DEFAULT_FIXTURE_V4_SNAPSHOT_PATH, "utf8"));
 const catalogSnapshot = JSON.parse(
   await readFile(path.join(REPO_ROOT, "config", "sdkjs-catalog.snapshot.json"), "utf8"),
 );
@@ -33,11 +41,13 @@ const catalogSnapshot = JSON.parse(
 // hardcoded date would then incorrectly classify valid observations as
 // future evidence.
 const pinnedHandoff = JSON.parse(handoffText);
+const pinnedNextHandoff = JSON.parse(nextHandoffText);
+const pinnedJourneys = [...pinnedHandoff.qualifiedJourneys, ...pinnedNextHandoff.qualifiedJourneys];
 const newestObservation = Math.max(
-  ...pinnedHandoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt)),
+  ...pinnedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt)),
 );
 const earliestExpiry = Math.min(
-  ...pinnedHandoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.expiresAt)),
+  ...pinnedJourneys.map((journey) => Date.parse(journey.visualEvidence.expiresAt)),
 );
 const FRESH_NOW = new Date(newestObservation + 1);
 assert.ok(FRESH_NOW.getTime() < earliestExpiry, "pinned evidence windows do not overlap");
@@ -69,6 +79,29 @@ test("pinned snapshot pair is admitted deterministically", () => {
   assert.equal(new Set(ids).size, ids.length);
 });
 
+test("preferred v2/v4 snapshot pair admits every legacy identity plus newly published records", () => {
+  const legacy = admitSdkJsHandoff({ handoffText, fixtureText, now: FRESH_NOW });
+  const next = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: FRESH_NOW });
+  assert.equal(legacy.ok, true, legacy.errors.join("; "));
+  assert.equal(next.ok, true, next.errors.join("; "));
+  assert.equal(legacy.contract.id, "v1/v3");
+  assert.equal(next.contract.id, "v2/v4");
+  assert.equal(next.handoff.format, undefined, "producer transport version is not exposed in the internal projection");
+  const legacyIds = legacy.handoff.cards.map((card) => card.id);
+  const nextIds = next.handoff.cards.map((card) => card.id);
+  assert.deepEqual(nextIds.filter((id) => !legacyIds.includes(id)), ["coverages-wcs-basic"]);
+  assert.deepEqual(legacyIds.filter((id) => !nextIds.includes(id)), []);
+  assert.equal(next.handoff.canonicalRoutes.length, legacy.handoff.canonicalRoutes.length + 1);
+  const nextCardsById = new Map(next.handoff.cards.map((card) => [card.id, card]));
+  assert.deepEqual(
+    legacy.handoff.cards.map((card) => [card.id, card.source.path, card.source.docsPath]),
+    legacy.handoff.cards.map((card) => {
+      const nextCard = nextCardsById.get(card.id);
+      return [nextCard.id, nextCard.source.path, nextCard.source.docsPath];
+    }),
+  );
+});
+
 test("tampered handoff bytes are rejected by the fixture content binding", () => {
   const tampered = handoffText.replace("Safe Agent Workbench", "Safe Agent Workshop");
   assert.notEqual(tampered, handoffText);
@@ -91,6 +124,19 @@ test("schema-incompatible fixture accepts block is rejected", () => {
   const result = admitSdkJsHandoff({ handoffText, fixtureText: JSON.stringify(fixture), now: FRESH_NOW });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /schema-incompatible/);
+});
+
+test("unknown future fixture generation is rejected instead of coerced", () => {
+  const fixture = JSON.parse(nextFixtureText);
+  fixture.format = "honua.site.sdk-sample-consumer-fixture.v5";
+  fixture.schemaVersion = 5;
+  const result = admitSdkJsHandoff({
+    handoffText: nextHandoffText,
+    fixtureText: JSON.stringify(fixture),
+    now: FRESH_NOW,
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join("\n"), /schema-incompatible consumer fixture/);
 });
 
 test("handoff declaring a different format than the fixture accepts is rejected even with a matching digest", () => {
@@ -150,7 +196,7 @@ test("qualified card without a backing qualified journey is rejected", () => {
 
 // ---- cross-source merge ----------------------------------------------------
 
-const admitted = admitSdkJsHandoff({ handoffText, fixtureText, now: FRESH_NOW });
+const admitted = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: FRESH_NOW });
 assert.equal(admitted.ok, true);
 const catalogEntries = catalogSnapshot.catalog.samples;
 

@@ -123,9 +123,6 @@ jobs:
           SAMPLE_BUNDLES_TARBALL_URL: ${{ vars.SAMPLE_BUNDLES_TARBALL_URL }}
           SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT: ${{ github.workspace }}/../honua-sdk-js
           SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,maplibre-quickstart,oauth-signin,kepler-analytics,app-bootstrap-basic,geoprocessing-job-runner,runtime-parity-showcase,storytelling-25d-map,terrain-rgb-elevation,unified-ops-workspace,web-components-basic,planning-permitting-workbench,service-explorer,nl-map-control,realtime-incident-dashboard,pmtiles-static"
-          # The rolling release still targets the retired natural-earth layer.
-          # Replace only Quickstart with this run's freshly built, re-hashed copy.
-          SAMPLE_BUNDLES_LOCAL_OVERRIDE_IDS: "maplibre-quickstart"
           # Production must never publish a gallery with zero runnable apps.
           MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/lib/sample-bundles.mjs
@@ -152,7 +149,10 @@ jobs:
 
       - name: Smoke the exact gallery artifact
         env:
-          MIN_RUNNABLE_BUNDLES: "11"
+          # Bundle supply is already gated at 11 above. The curated public
+          # portfolio intentionally withholds technically runnable labs until
+          # they demonstrate a product-grade result, so gate its own floor.
+          MIN_PUBLISHED_RUNNABLE_APPS: "8"
         run: npm run test:gallery:browser
 
       - name: Upload gallery browser evidence
@@ -168,3 +168,33 @@ jobs:
           path: site
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+
+  verify-live:
+    name: verify deployed gallery
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install live-gallery browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Verify every admitted live route and runnable app
+        env:
+          GALLERY_BASE_URL: https://samples.honua.io
+          EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
+        run: npm run test:gallery:live
+
+      - name: Upload live-gallery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: gallery-live-smoke
+          path: .artifacts/gallery-live-smoke
+          if-no-files-found: error

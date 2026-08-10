@@ -2,6 +2,7 @@
     "id":  "wms-getmap-check",
     "title":  "WMS GetCapabilities + GetMap check (bash + curl)",
     "description":  "Plain bash+curl walkthrough of classic WMS: imports a tiny GeoJSON dataset, publishes it, requests GetCapabilities and GetMap, and asserts a real, correctly-sized PNG comes back -- not just a 200 status.",
+    "contentKind":  "walkthrough",
     "learning":  {
                      "goal":  "build-map",
                      "level":  "advanced",

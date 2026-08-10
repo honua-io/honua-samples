@@ -2,6 +2,7 @@
   "id": "odata-query-rest",
   "title": "Read spatial features with OData v4",
   "description": "Discovers a public layer and reads three spatial features plus the server-side count with plain fetch().",
+  "contentKind": "example",
   "learning": {
     "goal": "query-data",
     "level": "beginner",
