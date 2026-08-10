@@ -41,11 +41,13 @@ const catalogSnapshot = JSON.parse(
 // hardcoded date would then incorrectly classify valid observations as
 // future evidence.
 const pinnedHandoff = JSON.parse(handoffText);
+const pinnedNextHandoff = JSON.parse(nextHandoffText);
+const pinnedJourneys = [...pinnedHandoff.qualifiedJourneys, ...pinnedNextHandoff.qualifiedJourneys];
 const newestObservation = Math.max(
-  ...pinnedHandoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt)),
+  ...pinnedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt)),
 );
 const earliestExpiry = Math.min(
-  ...pinnedHandoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.expiresAt)),
+  ...pinnedJourneys.map((journey) => Date.parse(journey.visualEvidence.expiresAt)),
 );
 const FRESH_NOW = new Date(newestObservation + 1);
 assert.ok(FRESH_NOW.getTime() < earliestExpiry, "pinned evidence windows do not overlap");
@@ -77,7 +79,7 @@ test("pinned snapshot pair is admitted deterministically", () => {
   assert.equal(new Set(ids).size, ids.length);
 });
 
-test("preferred v2/v4 snapshot pair is admitted and normalized to the same stable identities and routes", () => {
+test("preferred v2/v4 snapshot pair admits every legacy identity plus newly published records", () => {
   const legacy = admitSdkJsHandoff({ handoffText, fixtureText, now: FRESH_NOW });
   const next = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: FRESH_NOW });
   assert.equal(legacy.ok, true, legacy.errors.join("; "));
@@ -85,14 +87,18 @@ test("preferred v2/v4 snapshot pair is admitted and normalized to the same stabl
   assert.equal(legacy.contract.id, "v1/v3");
   assert.equal(next.contract.id, "v2/v4");
   assert.equal(next.handoff.format, undefined, "producer transport version is not exposed in the internal projection");
+  const legacyIds = legacy.handoff.cards.map((card) => card.id);
+  const nextIds = next.handoff.cards.map((card) => card.id);
+  assert.deepEqual(nextIds.filter((id) => !legacyIds.includes(id)), ["coverages-wcs-basic"]);
+  assert.deepEqual(legacyIds.filter((id) => !nextIds.includes(id)), []);
+  assert.equal(next.handoff.canonicalRoutes.length, legacy.handoff.canonicalRoutes.length + 1);
+  const nextCardsById = new Map(next.handoff.cards.map((card) => [card.id, card]));
   assert.deepEqual(
-    next.handoff.cards.map((card) => card.id),
-    legacy.handoff.cards.map((card) => card.id),
-  );
-  assert.deepEqual(next.handoff.canonicalRoutes, legacy.handoff.canonicalRoutes);
-  assert.deepEqual(
-    next.handoff.cards.map((card) => [card.id, card.source.path, card.source.docsPath]),
     legacy.handoff.cards.map((card) => [card.id, card.source.path, card.source.docsPath]),
+    legacy.handoff.cards.map((card) => {
+      const nextCard = nextCardsById.get(card.id);
+      return [nextCard.id, nextCard.source.path, nextCard.source.docsPath];
+    }),
   );
 });
 
@@ -190,7 +196,7 @@ test("qualified card without a backing qualified journey is rejected", () => {
 
 // ---- cross-source merge ----------------------------------------------------
 
-const admitted = admitSdkJsHandoff({ handoffText, fixtureText, now: FRESH_NOW });
+const admitted = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: FRESH_NOW });
 assert.equal(admitted.ok, true);
 const catalogEntries = catalogSnapshot.catalog.samples;
 

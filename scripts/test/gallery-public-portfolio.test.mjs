@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "../lib/gallery-public-portfolio.mjs";
 
-test("the gallery portfolio classifies the 30 SDK and seven owned cards", async () => {
+test("the gallery portfolio classifies the 31 SDK and seven owned cards", async () => {
   const portfolio = await loadGalleryPublicPortfolio();
   const counts = portfolio.entries.reduce((result, entry) => {
     result[entry.disposition] = (result[entry.disposition] ?? 0) + 1;
     return result;
   }, {});
-  assert.equal(portfolio.entries.length, 37);
-  assert.deepEqual(counts, { "internal-qualification": 17, "rework-map-first": 13, public: 7 });
+  assert.equal(portfolio.entries.length, 38);
+  assert.deepEqual(counts, { "internal-qualification": 18, "rework-map-first": 11, public: 9 });
 });
 
 test("only explicitly public technically qualified cards are admitted", async () => {
@@ -19,9 +19,8 @@ test("only explicitly public technically qualified cards are admitted", async ()
     { sourceRepo: "honua-sdk-js", id: "maplibre-quickstart" },
     { sourceRepo: "honua-samples", id: "odata-query-rest" }
   ], portfolio);
-  assert.deepEqual(result.publicCards.map((card) => card.id), ["pmtiles-static"]);
+  assert.deepEqual(result.publicCards.map((card) => card.id), ["pmtiles-static", "maplibre-quickstart"]);
   assert.deepEqual(result.excluded.map((entry) => [entry.id, entry.disposition]), [
-    ["maplibre-quickstart", "rework-map-first"],
     ["odata-query-rest", "internal-qualification"]
   ]);
 });

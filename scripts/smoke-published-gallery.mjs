@@ -15,7 +15,7 @@ const snapshotPath = path.join(repoRoot, "config", "sample-bundles.snapshot.json
 const stagedStatusPath = path.join(repoRoot, ".sample-bundles-staging", "status.json");
 const evidenceDir = path.join(repoRoot, ".artifacts", "gallery-browser-smoke");
 const evidencePath = path.join(evidenceDir, "browser-smoke.v1.json");
-const minimumApps = parseMinimum(process.env.MIN_RUNNABLE_BUNDLES ?? "1");
+const minimumApps = parseMinimum(process.env.MIN_PUBLISHED_RUNNABLE_APPS ?? "1");
 
 const mediaTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -295,7 +295,7 @@ function parseRange(header, size) {
 function parseMinimum(value) {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 1) {
-    throw new Error(`MIN_RUNNABLE_BUNDLES must be a positive integer, received ${JSON.stringify(value)}`);
+    throw new Error(`MIN_PUBLISHED_RUNNABLE_APPS must be a positive integer, received ${JSON.stringify(value)}`);
   }
   return parsed;
 }

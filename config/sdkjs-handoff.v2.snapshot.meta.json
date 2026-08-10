@@ -1,13 +1,12 @@
 {
-    "_comment":  "Provenance for the byte-exact v2/v4 snapshot pair config/sdkjs-handoff.v2.snapshot.json and config/sdkjs-handoff-fixture.v4.snapshot.json. Both files are committed exactly as produced by honua-sdk-js PR #1111 and must never be reformatted, re-serialized, or hand-edited. The v4 fixture content-binds the v2 handoff by bytes and sha256.",
-    "contract":  {
-                     "handoffFormat":  "honua.site.sdk-sample-consumer-handoff.v2",
-                     "handoffSchemaVersion":  2,
-                     "fixtureFormat":  "honua.site.sdk-sample-consumer-fixture.v4",
-                     "fixtureSchemaVersion":  4
-                 },
-    "handoffSourceUrl":  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v2.json",
-    "fixtureSourceUrl":  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json",
-    "producerRevision":  "09ebaa8a1aae186d1b23a8e87eae2e4265aa29f7",
-    "fetchedAt":  "2026-08-08T23:57:12.6582141Z"
+  "_comment": "Provenance for the byte-exact v2/v4 snapshot pair config\\sdkjs-handoff.v2.snapshot.json and config\\sdkjs-handoff-fixture.v4.snapshot.json. Both files are committed EXACTLY as fetched -- never reformat, re-serialize, or hand-edit them: the admission gate in scripts/lib/sdkjs-handoff.mjs verifies the handoff's bytes and sha256 against the fixture's input pin, so any local mutation (including pretty-printing) is rejected as a tampered/locally-reconstructed projection (honua-io/honua-samples#16). Refreshed automatically by scripts/build-gallery.mjs whenever the live fetch succeeds and the fetched pair passes admission.",
+  "contract": {
+    "handoffFormat": "honua.site.sdk-sample-consumer-handoff.v2",
+    "handoffSchemaVersion": 2,
+    "fixtureFormat": "honua.site.sdk-sample-consumer-fixture.v4",
+    "fixtureSchemaVersion": 4
+  },
+  "handoffSourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v2.json",
+  "fixtureSourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json",
+  "fetchedAt": "2026-08-10T09:58:17.302Z"
 }

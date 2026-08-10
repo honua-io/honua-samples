@@ -152,7 +152,10 @@ jobs:
 
       - name: Smoke the exact gallery artifact
         env:
-          MIN_RUNNABLE_BUNDLES: "11"
+          # Bundle supply is already gated at 11 above. The curated public
+          # portfolio intentionally withholds technically runnable labs until
+          # they demonstrate a product-grade result, so gate its own floor.
+          MIN_PUBLISHED_RUNNABLE_APPS: "7"
         run: npm run test:gallery:browser
 
       - name: Upload gallery browser evidence
