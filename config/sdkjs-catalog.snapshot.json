@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sdkjs-catalog.mjs (via scripts/build-gallery.mjs) when the live fetch of samples/catalog.v2.json fails, so samples.honua.io deploys never break on an sdk-js-side hiccup. Rewritten automatically whenever the live fetch succeeds -- commit the change to keep the offline fallback current. See honua-io/honua-samples#3.",
-  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/64132b626d5ece2bdf9740675403b9fcbe595581/samples/catalog.v2.json",
-  "fetchedAt": "2026-08-10T09:58:17.325Z",
+  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/catalog.v2.json",
+  "fetchedAt": "2026-08-10T20:39:43.321Z",
   "catalog": {
     "$schema": "./contract/v2/schemas/sample-catalog.schema.json",
     "format": "honua.sdk.sample-catalog.v2",
@@ -874,7 +874,7 @@
               "npm run evidence:cog:live"
             ],
             "evidencePath": "samples/evidence/imagery-cog-quickstart/live.v1.json",
-            "expiresAt": "2026-09-10T08:18:27.957Z"
+            "expiresAt": "2026-09-10T19:00:25.178Z"
           }
         },
         "expectedDegradation": "Credential-bearing URLs, CORS, missing or oversized range responses, unsupported CRS/format, and nodata return structured outcomes while published imagery remains usable. Public live proof covers classified COG inspection and a bounded decoded window in EPSG:32621; browser-side UTM reprojection and a georeferenced live MapLibre mount remain explicitly unclaimed.",
@@ -1122,7 +1122,7 @@
               "npm run evidence:first-map:live"
             ],
             "evidencePath": "samples/evidence/maplibre-quickstart/live.v1.json",
-            "expiresAt": "2026-09-10T08:16:17.047Z"
+            "expiresAt": "2026-09-10T18:58:09.006Z"
           }
         },
         "expectedDegradation": "Capability misses, plan warnings, and bounded fallback are shown rather than silently returning an empty map.",
@@ -1244,7 +1244,7 @@
               "npm run evidence:migration-workbench:live"
             ],
             "evidencePath": "samples/evidence/migration-workbench/live.v1.json",
-            "expiresAt": "2026-09-10T08:18:52.972Z"
+            "expiresAt": "2026-09-10T19:00:49.528Z"
           }
         },
         "expectedDegradation": "Unsupported ArcGIS modules are reported as manual work, never silently removed.",
@@ -2159,7 +2159,7 @@
               "npm run demo:service-explorer:live-evidence"
             ],
             "evidencePath": "samples/evidence/service-explorer/live.v1.json",
-            "expiresAt": "2026-09-10T08:19:55.154Z"
+            "expiresAt": "2026-09-10T19:01:53.078Z"
           }
         },
         "expectedDegradation": "Partial discovery and unsupported source actions remain visible with structured state, code, and reason; the sample does not synthesize success.",
