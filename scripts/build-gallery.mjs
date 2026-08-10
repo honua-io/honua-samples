@@ -1196,7 +1196,7 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
     ? runnablePanel
     : card.contentKind === "walkthrough"
       ? `${runnablePanel}${renderWalkthroughGuide(card)}${renderRemoteCodePanel(card)}`
-      : `${runnablePanel}${renderRemoteCodePanel(card)}`;
+      : `${renderRemoteCodePanel(card)}${runnablePanel}`;
   const bodyHtml = `
 <a class="back-link" href="../../">← All samples</a>
 ${renderContentKindLabel(card)}
@@ -1237,10 +1237,12 @@ ${card.contentKind === "project" ? renderProjectSourcePanel(card) : ""}
 
 function renderRemoteCodePanel(card) {
   const root = `https://raw.githubusercontent.com/${SDKJS_REPO}/trunk/${card.sourcePath}`;
-  return `<section class="code-view remote-code" data-source-root="${escapeAttr(root)}" data-source-path="${escapeAttr(card.sourcePath)}" data-github-url="${escapeAttr(card.githubUrl)}">
-  <div class="code-toolbar"><div><span>PRODUCER TRUNK PREVIEW</span><strong data-source-name>Finding the primary source file…</strong></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
-  <pre tabindex="0"><code data-source-code>Loading source from honua-sdk-js…</code></pre>
-  <p class="source-note" data-source-note>This preview follows producer trunk and is not the integrity-bound browser bundle shown above.</p>
+  return `<section class="code-view remote-code code-first-preview" data-source-root="${escapeAttr(root)}" data-source-path="${escapeAttr(card.sourcePath)}" data-github-url="${escapeAttr(card.githubUrl)}">
+  <details class="remote-code-details"><summary><span>CODE FIRST</span><strong data-source-name>Finding the primary source file…</strong><em>Expand source</em></summary>
+    <div class="code-toolbar"><div><span>PRODUCER TRUNK PREVIEW</span><strong>Focused implementation before runtime evidence</strong></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
+    <pre tabindex="0"><code data-source-code>Loading source from honua-sdk-js…</code></pre>
+    <p class="source-note" data-source-note>This preview follows producer trunk and is not the integrity-bound browser bundle shown next.</p>
+  </details>
 </section>`;
 }
 

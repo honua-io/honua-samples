@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
+import { detailStructureFailures, geocodingProofFailures } from "./lib/gallery-live-contract.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(repoRoot, "site");
@@ -50,6 +51,25 @@ const semanticAssertions = new Map([
     if (runtime?.lastError) throw new Error(`Quickstart runtime error: ${runtime.lastError}`);
     if (runtime?.mapReady !== true || runtime?.journeyComplete !== true) throw new Error("Quickstart did not complete its map journey");
     if ((await frame.locator("canvas").count()) < 1) throw new Error("Quickstart did not mount a map canvas");
+  }],
+  ["geocoding-quickstart", async (frame) => {
+    await frame.waitForFunction(() => window.__HONUA_GEOCODING_DEMO__?.ready === true, null, markerOptions());
+    const proof = await frame.evaluate(() => {
+      const runtime = window.__HONUA_GEOCODING_DEMO__;
+      return {
+        ready: runtime?.ready,
+        mode: runtime?.mode,
+        endpoint: runtime?.endpoint,
+        resultCount: runtime?.resultCount,
+        markerCount: runtime?.markerCount,
+        selectedAddress: runtime?.selectedAddress,
+        selectedScore: runtime?.selectedScore,
+        selectedCoordinates: runtime?.selectedCoordinates ? [...runtime.selectedCoordinates] : null,
+        lastError: runtime?.lastError,
+      };
+    });
+    const failures = geocodingProofFailures(proof, await frame.locator("canvas").count());
+    if (failures.length > 0) throw new Error(failures.join("; "));
   }],
   ["pmtiles-static", async (frame) => {
     await frame.waitForFunction(() => window.__HONUA_PMTILES_STATIC_DEMO__?.ready === true, null, markerOptions());
@@ -312,22 +332,19 @@ async function validateDetailContract(page, card, failures) {
   }
   const position = async (selector) => page.locator("main").evaluate((main, value) => main.innerHTML.indexOf(value), selector);
   const embedPosition = await position('class="embed-panel"');
-  if (card.contentKind === "example") {
-    const codePosition = await position('class="code-view');
-    if (codePosition < 0) failures.push("example detail has no inline code view");
-    if (card.runnable && embedPosition >= 0 && codePosition > embedPosition) failures.push("example detail is not inline-code-first");
-  } else if (card.contentKind === "walkthrough") {
-    const guidePosition = await position('class="walkthrough-guide"');
-    const codePosition = await position('class="code-view');
-    if (guidePosition < 0) failures.push("walkthrough detail has no ordered guide");
-    if ((await page.locator(".walkthrough-guide ol > li").count()) < 3) failures.push("walkthrough guide has fewer than three ordered steps");
-    if ((await page.locator(".walkthrough-guide .expected-outcome").count()) !== 1) failures.push("walkthrough guide has no expected outcome");
-    if (codePosition >= 0 && guidePosition > codePosition) failures.push("walkthrough guide does not lead its code view");
-  } else if (card.contentKind === "project") {
-    const sourcePosition = await position('class="project-source-panel"');
-    if (sourcePosition < 0) failures.push("project detail has no architecture/source panel");
-    if (embedPosition >= 0 && sourcePosition > embedPosition) failures.push("project architecture/source panel does not lead runtime evidence");
-    if ((await page.locator(".code-view").count()) !== 0) failures.push("project detail incorrectly presents one file as primary code");
+  const sourcePosition = await position('class="project-source-panel"');
+  failures.push(...detailStructureFailures({
+    contentKind: card.contentKind,
+    runnable: card.runnable,
+    embedPosition,
+    codePosition: await position('class="code-view'),
+    guidePosition: await position('class="walkthrough-guide"'),
+    guideStepCount: await page.locator(".walkthrough-guide ol > li").count(),
+    expectedOutcomeCount: await page.locator(".walkthrough-guide .expected-outcome").count(),
+    sourcePosition,
+    codeViewCount: await page.locator(".code-view").count(),
+  }));
+  if (card.contentKind === "project") {
     const href = await page.locator(".project-source-panel a.button.primary").getAttribute("href");
     if (!isSdkExampleFolder(href, card.id)) failures.push("project detail primary action is not its complete SDK example folder");
   }
