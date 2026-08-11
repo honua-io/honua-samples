@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sample-bundles.mjs (via scripts/build-gallery.mjs / the pages.yml staging step) when the live fetch of honua-sdk-js's sample-bundles-latest release fails, so a samples.honua.io deploy degrades to an honest \"no runnable build published yet\" for every sdk-js sample rather than breaking the deploy. Only manifest metadata is recorded here -- the actual bundle *files* (~8MB+ of built JS/CSS/wasm) are never committed, so a degraded deploy never serves stale or unverified bytes, only the honest no-bundle panel plus this record's builtFrom provenance in the notice. Rewritten automatically whenever a live fetch + full integrity verification succeeds -- commit the change to keep the offline record current. See honua-io/honua-samples#11.",
   "sourceUrl": "https://github.com/honua-io/honua-sdk-js/releases/download/sample-bundles-latest/sample-bundles.v2.json",
-  "fetchedAt": "2026-08-11T02:22:03.130Z",
+  "fetchedAt": "2026-08-11T05:10:54.690Z",
   "manifest": {
     "format": "honua.sdk.sample-bundles.v2",
     "schemaVersion": 2,
@@ -28,7 +28,7 @@
           "reason": "North-star safe-agent flagship rebuilt around plan-bound approval and receipts."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -73,7 +73,7 @@
           "reason": "Focused inline-code-first entry point for GeoArrow and GeoParquet planning; Overture remains the production-shaped large-data project."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -160,7 +160,7 @@
           "reason": "Provide the smallest deterministic OGC API Coverages workflow while WCS/connect discovery matures."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -240,7 +240,7 @@
           "reason": "Credential-free map-first recipe with a self-contained GeocodeServer fixture route and focused desktop/mobile browser coverage."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -309,7 +309,7 @@
           "reason": "Qualified Imagery and Terrain journey with current packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and pinned public STAC/COG live receipts."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -521,7 +521,7 @@
           "reason": "Qualified First Map journey with a governed 2025 Census TIGER/Line fixture, plus immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and separate anonymous live receipts."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -533,13 +533,6 @@
             "mediaType": "application/json"
           },
           {
-            "path": "assets/esm-6VLBuaUa.js",
-            "bytes": 8257,
-            "sha256": "98c3a82be663e74f3cc2cd729e78bd9e1c1d76e2f30e2a13514ab1608b7eca55",
-            "integrity": "sha256-mMOoK+Zj5088ws1ynni9nhwdduLzDioTUUqxYIt+ylU=",
-            "mediaType": "text/javascript"
-          },
-          {
             "path": "assets/esm-B6JxQVfq.js",
             "bytes": 18554,
             "sha256": "2c8845228a3a137328cbe52780016f610ad156f527a0f4118fccbd870fac92ed",
@@ -547,10 +540,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/esm-z06lpmgF.js",
+            "path": "assets/esm-BF98vsZF.js",
+            "bytes": 8257,
+            "sha256": "d452eed2bb06125caacd3880edf32917c55e253094cd126fcfff1b190c765fd5",
+            "integrity": "sha256-1FLu0rsGElyqzTiA7fMpF8VeJTCUzRJvz/8bGQx2X9U=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/esm-BHceIPBz.js",
             "bytes": 69474,
-            "sha256": "fc31496afd3d7da53057fe3801634629c174be01f3fc69c25481fbdfe5f0e4b6",
-            "integrity": "sha256-/DFJav09faUwV/44AWNGKcF0vgHz/GnCVIH73+Xw5LY=",
+            "sha256": "2de9226ce4f601dadb00204c58d9b9c6f0d1e400c5e3d55741ac3ea3b8d10e45",
+            "integrity": "sha256-LekibOT2AdrbACBMWNm5xvDR5ADF49VXQaw+o7jRDkU=",
             "mediaType": "text/javascript"
           },
           {
@@ -575,10 +575,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-DlwmdJhu.js",
+            "path": "assets/grpc-adapter-Cm8-NVO4.js",
             "bytes": 11375,
-            "sha256": "9fbf89f68fa59114ef3600190e8676b7840759ce7a2a01f5651e85de60a1e2a7",
-            "integrity": "sha256-n7+J9o+lkRTvNgAZDoZ2t4QHWc56KgH1ZR6F3mCh4qc=",
+            "sha256": "22a6a641333098a9713220322f81336157f0b67b8d586d4f7e35fcca1ea15319",
+            "integrity": "sha256-IqamQTMwmKlxMiAyL4EzYVfwtnuNWG1PfjX8yh6hUxk=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/index-ARf2b1wd.js",
+            "bytes": 1734391,
+            "sha256": "9a5a5c28483f8f114736e94fca92ec34c5f95cb255049fbd15eaa4d9e087c883",
+            "integrity": "sha256-mlpcKEg/jxFHNulPypLsNMX5XLJVBJ+9Feqk2eCHyIM=",
             "mediaType": "text/javascript"
           },
           {
@@ -587,13 +594,6 @@
             "sha256": "ab3b6eced5354266d2346a46746160cdbb5d53e885ca590820122f89e5e307ee",
             "integrity": "sha256-qztuztU1QmbSNGpGdGFgzbtdU+iFylkIIBIvieXjB+4=",
             "mediaType": "text/css"
-          },
-          {
-            "path": "assets/index-Dl7qNWGX.js",
-            "bytes": 1733633,
-            "sha256": "5e8d88ad548cefd1b71a5d523753f380704232f2e59fc5c6f3c31896d7bf34b2",
-            "integrity": "sha256-Xo2IrVSM79G3Gl1SN1PzgHBCMvLln8XG88MYlte/NLI=",
-            "mediaType": "text/javascript"
           },
           {
             "path": "assets/layer-BiJKvD-i.json",
@@ -610,31 +610,66 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/odata-write-codec-C58YOrET.js",
+            "path": "assets/odata-write-codec-C9vG2Vok.js",
             "bytes": 18695,
-            "sha256": "4e8d5784be67e96a1ba31d658b89085f4efafbebe30b3397c9bf978798c320e0",
-            "integrity": "sha256-To1XhL5n6Wobox1li4kIX076++vjCzOXyb+Xh5jDIOA=",
+            "sha256": "bd6c7215644f95b0dd13eda18f7af2cd3e3f86c300bddfb25545a2232ceb15c8",
+            "integrity": "sha256-vWxyFWRPlbDdE+2hj3ryzT4/hsMAvd+yVUWiIyzrFcg=",
             "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/ogc-api-definition-DY4X0Tld.json",
+            "bytes": 9787,
+            "sha256": "3be9b489ac03e5807ba5f0eb8cb1c561b9b745277b23536553f7f9bb8d96f250",
+            "integrity": "sha256-O+m0iawD5YB7pfDrjLHFYbm3RSd7I1NlU/f5u42W8lA=",
+            "mediaType": "application/json"
+          },
+          {
+            "path": "assets/ogc-collection-Dkt232JH.json",
+            "bytes": 2243,
+            "sha256": "9ae8d24007ce80875cd0ff9322ee91bacd0c9a76e25b423333d5aa3620aba35b",
+            "integrity": "sha256-mujSQAfOgIdc0P+TIu6Rus0MmnbiW0IzM9WqNiCro1s=",
+            "mediaType": "application/json"
+          },
+          {
+            "path": "assets/ogc-conformance-BGAMwFJg.json",
+            "bytes": 162,
+            "sha256": "c6708ab48d2adba1f922fdc47013284135ad330e1fc8c4474cafe38f3b3f2373",
+            "integrity": "sha256-xnCKtI0q26H5Iv3EcBMoQTWtMw4fyMRHTK/jjzs/I3M=",
+            "mediaType": "application/json"
+          },
+          {
+            "path": "assets/ogc-items-BYuH4sXt.json",
+            "bytes": 1206604,
+            "sha256": "c6ebae244538225ec8b038ba03f7d8c00dabea5d08f5db29ce9c9d230ae61e20",
+            "integrity": "sha256-xuuuJEU4Il7IsDi6A/fYwA2r6l0I9dspzpydIwrmHiA=",
+            "mediaType": "application/json"
+          },
+          {
+            "path": "assets/ogc-landing-CF9it_V2.json",
+            "bytes": 2074,
+            "sha256": "6a280f31adee99bd6d187bcc6315d8499255e84193db2276dfb333d8cc7af65d",
+            "integrity": "sha256-aigPMa3umb1tGHvMYxXYSZJV6EGT2yJ237Mz2Mx69l0=",
+            "mediaType": "application/json"
           },
           {
             "path": "first-map-bundle-budget.json",
             "bytes": 245,
-            "sha256": "f920b80e071a9b6bbee57e2d8e9083f9beba3237dd2543ae547da727d71cd4db",
-            "integrity": "sha256-+SC4Dgcam2u+5X4tjpCD+b66MjfdJUOuVH2nJ9cc1Ns=",
+            "sha256": "189807c46cc3e40799a23aef38129dbd76b3f5644d33af4f745aa32cb00e3218",
+            "integrity": "sha256-GJgHxGzD5AeZojrvOBKdvXaz9WRNM69PdFqjLLAOMhg=",
             "mediaType": "application/json"
           },
           {
             "path": "honua-sample-sdk-resolution.json",
-            "bytes": 4080,
-            "sha256": "4b34da75cf5f0cd8fd0e50647fb1aea52c39fe65bbd496d88e67732330dfd804",
-            "integrity": "sha256-SzTadc9fDNj9DlBkf7GupSw5/mW71JbYjmdzIzDf2AQ=",
+            "bytes": 5314,
+            "sha256": "fef2add9e7aaee3f006d831d1060a0c30a8d9df31ca91abc040b4ab9b300742f",
+            "integrity": "sha256-/vKt2eeq7j8AbYMdEGCgwwqNnfMcqRq8BAtKubMAdC8=",
             "mediaType": "application/json"
           },
           {
             "path": "index.html",
             "bytes": 13144,
-            "sha256": "a1c3524d4d7e28824fc60f26489857132f29e18fe8171b3d8f5251c9e22abc39",
-            "integrity": "sha256-ocNSTU1+KIJPxg8mSJhXEy8p4Y/oFxs9j1JRyeIqvDk=",
+            "sha256": "67be1882970224fc85fc186c87f5ec3fd2ccfeaea632f1724b1caf3f04807e68",
+            "integrity": "sha256-Z74YgpcCJPyF/Bhsh/XsP9LM/q6mMvFySxyvPwSAfmg=",
             "mediaType": "text/html"
           }
         ]
@@ -657,15 +692,15 @@
           "reason": "Qualified ArcGIS Migration Workbench journey with immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and deterministic-CLI live receipts."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
           {
             "path": "artifacts/v1/manifest.v1.json",
             "bytes": 6129,
-            "sha256": "ba1104f88834733d2a1f60401d7124196bc0df0764cb6c97790b401b7b73b01c",
-            "integrity": "sha256-uhEE+Ig0cz0qH2BAHXEkGWvA3wdky2yXeQtAG3tzsBw=",
+            "sha256": "4d2882c147e48ebcce7066375d1ab53c0d889e8ed14ca10ef7a44c72b54d468f",
+            "integrity": "sha256-TSiCwUfkjrzOcGY3XRq1PA2Ino7RTKEO96RMcrVNRo8=",
             "mediaType": "application/json"
           },
           {
@@ -685,8 +720,8 @@
           {
             "path": "artifacts/v1/migration-report.v1.json",
             "bytes": 62504,
-            "sha256": "d0be0d3abd77214ec8bdfb14a444c3eb8e8aa82e37dd312fc0266e004f0825b1",
-            "integrity": "sha256-0L4NOr13IU7IvfsUpETD646KqC433TEvwCZuAE8IJbE=",
+            "sha256": "3d98608a18bcebe53898c7b73d224b352fadbb600e9b59a9e43e1db0d95d4c0e",
+            "integrity": "sha256-PZhgihi86+U4mMe3PSJLNS+tu2AOm1mp5D4dsNldTA4=",
             "mediaType": "application/json"
           },
           {
@@ -790,8 +825,8 @@
           {
             "path": "honua-sample-sdk-resolution.json",
             "bytes": 4840,
-            "sha256": "aedfeec1faa2bf9c1e27348ab382c8ac095306ce34743b314640ec3182c3d195",
-            "integrity": "sha256-rt/uwfqiv5weJzSKs4LIrAlTBs40dDsxRkDsMYLD0ZU=",
+            "sha256": "d607581c809c869f13e96e0421235abff672bba06ca10db0c5e26c680a9d3301",
+            "integrity": "sha256-1gdYHICchp8T6W4EISNav/Zyu6BsoQ2wxeJsaAqdMwE=",
             "mediaType": "application/json"
           },
           {
@@ -823,7 +858,7 @@
           "reason": "Headline proof of the plan-first NL map-control layer (#500): BYO LLM, approval envelopes, and execution receipts on a live MapLibre map."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -875,7 +910,7 @@
           "reason": "Large-data flagship now shares one bounded semantic workflow across deterministic fixture and pinned AWS lanes."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -971,7 +1006,7 @@
           "reason": "Maintain the fixture-first public SDK workflow and source/packed browser gates as the planned planning candidate; golden qualification and live evidence remain explicitly unclaimed."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1121,7 +1156,7 @@
           "reason": "Preserve the smallest server-optional vector-tile recipe."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1258,7 +1293,7 @@
           "reason": "Keep one focused React integration recipe without duplicating or redesigning First Map."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1366,7 +1401,7 @@
           "reason": "Flagship realtime journey now proves authority, diagnostics, degradation, concurrency, idempotency, and safe reset."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1425,7 +1460,7 @@
           "reason": "Qualified Universal Service Explorer journey with immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and anonymous dual-protocol live receipts."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1533,7 +1568,7 @@
           "reason": "Retain as the focused terra-draw drawing, snapping, undo, and edit-submission recipe; the planning journey owns the end-to-end planning workflow."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1599,7 +1634,7 @@
           "reason": "Retain as the small credential-free STAC discovery recipe; the imagery journey owns full range, comparison, elevation, and terrain qualification."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1644,7 +1679,7 @@
           "reason": "Canonical demo for first-class renderer objects + temporal playback (#497): renderer-driven styling, legend contracts, and filter-composed time windows."
         },
         "builtFrom": {
-          "commit": "8dbae2624fc830d2e8b7f887cd73decaa0d6c89e",
+          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
