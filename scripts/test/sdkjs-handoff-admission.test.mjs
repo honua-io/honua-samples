@@ -89,9 +89,9 @@ test("preferred v2/v4 snapshot pair admits every legacy identity plus newly publ
   assert.equal(next.handoff.format, undefined, "producer transport version is not exposed in the internal projection");
   const legacyIds = legacy.handoff.cards.map((card) => card.id);
   const nextIds = next.handoff.cards.map((card) => card.id);
-  assert.deepEqual(nextIds.filter((id) => !legacyIds.includes(id)), ["coverages-wcs-basic"]);
+  assert.deepEqual(nextIds.filter((id) => !legacyIds.includes(id)), ["columnar-query-quickstart", "coverages-wcs-basic"]);
   assert.deepEqual(legacyIds.filter((id) => !nextIds.includes(id)), []);
-  assert.equal(next.handoff.canonicalRoutes.length, legacy.handoff.canonicalRoutes.length + 1);
+  assert.equal(next.handoff.canonicalRoutes.length, legacy.handoff.canonicalRoutes.length + 2);
   const nextCardsById = new Map(next.handoff.cards.map((card) => [card.id, card]));
   assert.deepEqual(
     legacy.handoff.cards.map((card) => [card.id, card.source.path, card.source.docsPath]),
