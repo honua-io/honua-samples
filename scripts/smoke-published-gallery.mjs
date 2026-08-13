@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
 import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT, resultTimeoutMs, viewportFailure, visibleViewportRatio } from "./lib/gallery-visual-contract.mjs";
+import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(repoRoot, "site");
@@ -54,6 +55,11 @@ async function main() {
   if (published.length < minimumApps) {
     throw new Error(`gallery browser gate requires ${minimumApps} published standalone app(s), found ${published.length}`);
   }
+  for (const sample of published) {
+    if (sample.builtFrom?.commit !== SDK_PRODUCER_LOCK.revision) {
+      throw new Error(`published sample ${sample.id} is not bound to locked SDK producer ${SDK_PRODUCER_LOCK.revision}`);
+    }
+  }
 
   await mkdir(evidenceDir, { recursive: true });
   const server = createStaticServer();
@@ -83,6 +89,7 @@ async function main() {
   const receipt = {
     format: "honua.samples.gallery-browser-smoke.v1",
     generatedAt: new Date().toISOString(),
+    samplesSourceCommit: process.env.EXPECTED_SOURCE_COMMIT ?? null,
     sourceBundleCommit: published[0]?.builtFrom?.commit ?? null,
     summary: {
       required: minimumApps,

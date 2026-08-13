@@ -8,6 +8,7 @@ import {
   parseMinimumBundles,
   validateManifestShape,
 } from "../lib/sample-bundles.mjs";
+import { SDK_PRODUCER_LOCK } from "../lib/sdk-producer-lock.mjs";
 
 const validManifest = {
   format: "honua.sdk.sample-bundles.v2",
@@ -35,8 +36,8 @@ const validManifest = {
   ],
 };
 
-test("defaults to the current v2 rolling manifest", () => {
-  assert.match(DEFAULT_MANIFEST_URL, /sample-bundles\.v2\.json$/);
+test("defaults to the immutable producer-locked v2 manifest asset", () => {
+  assert.equal(DEFAULT_MANIFEST_URL, SDK_PRODUCER_LOCK.urls.bundleManifest);
 });
 
 test("accepts the producer's v2 manifest contract", () => {

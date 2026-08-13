@@ -65,11 +65,12 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { SDK_PRODUCER_LOCK, assertLockedProducerUrl } from "./sdk-producer-lock.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
-export const SDKJS_REPO = "honua-io/honua-sdk-js";
+export const SDKJS_REPO = SDK_PRODUCER_LOCK.repository;
 export const SUPPORTED_HANDOFF_FORMAT = "honua.site.sdk-sample-consumer-handoff.v1";
 export const SUPPORTED_HANDOFF_SCHEMA_VERSION = 1;
 export const SUPPORTED_FIXTURE_FORMAT = "honua.site.sdk-sample-consumer-fixture.v3";
@@ -99,17 +100,17 @@ const NEXT_CONTRACT = Object.freeze({
 const SUPPORTED_CONTRACTS = Object.freeze([NEXT_CONTRACT, LEGACY_CONTRACT]);
 
 export const DEFAULT_HANDOFF_URL =
-  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v1.json";
+  SDK_PRODUCER_LOCK.urls.handoffV1;
 export const DEFAULT_HANDOFF_FIXTURE_URL =
-  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/contract/v2/consumer-fixtures/honua-site-consumer.v3.json";
+  SDK_PRODUCER_LOCK.urls.fixtureV3;
 export const DEFAULT_HANDOFF_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.snapshot.json");
 export const DEFAULT_FIXTURE_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff-fixture.snapshot.json");
 export const DEFAULT_SNAPSHOT_META_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.snapshot.meta.json");
 
 export const DEFAULT_HANDOFF_V2_URL =
-  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v2.json";
+  SDK_PRODUCER_LOCK.urls.handoffV2;
 export const DEFAULT_FIXTURE_V4_URL =
-  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json";
+  SDK_PRODUCER_LOCK.urls.fixtureV4;
 export const DEFAULT_HANDOFF_V2_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.v2.snapshot.json");
 export const DEFAULT_FIXTURE_V4_SNAPSHOT_PATH = path.join(
   REPO_ROOT,
@@ -529,6 +530,10 @@ export async function loadSdkJsHandoff({
   now = new Date(),
   fetchTextFn = fetchText,
 } = {}) {
+  assertLockedProducerUrl("handoffV2", nextHandoffUrl);
+  assertLockedProducerUrl("fixtureV4", nextFixtureUrl);
+  assertLockedProducerUrl("handoffV1", handoffUrl);
+  assertLockedProducerUrl("fixtureV3", fixtureUrl);
   const nextLive = await acquireLivePair({
     handoffUrl: nextHandoffUrl,
     fixtureUrl: nextFixtureUrl,

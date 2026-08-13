@@ -40,15 +40,50 @@ export function bindSdkSourceToBundle({ repository, sourcePath, docsPath = null,
   }
 
   const repositoryRoot = `https://github.com/${repository}`;
+  const sourceTreeUrl = validateBoundSdkUrl(`${repositoryRoot}/tree/${revision}/${sourcePath}`, {
+    repository,
+    revision,
+    kind: "tree",
+  });
+  const docsUrl = docsPath
+    ? validateBoundSdkUrl(`${repositoryRoot}/blob/${revision}/${docsPath}`, {
+        repository,
+        revision,
+        kind: "blob",
+      })
+    : null;
   return Object.freeze({
     revision,
     repositoryRoot,
-    sourceTreeUrl: `${repositoryRoot}/tree/${revision}/${sourcePath}`,
-    docsUrl: docsPath ? `${repositoryRoot}/blob/${revision}/${docsPath}` : null,
+    sourceTreeUrl,
+    docsUrl,
     rawRoot: `https://raw.githubusercontent.com/${repository}/${revision}/${sourcePath}`,
   });
 }
 
 export function isFullGitSha(value) {
   return FULL_GIT_SHA.test(value ?? "");
+}
+
+export function validateBoundSdkUrl(value, { repository, revision, kind }) {
+  if (typeof value !== "string" || /[\u0000-\u001f\u007f'"<>`]/u.test(value)) {
+    throw new Error("SDK source URL contains characters that are unsafe in an HTML attribute");
+  }
+  if (!isFullGitSha(revision) || !["blob", "tree"].includes(kind)) {
+    throw new Error("SDK source URL validation requires an immutable revision and a blob/tree kind");
+  }
+  const url = new URL(value);
+  const expectedPrefix = `/${repository}/${kind}/${revision}/`;
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "github.com" ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    !url.pathname.startsWith(expectedPrefix)
+  ) {
+    throw new Error(`SDK source URL is not bound to ${repository}@${revision}`);
+  }
+  return url.toString();
 }

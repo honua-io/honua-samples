@@ -1,7 +1,7 @@
 // Fetches, integrity-verifies, and stages honua-sdk-js's published browser
 // sample bundles so scripts/build-gallery.mjs can embed the *actual running
 // app* on a gallery detail page (honua-io/honua-samples#11, consuming
-// honua-io/honua-sdk-js#642/#648's `sample-bundles-latest` GitHub Release).
+// honua-io/honua-sdk-js#642/#648's immutable release asset IDs).
 //
 // Contract consumed (honua-sdk-js's samples/contract/v2/schemas/sample-bundles.schema.json,
 // format "honua.sdk.sample-bundles.v2"): a manifest JSON asset
@@ -9,9 +9,9 @@
 // dataMode, configDefaults, builtFrom {commit, packageVersion}, and a
 // `files[]` array of {path, bytes, sha256, integrity, mediaType} -- plus a
 // tarball asset (sample-bundles.tar.gz) containing `<id>/<file.path>` for
-// every listed file. Both assets are published on the release tagged
-// `sample-bundles-latest` (a rolling tag re-pointed at the latest trunk push
-// that built successfully).
+// every listed file. Both assets are retained under
+// vendor/sdk-producer/<commit>/ after byte and digest verification against the
+// original producer release.
 //
 // HONESTY RULES (see honua-io/honua-samples#11):
 //   - Every file extracted from the tarball is SHA-256-verified against the
@@ -53,17 +53,24 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  SDK_PRODUCER_LOCK,
+  assertLockedAssetDigest,
+  assertLockedProducerRevision,
+  assertLockedProducerUrl,
+  isSdkProducerLockError,
+  lockedAssetRequestHeaders,
+  sdkProducerLockEnforced,
+} from "./sdk-producer-lock.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
-export const SDKJS_REPO = "honua-io/honua-sdk-js";
-export const RELEASE_TAG = "sample-bundles-latest";
+export const SDKJS_REPO = SDK_PRODUCER_LOCK.repository;
+export const RELEASE_TAG = `vendored-${SDK_PRODUCER_LOCK.revision}`;
 
-const RELEASE_BASE_URL = `https://github.com/${SDKJS_REPO}/releases/download/${RELEASE_TAG}`;
-
-export const DEFAULT_MANIFEST_URL = `${RELEASE_BASE_URL}/sample-bundles.v2.json`;
-export const DEFAULT_TARBALL_URL = `${RELEASE_BASE_URL}/sample-bundles.tar.gz`;
+export const DEFAULT_MANIFEST_URL = SDK_PRODUCER_LOCK.urls.bundleManifest;
+export const DEFAULT_TARBALL_URL = SDK_PRODUCER_LOCK.urls.bundleArchive;
 export const DEFAULT_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sample-bundles.snapshot.json");
 export const DEFAULT_STAGING_ROOT = path.join(REPO_ROOT, ".sample-bundles-staging");
 export const DEFAULT_LOCAL_SDKJS_ROOT = path.join(REPO_ROOT, "..", "honua-sdk-js");
@@ -102,12 +109,16 @@ export async function ensureSampleBundlesStaged({
   forceRefetch = false,
   minimumBundles = parseMinimumBundles(process.env.MIN_RUNNABLE_BUNDLES),
 } = {}) {
+  assertLockedProducerUrl("bundleManifest", manifestUrl);
+  assertLockedProducerUrl("bundleArchive", tarballUrl);
+  const expectedRevision = sdkProducerLockEnforced() ? SDK_PRODUCER_LOCK.revision : undefined;
   const statusPath = path.join(stagingRoot, "status.json");
   const localSdkRootAvailable = await canUseLocalSdkJsRoot(localSdkJsRoot);
 
   if (!forceRefetch) {
     const cached = await readCachedStatus(statusPath);
     if (cached) {
+      validateManifestShape(cached.manifest, { expectedRevision });
       assertMinimumBundles(cached, minimumBundles);
       return cached;
     }
@@ -117,6 +128,7 @@ export async function ensureSampleBundlesStaged({
   try {
     manifest = await fetchManifest(manifestUrl);
   } catch (err) {
+    if (sdkProducerLockEnforced() || isSdkProducerLockError(err)) throw err;
     const result = await finalizeDegraded({
       stagingRoot,
       statusPath,
@@ -131,6 +143,7 @@ export async function ensureSampleBundlesStaged({
   try {
     tarballBytes = await fetchBytes(tarballUrl);
   } catch (err) {
+    if (sdkProducerLockEnforced() || isSdkProducerLockError(err)) throw err;
     const result = await finalizeDegraded({
       stagingRoot,
       statusPath,
@@ -155,6 +168,7 @@ export async function ensureSampleBundlesStaged({
   });
   const localStagedIds = await stageLocalBundles(localEntries, stagingRoot);
   manifest = mergeLocalManifestEntries(manifest, localEntries);
+  validateManifestShape(manifest, { expectedRevision });
 
   const allStagedIds = [...new Set([...stagedIds, ...localStagedIds])];
   assertMinimumBundles({ manifest, stagedIds: allStagedIds, degradedReason: null }, minimumBundles);
@@ -418,14 +432,16 @@ function describeSnapshotCommit(manifest) {
 }
 
 async function fetchManifest(manifestUrl) {
-  const response = await fetch(manifestUrl);
-  if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${manifestUrl}`);
-  const manifest = await response.json();
-  validateManifestShape(manifest);
+  const bytes = await readAcquisitionBytes(manifestUrl);
+  assertLockedAssetDigest("bundleManifest", bytes);
+  const manifest = JSON.parse(bytes.toString("utf8"));
+  validateManifestShape(manifest, {
+    expectedRevision: sdkProducerLockEnforced() ? SDK_PRODUCER_LOCK.revision : undefined,
+  });
   return manifest;
 }
 
-function validateManifestShape(manifest) {
+function validateManifestShape(manifest, { expectedRevision } = {}) {
   if (manifest?.format !== EXPECTED_FORMAT) {
     throw new Error(`unexpected manifest format ${JSON.stringify(manifest?.format)} (expected "${EXPECTED_FORMAT}")`);
   }
@@ -454,6 +470,11 @@ function validateManifestShape(manifest) {
     if (typeof sample.builtFrom?.packageVersion !== "string" || sample.builtFrom.packageVersion.length === 0) {
       throw new Error(`manifest sample ${JSON.stringify(sample.id)} is missing builtFrom.packageVersion`);
     }
+    if (expectedRevision) {
+      assertLockedProducerRevision(sample.builtFrom.commit, `manifest sample ${JSON.stringify(sample.id)}`, {
+        enforce: true,
+      });
+    }
   }
 }
 
@@ -479,7 +500,14 @@ export function assertMinimumBundles(result, minimumBundles) {
 }
 
 async function fetchBytes(url) {
-  const response = await fetch(url);
+  const bytes = await readAcquisitionBytes(url);
+  assertLockedAssetDigest("bundleArchive", bytes);
+  return bytes;
+}
+
+async function readAcquisitionBytes(url) {
+  if (url.startsWith("file:")) return Buffer.from(await readFile(fileURLToPath(url)));
+  const response = await fetch(url, { headers: lockedAssetRequestHeaders(url) });
   if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
   return Buffer.from(await response.arrayBuffer());
 }
@@ -577,13 +605,10 @@ async function writeSnapshot(snapshotPath, sourceUrl, manifest) {
   const snapshot = {
     _comment:
       "Committed fallback snapshot consumed by scripts/lib/sample-bundles.mjs (via scripts/build-gallery.mjs / " +
-      "the pages.yml staging step) when the live fetch of honua-sdk-js's sample-bundles-latest release fails, " +
-      "so a samples.honua.io deploy degrades to an honest \"no runnable build published yet\" for every sdk-js " +
-      "sample rather than breaking the deploy. Only manifest metadata is recorded here -- the actual bundle " +
-      "*files* (~8MB+ of built JS/CSS/wasm) are never committed, so a degraded deploy never serves stale or " +
-      "unverified bytes, only the honest no-bundle panel plus this record's builtFrom provenance in the notice. " +
-      "Rewritten automatically whenever a live fetch + full integrity verification succeeds -- commit the change " +
-      "to keep the offline record current. See honua-io/honua-samples#11.",
+      "the pages.yml staging step) if the content-addressed vendored honua-sdk-js archive is unavailable. " +
+      "Only manifest metadata is recorded here; runnable files are staged from the byte-verified vendored archive, " +
+      "never from this fallback JSON. Rewritten automatically whenever staging and full integrity verification " +
+      "succeed. See honua-io/honua-samples#11.",
     sourceUrl,
     fetchedAt: new Date().toISOString(),
     manifest,

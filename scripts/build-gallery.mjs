@@ -38,7 +38,7 @@
 // Detail pages also embed the ACTUAL RUNNING SAMPLE wherever a
 // sha256-verified static browser bundle has been staged for it
 // (honua-io/honua-samples#11, consuming honua-sdk-js#642/#648's
-// sample-bundles-latest release via scripts/lib/sample-bundles.mjs) --
+// immutable content-locked release via scripts/lib/sample-bundles.mjs) --
 // never a fake/broken iframe: an sdk-js entry with no staged bundle gets an
 // explicit "no runnable build published yet" panel, and this repo's own
 // headless/CLI samples get a labeled "headless sample" panel instead of an
@@ -74,7 +74,8 @@ import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs"
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
 import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
-import { bindSdkSourceToBundle } from "./lib/sdk-source-binding.mjs";
+import { bindSdkSourceToBundle, isFullGitSha, validateBoundSdkUrl } from "./lib/sdk-source-binding.mjs";
+import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
 
@@ -565,7 +566,7 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     sourceRepo: "honua-sdk-js",
     detailUrl: `${GALLERY_BASE_URL}/sdk/${id}/`,
     detailPath: `/sdk/${id}/`,
-    githubUrl: sourceBinding?.sourceTreeUrl ?? `https://github.com/${SDKJS_REPO}/tree/trunk/${entry.source.path}`,
+    githubUrl: sourceBinding?.sourceTreeUrl ?? null,
     sourcePath: entry.source.path,
     docsUrl: sourceBinding?.docsUrl ?? null,
     sourceRevision: sourceBinding?.revision ?? null,
@@ -1252,8 +1253,8 @@ ${capabilityChips(card.capabilities, keyByKey)}
 ${renderSdkEvidenceSection(card)}
 ${card.contentKind === "project" ? renderProjectSourcePanel(card) : ""}
 <p>
-  ${card.githubUrl ? `<a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a>` : ""}
-  ${card.docsUrl ? ` · <a href="${card.docsUrl}" target="_blank" rel="noopener noreferrer">Docs ↗</a>` : ""}
+  ${card.githubUrl ? `<a href="${escapeAttr(card.githubUrl)}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a>` : ""}
+  ${card.docsUrl ? ` · <a href="${escapeAttr(card.docsUrl)}" target="_blank" rel="noopener noreferrer">Docs ↗</a>` : ""}
 </p>
 `;
   return pageShell({
@@ -1273,7 +1274,7 @@ function renderRemoteCodePanel(card) {
   }
   return `<section class="code-view remote-code code-first-preview" data-source-root="${escapeAttr(card.sourceRawRoot)}" data-source-path="${escapeAttr(card.sourcePath)}" data-source-revision="${escapeAttr(card.sourceRevision)}" data-github-url="${escapeAttr(card.githubUrl)}">
   <details class="remote-code-details"><summary><span>CODE FIRST</span><strong data-source-name>Finding the primary source file…</strong><em>Expand source</em></summary>
-    <div class="code-toolbar"><div><span>EXACT BUNDLE SOURCE</span><strong>honua-sdk-js @ ${escapeHtml(card.sourceRevision.slice(0, 12))}</strong></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
+    <div class="code-toolbar"><div><span>EXACT BUNDLE SOURCE</span><strong>honua-sdk-js @ ${escapeHtml(card.sourceRevision.slice(0, 12))}</strong></div><a href="${escapeAttr(card.githubUrl)}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
     <pre tabindex="0"><code data-source-code>Loading source from honua-sdk-js…</code></pre>
     <p class="source-note" data-source-note>This preview and the runnable browser bundle are bound to the same immutable producer commit.</p>
   </details>
@@ -1308,8 +1309,8 @@ function renderSdkEvidenceSection(card) {
   }
   if (card.evidence?.live) {
     const live = card.evidence.live;
-    const evidenceRevision = card.sourceRevision ?? "trunk";
-    const evidenceLink = live.evidencePath
+    const evidenceRevision = isFullGitSha(card.sourceRevision) ? card.sourceRevision : null;
+    const evidenceLink = live.evidencePath && evidenceRevision
       ? ` <a href="https://github.com/${SDKJS_REPO}/blob/${escapeAttr(evidenceRevision)}/${escapeAttr(live.evidencePath)}" target="_blank" rel="noopener noreferrer">Receipt ↗</a>`
       : "";
     rows.push(
@@ -1321,13 +1322,17 @@ function renderSdkEvidenceSection(card) {
   }
   for (const journey of card.qualifiedJourneys ?? []) {
     const ve = journey.visualEvidence ?? {};
-    const evidenceRevision = ve.source?.revision ?? card.sourceRevision ?? "trunk";
-    const shots = (ve.screenshots ?? [])
+    const evidenceRevision = isFullGitSha(ve.source?.revision)
+      ? ve.source.revision
+      : isFullGitSha(card.sourceRevision)
+        ? card.sourceRevision
+        : null;
+    const shots = evidenceRevision ? (ve.screenshots ?? [])
       .map(
         (s) =>
           `<a href="https://github.com/${SDKJS_REPO}/blob/${escapeAttr(evidenceRevision)}/${escapeAttr(s.sourcePath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.variant)} ↗</a>`,
       )
-      .join(" · ");
+      .join(" · ") : "";
     rows.push(
       `<li>Qualified journey <code>${escapeHtml(journey.journeyId)}</code> — evidence binding <code>${escapeHtml(journey.evidenceBindingId ?? "—")}</code>, observed ${escapeHtml(ve.observedAt ?? "unknown")}, window until ${escapeHtml(ve.expiresAt ?? "unknown")}${shots ? ` — screenshots: ${shots}` : ""}</li>`,
     );
@@ -1358,7 +1363,7 @@ function renderSdkStatusStubPage(entry, generatedAt, sourceCommit, bundleNotice)
 <div class="no-bundle-panel"><p><strong>Internal SDK fixture — not a public sample.</strong>
 The authoritative honua-sdk-js site-consumer handoff does not publish this entry as a public card
 ${entry.lifecycle?.reason ? `(${escapeHtml(entry.lifecycle.reason)})` : ""}, so it is not listed in the gallery.</p></div>
-${entry.sourcePath ? `<p><a href="https://github.com/${SDKJS_REPO}/tree/trunk/${escapeAttr(entry.sourcePath)}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a></p>` : ""}
+${entry.sourcePath ? `<p><a href="https://github.com/${SDKJS_REPO}/tree/${SDK_PRODUCER_LOCK.revision}/${escapeAttr(entry.sourcePath)}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a></p>` : ""}
 `;
   return pageShell({
     title: `${entry.title ?? entry.id} — Honua Samples`,
@@ -1405,7 +1410,12 @@ async function bindEmbeddedBundleDocumentationLinks(card, appDir) {
     if (!html.includes(link.from)) {
       throw new Error(`bundle ${card.id} no longer contains governed documentation link ${link.from}`);
     }
-    await writeFile(filePath, html.replace(link.from, `href="${escapeHtml(card.docsUrl)}"`), "utf8");
+    const docsUrl = validateBoundSdkUrl(card.docsUrl, {
+      repository: SDK_PRODUCER_LOCK.repository,
+      revision: card.sourceRevision,
+      kind: "blob",
+    });
+    await writeFile(filePath, html.replace(link.from, `href="${escapeAttr(docsUrl)}"`), "utf8");
   }
 }
 
