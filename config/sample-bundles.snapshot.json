@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sample-bundles.mjs (via scripts/build-gallery.mjs / the pages.yml staging step) when the live fetch of honua-sdk-js's sample-bundles-latest release fails, so a samples.honua.io deploy degrades to an honest \"no runnable build published yet\" for every sdk-js sample rather than breaking the deploy. Only manifest metadata is recorded here -- the actual bundle *files* (~8MB+ of built JS/CSS/wasm) are never committed, so a degraded deploy never serves stale or unverified bytes, only the honest no-bundle panel plus this record's builtFrom provenance in the notice. Rewritten automatically whenever a live fetch + full integrity verification succeeds -- commit the change to keep the offline record current. See honua-io/honua-samples#11.",
   "sourceUrl": "https://github.com/honua-io/honua-sdk-js/releases/download/sample-bundles-latest/sample-bundles.v2.json",
-  "fetchedAt": "2026-08-11T05:10:54.690Z",
+  "fetchedAt": "2026-08-13T07:17:48.207Z",
   "manifest": {
     "format": "honua.sdk.sample-bundles.v2",
     "schemaVersion": 2,
@@ -28,7 +28,7 @@
           "reason": "North-star safe-agent flagship rebuilt around plan-bound approval and receipts."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -40,17 +40,17 @@
             "mediaType": "text/css"
           },
           {
-            "path": "assets/index-Bwjz2KOY.js",
-            "bytes": 198098,
-            "sha256": "a7f9e95319c2032a95c0f6ce0752243f9408a2db3b4e96afe3000e6641ef51ad",
-            "integrity": "sha256-p/npUxnCAyqVwPbOB1IkP5QIots7Tpav4wAOZkHvUa0=",
+            "path": "assets/index-fA1i8Qs1.js",
+            "bytes": 198627,
+            "sha256": "d0a74bbd25b2677445a6e405e7f2d6f74bdf98cd2e831ba4139317cc539abb5f",
+            "integrity": "sha256-0KdLvSWyZ3RFpuQF5/LW90vfmM0ugxukE5MXzFOau18=",
             "mediaType": "text/javascript"
           },
           {
             "path": "index.html",
             "bytes": 5776,
-            "sha256": "95c982398f9e3ad59b192dcee459451ba2420f338663e928a5d02a4ad1d42a95",
-            "integrity": "sha256-lcmCOY+eOtWbGS3O5FlFG6JCDzOGY+kopdAqStHUKpU=",
+            "sha256": "e86709531c85160eeb5ea6ca88f5fa4efc222e9a3e4aeab57cead43868a8da44",
+            "integrity": "sha256-6GcJUxyFFg7rXqbKiPX6TvwiLpo+Suq1fOrUOGio2kQ=",
             "mediaType": "text/html"
           }
         ]
@@ -70,32 +70,39 @@
         },
         "lifecycle": {
           "state": "active",
-          "reason": "Focused inline-code-first entry point for GeoArrow and GeoParquet planning; Overture remains the production-shaped large-data project."
+          "reason": "Map-first fixture workflow for exact Honua Arrow interoperability; Overture remains the complete production-shaped browser GeoParquet project."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
           {
-            "path": "assets/duckdb-browser-4Q3NKCrT.js",
-            "bytes": 201231,
-            "sha256": "34a2b382c24c3a7fcce1dcf98a0a401fa128a27a693c5e42baef3db195cf54df",
-            "integrity": "sha256-NKKzgsJMOn/M4dz5igpAH6EoonppPF5Cuu89sZXPVN8=",
+            "path": "assets/Arrow.dom-pdeLHRS_.js",
+            "bytes": 205998,
+            "sha256": "4f5c2f45174518faedafa621b4781ef55900684324365e5973d7d1f4217df37b",
+            "integrity": "sha256-T1wvRRdFGPrtr6YhtHge9VkAaEMkNl5Zc9fR9CF983s=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/esm-CeHkVY0D.js",
-            "bytes": 8252,
-            "sha256": "d4db0a2e13029a6b7fa2871ecb9e727e2e43199846ba0874634d25a6f5478972",
-            "integrity": "sha256-1NsKLhMCmmt/oocey55yfi5DGZhGugh0Y00lpvVHiXI=",
+            "path": "assets/duckdb-browser-j9v3k2UE.js",
+            "bytes": 31363,
+            "sha256": "cd6257c203ab21afb7b6941a5d5c3383a95093335bb84b391981421834c9efae",
+            "integrity": "sha256-zWJXwgOrIa+3tpQaXVwzg6lQkzNbuEs5GYFCGDTJ764=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/esm-D7yE_Xr2.js",
-            "bytes": 69575,
-            "sha256": "997c1bbee8804a6da2008f115eadac4c40efab420d3fe72b36ded9bfba01dcd9",
-            "integrity": "sha256-mXwbvuiASm2iAI8RXq2sTEDvq0INP+crNt7Zv7oB3Nk=",
+            "path": "assets/esm-DmlFuDHG.js",
+            "bytes": 69474,
+            "sha256": "b614265501432a143e1a772fc2cff7e08844f26a07ea50b7dd6baca1d95f6543",
+            "integrity": "sha256-thQmVQFDKhQ+Gncvws/34IhE8moH6lC33WusodlfZUM=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/esm-gaAEd7bw.js",
+            "bytes": 8257,
+            "sha256": "0f1d3fcb17bf6f208533659adad574d93db179076f964439443ebd9e5390544d",
+            "integrity": "sha256-Dx0/yxe/byCFM2Wa2tV02T2xeQdvlkQ5RD69nlOQVE0=",
             "mediaType": "text/javascript"
           },
           {
@@ -113,31 +120,38 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-CySimF-6.js",
+            "path": "assets/grpc-adapter-BJYPJpZR.js",
             "bytes": 11375,
-            "sha256": "b00201c033213aed42f2d3cbcd30272c78943a9b6d08c3ded12eeb2a3689e581",
-            "integrity": "sha256-sAIBwDMhOu1C8tPLzTAnLHiUOpttCMPe0S7rKjaJ5YE=",
+            "sha256": "143532736baeedf553bd16557b0375ca1bcc3735aaf42eec1e250a3d719ff0c6",
+            "integrity": "sha256-FDUyc2uu7fVTvRZVewN1yhvMNzWq9C7sHiUKPXGf8MY=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index-G_2sFw9Y.css",
-            "bytes": 774,
-            "sha256": "594ddcd81df2e6030995fd2aefdcfa2e6b2e69b177cc3bb6ee66440034fb6b42",
-            "integrity": "sha256-WU3c2B3y5gMJlf0q79z6LmsuabF3zDu27mZEADT7a0I=",
+            "path": "assets/index-FO1uy13p.js",
+            "bytes": 1364337,
+            "sha256": "c3ea351602db9fb474c229a2858b3dd7533f91b51d469d828f5632b6ddf594f3",
+            "integrity": "sha256-w+o1FgLbn7R0wimihYs911M/kbUdRp2Cj1Yytt31lPM=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/index-XBVaglHV.css",
+            "bytes": 75716,
+            "sha256": "163921bf33bccfc7a6d11a2a39d56d75bca38deb8c22f591a72c6678474a0bdf",
+            "integrity": "sha256-FjkhvzO8z8em0RoqOdVtdbyjjeuMIvWRpyxmeEdKC98=",
             "mediaType": "text/css"
           },
           {
-            "path": "assets/index-yQsj-uNn.js",
-            "bytes": 370867,
-            "sha256": "4c675cc977b2000549f1281ff0a99c102d857e6d02268faa123011f2bc2dca78",
-            "integrity": "sha256-TGdcyXeyAAVJ8Sgf8KmcEC2Ffm0CJo+qEjAR8rwtyng=",
+            "path": "assets/maplibre-gl-worker-D8-8q1nl.js",
+            "bytes": 467527,
+            "sha256": "dfdffdaf2c58028782ea7335d88a901d37ac5c242117922ff6f79398caf8e120",
+            "integrity": "sha256-39/9ryxYAoeC6nM12IqQHTesXCQhF5Iv9veTmMr44SA=",
             "mediaType": "text/javascript"
           },
           {
             "path": "index.html",
-            "bytes": 654,
-            "sha256": "5ded5e428f38c26b8bd7bd2c1d5356853aa76bf2a7951194b839839dcab59160",
-            "integrity": "sha256-Xe1eQo84wmuL170sHVNWhTqna/KnlRGUuDmDncq1kWA=",
+            "bytes": 4541,
+            "sha256": "acb8906964a2ebce04514767dac55b7e3415da4c8b360020d1d06f81d61e9abf",
+            "integrity": "sha256-rLiQaWSi684EUUdn2sVbfjQV2kyLNgAg0dBvgdYemr8=",
             "mediaType": "text/html"
           }
         ]
@@ -157,10 +171,10 @@
         },
         "lifecycle": {
           "state": "active",
-          "reason": "Provide the smallest deterministic OGC API Coverages workflow while WCS/connect discovery matures."
+          "reason": "Provide browser-qualified deterministic Coverages/WCS evidence while anonymous live canaries and connect discovery remain open."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -193,31 +207,38 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-fjuOzuNq.js",
+            "path": "assets/grpc-adapter-D-wJxzeo.js",
             "bytes": 11375,
-            "sha256": "d87e22df28e50f93284ffab7bf3fc7381ea10f7164aaccaeeb48e348c1f3f726",
-            "integrity": "sha256-2H4i3yjlD5MoT/q3vz/HOB6hD3Fkqsyu60jjSMHz9yY=",
+            "sha256": "7efc4c19e1b631bff07bf78be20952b1503f47a276bc2ae6d39528e5e491df08",
+            "integrity": "sha256-fvxMGeG2Mb/we/eL4glSsVA/R6J2vCrm05Uo5eSR3wg=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index-BO0N9PWV.css",
-            "bytes": 2170,
-            "sha256": "0ccc14ddb49ad8cf6c4753b680177b542484c7031a543cd42d3c2aacac4002c4",
-            "integrity": "sha256-DMwU3bSa2M9sR1O2gBd7VCSExwMaVDzULTwqrKxAAsQ=",
+            "path": "assets/index-C6-ULjDI.css",
+            "bytes": 75747,
+            "sha256": "ac7e9741a8a7e04077062c7ad25dc6208ef8dee0a86e880202ae11796e8cd71b",
+            "integrity": "sha256-rH6XQain4EB3Bix60l3GII743uCobogCAq4ReW6M1xs=",
             "mediaType": "text/css"
           },
           {
-            "path": "assets/index-DUv9OlKz.js",
-            "bytes": 242232,
-            "sha256": "12b361d7feee9c452f4a00ead9c53eb25d1f1e3531ade12c60c3b59c0ca4f495",
-            "integrity": "sha256-ErNh1/7unEUvSgDq2cU+sl0fHjUxreEsYMO1nAyk9JU=",
+            "path": "assets/index-CtI_MZkp.js",
+            "bytes": 1192756,
+            "sha256": "2761c4c1e050b6430624da794b091a00a3be472312e2ece4dcda983e96880cd3",
+            "integrity": "sha256-J2HEweBQtkMGJNp5SwkaAKO+RyMS4uzk3NqYPpaIDNM=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/maplibre-gl-worker-D8-8q1nl.js",
+            "bytes": 467527,
+            "sha256": "dfdffdaf2c58028782ea7335d88a901d37ac5c242117922ff6f79398caf8e120",
+            "integrity": "sha256-39/9ryxYAoeC6nM12IqQHTesXCQhF5Iv9veTmMr44SA=",
             "mediaType": "text/javascript"
           },
           {
             "path": "index.html",
-            "bytes": 1662,
-            "sha256": "099dc16bf2778a017edc5d066e96d0c03db58e9b5a9fa54d6148733a6e3e08d7",
-            "integrity": "sha256-CZ3Ba/J3igF+3F0GbpbQwD21jptan6VNYUhzOm4+CNc=",
+            "bytes": 5007,
+            "sha256": "e072c9a7c673ef1b094f09a1d1c7febcb2c566be1fff62be89ebde3dab232304",
+            "integrity": "sha256-4HLJp8Zz7xsJTwmh0cf+vLLFZr4f/2K+ievePasjIwQ=",
             "mediaType": "text/html"
           }
         ]
@@ -240,7 +261,7 @@
           "reason": "Credential-free map-first recipe with a self-contained GeocodeServer fixture route and focused desktop/mobile browser coverage."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -252,10 +273,10 @@
             "mediaType": "text/css"
           },
           {
-            "path": "assets/index-CTlI2www.js",
-            "bytes": 973184,
-            "sha256": "865707281ca934bc93fdb17698be184402e5307464bbf6eb5f2fb641b2a691dd",
-            "integrity": "sha256-hlcHKBypNLyT/bF2mL4YRALlMHRku/brXy+2QbKmkd0=",
+            "path": "assets/index-wmZ3-kGx.js",
+            "bytes": 973713,
+            "sha256": "9a015751ae09f12a6182dcc1287324c503dee894b0a64344ab25ac1c71123724",
+            "integrity": "sha256-mgFXUa4J8SphgtzBKHMkxQPe6JSwpkNEqyWsHHESNyQ=",
             "mediaType": "text/javascript"
           },
           {
@@ -268,8 +289,8 @@
           {
             "path": "index.html",
             "bytes": 3674,
-            "sha256": "618966dbc7475695f898c92e710b8395db674b73bb6fa117d889931be2d82863",
-            "integrity": "sha256-YYlm28dHVpX4mMkucQuDldtnS3O7b6EX2ImTG+LYKGM=",
+            "sha256": "6e8998aff8eb43031c637beb3a11933136c7bf277c8885e8339977c5d50cf779",
+            "integrity": "sha256-bomYr/jrQwMcY3vrOhGTMTbHvyd8iIXoM5l3xdUM93k=",
             "mediaType": "text/html"
           },
           {
@@ -288,17 +309,9 @@
         "configDefaults": {
           "VITE_HONUA_IMAGERY_BASE_URL": null
         },
-        "runtimeHosting": "same-origin-fixture-service",
-        "runnability": "requires-host-fixture-service",
-        "hostFixtureRoutes": [
-          "/api/v1/terrain/OahuTerrain/elevation/value",
-          "/fixtures/cog/",
-          "/fixtures/imagery/cog/",
-          "/rest/services/OahuCog/ImageServer",
-          "/rest/services/OahuImagery/MapServer/WMS",
-          "/rest/services/OahuTerrain/ImageServer",
-          "/stac/search"
-        ],
+        "runtimeHosting": "self-contained",
+        "runnability": "standalone",
+        "hostFixtureRoutes": [],
         "support": {
           "tier": "supported",
           "track": "golden",
@@ -309,7 +322,7 @@
           "reason": "Qualified Imagery and Terrain journey with current packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and pinned public STAC/COG live receipts."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -335,17 +348,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/esm-BgBY4F2e.js",
-            "bytes": 69476,
-            "sha256": "da0ba056c58d736aa6b6653eaf41ab0ad3e76d77fe6eea27a4469abd08b4a112",
-            "integrity": "sha256-2gugVsWNc2qmtmU+r0GrCtPnbXf+buonpEaavQi0oRI=",
+            "path": "assets/esm-DhqUAdMI.js",
+            "bytes": 69474,
+            "sha256": "155f9a11b9ab1d642680e15902c24f37ee3b14d06fd73bf8a66f8b4c49c42538",
+            "integrity": "sha256-FV+aEbmrHWQmgOFZAsJPN+47FNBv1zv4pm+LTEnEJTg=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/esm-WaYqnrrd.js",
+            "path": "assets/esm-dwKqKSM4.js",
             "bytes": 8257,
-            "sha256": "1a8487724f7ca795e6744d5b4630e48294327673d44bd6f698579daba3ba6598",
-            "integrity": "sha256-GoSHck98p5XmdE1bRjDkgpQydnPUS9b2mFedq6O6ZZg=",
+            "sha256": "2a90de72f92f6e6e0dcd16773b23a6de90a758d2d083aa4ab013618d574d8abf",
+            "integrity": "sha256-KpDecvkvbm4NzRZ3OyOm3pCnWNLQg6pKsBNhjVdNir8=",
             "mediaType": "text/javascript"
           },
           {
@@ -363,52 +376,52 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/fixture-cog-decoder-BNRkTn79.js",
-            "bytes": 2834,
-            "sha256": "b650e5021471f85a42c3d312bb95ad3351d3492e752b6ad4a418b1dcef6c7793",
-            "integrity": "sha256-tlDlAhRx+FpCw9MSu5WtM1HTSS51K2rUpBix3O9sd5M=",
+            "path": "assets/fixture-cog-decoder-HKtHZwN8.js",
+            "bytes": 5216,
+            "sha256": "becaab2dda839126b993456e8f2efdb2ab65321705f472257b2e99f967f124fb",
+            "integrity": "sha256-vsqrLdqDkSa5k0Vujy79sqtlMhcF9HIley6Z+WfxJPs=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/geotiff-Bl1HkbFF.js",
-            "bytes": 34675,
-            "sha256": "5baeed4057b9d5374a4113733f5115ae6b9e13c3bef39e1c5d9c220d7c89705a",
-            "integrity": "sha256-W67tQFe51TdKQRNzP1EVrmueE8O+854cXZwiDXyJcFo=",
-            "mediaType": "text/javascript"
-          },
-          {
-            "path": "assets/geotiff-cog-decoder-C-74cTKd.js",
+            "path": "assets/geotiff-cog-decoder-Dk0DEZoy.js",
             "bytes": 4253,
-            "sha256": "f9af72f67a74daadce96709fff61e86fba70b7d15f884696b8a6a216d004bd24",
-            "integrity": "sha256-+a9y9np02q3OlnCf/2Hob7pwt9FfiEaWuKaiFtAEvSQ=",
+            "sha256": "262c03425d02ee574e4ac4f6c4904b43cfef24183c5f687f9f81371003aba9bf",
+            "integrity": "sha256-JiwDQl0C7ldOSsT2xJBLQ8/vJBg8X2h/n4E3EAOrqb8=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/globals-CSpOXDpQ.js",
-            "bytes": 7593,
-            "sha256": "1607bdfd986211bfe031650f6fbb7e501579251bc00cf3e31a9690ba9f6a9752",
-            "integrity": "sha256-Fge9/ZhiEb/gMWUPb7t+UBV5JRvADPPjGpaQup9ql1I=",
+            "path": "assets/geotiff-DWkZJNX9.js",
+            "bytes": 34726,
+            "sha256": "b3453411f581faf772cbdb40d0c7fe0d70bdf32619072aad7ea9533d78acbddd",
+            "integrity": "sha256-s0U0EfWB+vdyy9tA0Mf+DXC98yYZByqtfqlTPXisvd0=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-CF7WsGH6.js",
+            "path": "assets/globals-CmdPTWa9.js",
+            "bytes": 6911,
+            "sha256": "55da6345eded6d320e3b7c5f2f7a09245e5b0026985ab226cd32192bfba7e7ba",
+            "integrity": "sha256-VdpjRe3tbTIOO3xfL3oJJF5bACaYWrImzTIZK/un57o=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/grpc-adapter-8Bsd21fe.js",
             "bytes": 11375,
-            "sha256": "efb80167d5c8c46430baa45ec29402610c3859e53605875fea49b6c39228ca17",
-            "integrity": "sha256-77gBZ9XIxGQwuqRewpQCYQw4WeU2BYdf6km2w5Ioyhc=",
+            "sha256": "58bc46b9d1e63bc3a0501bdd202ee41c27235667c59a668548acb7f0d2358e8f",
+            "integrity": "sha256-WLxGudHmO8OgUBvdIC7kHCcjVmfFmmaFSKy38NI1jo8=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index--YcVqwCe.css",
-            "bytes": 107607,
-            "sha256": "6857d1dfdad58933f33d7cb2cc739cb26e164b9321289f4242dc7c55928931af",
-            "integrity": "sha256-aFfR39rViTPzPXyyzHOcsm4WS5MhKJ9CQtx8VZKJMa8=",
+            "path": "assets/index--lciQdWm.css",
+            "bytes": 108471,
+            "sha256": "1f40106672eee107323c653d2ca1d336939beccdbd8b396a3a709ae810e87c2e",
+            "integrity": "sha256-H0AQZnLu4QcyPGU9LKHTNpOb7M29izlqOnCa6BDofC4=",
             "mediaType": "text/css"
           },
           {
-            "path": "assets/index-DYPR9pue.js",
-            "bytes": 1628729,
-            "sha256": "32f84e34d69c0149bf7f318046486a7b00815f3d52f88dfb1025935d0bb77df8",
-            "integrity": "sha256-MvhONNacAUm/fzGARkhqewCBXz1S+I37ECWTXQu3ffg=",
+            "path": "assets/index-B5BlLUdz.js",
+            "bytes": 1689997,
+            "sha256": "d6f514035626683d1a0395a4a33d692c5f6a78a5428810078e88ca0724cd911d",
+            "integrity": "sha256-1vUUA1YmaD0aA5Wkoz1pLF9qeKVCiBAHjojKByTNkR0=",
             "mediaType": "text/javascript"
           },
           {
@@ -419,10 +432,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/lerc-C30Xs_jM.js",
-            "bytes": 96942,
-            "sha256": "c43c15563e9ac538262d46c5bf00b671af1f889cc1e56bae27ecf824a9ddf3ee",
-            "integrity": "sha256-xDwVVj6axTgmLUbFvwC2ca8fiJzB5WuuJ+z4JKnd8+4=",
+            "path": "assets/lerc-CMBw1yT_.js",
+            "bytes": 96980,
+            "sha256": "31c854b0045adbed90c329c7b08498c7140128644330633ed58da81b04e0b809",
+            "integrity": "sha256-MchUsARa2+2QwynHsISYxxQBKGRDMGM+1Y2oGwTguAk=",
             "mediaType": "text/javascript"
           },
           {
@@ -440,10 +453,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/odata-write-codec-RWqmFUM4.js",
+            "path": "assets/odata-write-codec-DULlAJkw.js",
             "bytes": 18695,
-            "sha256": "cc4265d6f3dcb5fc80af868dbda2761b3834e5f9f1b26b450b03a917a2a5c45f",
-            "integrity": "sha256-zEJl1vPctfyAr4aNvaJ2Gzg05fnxsmtFCwOpF6KlxF8=",
+            "sha256": "2094c63b99658e8dce439ea8a6c1c83c5dac380b8fee9fea7da6820936b6d0f2",
+            "integrity": "sha256-IJTGO5lljo3OQ56opsHIPF2sOAuP7p/qfaaCCTa20PI=",
             "mediaType": "text/javascript"
           },
           {
@@ -482,17 +495,87 @@
             "mediaType": "text/javascript"
           },
           {
+            "path": "fixtures/cog/chunks/0000.bin",
+            "bytes": 5672,
+            "sha256": "3e9ed08c2e9482791c98e9e316dcf2f117c459f9988f6f20409e11ee051ca3b5",
+            "integrity": "sha256-Pp7QjC6UgnkcmOnjFtzy8RfEWfmYj28gQJ4R7gUco7U=",
+            "mediaType": "application/octet-stream"
+          },
+          {
+            "path": "fixtures/cog/chunks/0001.bin",
+            "bytes": 12376,
+            "sha256": "73b3f20c8a1b0078c270f9f57812709a6f2f1746ca35edace22adf17e2b38849",
+            "integrity": "sha256-c7PyDIobAHjCcPn1eBJwmm8vF0bKNe2s4irfF+KziEk=",
+            "mediaType": "application/octet-stream"
+          },
+          {
+            "path": "fixtures/cog/chunks/0002.bin",
+            "bytes": 2799,
+            "sha256": "c982f82cb84a5d80e2b03d741ff4ab2ce1bde928f6d7c670e234ae0e091e2205",
+            "integrity": "sha256-yYL4LLhKXYDisD10H/SrLOG96Sj218Zw4jSuDgkeIgU=",
+            "mediaType": "application/octet-stream"
+          },
+          {
+            "path": "fixtures/cog/item.json",
+            "bytes": 8589,
+            "sha256": "24ecc93ec732af3e6cea81ef099a54db9b39d9428bf5cd2491e48b16526703fb",
+            "integrity": "sha256-JOzJPscyrz5s6oHvCZpU25s52UKL9c0kkeSLFlJnA/s=",
+            "mediaType": "application/json"
+          },
+          {
+            "path": "fixtures/cog/LICENSE.txt",
+            "bytes": 96,
+            "sha256": "1d7e8d6e31a96bb9397c10dd7a3d93dcd3a5006c7f3f809afd48f00392d36486",
+            "integrity": "sha256-HX6NbjGpa7k5fBDdej2T3NOlAGx/P4Ca/UjwA5LTZIY=",
+            "mediaType": "text/plain"
+          },
+          {
+            "path": "fixtures/cog/manifest.json",
+            "bytes": 3300,
+            "sha256": "843d2eaf81cbd5e6f4c3304eea965780e95ae2cbcced3d23d34ec5c885fc9223",
+            "integrity": "sha256-hD0ur4HL1eb0wzBO6pZXgOla4svM7T0j007FyIX8kiM=",
+            "mediaType": "application/json"
+          },
+          {
+            "path": "fixtures/cog/search.json",
+            "bytes": 10163,
+            "sha256": "0a7cd1d57bf1837c4802c0e71316744bf849f635d98387340c4d33e8962cf9ad",
+            "integrity": "sha256-CnzR1Xvxg3xIAsDnExZ0S/hJ9jXZg4c0DE0z6JYs+a0=",
+            "mediaType": "application/json"
+          },
+          {
+            "path": "fixtures/cog/tiles/image-server-natural-color.png",
+            "bytes": 1767,
+            "sha256": "6eb6d3e2da86cbb2e0446d0877f1442a84e6e62861ed1da5036ec84446754585",
+            "integrity": "sha256-brbT4tqGy7LgRG0Id/FEKoTm5ihh7R2lA27IREZ1RYU=",
+            "mediaType": "image/png"
+          },
+          {
+            "path": "fixtures/cog/tiles/terrain-rgb.png",
+            "bytes": 1850,
+            "sha256": "ae5fb63aa2253af46ccf05016ea19c821e3e49b3c775f0496e639d38b206b008",
+            "integrity": "sha256-rl+2OqIlOvRszwUBbqGcgh4+SbPHdfBJbmOdOLIGsAg=",
+            "mediaType": "image/png"
+          },
+          {
+            "path": "fixtures/cog/tiles/wms-natural-color.png",
+            "bytes": 1796,
+            "sha256": "6a5c3696a9b030e4275baece68310d50bec821f8c88e9db8ad2c64b65e3848ad",
+            "integrity": "sha256-alw2lqmwMOQnW67OaDENUL7IIfjIjp24rSxktl44SK0=",
+            "mediaType": "image/png"
+          },
+          {
             "path": "honua-sample-sdk-resolution.json",
-            "bytes": 7192,
-            "sha256": "945e51f5f680b5315d15ace84c089e381b5affb3c358f0c4ac1ce4b4eb1739e6",
-            "integrity": "sha256-lF5R9faAtTFdFazoTAieOBta/7PDWPDErBzktOsXOeY=",
+            "bytes": 9625,
+            "sha256": "c3ff7951c7763c05f334d803120c0e7ca3a2e40989d19a82fbbb389e17622170",
+            "integrity": "sha256-w/95Ucd2PAXzNNgDEgwOfKOi5AmJ0ZqC+7s4nhdiIXA=",
             "mediaType": "application/json"
           },
           {
             "path": "index.html",
-            "bytes": 12201,
-            "sha256": "60884ae2ffdfe6c5281b3ec8c3287ec9a5dad727e8657b8fcb8d05fa7d2d2828",
-            "integrity": "sha256-YIhK4v/f5sUoGz7Iwyh+yaXa1yfoZXuPy40F+n0tKCg=",
+            "bytes": 12845,
+            "sha256": "3295bb95b44b1e409c207dc169d9f9e887b76f2ab5255629984a504df150e648",
+            "integrity": "sha256-MpW7lbRLHkCcIH3Badn56Ie3byq1JVYpmEpQTfFQ5kg=",
             "mediaType": "text/html"
           }
         ]
@@ -521,7 +604,7 @@
           "reason": "Qualified First Map journey with a governed 2025 Census TIGER/Line fixture, plus immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and separate anonymous live receipts."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -540,17 +623,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/esm-BF98vsZF.js",
+            "path": "assets/esm-D5iT0IT9.js",
             "bytes": 8257,
-            "sha256": "d452eed2bb06125caacd3880edf32917c55e253094cd126fcfff1b190c765fd5",
-            "integrity": "sha256-1FLu0rsGElyqzTiA7fMpF8VeJTCUzRJvz/8bGQx2X9U=",
+            "sha256": "f1265194920ae495bae44be3ed5db3941b5d3baa12e74496cacafbf492e5a26f",
+            "integrity": "sha256-8SZRlJIK5JW65Evj7V2zlBtdO6oS50SWysr79JLlom8=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/esm-BHceIPBz.js",
+            "path": "assets/esm-DUxxd3iP.js",
             "bytes": 69474,
-            "sha256": "2de9226ce4f601dadb00204c58d9b9c6f0d1e400c5e3d55741ac3ea3b8d10e45",
-            "integrity": "sha256-LekibOT2AdrbACBMWNm5xvDR5ADF49VXQaw+o7jRDkU=",
+            "sha256": "f822702ecbf9f5a88046e4e331e896699a19f9cb896cf72b12db32cce660b2a7",
+            "integrity": "sha256-+CJwLsv59aiARuTjMeiWaZoZ+cuJbPcrEtsyzOZgsqc=",
             "mediaType": "text/javascript"
           },
           {
@@ -575,17 +658,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-Cm8-NVO4.js",
+            "path": "assets/grpc-adapter-Cw057X0Q.js",
             "bytes": 11375,
-            "sha256": "22a6a641333098a9713220322f81336157f0b67b8d586d4f7e35fcca1ea15319",
-            "integrity": "sha256-IqamQTMwmKlxMiAyL4EzYVfwtnuNWG1PfjX8yh6hUxk=",
-            "mediaType": "text/javascript"
-          },
-          {
-            "path": "assets/index-ARf2b1wd.js",
-            "bytes": 1734391,
-            "sha256": "9a5a5c28483f8f114736e94fca92ec34c5f95cb255049fbd15eaa4d9e087c883",
-            "integrity": "sha256-mlpcKEg/jxFHNulPypLsNMX5XLJVBJ+9Feqk2eCHyIM=",
+            "sha256": "2e937e2728a66bd757cd44004d4d3597dbc41636eac4647a88ed36bb32b59daa",
+            "integrity": "sha256-LpN+Jyima9dXzUQATU01l9vEFjbqxGR6iO02uzK1nao=",
             "mediaType": "text/javascript"
           },
           {
@@ -594,6 +670,13 @@
             "sha256": "ab3b6eced5354266d2346a46746160cdbb5d53e885ca590820122f89e5e307ee",
             "integrity": "sha256-qztuztU1QmbSNGpGdGFgzbtdU+iFylkIIBIvieXjB+4=",
             "mediaType": "text/css"
+          },
+          {
+            "path": "assets/index-Dh2vr-9y.js",
+            "bytes": 1738091,
+            "sha256": "11f1daa79823a97a341d85ae03e308a85b03c624dd9fe9f3587dafe5a2e88589",
+            "integrity": "sha256-EfHap5gjqXo0HYWuA+MIqFsDxiTdn+nzWH2v5aLohYk=",
+            "mediaType": "text/javascript"
           },
           {
             "path": "assets/layer-BiJKvD-i.json",
@@ -610,10 +693,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/odata-write-codec-C9vG2Vok.js",
+            "path": "assets/odata-write-codec-03FZmmSY.js",
             "bytes": 18695,
-            "sha256": "bd6c7215644f95b0dd13eda18f7af2cd3e3f86c300bddfb25545a2232ceb15c8",
-            "integrity": "sha256-vWxyFWRPlbDdE+2hj3ryzT4/hsMAvd+yVUWiIyzrFcg=",
+            "sha256": "006926ce1ac97a47ae013de61318512803fdef22f61df7322656ad316194ee98",
+            "integrity": "sha256-AGkmzhrJekeuAT3mExhRKAP97yL2HfcyJlatMWGU7pg=",
             "mediaType": "text/javascript"
           },
           {
@@ -654,22 +737,22 @@
           {
             "path": "first-map-bundle-budget.json",
             "bytes": 245,
-            "sha256": "189807c46cc3e40799a23aef38129dbd76b3f5644d33af4f745aa32cb00e3218",
-            "integrity": "sha256-GJgHxGzD5AeZojrvOBKdvXaz9WRNM69PdFqjLLAOMhg=",
+            "sha256": "0350aa538d8cdb44b2ef4da3189cf3fbe0fe287f2035b11b96ea07ff7e838d84",
+            "integrity": "sha256-A1CqU42M20Sy702jGJzz++D+KH8gNbEbluoH/36DjYQ=",
             "mediaType": "application/json"
           },
           {
             "path": "honua-sample-sdk-resolution.json",
             "bytes": 5314,
-            "sha256": "fef2add9e7aaee3f006d831d1060a0c30a8d9df31ca91abc040b4ab9b300742f",
-            "integrity": "sha256-/vKt2eeq7j8AbYMdEGCgwwqNnfMcqRq8BAtKubMAdC8=",
+            "sha256": "6d7623faaa9f8f76eb4247c94313539060ab31c0245e6c91965c6bb6771015cf",
+            "integrity": "sha256-bXYj+qqfj3brQkfJQxNTkGCrMcAkXmyRllxrtncQFc8=",
             "mediaType": "application/json"
           },
           {
             "path": "index.html",
             "bytes": 13144,
-            "sha256": "67be1882970224fc85fc186c87f5ec3fd2ccfeaea632f1724b1caf3f04807e68",
-            "integrity": "sha256-Z74YgpcCJPyF/Bhsh/XsP9LM/q6mMvFySxyvPwSAfmg=",
+            "sha256": "bb1e077022e0f8e4e9e8341bf046107fd3f7c0d5b76723d83695697e086c7ac0",
+            "integrity": "sha256-ux4HcCLg+OTp6DQb8EYQf9P3wNW3ZyPYNpVpfghsesA=",
             "mediaType": "text/html"
           }
         ]
@@ -692,15 +775,15 @@
           "reason": "Qualified ArcGIS Migration Workbench journey with immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and deterministic-CLI live receipts."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
           {
             "path": "artifacts/v1/manifest.v1.json",
             "bytes": 6129,
-            "sha256": "4d2882c147e48ebcce7066375d1ab53c0d889e8ed14ca10ef7a44c72b54d468f",
-            "integrity": "sha256-TSiCwUfkjrzOcGY3XRq1PA2Ino7RTKEO96RMcrVNRo8=",
+            "sha256": "a0aadb954685881d884478f94dd3d59f642c787153967b8fb56dbc062ca04f7d",
+            "integrity": "sha256-oKrblUaFiB2IRHj5TdPVn2QseHFTlnuPtW28BiygT30=",
             "mediaType": "application/json"
           },
           {
@@ -720,8 +803,8 @@
           {
             "path": "artifacts/v1/migration-report.v1.json",
             "bytes": 62504,
-            "sha256": "3d98608a18bcebe53898c7b73d224b352fadbb600e9b59a9e43e1db0d95d4c0e",
-            "integrity": "sha256-PZhgihi86+U4mMe3PSJLNS+tu2AOm1mp5D4dsNldTA4=",
+            "sha256": "7f71559855ac51b848c3fb11c9305731b033fb4d692f8091c7d47de05bc07d4a",
+            "integrity": "sha256-f3FVmFWsUbhIw/sRyTBXMbAz+01pL4CRx9R94FvAfUo=",
             "mediaType": "application/json"
           },
           {
@@ -739,10 +822,10 @@
             "mediaType": "application/json"
           },
           {
-            "path": "assets/errors-B3cuSYe7.js",
-            "bytes": 30323,
-            "sha256": "ec66e4e0f0b89738a263c4c916d22b4f4ed10bcc5065643c3ab84b7c6a88a534",
-            "integrity": "sha256-7Gbk4PC4lziiY8TJFtIrT07RC8xQZWQ8OrhLfGqIpTQ=",
+            "path": "assets/errors-C_th6E62.js",
+            "bytes": 31075,
+            "sha256": "b44f69f0c87b791ffbc4897ff8173d0bd98d423fe1e6726d4a33c858206a6346",
+            "integrity": "sha256-tE9p8Mh7eR/7xIl/+Bc9C9mNQj/h5nJtSjPIWCBqY0Y=",
             "mediaType": "text/javascript"
           },
           {
@@ -788,17 +871,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-DpbisIoD.js",
+            "path": "assets/grpc-adapter-DBd6rRV_.js",
             "bytes": 21140,
-            "sha256": "c0e0f56a07b93bd630f4d85c3e4f828462849705b8cee4711df120b2df13f57b",
-            "integrity": "sha256-wOD1age5O9Yw9NhcPk+ChGKElwW4zuRxHfEgst8T9Xs=",
+            "sha256": "28b66d48006308872a1212e040f9ade96224941e50a3c98362a4e4a22ddb57e1",
+            "integrity": "sha256-KLZtSABjCIcqEhLgQPmt6WIklB5Qo8mDYqTkoi3bV+E=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index-CrFBU-j8.js",
+            "path": "assets/index-BhGZjn8k.js",
             "bytes": 33292,
-            "sha256": "9951d60520594ac229ff06d94bbf52c79fb2e32a528925bf9fdb6257ad031624",
-            "integrity": "sha256-mVHWBSBZSsIp/wbZS79Sx5+y4ypSiSW/n9tiV60DFiQ=",
+            "sha256": "3ef1597fc820a1e9099c2da888e3a72cb83b1a90c047537f783ffb023cab5cda",
+            "integrity": "sha256-PvFZf8ggoekJnC2oiOOnLLg7GpDAR1N/eD/7AjyrXNo=",
             "mediaType": "text/javascript"
           },
           {
@@ -809,10 +892,10 @@
             "mediaType": "text/css"
           },
           {
-            "path": "assets/migrated-main-BX9Vx_x4.js",
-            "bytes": 546159,
-            "sha256": "502fc587cef6f6e050c46756fcab2dd21b8d66168c7f252d7e43d29e82dfea67",
-            "integrity": "sha256-UC/Fh8729uBQxGdW/Kst0huNZhaMfyUtfkPSnoLf6mc=",
+            "path": "assets/migrated-main-LCbHtcYa.js",
+            "bytes": 546853,
+            "sha256": "c21cb89053c9786379bfe28c52ab2b322be4dfe67d3ad349bad6ecc48c5906df",
+            "integrity": "sha256-why4kFPJeGN5v+KMUqsrMivk3+Z9OtNJutbsxIxZBt8=",
             "mediaType": "text/javascript"
           },
           {
@@ -825,15 +908,15 @@
           {
             "path": "honua-sample-sdk-resolution.json",
             "bytes": 4840,
-            "sha256": "d607581c809c869f13e96e0421235abff672bba06ca10db0c5e26c680a9d3301",
-            "integrity": "sha256-1gdYHICchp8T6W4EISNav/Zyu6BsoQ2wxeJsaAqdMwE=",
+            "sha256": "fa265c6ca9bb241d204a2fb77ad6d63395ccda894f29b7498d00c5a18f7e450f",
+            "integrity": "sha256-+iZcbKm7JB0gSi+3etbWM5XM2olPKbdJjQDFoY9+RQ8=",
             "mediaType": "application/json"
           },
           {
             "path": "index.html",
             "bytes": 10934,
-            "sha256": "f77cd9680a9a9fbd54962fa956b1c6748c44c726e8b2a38b0787ddca32eace27",
-            "integrity": "sha256-93zZaAqan71Uli+pVrHGdIxExybosqOLB4fdyjLqzic=",
+            "sha256": "7e4c27b15298ba788859527b8aa09df58e62f0decec62687180079b80de60367",
+            "integrity": "sha256-fkwnsVKYuniIWVJ7iqCd9Y5i8N7OxiaHGAB5uA3mA2c=",
             "mediaType": "text/html"
           }
         ]
@@ -858,7 +941,7 @@
           "reason": "Headline proof of the plan-first NL map-control layer (#500): BYO LLM, approval envelopes, and execution receipts on a live MapLibre map."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -870,10 +953,10 @@
             "mediaType": "text/css"
           },
           {
-            "path": "assets/index-W-1WMivk.js",
-            "bytes": 1013326,
-            "sha256": "40b8e8b98ebb910612f185f04655a194a6b9645e558f22d9b7a30fb5d249b7af",
-            "integrity": "sha256-QLjouY67kQYS8YXwRlWhlKa5ZF5VjyLZt6MPtdJJt68=",
+            "path": "assets/index-uef-oLG8.js",
+            "bytes": 1013855,
+            "sha256": "2960a321f5e5e02c97310c220c75f72352978a08e8639014aa39babc326d270a",
+            "integrity": "sha256-KWCjIfXl4CyXMQwiDHX3I1KXigjoY5AUqjm6vDJtJwo=",
             "mediaType": "text/javascript"
           },
           {
@@ -886,8 +969,8 @@
           {
             "path": "index.html",
             "bytes": 3073,
-            "sha256": "6c8fb1827820156221da18511fbe4f9bd2b249842d563f95fee0eb2e2dcbe1f2",
-            "integrity": "sha256-bI+xgnggFWIh2hhRH75Pm9KySYQtVj+V/uDrLi3L4fI=",
+            "sha256": "9fff19ed30b6b1b525056150bf558fb59e99a525fa25fe344749d953182017eb",
+            "integrity": "sha256-n/8Z7TC2sbUlBWFQv1WPtZ6ZpSX6Jf40R0nZUxggF+s=",
             "mediaType": "text/html"
           }
         ]
@@ -910,7 +993,7 @@
           "reason": "Large-data flagship now shares one bounded semantic workflow across deterministic fixture and pinned AWS lanes."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -929,10 +1012,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index-BkxoIapV.js",
-            "bytes": 399612,
-            "sha256": "17cc75dd6dc7586699efcfd3930a714e0dfa994372f16a8d93d217ff10783342",
-            "integrity": "sha256-F8x13W3HWGaZ78/TkwpxTg36mUNy8WqNk9IX/xB4M0I=",
+            "path": "assets/index-BNbQHeaP.js",
+            "bytes": 400424,
+            "sha256": "bf0eacbba6a87f0cc44b41be69d8b9cc3c90263758748d78ebc83222a8e8bb0b",
+            "integrity": "sha256-vw6su6aofwzES0G+adi5zDyQJjdYdI1468gyIqjouws=",
             "mediaType": "text/javascript"
           },
           {
@@ -943,10 +1026,10 @@
             "mediaType": "text/css"
           },
           {
-            "path": "assets/odata-write-codec-OffoO3Xu.js",
+            "path": "assets/odata-write-codec-B-X-hA8B.js",
             "bytes": 18695,
-            "sha256": "03fca24b25705b8a8772d055843ee1a8613baba52e1da6cd88619b2f74146201",
-            "integrity": "sha256-A/yiSyVwW4qHctBVhD7hqGE7q6UuHabNiGGbL3QUYgE=",
+            "sha256": "7ca61a77a00f4a1af6189c896dbabbf34152c9a56a450509c2446ab198cd55d6",
+            "integrity": "sha256-fKYad6APShr2GJyJbbq780FSyaVqRQUJwkRqsZjNVdY=",
             "mediaType": "text/javascript"
           },
           {
@@ -973,8 +1056,8 @@
           {
             "path": "index.html",
             "bytes": 7208,
-            "sha256": "5b22dd88b0ac8f1ead9234f60d17bfa164da3742999d3c2175093316feb58969",
-            "integrity": "sha256-WyLdiLCsjx6tkjT2DRe/oWTaN0KZnTwhdQkzFv61iWk=",
+            "sha256": "1c64924f7898652cb54fa3e7f9bef35d6d02d8bab179f2868c25ee62ae380308",
+            "integrity": "sha256-HGSST3iYZSy1T6Pn+b7zXW0C2LqxefKGjCXuYq44Awg=",
             "mediaType": "text/html"
           },
           {
@@ -1006,7 +1089,7 @@
           "reason": "Maintain the fixture-first public SDK workflow and source/packed browser gates as the planned planning candidate; golden qualification and live evidence remain explicitly unclaimed."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1018,10 +1101,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/errors-BiKFhZ0P.js",
-            "bytes": 17219,
-            "sha256": "e1410ee14ba22200d8ef347cef6b782fa4f0f97272857b0454f1917f6422b7ee",
-            "integrity": "sha256-4UEO4UuiIgDY7zR872t4L6Tw+XJyhXsEVPGRf2Qit+4=",
+            "path": "assets/errors-eBZ03kl7.js",
+            "bytes": 17748,
+            "sha256": "8087b595446c742c1f91cbd69648d98427fc5c518182fd4198cb84b08868ec4d",
+            "integrity": "sha256-gIe1lURsdCwfkcvWlkjZhCf8XFGBgv1BmMuEsIho7E0=",
             "mediaType": "text/javascript"
           },
           {
@@ -1060,17 +1143,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-CzgPfn7Z.js",
+            "path": "assets/grpc-adapter-DYMP7biv.js",
             "bytes": 11376,
-            "sha256": "a57e5eb946ea44a2dc62462a9092bef1e027aa1aacbb1caa21739119aae1ae2a",
-            "integrity": "sha256-pX5euUbqRKLcYkYqkJK+8eAnqhqsuxyqIXORGarhrio=",
+            "sha256": "b6f9d8fbb1eb6fae71ab89bee979d132e35d41285fc44830d57433c5370a0333",
+            "integrity": "sha256-tvnY+7Hrb65xq4m+6XnRMuNdQShfxEgw1XQzxTcKAzM=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index-EhXAspwd.js",
-            "bytes": 1012504,
-            "sha256": "bbefda10457ce713cc5e913593d2f267a5594622ef122be136498aaef5b10fe5",
-            "integrity": "sha256-u+/aEEV85xPMXpE1k9LyZ6VZRiLvEivhNkmKrvWxD+U=",
+            "path": "assets/index-7pwlmV7H.js",
+            "bytes": 1015628,
+            "sha256": "f0b47ba15d3524070e60bfd569887ed4af5c5b27da37b45598d595c9feca3183",
+            "integrity": "sha256-8LR7oV01JAcOYL/VaYh+1K9cWyfaN7RVmNWVyf7KMYM=",
             "mediaType": "text/javascript"
           },
           {
@@ -1088,10 +1171,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/odata-write-codec-DTN_nqiN.js",
+            "path": "assets/odata-write-codec-Dp38lpd4.js",
             "bytes": 18695,
-            "sha256": "9c9817c6ba45de85d37ba883ce843e03edc2a67820b9baef6859e2d559ed34ee",
-            "integrity": "sha256-nJgXxrpF3oXTe6iDzoQ+A+3CpnggubrvaFni1VntNO4=",
+            "sha256": "5cd8df8c41eb19dabdaa6c5b15a6877a8498b98b066609fec6e833e1fe29277d",
+            "integrity": "sha256-XNjfjEHrGdq9qmxbFaaHeoSYuYsGZgn+xugz4f4pJ30=",
             "mediaType": "text/javascript"
           },
           {
@@ -1102,10 +1185,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/runtime-CfQdcJAI.js",
+            "path": "assets/runtime-DYG1jleP.js",
             "bytes": 174326,
-            "sha256": "d106c7f0db85c9ae49c9a273bc1ef378f8806001b20ff237684a5bcdff7130c6",
-            "integrity": "sha256-0QbH8NuFya5JyaJzvB7zePiAYAGyD/I3aEpbzf9xMMY=",
+            "sha256": "13b305ae926f94849aec535d2ff4494a0c2f98550a946a40538ab082e0c6a0b4",
+            "integrity": "sha256-E7MFrpJvlISa7FNdL/RJSgwvmFUKlGpAU4qwguDGoLQ=",
             "mediaType": "text/javascript"
           },
           {
@@ -1125,15 +1208,15 @@
           {
             "path": "honua-sample-sdk-resolution.json",
             "bytes": 6155,
-            "sha256": "99920be5e068404e580bc7b5ef3ebf775668b99534d032bb852cecf1dca3ac4b",
-            "integrity": "sha256-mZIL5eBoQE5YC8e17z6/d1ZouZU00DK7hSzs8dyjrEs=",
+            "sha256": "f2e2b7a471a6e76e161a2431c0ec4bfb74141e231ac759a22dba1672929fd9e5",
+            "integrity": "sha256-8uK3pHGm524WGiQxwOxL+3QUHiMax1miLboWcpKf2eU=",
             "mediaType": "application/json"
           },
           {
             "path": "index.html",
             "bytes": 21632,
-            "sha256": "806e64aeb642499ab0aa7bc8301d4a2a8ef4fd7d3b355f4971d3a16bb2e0a214",
-            "integrity": "sha256-gG5krrZCSZqwqnvIMB1KKo70/X07NV9JcdOha7LgohQ=",
+            "sha256": "89b2f616f51a4048a21b80c8c1d3794730b986be4b5c97fac73105dba2dedeae",
+            "integrity": "sha256-ibL2FvUaQEiiG4DIwdN5RzC5hr5LXJf6xzEF26Le3q4=",
             "mediaType": "text/html"
           }
         ]
@@ -1156,7 +1239,7 @@
           "reason": "Preserve the smallest server-optional vector-tile recipe."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1203,10 +1286,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-CL3IBbfN.js",
+            "path": "assets/grpc-adapter-C4ZF1f7D.js",
             "bytes": 11375,
-            "sha256": "26d549d22a575d761eb80cb04b3d40b03e9970a2cf81793108ac4e57f65c342b",
-            "integrity": "sha256-JtVJ0ipXXXYeuAywSz1AsD6ZcKLPgXkxCKxOV/ZcNCs=",
+            "sha256": "ddaea89899933cb14eb716c932784526d1d709b7b9e8ab11e2e270e7415a45be",
+            "integrity": "sha256-3a6omJmTPLFOtxbJMnhFJtHXCbe56KsR4uJw50FaRb4=",
             "mediaType": "text/javascript"
           },
           {
@@ -1217,10 +1300,10 @@
             "mediaType": "text/css"
           },
           {
-            "path": "assets/index-ByacBbXT.js",
-            "bytes": 1436990,
-            "sha256": "c677423f193561ce7ad839d293011a2119acaaab480c210f7c6b1a0965045f1d",
-            "integrity": "sha256-xndCPxk1Yc562DnSkwEaIRmsqqtIDCEPfGsaCWUEXx0=",
+            "path": "assets/index-yN6NviQD.js",
+            "bytes": 1437950,
+            "sha256": "fe1cf444c72757f045f0fe15820f6adbecd3bed933fdde51d037a92102d49c4d",
+            "integrity": "sha256-/hz0RMcnV/BF8P4Vgg9q2+zTvtkz/d5R0DepIQLUnE0=",
             "mediaType": "text/javascript"
           },
           {
@@ -1231,10 +1314,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/odata-write-codec-D1za6YNX.js",
+            "path": "assets/odata-write-codec-Dn-Lyi9G.js",
             "bytes": 18695,
-            "sha256": "bbf7aa79d10ee4a89288187ab409435d29c61ff6c3b97dad15bf76080e370ca2",
-            "integrity": "sha256-u/eqedEO5KiSiBh6tAlDXSnGH/bDuX2tFb92CA43DKI=",
+            "sha256": "7d20bb2375ce1145097f70a6ca43cbe04780c01181d05c60d4dd6019a563b864",
+            "integrity": "sha256-fSC7I3XOEUUJf3CmykPL4EeAwBGB0Fxg1N1gGaVjuGQ=",
             "mediaType": "text/javascript"
           },
           {
@@ -1254,8 +1337,8 @@
           {
             "path": "index.html",
             "bytes": 2608,
-            "sha256": "8b9c4fd0738ab57c8e80454ae8c30f933c7f96da96506c385cd37b1e6dc66325",
-            "integrity": "sha256-i5xP0HOKtXyOgEVK6MMPkzx/ltqWUGw4XNN7Hm3GYyU=",
+            "sha256": "3cf5e7a233d0ef45fbc91b8ec146e66bd0f5a690159d912810c242de3d799422",
+            "integrity": "sha256-PPXnojPQ70X7yRuOwUbma9D1ppAVnZEoEMJC3j15lCI=",
             "mediaType": "text/html"
           },
           {
@@ -1293,10 +1376,17 @@
           "reason": "Keep one focused React integration recipe without duplicating or redesigning First Map."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
+          {
+            "path": "assets/esm-7i1_FYs9.js",
+            "bytes": 8257,
+            "sha256": "4aca91572aed7a311affb117ad1464922ae34e930fd56930a068ff8f01d799be",
+            "integrity": "sha256-SsqRVyrtejEa/7EXrRRkkirjTpMP1WkwoGj/jwHXmb4=",
+            "mediaType": "text/javascript"
+          },
           {
             "path": "assets/esm-B6JxQVfq.js",
             "bytes": 18554,
@@ -1305,17 +1395,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/esm-CFY0HulU.js",
+            "path": "assets/esm-BZ3Yai_Q.js",
             "bytes": 69474,
-            "sha256": "8feadff238887038fa8d61858e9d5dd1ca94adbdd4b449d21ff354f296b14640",
-            "integrity": "sha256-j+rf8jiIcDj6jWGFjp1d0cqUrb3UtEnSH/NU8paxRkA=",
-            "mediaType": "text/javascript"
-          },
-          {
-            "path": "assets/esm-D6f_WJ5o.js",
-            "bytes": 8257,
-            "sha256": "a298b3d1ac2342b99904fda8de3f964112a93638a6a36404107e1461ae7e64d6",
-            "integrity": "sha256-opiz0awjQrmZBP2o3j+WQRKpNjimo2QEEH4UYa5+ZNY=",
+            "sha256": "3c39c2ad24ba27dcdc5de4e5e74be04bb8545591824bae65aa7e88f428c55612",
+            "integrity": "sha256-PDnCrSS6J9zcXeTl50vgS7hUVZGCS65lqn6I9CjFVhI=",
             "mediaType": "text/javascript"
           },
           {
@@ -1333,17 +1416,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-Cnwebv1s.js",
+            "path": "assets/grpc-adapter-BqYHf8Rq.js",
             "bytes": 11375,
-            "sha256": "29c4bfa14ca765bdd957fafbcc28f7a793261f85d5ec12e8d042160b4c90d8e6",
-            "integrity": "sha256-KcS/oUynZb3ZV/r7zCj3p5MmH4XV7BLo0EIWC0yQ2OY=",
+            "sha256": "3c782c698d163c5f9b45122275936349550df18e2dfc343dc78d43a1480d2dd9",
+            "integrity": "sha256-PHgsaY0WPF+bRRIidZNjSVUN8Y4t/DQ9x41DoUgNLdk=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index-BWd76eHU.js",
-            "bytes": 1563596,
-            "sha256": "0f00a743c066f612f561f03391683e5e5747f6ef4a53027395a258037fe31553",
-            "integrity": "sha256-DwCnQ8Bm9hL1YfAzkWg+XldH9u9KUwJzlaJYA3/jFVM=",
+            "path": "assets/index-BlquktWC.js",
+            "bytes": 1564556,
+            "sha256": "a89fccbaebbbba14631ed18baa4261239fcd0bcbe785669ade95eeb03c343a78",
+            "integrity": "sha256-qJ/Muuu7uhRjHtGLqkJhI5/NC8vnhWaa3pXusDw0Ong=",
             "mediaType": "text/javascript"
           },
           {
@@ -1361,17 +1444,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/odata-write-codec-DMQSoOeA.js",
+            "path": "assets/odata-write-codec-B0jPrnSE.js",
             "bytes": 18695,
-            "sha256": "f2c8dfab6bae8c495015fbfdb799e9f57e6399c2a5f70fb2daed51eb88ccdde8",
-            "integrity": "sha256-8sjfq2uujElQFfv9t5np9X5jmcKl9w+y2u1R64jM3eg=",
+            "sha256": "67f755bc239c1a2c56fe86410302d762a5c50bd48b70ec1ed032eb839eec8e82",
+            "integrity": "sha256-Z/dVvCOcGixW/oZBAwLXYqXFC9SLcOwe0DLrg57sjoI=",
             "mediaType": "text/javascript"
           },
           {
             "path": "index.html",
             "bytes": 407,
-            "sha256": "9b57d3a745c4c28b5d9d0ed5b4fe7baf49f61e1dfb08e6ddbe759e2f79a0ea8e",
-            "integrity": "sha256-m1fTp0XEwotdnQ7VtP57r0n2Hh37CObdvnWeL3mg6o4=",
+            "sha256": "34a52a4b8b7aa22f54016dd5012de7dcf9227ab7ae1c79673349f5e7b4c228e2",
+            "integrity": "sha256-NKUqS4t6oi9UAW3VAS3n3PkiereuHHlnM0n157TCKOI=",
             "mediaType": "text/html"
           }
         ]
@@ -1401,23 +1484,23 @@
           "reason": "Flagship realtime journey now proves authority, diagnostics, degradation, concurrency, idempotency, and safe reset."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
+          {
+            "path": "assets/index-C3LrLJWG.js",
+            "bytes": 1062306,
+            "sha256": "69f0f9a4669aebb82ad1d1c1e51d52e726901356d64a2fed9bee7ebd266fa019",
+            "integrity": "sha256-afD5pGaa67gq0dHB5R1S5yaQE1bWSi/tm+5+vSZvoBk=",
+            "mediaType": "text/javascript"
+          },
           {
             "path": "assets/index-CUkyYU6_.css",
             "bytes": 105506,
             "sha256": "9c2bb97808f0df0593223b2e97fe9f5ea96c253296c75f56f3f376e6593c519c",
             "integrity": "sha256-nCu5eAjw3wWTIjsul/6fXqlsJTKWx19W8/N25lk8UZw=",
             "mediaType": "text/css"
-          },
-          {
-            "path": "assets/index-eEEFi7pY.js",
-            "bytes": 1061777,
-            "sha256": "60550d1550f41954fd5e9402db3346da24d5926589f256051df045d4c5325939",
-            "integrity": "sha256-YFUNFVD0GVT9XpQC2zNG2iTVkmWJ8lYFHfBF1MUyWTk=",
-            "mediaType": "text/javascript"
           },
           {
             "path": "assets/maplibre-gl-worker-D8-8q1nl.js",
@@ -1429,15 +1512,15 @@
           {
             "path": "honua-sample-sdk-resolution.json",
             "bytes": 2454,
-            "sha256": "12c87af89ba217e55777ca0994bbd6d4da40395633390a0aa03ee0ff19f400cb",
-            "integrity": "sha256-Esh6+JuiF+VXd8oJlLvW1NpAOVYzOQoKoD7g/xn0AMs=",
+            "sha256": "d6358b53726ad00c2395c7c71159b8719bf3371c36cac277442c1f78ec634220",
+            "integrity": "sha256-1jWLU3Jq0AwjlcfHEVm4cZvzNxw2ysJ3RCwfeOxjQiA=",
             "mediaType": "application/json"
           },
           {
             "path": "index.html",
             "bytes": 16855,
-            "sha256": "748b07621bcd9e9af429cafcc09f1e4eb429fe9cc19d755f44f0344de6b9b6fa",
-            "integrity": "sha256-dIsHYhvNnpr0Kcr8wJ8eTrQp/pzBnXVfRPA0Tea5tvo=",
+            "sha256": "cf689aeb6a92227832e32bf7dd97df85a43726afec3128cbe31376f4bea85d80",
+            "integrity": "sha256-z2ia62qSIngy4yv33ZffhaQ3Jq/sMSjL4xN29L6oXYA=",
             "mediaType": "text/html"
           }
         ]
@@ -1460,7 +1543,7 @@
           "reason": "Qualified Universal Service Explorer journey with immutable packed-build, browser, accessibility, console, responsive, screenshot, performance, fixture, and anonymous dual-protocol live receipts."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
@@ -1500,10 +1583,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-Bfoad8R0.js",
+            "path": "assets/grpc-adapter-B0aK0P8f.js",
             "bytes": 11375,
-            "sha256": "f0f8a9045a1366fd9acb92da4285b07657201947492eb4b15f2a22737562d054",
-            "integrity": "sha256-8PipBFoTZv2ay5LaQoWwdlcgGUdJLrSxXyoic3Vi0FQ=",
+            "sha256": "0e578029887a9c07e851b4625ad060b311dbf390f5d7873967eea96ebc9df110",
+            "integrity": "sha256-DleAKYh6nAfoUbRiWtBgsxHb85D114c5Z+6pbryd8RA=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/index-C-b50r6t.js",
+            "bytes": 1690072,
+            "sha256": "cb94c83b532e87e296123ed221eccaa51623da1be225b6f490d3ce89c1998c66",
+            "integrity": "sha256-y5TIO1Muh+KWEj7SIezKpRYj2hviJbb0kNPOicGZjGY=",
             "mediaType": "text/javascript"
           },
           {
@@ -1514,13 +1604,6 @@
             "mediaType": "text/css"
           },
           {
-            "path": "assets/index-Dle2cLww.js",
-            "bytes": 1686390,
-            "sha256": "18faea135bfb6ca4fe444544134587ca5816c1c6d7e49c1f6f0a711a5c6fcdaa",
-            "integrity": "sha256-GPrqE1v7bKT+REVEE0WHylgWwcbX5JwfbwpxGlxvzao=",
-            "mediaType": "text/javascript"
-          },
-          {
             "path": "assets/maplibre-gl-worker-D8-8q1nl.js",
             "bytes": 467527,
             "sha256": "dfdffdaf2c58028782ea7335d88a901d37ac5c242117922ff6f79398caf8e120",
@@ -1528,24 +1611,24 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/odata-write-codec-DBVpXgwh.js",
+            "path": "assets/odata-write-codec-BpmizRam.js",
             "bytes": 18695,
-            "sha256": "6318da17e4a5ceebedae553527184d5362bb37ff1b6b600744b10ca4e438ca10",
-            "integrity": "sha256-YxjaF+SlzuvtrlU1JxhNU2K7N/8ba2AHRLEMpOQ4yhA=",
+            "sha256": "989763faa9dca8e8fff3e9a35992e2947593b15e6ab30ea8b0aa3b43e8810fec",
+            "integrity": "sha256-mJdj+qncqOj/8+mjWZLilHWTsV5qsw6osKo7Q+iBD+w=",
             "mediaType": "text/javascript"
           },
           {
             "path": "honua-sample-sdk-resolution.json",
             "bytes": 3353,
-            "sha256": "4e2d6573e2a0e16dd199a8c9008db3fd02f593a2448746ecf4d94b7086d880fb",
-            "integrity": "sha256-Ti1lc+Kg4W3RmajJAI2z/QL1k6JEh0bs9NlLcIbYgPs=",
+            "sha256": "89ff218236fe57c16eaa6f5bae58ae3d1103dd8d7f1eae493c3a6e9de1701537",
+            "integrity": "sha256-if8hgjb+V8Fuqm9brliuPRED3Y1/Hq5JPDpuneFwFTc=",
             "mediaType": "application/json"
           },
           {
             "path": "index.html",
             "bytes": 11330,
-            "sha256": "5a98e4d0b106f682c28ab223f8511b7f5908330640d28af7a4ed3435e8124e59",
-            "integrity": "sha256-Wpjk0LEG9oLCirIj+FEbf1kIMwZA0or3pO00NegSTlk=",
+            "sha256": "60e00fd43222d7e0c0a1769605d6e72230b47b39b583a77da83b698f6d83e598",
+            "integrity": "sha256-YOAP1DIi1+DAoXaWBdbnIjC0ezm1g6d9qDtpj22D5Zg=",
             "mediaType": "text/html"
           }
         ]
@@ -1568,15 +1651,15 @@
           "reason": "Retain as the focused terra-draw drawing, snapping, undo, and edit-submission recipe; the planning journey owns the end-to-end planning workflow."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
           {
-            "path": "assets/index-BFF24rtd.js",
-            "bytes": 984885,
-            "sha256": "090b45ee7ea984e3e50df5871c1df467a2bc552249199cdda25098861cecbfda",
-            "integrity": "sha256-CQtF7n6phOPlDfWHHB30Z6K8VSJJGZzdolCYhhzsv9o=",
+            "path": "assets/index-Cs6ikH5v.js",
+            "bytes": 985414,
+            "sha256": "f26ef48d98bd19c34144cec2b0f94382df22a48cf8ee8b43b7179bf061ee3ab6",
+            "integrity": "sha256-8m70jZi9GcNBRM7CsPlDgt8ipIz47otDtxeb8GHuOrY=",
             "mediaType": "text/javascript"
           },
           {
@@ -1610,8 +1693,8 @@
           {
             "path": "index.html",
             "bytes": 3491,
-            "sha256": "82a09a93234bbbf9409ea3004386c247e392d45410ba63f0c6602c2a0538c177",
-            "integrity": "sha256-gqCakyNLu/lAnqMAQ4bCR+OS1FQQumPwxmAsKgU4wXc=",
+            "sha256": "5e71b2f9cda03aa3ed9e28a7d4f414c242724f327a89adc39f4950a30efd9b8b",
+            "integrity": "sha256-XnGy+c2gOqPtniin1PQUwkJyTzJ6ia3Dn0lQow79m4s=",
             "mediaType": "text/html"
           }
         ]
@@ -1625,7 +1708,7 @@
         "runnability": "standalone",
         "hostFixtureRoutes": [],
         "support": {
-          "tier": "supported",
+          "tier": "experimental",
           "track": "recipe",
           "validationProfile": "browser-recipe"
         },
@@ -1634,29 +1717,99 @@
           "reason": "Retain as the small credential-free STAC discovery recipe; the imagery journey owns full range, comparison, elevation, and terrain qualification."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
           {
-            "path": "assets/index-BdHDjjq3.js",
-            "bytes": 12031,
-            "sha256": "328e7530c84f8ec67c8d4fe888df37fc913368f06e92aa3ffb9412a55fe15b8e",
-            "integrity": "sha256-Mo51MMhPjsZ8jU/oiN83/JEzaPBukqo/+5QSpV/hW44=",
+            "path": "assets/errors-Dc_WGZ8h.js",
+            "bytes": 17278,
+            "sha256": "7e3c6d37d1d2f52a2c315a86fe337883ea502c9a7214767515d8ed46d824c648",
+            "integrity": "sha256-fjxtN9HS9SosMVqG/jN4g+pQLJpyFHZ1FdjtRtgkxkg=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/index-niRv56qU.css",
-            "bytes": 2522,
-            "sha256": "fb4de2d244b3ae26883ea0ca59383ac36123a5537f861f03d60eb1ca7786ac00",
-            "integrity": "sha256-+03i0kSzriaIPqDKWTg6w2EjpVN/hh8D1g6xyneGrAA=",
+            "path": "assets/esm-B6JxQVfq.js",
+            "bytes": 18554,
+            "sha256": "2c8845228a3a137328cbe52780016f610ad156f527a0f4118fccbd870fac92ed",
+            "integrity": "sha256-LIhFIoo6E3Moy+UngAFvYQrRVvUnoPQRj8y9hw+sku0=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/esm-B8vkI3dR.js",
+            "bytes": 69129,
+            "sha256": "2177319993da0d1487ef712b4330b407f7c4077d3649f4de0ecddc58b87dc288",
+            "integrity": "sha256-IXcxmZPaDRSH73ErQzC0B/fEB302SfTeDs3cWLh9wog=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/esm-C4YY0t6R.js",
+            "bytes": 8262,
+            "sha256": "6d82cecc16cd7799fa7942d5e1db80de99242c5d8295237cc68cd59d03cee405",
+            "integrity": "sha256-bYLOzBbNd5n6eULV4duA3pkkLF2ClSN8xozVnQPO5AU=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/esm-D-6IjX11.js",
+            "bytes": 497,
+            "sha256": "7d47b4c85dcf9eacca0deaf891bea79350c5b8fab664b4e29e4d468fd0bc6807",
+            "integrity": "sha256-fUe0yF3PnqzKDer4kb6nk1DFuPq2ZLTink1Gj9C8aAc=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/feature_service_pb-Crq8TxZT.js",
+            "bytes": 8631,
+            "sha256": "d6824ecfb837471edc7a5379be9a26d0a71a17b343dad767444c65e5ab39785d",
+            "integrity": "sha256-1oJOz7g3Rx7celN5vpom0KcaF7ND2tdnRExl5as5eF0=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/feature_service_pb-DWd373G0.js",
+            "bytes": 1060,
+            "sha256": "4933bfa94037c972e05019d397775c0c17ae03933f6aa752cf4246208a58f459",
+            "integrity": "sha256-STO/qUA3yXLgUBnTl3dcDBeuA5M/aqdSz0JGIIpY9Fk=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/file-CWyy5pTp.js",
+            "bytes": 64697,
+            "sha256": "b4f4e5446744d7322aa0ebe38d0403a6cce03a043c655b06d1c766c473af7ce2",
+            "integrity": "sha256-tPTlRGdE1zIqoOvjjQQDpszgOgQ8ZVsG0cdmxHOvfOI=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/grpc-adapter-Cl8gbYKe.js",
+            "bytes": 11095,
+            "sha256": "b2eb2ee3cbaebe8e8327a2e0d05ea582d40eb751fc5700c5982dff0a2e1abb02",
+            "integrity": "sha256-susu48uuvo6DJ6Lg0F6lgtQOt1H8VwDFmC3/Ci4auwI=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/index-BzPMIQ3b.js",
+            "bytes": 1246520,
+            "sha256": "4680cc9e3406eff916ee16bba82f8e18c04e571cfca9674bebba678913043663",
+            "integrity": "sha256-RoDMnjQG7/kW7ha7qC+OGMBOVxz8qWdL67pniRMENmM=",
+            "mediaType": "text/javascript"
+          },
+          {
+            "path": "assets/index-D7AP4ch0.css",
+            "bytes": 75210,
+            "sha256": "930dfea98e12ad91977a7f3a98e5f47faf7c1d199412d7ee2080cea8dd05d781",
+            "integrity": "sha256-kw3+qY4SrZGXen86mOX0f698HRmUEtfuIIDOqN0F14E=",
             "mediaType": "text/css"
           },
           {
+            "path": "assets/maplibre-gl-worker-D8-8q1nl.js",
+            "bytes": 467527,
+            "sha256": "dfdffdaf2c58028782ea7335d88a901d37ac5c242117922ff6f79398caf8e120",
+            "integrity": "sha256-39/9ryxYAoeC6nM12IqQHTesXCQhF5Iv9veTmMr44SA=",
+            "mediaType": "text/javascript"
+          },
+          {
             "path": "index.html",
-            "bytes": 3624,
-            "sha256": "ed5da4cd422fc5e44335cf6f63d689456939231da670b8410d99f1dfb5dd30c2",
-            "integrity": "sha256-7V2kzUIvxeRDNc9vY9aJRWk5Ix2mcLhBDZnx37XdMMI=",
+            "bytes": 4858,
+            "sha256": "444c6fc64aca1d19380cde5cb80d86b74dc6f4047c9167acbaf3273122b950b6",
+            "integrity": "sha256-RExvxkrKHRk4DN5cuA2Gt03G9AR8kWesuvMnMSK5ULY=",
             "mediaType": "text/html"
           }
         ]
@@ -1679,15 +1832,15 @@
           "reason": "Canonical demo for first-class renderer objects + temporal playback (#497): renderer-driven styling, legend contracts, and filter-composed time windows."
         },
         "builtFrom": {
-          "commit": "8b532d13e7ab4774237060ff668a75c2b2be23b6",
+          "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
           "packageVersion": "0.1.4-beta.0"
         },
         "files": [
           {
-            "path": "assets/client-CUsa8Ba2.js",
+            "path": "assets/client-Dy3YhGv8.js",
             "bytes": 98668,
-            "sha256": "49c5eeab37bc136456184dab814623352fecccdd6f859faff38f4488c4ab5d0d",
-            "integrity": "sha256-ScXuqze8E2RWGE2rgUYjNS/szN1vhZ+v849EiMSrXQ0=",
+            "sha256": "a8441ec18df16ae31e1513425797d7c49d0cc624d39dfbb77cf5a9ccc18d16f4",
+            "integrity": "sha256-qEQewY3xauMeFRNCV5fXxJ0MxiTTnfu3fPWpzMGNFvQ=",
             "mediaType": "text/javascript"
           },
           {
@@ -1733,17 +1886,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/grpc-adapter-Dm35sZFI.js",
+            "path": "assets/grpc-adapter-DG6ppH9t.js",
             "bytes": 11375,
-            "sha256": "56183f010e91738a2e26b361acff958d50267f974fe02ff028e0d44faf573194",
-            "integrity": "sha256-Vhg/AQ6Rc4ouJrNhrP+VjVAmf5dP4C/wKODUT69XMZQ=",
-            "mediaType": "text/javascript"
-          },
-          {
-            "path": "assets/index-CmvzoefU.js",
-            "bytes": 1162388,
-            "sha256": "3bd7457c74975b0a181426012ff50856abb65deb460e82a9669a78c3bd7f0eae",
-            "integrity": "sha256-O9dFfHSXWwoYFCYBL/UIVqu2XetGDoKpZpp4w71/Dq4=",
+            "sha256": "dcc2fdd6265e4775a868f1150bdf88a623f0821f83404c95c4b78e6f05697949",
+            "integrity": "sha256-3ML91iZeR3WoaPEVC9+IpiPwgh+DQEyVxLeObwVpeUk=",
             "mediaType": "text/javascript"
           },
           {
@@ -1754,6 +1900,13 @@
             "mediaType": "text/css"
           },
           {
+            "path": "assets/index-E_fu_Zw9.js",
+            "bytes": 1162917,
+            "sha256": "161bbf7959c59c243e9789a163b3d17c96bd3e2284e6a3463c883159b6e8c5c7",
+            "integrity": "sha256-Fhu/eVnFnCQ+l4mhY7PRfJa9PiKE5qNGPIgxWbboxcc=",
+            "mediaType": "text/javascript"
+          },
+          {
             "path": "assets/maplibre-gl-worker-D8-8q1nl.js",
             "bytes": 467527,
             "sha256": "dfdffdaf2c58028782ea7335d88a901d37ac5c242117922ff6f79398caf8e120",
@@ -1761,10 +1914,10 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/odata-write-codec-BhazAanF.js",
+            "path": "assets/odata-write-codec-OvjL4GR4.js",
             "bytes": 18694,
-            "sha256": "fbdb29d622aa3ccfceb262d03a7691f853d94f4f1e039fe2f44d85844ca67a9e",
-            "integrity": "sha256-+9sp1iKqPM/OsmLQOnaR+FPZT08eA5/i9E2FhEymep4=",
+            "sha256": "042c06d52b90fc56cc504a430808fd9ac16bd56a953125015861ab43cb22966e",
+            "integrity": "sha256-BCwG1SuQ/FbMUEpDCAj9msFr1WqVMSUBWGGrQ8silm4=",
             "mediaType": "text/javascript"
           },
           {
@@ -1775,17 +1928,17 @@
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/runtime-CSBFGJdS.js",
+            "path": "assets/runtime-BN1_Jxz1.js",
             "bytes": 340728,
-            "sha256": "f8ec732f8da972113ee6e466318d81c1e65e09b0e9a2c1c31d42252a287aae77",
-            "integrity": "sha256-+OxzL42pchE+5uRmMY2BweZeCbDposHDHUIlKih6rnc=",
+            "sha256": "862a105951569ef542ddb34d42a1f1087ec8d1b8364f3fa38280bd6fc0464d05",
+            "integrity": "sha256-hioQWVFWnvVC3bNNQqHxCH7I0bg2Tz+jgoC9b8BGTQU=",
             "mediaType": "text/javascript"
           },
           {
-            "path": "assets/stac-aqlZ_w0c.js",
-            "bytes": 112587,
-            "sha256": "d28dc28be85122cd00429f5256d8cb49d5a37a5f70e63528ce5dda5d0953d503",
-            "integrity": "sha256-0o3Ci+hRIs0AQp9SVtjLSdWjel9w5jUozl3aXQlT1QM=",
+            "path": "assets/stac-BnQDvTAO.js",
+            "bytes": 113018,
+            "sha256": "cbf1b16a562d60e89ebb5a3ad2a1689c54987a46505ccb8fda90b26a43040458",
+            "integrity": "sha256-y/GxalYtYOieu1o60qFonFSYekZQXMuP2pCyakMEBFg=",
             "mediaType": "text/javascript"
           },
           {
@@ -1805,8 +1958,8 @@
           {
             "path": "index.html",
             "bytes": 1996,
-            "sha256": "8fb0f3fd6bd11c0f7383edc766cb37daf61175c72a623864c37677af8ff39e09",
-            "integrity": "sha256-j7Dz/WvRHA9zg+3HZss32vYRdccqYjhkw3Z3r4/zngk=",
+            "sha256": "144615baba4e8905c6ee421224135d7640603ad871bb444a6be0ed721fa007f3",
+            "integrity": "sha256-FEYVurpOiQXG7kISJBNddkBgOthxu0RKa+Dtch+gB/M=",
             "mediaType": "text/html"
           }
         ]

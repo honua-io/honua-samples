@@ -437,9 +437,22 @@ function validateManifestShape(manifest) {
   if (!Array.isArray(manifest.samples) || manifest.samples.length === 0) {
     throw new Error("manifest has no samples[]");
   }
+  const ids = new Set();
   for (const sample of manifest.samples) {
     if (!sample.id || !sample.entrypoint || !Array.isArray(sample.files) || sample.files.length === 0) {
       throw new Error(`manifest sample ${JSON.stringify(sample.id)} is missing required fields`);
+    }
+    if (ids.has(sample.id)) {
+      throw new Error(`manifest lists duplicate sample id ${JSON.stringify(sample.id)}`);
+    }
+    ids.add(sample.id);
+    if (!/^[0-9a-f]{40}$/u.test(sample.builtFrom?.commit ?? "")) {
+      throw new Error(
+        `manifest sample ${JSON.stringify(sample.id)} has invalid builtFrom.commit ${JSON.stringify(sample.builtFrom?.commit)}; a full lowercase Git SHA is required`,
+      );
+    }
+    if (typeof sample.builtFrom?.packageVersion !== "string" || sample.builtFrom.packageVersion.length === 0) {
+      throw new Error(`manifest sample ${JSON.stringify(sample.id)} is missing builtFrom.packageVersion`);
     }
   }
 }

@@ -1,0 +1,51 @@
+{
+  "format": "honua.samples.sdk-v2-capability-refresh.v1",
+  "schemaVersion": 1,
+  "issue": "https://github.com/honua-io/honua-samples/issues/38",
+  "producer": {
+    "repository": "honua-io/honua-sdk-js",
+    "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
+    "handoff": "samples/dist/honua-site-consumer-handoff.v2.json",
+    "consumerFixture": "samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json"
+  },
+  "release": {
+    "tag": "sample-bundles-latest",
+    "targetCommit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
+    "sampleCount": 17,
+    "assets": [
+      {
+        "name": "sample-bundles.v2.json",
+        "sha256": "d87e3c9ab740d1c3393ab549a92ec5b933159e089e059fb8d1287a942e305e96",
+        "bytes": 85856
+      },
+      {
+        "name": "sample-bundles.tar.gz",
+        "sha256": "8b801b803893e28bc055fa03d92253af1977f496cc8af1f0f8b594f281ba084d",
+        "bytes": 17542136
+      }
+    ]
+  },
+  "semanticFixtures": [
+    {
+      "sampleId": "imagery-cog-quickstart",
+      "artifact": "synthetic COG asset",
+      "sha256": "59ba6110a96c0aba2ab5f5ee27b0eed6ec436956df27bb6312b94573f35190bd"
+    },
+    {
+      "sampleId": "columnar-query-quickstart",
+      "artifact": "1,336-byte Honua Server geoarrow.wkb Arrow fixture",
+      "sha256": "c5d9c789171970b19ca9c54d5eda97f045f28adf66324f949c14813e8f90d001"
+    },
+    {
+      "sampleId": "coverages-wcs-basic",
+      "artifact": "320 x 220 deterministic PNG",
+      "sha256": "8c7b5b3f8bd31bca2df07c4a70254d75e70d63838c2f77e033def3c1b8d2acff"
+    }
+  ],
+  "admission": {
+    "sourceBinding": "Each runnable SDK card resolves source and docs from its bundle builtFrom.commit.",
+    "states": "Support, lifecycle, qualification, fixture, and live states are read from the admitted producer handoff without promotion.",
+    "multidimensional": "Preview-only and non-runnable; no client, GA, fixture, or live claim is added."
+  },
+  "remainingDependency": "Final demo.honua.io capability discovery, public canaries, samples.honua.io deployment, and post-deploy audit are outside this phase."
+}

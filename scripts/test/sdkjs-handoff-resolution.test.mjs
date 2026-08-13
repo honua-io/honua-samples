@@ -19,9 +19,12 @@ const nextFixtureText = producerText(await readFile(DEFAULT_FIXTURE_V4_SNAPSHOT_
 const legacyHandoffText = producerText(await readFile(DEFAULT_HANDOFF_SNAPSHOT_PATH, "utf8"));
 const legacyFixtureText = producerText(await readFile(DEFAULT_FIXTURE_SNAPSHOT_PATH, "utf8"));
 const parsedNextHandoff = JSON.parse(nextHandoffText);
-const FRESH_NOW = new Date(
-  Math.max(...parsedNextHandoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt))) + 1,
+const parsedLegacyHandoff = JSON.parse(legacyHandoffText);
+const freshNowFor = (handoff) => new Date(
+  Math.max(...handoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt))) + 1,
 );
+const NEXT_FRESH_NOW = freshNowFor(parsedNextHandoff);
+const LEGACY_FRESH_NOW = freshNowFor(parsedLegacyHandoff);
 
 const URLS = Object.freeze({
   nextHandoff: "https://producer.test/handoff.v2.json",
@@ -46,7 +49,7 @@ function options(fetchTextFn, overrides = {}) {
     nextFixtureUrl: URLS.nextFixture,
     handoffUrl: URLS.legacyHandoff,
     fixtureUrl: URLS.legacyFixture,
-    now: FRESH_NOW,
+    now: NEXT_FRESH_NOW,
     refreshSnapshot: false,
     fetchTextFn,
     ...overrides,
@@ -93,6 +96,7 @@ test("resolution reaches legacy live only when both next sources are unavailable
         calls,
       ),
       {
+        now: LEGACY_FRESH_NOW,
         nextSnapshotPath: path.join(workDir, "missing-next-handoff.json"),
         nextFixtureSnapshotPath: path.join(workDir, "missing-next-fixture.json"),
       },
@@ -115,6 +119,7 @@ test("resolution reaches the legacy snapshot last", async (t) => {
   await writeFile(fixtureSnapshotPath, legacyFixtureText);
   const result = await loadSdkJsHandoff(
     options(fetcher(new Map(), []), {
+      now: LEGACY_FRESH_NOW,
       nextSnapshotPath: path.join(workDir, "missing-next-handoff.json"),
       nextFixtureSnapshotPath: path.join(workDir, "missing-next-fixture.json"),
       snapshotPath,

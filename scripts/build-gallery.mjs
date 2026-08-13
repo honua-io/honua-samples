@@ -74,6 +74,7 @@ import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs"
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
 import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
+import { bindSdkSourceToBundle } from "./lib/sdk-source-binding.mjs";
 import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
 
@@ -120,6 +121,12 @@ const SDK_CONTENT_KIND_OVERRIDES = new Map([
   ["overture-geoparquet", "walkthrough"],
   ["stac-imagery-browser", "walkthrough"],
   ["sketch-editing", "walkthrough"],
+]);
+const SDK_SEARCH_ALIASES = new Map([
+  ["imagery-cog-quickstart", ["COG", "Cloud Optimized GeoTIFF", "STAC", "terrain"]],
+  ["columnar-query-quickstart", ["GeoArrow", "Arrow IPC", "GeoParquet", "columnar"]],
+  ["coverages-wcs-basic", ["OGC API Coverages", "WCS", "multidimensional raster"]],
+  ["overture-geoparquet", ["GeoParquet", "GeoArrow", "Overture", "columnar"]],
 ]);
 const WALKTHROUGH_GUIDES = new Map([
   ["wms-getmap-check", {
@@ -294,6 +301,7 @@ async function main() {
       // site/sdk/ cleanup -- the staging root (scripts/lib/sample-bundles.mjs)
       // lives outside site/ entirely for exactly this reason.
       await cp(path.join(bundleState.stagingRoot, card.id), path.join(dir, "app"), { recursive: true });
+      await bindEmbeddedBundleDocumentationLinks(card, path.join(dir, "app"));
       embeddedCount += 1;
     }
     await writeFile(
@@ -500,6 +508,15 @@ function toJobCard(job, keyByKey, problems) {
 function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
   const entry = record.card;
   const id = entry.id;
+  const bundleSample = bundleById.get(id) ?? null;
+  const sourceBinding = bundleSample
+    ? bindSdkSourceToBundle({
+        repository: SDKJS_REPO,
+        sourcePath: entry.source.path,
+        docsPath: entry.source.docsPath ?? null,
+        bundleSample,
+      })
+    : null;
   for (const key of record.capabilityKeys) {
     if (!keyByKey.has(key)) {
       problems.push(`${SDKJS_REPO} handoff card "${id}" references unknown capability key "${key}" -- crosswalk or catalog is out of sync with the canonical key list`);
@@ -533,7 +550,10 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     protocols: entry.protocols ?? [],
     renderers: entry.renderers ?? [],
     dataMode: entry.data?.mode ?? null,
+    data: entry.data ?? null,
     auth: entry.data?.authMode ?? null,
+    expectedDegradation: entry.expectedDegradation ?? null,
+    searchAliases: SDK_SEARCH_ALIASES.get(id) ?? [],
     qualification: entry.qualification ?? null,
     evidence: entry.evidence ?? null,
     evidenceBindingId: entry.evidenceBindingId ?? null,
@@ -545,14 +565,16 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     sourceRepo: "honua-sdk-js",
     detailUrl: `${GALLERY_BASE_URL}/sdk/${id}/`,
     detailPath: `/sdk/${id}/`,
-    githubUrl: `https://github.com/${SDKJS_REPO}/tree/trunk/${entry.source.path}`,
+    githubUrl: sourceBinding?.sourceTreeUrl ?? `https://github.com/${SDKJS_REPO}/tree/trunk/${entry.source.path}`,
     sourcePath: entry.source.path,
-    docsUrl: entry.source.docsPath ? `https://github.com/${SDKJS_REPO}/blob/trunk/${entry.source.docsPath}` : null,
+    docsUrl: sourceBinding?.docsUrl ?? null,
+    sourceRevision: sourceBinding?.revision ?? null,
+    sourceRawRoot: sourceBinding?.rawRoot ?? null,
     // Populated only when scripts/lib/sample-bundles.mjs's manifest has this
     // id AND this build actually staged sha256-verified files for it this
     // run (bundleSample can be non-null while bundleStaged is false in a
     // degraded run -- see the file header comment on scripts/lib/sample-bundles.mjs).
-    bundleSample: bundleById.get(id) ?? null,
+    bundleSample,
     bundleStaged: stagedBundleIds.has(id),
     bundleRunnable:
       stagedBundleIds.has(id) && bundleById.get(id)?.runnability === "standalone",
@@ -899,7 +921,7 @@ function renderCard(card) {
   const extra =
     card.kind === "own"
       ? runBadgeHtml(card.runBadge)
-      : chip(`support: ${card.supportTier}`, "support-tier");
+      : `${chip(`support: ${card.supportTier}`, "support-tier")}${renderCardEvidenceBadges(card)}`;
   const runnableBadge = runnable
     ? `<span class="badge runnable" title="Runs in the browser on this page">&#9654; Runnable</span>`
     : "";
@@ -913,7 +935,7 @@ function renderCard(card) {
   const actions = card.contentKind === "project"
     ? `<a class="card-open" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">${card.kind === "job" ? "Open governed project contract" : "Open project source"} &nearr;</a><a href="${card.detailPath}">Project overview &rarr;</a>`
     : `<a class="card-open" href="${card.detailPath}">${runnable ? "Run and view code" : "View code"} &rarr;</a><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">GitHub &nearr;</a>`;
-  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")}`)}">
+  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")} ${(card.searchAliases ?? []).join(" ")}`)}">
   <div class="card-topline"><span class="content-kind-label kind-${escapeAttr(card.contentKind)}">${escapeHtml(contentKind.singular)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
   <p class="summary">${escapeHtml(card.summary)}</p>
@@ -928,6 +950,16 @@ function renderCard(card) {
   <div class="card-evidence">${runnableBadge}${extra}</div>
   <div class="card-actions">${actions}</div>
 </article>`;
+}
+
+function renderCardEvidenceBadges(card) {
+  if (card.kind !== "sdk") return "";
+  const fixture = card.evidence?.fixture;
+  const live = card.evidence?.live;
+  const badges = [];
+  if (fixture?.status) badges.push(chip(`fixture: ${fixture.status}`, "fixture-state"));
+  if (live?.status) badges.push(chip(`live: ${live.status}`, `live-state-${live.status}`));
+  return badges.join("");
 }
 
 function renderContentKindSection(section) {
@@ -1236,12 +1268,14 @@ ${card.contentKind === "project" ? renderProjectSourcePanel(card) : ""}
 }
 
 function renderRemoteCodePanel(card) {
-  const root = `https://raw.githubusercontent.com/${SDKJS_REPO}/trunk/${card.sourcePath}`;
-  return `<section class="code-view remote-code code-first-preview" data-source-root="${escapeAttr(root)}" data-source-path="${escapeAttr(card.sourcePath)}" data-github-url="${escapeAttr(card.githubUrl)}">
+  if (!card.sourceRevision || !card.sourceRawRoot) {
+    return renderNoBundlePanel("The producer did not publish an immutable source revision for this bundle.");
+  }
+  return `<section class="code-view remote-code code-first-preview" data-source-root="${escapeAttr(card.sourceRawRoot)}" data-source-path="${escapeAttr(card.sourcePath)}" data-source-revision="${escapeAttr(card.sourceRevision)}" data-github-url="${escapeAttr(card.githubUrl)}">
   <details class="remote-code-details"><summary><span>CODE FIRST</span><strong data-source-name>Finding the primary source file…</strong><em>Expand source</em></summary>
-    <div class="code-toolbar"><div><span>PRODUCER TRUNK PREVIEW</span><strong>Focused implementation before runtime evidence</strong></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
+    <div class="code-toolbar"><div><span>EXACT BUNDLE SOURCE</span><strong>honua-sdk-js @ ${escapeHtml(card.sourceRevision.slice(0, 12))}</strong></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
     <pre tabindex="0"><code data-source-code>Loading source from honua-sdk-js…</code></pre>
-    <p class="source-note" data-source-note>This preview follows producer trunk and is not the integrity-bound browser bundle shown next.</p>
+    <p class="source-note" data-source-note>This preview and the runnable browser bundle are bound to the same immutable producer commit.</p>
   </details>
 </section>`;
 }
@@ -1262,12 +1296,36 @@ function renderSdkLifecycleNotice(notice) {
 // repo -- nothing is vendored or re-hosted here.
 function renderSdkEvidenceSection(card) {
   const rows = [];
+  if (card.sourceRevision) {
+    rows.push(
+      `<li>Runnable bytes and inline source are bound to producer commit <a href="https://github.com/${SDKJS_REPO}/commit/${escapeAttr(card.sourceRevision)}" target="_blank" rel="noopener noreferrer"><code>${escapeHtml(card.sourceRevision)}</code></a>.</li>`,
+    );
+  }
+  if (card.evidence?.fixture) {
+    rows.push(
+      `<li>Fixture lane: <code>${escapeHtml(card.evidence.fixture.mode ?? "fixture")}</code> / <strong>${escapeHtml(card.evidence.fixture.status ?? "unknown")}</strong>. ${escapeHtml(card.data?.provenance ?? "See the immutable producer source for fixture provenance and digests.")}</li>`,
+    );
+  }
+  if (card.evidence?.live) {
+    const live = card.evidence.live;
+    const evidenceRevision = card.sourceRevision ?? "trunk";
+    const evidenceLink = live.evidencePath
+      ? ` <a href="https://github.com/${SDKJS_REPO}/blob/${escapeAttr(evidenceRevision)}/${escapeAttr(live.evidencePath)}" target="_blank" rel="noopener noreferrer">Receipt ↗</a>`
+      : "";
+    rows.push(
+      `<li>Live lane: <code>${escapeHtml(live.mode ?? "unavailable")}</code> / <strong>${escapeHtml(live.status ?? "unknown")}</strong>${live.expiresAt ? `, expires ${escapeHtml(live.expiresAt)}` : ""}.${evidenceLink}</li>`,
+    );
+  }
+  if (card.expectedDegradation) {
+    rows.push(`<li>Expected degradation: ${escapeHtml(card.expectedDegradation)}</li>`);
+  }
   for (const journey of card.qualifiedJourneys ?? []) {
     const ve = journey.visualEvidence ?? {};
+    const evidenceRevision = ve.source?.revision ?? card.sourceRevision ?? "trunk";
     const shots = (ve.screenshots ?? [])
       .map(
         (s) =>
-          `<a href="https://github.com/${SDKJS_REPO}/blob/trunk/${escapeAttr(s.sourcePath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.variant)} ↗</a>`,
+          `<a href="https://github.com/${SDKJS_REPO}/blob/${escapeAttr(evidenceRevision)}/${escapeAttr(s.sourcePath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.variant)} ↗</a>`,
       )
       .join(" · ");
     rows.push(
@@ -1329,6 +1387,27 @@ function assertNoDuplicateArticles(indexHtml) {
 }
 
 // ---- misc ----------------------------------------------------------------
+
+const EMBEDDED_BUNDLE_DOCUMENTATION_LINKS = Object.freeze({
+  "stac-imagery-browser": [
+    {
+      file: "index.html",
+      from: 'href="../../docs/walkthroughs/search-stac-and-open-assets.md"',
+    },
+  ],
+});
+
+async function bindEmbeddedBundleDocumentationLinks(card, appDir) {
+  const links = EMBEDDED_BUNDLE_DOCUMENTATION_LINKS[card.id] ?? [];
+  for (const link of links) {
+    const filePath = path.join(appDir, link.file);
+    const html = await readFile(filePath, "utf8");
+    if (!html.includes(link.from)) {
+      throw new Error(`bundle ${card.id} no longer contains governed documentation link ${link.from}`);
+    }
+    await writeFile(filePath, html.replace(link.from, `href="${escapeHtml(card.docsUrl)}"`), "utf8");
+  }
+}
 
 async function copyAssets() {
   const destDir = path.join(SITE_DIR, "assets");

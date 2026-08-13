@@ -18,6 +18,10 @@ const validManifest = {
   samples: [
     {
       id: "service-explorer",
+      builtFrom: {
+        commit: "0123456789abcdef0123456789abcdef01234567",
+        packageVersion: "0.0.0-test",
+      },
       entrypoint: "index.html",
       runnability: "standalone",
       files: [

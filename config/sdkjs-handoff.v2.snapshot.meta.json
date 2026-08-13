@@ -6,7 +6,7 @@
     "fixtureFormat": "honua.site.sdk-sample-consumer-fixture.v4",
     "fixtureSchemaVersion": 4
   },
-  "handoffSourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v2.json",
-  "fixtureSourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json",
-  "fetchedAt": "2026-08-11T05:10:37.548Z"
+  "handoffSourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/2284c9b032b2c81227dc86ff1ff9a46dc61cde6c/samples/dist/honua-site-consumer-handoff.v2.json",
+  "fixtureSourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/2284c9b032b2c81227dc86ff1ff9a46dc61cde6c/samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json",
+  "fetchedAt": "2026-08-13T07:16:30.559Z"
 }

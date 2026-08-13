@@ -1,0 +1,221 @@
+{
+  "schemaVersion": "honua.job-page/v1",
+  "id": "multidimensional-format-maturity",
+  "title": "Decide whether Zarr, NetCDF, or HDF5 is ready",
+  "kind": "walkthrough",
+  "summary": "A preview-only maturity review for multidimensional formats. It is deliberately non-runnable and non-GA: server source evidence exists, but no JavaScript adapter or public end-to-end canary closes the path.",
+  "maturity": {
+    "state": "source-preview",
+    "supportTier": "Preview-only architecture guidance; not a support claim",
+    "evidence": [
+      "honua-sdk-js@2284c9b032b2c81227dc86ff1ff9a46dc61cde6c/config/multidimensional-format-maturity.v1.json",
+      "Zarr server evidence pinned to honua-server@639d37449fb8da5e9df4b12b7641ba4c6c5ac581",
+      "NetCDF-4 and geospatial HDF5 server evidence pinned to honua-server@61b7038e1887c98131aa217b6f0ae7869356a1f3"
+    ],
+    "limitations": [
+      "Zarr client and end-to-end states are unavailable; the server state is experimental and lacks a positive public canary.",
+      "NetCDF-4 and geospatial HDF5 client and end-to-end states are unavailable; server evidence is metadata-only and build-optional.",
+      "There is no public JavaScript adapter, runnable sample, stable bounded variable/subset contract, immutable live fixture, Studio action, or CLI command for these formats.",
+      "Geospatial HDF5 means only datasets that map to a documented coverage model; arbitrary HDF5 group browsing is out of scope."
+    ]
+  },
+  "server": {
+    "operation": "Review multidimensional format maturity before choosing an executable coverage workflow",
+    "capabilityIds": ["raster.multidim-coverage"],
+    "fixture": {
+      "endpoint": null,
+      "serviceManifestKey": null,
+      "sourceCommit": "honua-server:61b7038e1887c98131aa217b6f0ae7869356a1f3 + 639d37449fb8da5e9df4b12b7641ba4c6c5ac581",
+      "serverVersion": "Pinned source evidence only; no admitted public deployment",
+      "evidenceState": "unavailable"
+    },
+    "auth": "No runnable request is admitted. Existing registration evidence is administrative and must not be presented as anonymous read support.",
+    "protocols": [
+      {
+        "id": "zarr-v2-v3",
+        "availability": "contract-only",
+        "method": "N/A",
+        "endpointTemplate": "No public endpoint admitted by this walkthrough",
+        "concreteEndpoint": null,
+        "request": { "state": "withheld", "reason": "No bounded JavaScript client or positive public Zarr canary" },
+        "response": { "client": "unavailable", "server": "experimental", "endToEnd": "unavailable" },
+        "notes": "Registration, bounded subset internals, CoverageJSON, WCS fixtures, and datacube components are source evidence only. They do not create a public client workflow."
+      },
+      {
+        "id": "netcdf4",
+        "availability": "contract-only",
+        "method": "N/A",
+        "endpointTemplate": "Administrative registration and build-optional conversion evidence only",
+        "concreteEndpoint": null,
+        "request": { "state": "withheld", "reason": "No stable public variable or bounded subset operation" },
+        "response": { "client": "unavailable", "server": "metadata-only", "endToEnd": "unavailable" },
+        "notes": "Registration metadata and optional GDAL conversion do not prove readable NetCDF variables or subsets."
+      },
+      {
+        "id": "geospatial-hdf5",
+        "availability": "contract-only",
+        "method": "N/A",
+        "endpointTemplate": "Administrative registration and conversion architecture evidence only",
+        "concreteEndpoint": null,
+        "request": { "state": "withheld", "reason": "No pinned HDF5 driver matrix or bounded public read contract" },
+        "response": { "client": "unavailable", "server": "metadata-only", "endToEnd": "unavailable" },
+        "notes": "HDF5 is not inherently geospatial. Only a future documented coverage mapping could enter scope."
+      }
+    ],
+    "docs": [
+      "https://github.com/honua-io/honua-sdk-js/blob/2284c9b032b2c81227dc86ff1ff9a46dc61cde6c/docs/multidimensional-format-maturity.md",
+      "https://github.com/honua-io/honua-sdk-js/blob/2284c9b032b2c81227dc86ff1ff9a46dc61cde6c/config/multidimensional-format-maturity.v1.json"
+    ],
+    "owner": "honua-server owns server maturity; honua-sdk-js owns any future public client; honua-samples owns this truthful curriculum projection",
+    "cancellation": "Not applicable because this page executes no request.",
+    "errors": "Treat unavailable, metadata-only, experimental, and missing-canary states as release blockers; never fall back to a browser full-file download."
+  },
+  "semantics": {
+    "normalizedRequest": { "operation": "maturity-review", "formats": ["zarr-v2-v3", "netcdf4", "geospatial-hdf5"], "runtime": "none" },
+    "expectedResult": {
+      "zarr": { "client": "unavailable", "server": "experimental", "endToEnd": "unavailable" },
+      "netcdf4": { "client": "unavailable", "server": "metadata-only", "endToEnd": "unavailable" },
+      "geospatialHdf5": { "client": "unavailable", "server": "metadata-only", "endToEnd": "unavailable" }
+    },
+    "assertion": "The page offers no Run action, executable code, live claim, GA badge, invented API, or full-file browser fallback; use the supported Coverages/WCS recipe for current runnable multidimensional curriculum."
+  },
+  "references": [
+    {
+      "surface": "http",
+      "availability": "source-preview",
+      "label": "Pinned multidimensional server/source maturity evidence",
+      "symbolOrCommand": "config/multidimensional-format-maturity.v1.json",
+      "deepLink": "https://github.com/honua-io/honua-sdk-js/blob/2284c9b032b2c81227dc86ff1ff9a46dc61cde6c/docs/multidimensional-format-maturity.md",
+      "package": "Honua Server source evidence",
+      "minVersion": "No public runtime version admitted",
+      "supportTier": "Preview only",
+      "owner": "honua-server",
+      "auth": "Administrative source evidence only; no request is shown.",
+      "cancellation": "Not applicable.",
+      "errors": "Missing public contract or canary keeps the operation unavailable.",
+      "gap": null
+    },
+    {
+      "surface": "cli",
+      "availability": "gap",
+      "label": "Multidimensional format CLI",
+      "symbolOrCommand": null,
+      "deepLink": null,
+      "package": null,
+      "minVersion": null,
+      "supportTier": "Unavailable",
+      "owner": "Honua CLI",
+      "auth": "Not applicable.",
+      "cancellation": "Not applicable.",
+      "errors": "Not applicable.",
+      "gap": "No admitted Zarr, NetCDF-4, or geospatial HDF5 CLI workflow exists."
+    },
+    {
+      "surface": "javascript",
+      "availability": "gap",
+      "label": "JavaScript multidimensional format adapter",
+      "symbolOrCommand": null,
+      "deepLink": null,
+      "package": "@honua/sdk-js",
+      "minVersion": null,
+      "supportTier": "Unavailable",
+      "owner": "honua-sdk-js",
+      "auth": "Not applicable.",
+      "cancellation": "Not applicable.",
+      "errors": "Not applicable.",
+      "gap": "No Zarr connector, NetCDF adapter, HDF5 adapter, metadata reader, slice reader, tile client, or package export is public."
+    },
+    {
+      "surface": "python",
+      "availability": "gap",
+      "label": "Python multidimensional format adapter",
+      "symbolOrCommand": null,
+      "deepLink": null,
+      "package": null,
+      "minVersion": null,
+      "supportTier": "Not claimed",
+      "owner": "honua-sdk-python",
+      "auth": "Not applicable.",
+      "cancellation": "Not applicable.",
+      "errors": "Not applicable.",
+      "gap": "This JavaScript SDK maturity handoff provides no evidence for a supported Python format adapter."
+    },
+    {
+      "surface": "dotnet",
+      "availability": "gap",
+      "label": ".NET multidimensional format adapter",
+      "symbolOrCommand": null,
+      "deepLink": null,
+      "package": null,
+      "minVersion": null,
+      "supportTier": "Not claimed",
+      "owner": "honua-sdk-dotnet",
+      "auth": "Not applicable.",
+      "cancellation": "Not applicable.",
+      "errors": "Not applicable.",
+      "gap": "This JavaScript SDK maturity handoff provides no evidence for a supported .NET format adapter."
+    }
+  ],
+  "codeTabs": [],
+  "walkthrough": [
+    {
+      "order": 1,
+      "title": "Separate client, server, and end-to-end maturity",
+      "state": "contract-only",
+      "action": "Read each layer independently; do not promote server source evidence into a client or deployed compatibility claim.",
+      "expectedOutcome": "Zarr resolves to unavailable / experimental / unavailable; NetCDF-4 and geospatial HDF5 resolve to unavailable / metadata-only / unavailable."
+    },
+    {
+      "order": 2,
+      "title": "Check the publication gates",
+      "state": "contract-only",
+      "action": "Require immutable fixtures, stable versioned metadata and bounded subset operations, deployed canaries, resource budgets, typed client errors, and reviewed package exports.",
+      "expectedOutcome": "Every missing gate remains visible and prevents a runnable or GA claim."
+    },
+    {
+      "order": 3,
+      "title": "Choose the current executable path",
+      "state": "available",
+      "action": "Use the separate fixture-backed OGC API Coverages / WCS quickstart when the learning task is a bounded coverage subset and MapLibre handoff.",
+      "expectedOutcome": "A runnable standards-based coverage example without implying native Zarr, NetCDF, or HDF5 client support."
+    },
+    {
+      "order": 4,
+      "title": "Revisit only after evidence lands",
+      "state": "planned",
+      "action": "Add format-specific executable curriculum only after the corresponding SDK export, fixture, live service, error, cancellation, and budget receipts pass.",
+      "expectedOutcome": "A future runnable walkthrough is evidence-gated rather than inferred from architecture."
+    }
+  ],
+  "console": {
+    "state": "not-applicable",
+    "route": null,
+    "requiredRole": null,
+    "equivalentConfig": { "runtime": "none", "reason": "Preview-only maturity guidance" },
+    "visual": {
+      "state": "not-applicable",
+      "path": null,
+      "alt": "No console or runtime screenshot is published for this preview-only walkthrough.",
+      "callouts": [],
+      "viewport": null,
+      "redaction": null,
+      "sourceCommit": null,
+      "serverVersion": null,
+      "fixtureKey": null,
+      "goldenReceipt": null
+    }
+  },
+  "ai": {
+    "state": "not-applicable",
+    "api": null,
+    "allowedTasks": [],
+    "contextInputs": [],
+    "providerBoundary": "No AI provider or model is involved.",
+    "security": "No data, credentials, endpoints, or source objects are submitted.",
+    "validation": "Schema and gallery tests verify the static maturity contract.",
+    "approvalBoundary": "Any future runtime or support promotion requires normal product review and evidence admission.",
+    "prohibitedActions": ["execute without required human approval"],
+    "fallback": "Use the pinned maturity manifest and the runnable Coverages/WCS recipe.",
+    "provenance": "All maturity statements are bound to the exact SDK and server source revisions named above."
+  }
+}

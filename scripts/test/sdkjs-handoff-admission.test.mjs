@@ -42,15 +42,19 @@ const catalogSnapshot = JSON.parse(
 // future evidence.
 const pinnedHandoff = JSON.parse(handoffText);
 const pinnedNextHandoff = JSON.parse(nextHandoffText);
-const pinnedJourneys = [...pinnedHandoff.qualifiedJourneys, ...pinnedNextHandoff.qualifiedJourneys];
-const newestObservation = Math.max(
-  ...pinnedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt)),
-);
-const earliestExpiry = Math.min(
-  ...pinnedJourneys.map((journey) => Date.parse(journey.visualEvidence.expiresAt)),
-);
-const FRESH_NOW = new Date(newestObservation + 1);
-assert.ok(FRESH_NOW.getTime() < earliestExpiry, "pinned evidence windows do not overlap");
+function freshNowFor(handoff) {
+  const newestObservation = Math.max(
+    ...handoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.observedAt)),
+  );
+  const earliestExpiry = Math.min(
+    ...handoff.qualifiedJourneys.map((journey) => Date.parse(journey.visualEvidence.expiresAt)),
+  );
+  const now = new Date(newestObservation + 1);
+  assert.ok(now.getTime() < earliestExpiry, "pinned contract has a valid evidence window");
+  return now;
+}
+const LEGACY_FRESH_NOW = freshNowFor(pinnedHandoff);
+const NEXT_FRESH_NOW = freshNowFor(pinnedNextHandoff);
 
 /** Re-pins the fixture's content binding onto mutated handoff text, so a test
  * can prove a rule fires AFTER the digest gate passes (only the producer can
@@ -65,8 +69,8 @@ function forgeFixtureFor(mutatedHandoffText, mutateFixture = (f) => f) {
 }
 
 test("pinned snapshot pair is admitted deterministically", () => {
-  const first = admitSdkJsHandoff({ handoffText, fixtureText, now: FRESH_NOW });
-  const second = admitSdkJsHandoff({ handoffText, fixtureText, now: FRESH_NOW });
+  const first = admitSdkJsHandoff({ handoffText, fixtureText, now: LEGACY_FRESH_NOW });
+  const second = admitSdkJsHandoff({ handoffText, fixtureText, now: LEGACY_FRESH_NOW });
   assert.equal(first.ok, true, first.errors.join("; "));
   assert.deepEqual(first.errors, []);
   assert.equal(second.ok, true);
@@ -80,8 +84,8 @@ test("pinned snapshot pair is admitted deterministically", () => {
 });
 
 test("preferred v2/v4 snapshot pair admits every legacy identity plus newly published records", () => {
-  const legacy = admitSdkJsHandoff({ handoffText, fixtureText, now: FRESH_NOW });
-  const next = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: FRESH_NOW });
+  const legacy = admitSdkJsHandoff({ handoffText, fixtureText, now: LEGACY_FRESH_NOW });
+  const next = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: NEXT_FRESH_NOW });
   assert.equal(legacy.ok, true, legacy.errors.join("; "));
   assert.equal(next.ok, true, next.errors.join("; "));
   assert.equal(legacy.contract.id, "v1/v3");
@@ -105,14 +109,14 @@ test("preferred v2/v4 snapshot pair admits every legacy identity plus newly publ
 test("tampered handoff bytes are rejected by the fixture content binding", () => {
   const tampered = handoffText.replace("Safe Agent Workbench", "Safe Agent Workshop");
   assert.notEqual(tampered, handoffText);
-  const result = admitSdkJsHandoff({ handoffText: tampered, fixtureText, now: FRESH_NOW });
+  const result = admitSdkJsHandoff({ handoffText: tampered, fixtureText, now: LEGACY_FRESH_NOW });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /tampered, stale, or locally reconstructed/);
 });
 
 test("locally reconstructed (re-serialized but semantically identical) handoff is rejected", () => {
   const reconstructed = JSON.stringify(JSON.parse(handoffText), null, 1);
-  const result = admitSdkJsHandoff({ handoffText: reconstructed, fixtureText, now: FRESH_NOW });
+  const result = admitSdkJsHandoff({ handoffText: reconstructed, fixtureText, now: LEGACY_FRESH_NOW });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /tampered, stale, or locally reconstructed/);
 });
@@ -121,7 +125,7 @@ test("schema-incompatible fixture accepts block is rejected", () => {
   const fixture = JSON.parse(fixtureText);
   fixture.accepts.handoffSchemaVersion = 2;
   fixture.accepts.handoffFormat = "honua.site.sdk-sample-consumer-handoff.v2";
-  const result = admitSdkJsHandoff({ handoffText, fixtureText: JSON.stringify(fixture), now: FRESH_NOW });
+  const result = admitSdkJsHandoff({ handoffText, fixtureText: JSON.stringify(fixture), now: LEGACY_FRESH_NOW });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /schema-incompatible/);
 });
@@ -133,7 +137,7 @@ test("unknown future fixture generation is rejected instead of coerced", () => {
   const result = admitSdkJsHandoff({
     handoffText: nextHandoffText,
     fixtureText: JSON.stringify(fixture),
-    now: FRESH_NOW,
+    now: NEXT_FRESH_NOW,
   });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /schema-incompatible consumer fixture/);
@@ -145,7 +149,7 @@ test("handoff declaring a different format than the fixture accepts is rejected 
     '"format": "honua.site.sdk-sample-consumer-handoff.v9"',
   );
   assert.notEqual(mutated, handoffText);
-  const result = admitSdkJsHandoff({ handoffText: mutated, fixtureText: forgeFixtureFor(mutated), now: FRESH_NOW });
+  const result = admitSdkJsHandoff({ handoffText: mutated, fixtureText: forgeFixtureFor(mutated), now: LEGACY_FRESH_NOW });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /schema-incompatible handoff/);
 });
@@ -165,7 +169,7 @@ test("duplicate stable identities inside the handoff are rejected", () => {
     f.assertions.cardCount += 1;
     return f;
   });
-  const result = admitSdkJsHandoff({ handoffText: mutated, fixtureText: forged, now: FRESH_NOW });
+  const result = admitSdkJsHandoff({ handoffText: mutated, fixtureText: forged, now: LEGACY_FRESH_NOW });
   assert.equal(result.ok, false);
   const text = result.errors.join("\n");
   assert.match(text, /duplicate stable identity: card id/);
@@ -177,7 +181,7 @@ test("counts/assertion drift from the actual arrays is rejected", () => {
   const handoff = JSON.parse(handoffText);
   handoff.cards.pop();
   const mutated = JSON.stringify(handoff);
-  const result = admitSdkJsHandoff({ handoffText: mutated, fixtureText: forgeFixtureFor(mutated), now: FRESH_NOW });
+  const result = admitSdkJsHandoff({ handoffText: mutated, fixtureText: forgeFixtureFor(mutated), now: LEGACY_FRESH_NOW });
   assert.equal(result.ok, false);
   const text = result.errors.join("\n");
   assert.match(text, /counts\.cards says/);
@@ -189,14 +193,14 @@ test("qualified card without a backing qualified journey is rejected", () => {
   const unqualified = handoff.cards.find((c) => c.qualification.state !== "qualified");
   unqualified.qualification = { ...unqualified.qualification, state: "qualified" };
   const mutated = JSON.stringify(handoff);
-  const result = admitSdkJsHandoff({ handoffText: mutated, fixtureText: forgeFixtureFor(mutated), now: FRESH_NOW });
+  const result = admitSdkJsHandoff({ handoffText: mutated, fixtureText: forgeFixtureFor(mutated), now: LEGACY_FRESH_NOW });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /claims qualification "qualified" but no qualified journey backs it/);
 });
 
 // ---- cross-source merge ----------------------------------------------------
 
-const admitted = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: FRESH_NOW });
+const admitted = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: NEXT_FRESH_NOW });
 assert.equal(admitted.ok, true);
 const catalogEntries = catalogSnapshot.catalog.samples;
 

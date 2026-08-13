@@ -14,6 +14,7 @@ The infrastructure repository was renamed from `honua-demo` to `honua-demo-infra
 ## Research artifacts
 
 - [Competitive sample audit](competitive-sample-audit.md) compares ArcGIS, Mapbox, CARTO, and AppStudio, identifies Honua SDK gaps, and defines the curriculum and delivery sequence.
+- [JavaScript SDK v2 capability refresh](sdk-v2-capability-refresh.md) records the immutable 17-bundle handoff, source/bundle binding, admitted COG/GeoArrow/Coverages routes, GeoParquet discovery path, and the non-runnable multidimensional maturity boundary.
 - [Competitor example inventory](competitor-example-inventory.json) is the route-level source inventory used by the audit.
 
 ## Content contract

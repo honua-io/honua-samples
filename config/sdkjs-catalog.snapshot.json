@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sdkjs-catalog.mjs (via scripts/build-gallery.mjs) when the live fetch of samples/catalog.v2.json fails, so samples.honua.io deploys never break on an sdk-js-side hiccup. Rewritten automatically whenever the live fetch succeeds -- commit the change to keep the offline fallback current. See honua-io/honua-samples#3.",
-  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/catalog.v2.json",
-  "fetchedAt": "2026-08-11T05:10:37.744Z",
+  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/2284c9b032b2c81227dc86ff1ff9a46dc61cde6c/samples/catalog.v2.json",
+  "fetchedAt": "2026-08-13T07:16:30.739Z",
   "catalog": {
     "$schema": "./contract/v2/schemas/sample-catalog.schema.json",
     "format": "honua.sdk.sample-catalog.v2",
@@ -542,34 +542,21 @@
       },
       {
         "id": "columnar-query-quickstart",
-        "title": "Bounded columnar query plan",
-        "summary": "Builds an inspectable Arrow query plan with server pushdown and hard browser resource ceilings before any bytes move.",
+        "title": "Map a bounded Arrow result",
+        "summary": "Executes an exact Honua Server Arrow fixture through bounded pushdown, decoding, cancellation, evidence, and a deterministic MapLibre handoff.",
         "sourceKind": "root-example",
         "track": "recipe",
         "supportTier": "experimental",
         "lifecycle": {
           "state": "active",
-          "reason": "Focused inline-code-first entry point for GeoArrow and GeoParquet planning; Overture remains the production-shaped large-data project."
+          "reason": "Map-first fixture workflow for exact Honua Arrow interoperability; Overture remains the complete production-shaped browser GeoParquet project."
         },
         "sourcePath": "examples/columnar-query-quickstart",
         "docsPath": "examples/columnar-query-quickstart/README.md",
-        "playground": {
-          "projectPath": "playgrounds/columnar-query-quickstart",
-          "providers": [
-            {
-              "id": "stackblitz",
-              "title": "StackBlitz",
-              "url": "https://stackblitz.com/github/honua-io/honua-sdk-js/tree/trunk/playgrounds/columnar-query-quickstart"
-            },
-            {
-              "id": "codesandbox",
-              "title": "CodeSandbox",
-              "url": "https://codesandbox.io/s/github/honua-io/honua-sdk-js/tree/trunk/playgrounds/columnar-query-quickstart"
-            }
-          ]
-        },
         "capabilities": [
+          "cancellation",
           "columnar",
+          "map",
           "query"
         ],
         "capabilityKeys": [],
@@ -577,15 +564,15 @@
           "geoservices"
         ],
         "renderers": [
-          "none"
+          "maplibre"
         ],
         "data": {
           "mode": "fixture",
           "authMode": "none",
           "config": [],
-          "provenance": "Deterministic in-browser request planning with no data or network access.",
-          "attribution": "No spatial data is loaded or rendered.",
-          "freshness": "Versioned with the SDK query contract.",
+          "provenance": "Base64 text embedding of the exact 1,336-byte Honua Server geoarrow.wkb fixture produced by commit fd1c651efa7078c269742152a2777298e3b1c4d4 and pinned by SHA-256.",
+          "attribution": "Honua Server interoperability fixture; application-pinned WGS84 display convention is not inferred from Arrow CRS metadata.",
+          "freshness": "Fixture producer commit, schema contract, byte length, and SHA-256 are release-gated.",
           "configurationStatus": "not-required",
           "configClassifications": []
         },
@@ -594,7 +581,9 @@
             "mode": "fixture",
             "status": "executed",
             "commands": [
-              "npm run demo:columnar-query:build"
+              "npm run demo:columnar-query:build",
+              "npx vitest run test/columnar-query-quickstart.test.ts",
+              "npm run test:playwright:columnar-query"
             ]
           },
           "live": {
@@ -603,11 +592,13 @@
             "commands": []
           }
         },
-        "expectedDegradation": "The example plans but does not execute because no demo-manifest target currently advertises live Arrow or Parquet output.",
+        "expectedDegradation": "No public live Arrow or Parquet endpoint is claimed. Cancellation and row, batch, transfer, backing-memory, schema, geometry, or CRS violations stop explicitly; unsupported layouts never fall back to full materialization.",
         "validationProfile": "browser-recipe",
         "validation": [
           "npm run demo:columnar-query:typecheck",
           "npm run demo:columnar-query:build",
+          "npx vitest run test/columnar-query-quickstart.test.ts",
+          "npm run test:playwright:columnar-query",
           "npx vitest run test/columnar-workflow.test.ts",
           "npx vitest run test/columnar-workflow-honua-arrow.test.ts"
         ]
@@ -615,13 +606,13 @@
       {
         "id": "coverages-wcs-basic",
         "title": "Bounded coverage quickstart",
-        "summary": "Discovers coverage axes and range fields, then renders one byte-bounded PNG subset.",
+        "summary": "Renders named-band OGC API Coverages and WCS subsets through one MapLibre image handoff.",
         "sourceKind": "root-example",
         "track": "recipe",
         "supportTier": "experimental",
         "lifecycle": {
           "state": "active",
-          "reason": "Provide the smallest deterministic OGC API Coverages workflow while WCS/connect discovery matures."
+          "reason": "Provide browser-qualified deterministic Coverages/WCS evidence while anonymous live canaries and connect discovery remain open."
         },
         "sourcePath": "examples/coverages-wcs-basic",
         "docsPath": "examples/coverages-wcs-basic/README.md",
@@ -641,7 +632,7 @@
           "authMode": "none",
           "configurationStatus": "not-required",
           "config": [],
-          "provenance": "Committed deterministic OGC API Coverages and WCS metadata plus a fixture PNG.",
+          "provenance": "Committed deterministic OGC API Coverages and WCS metadata plus a digest-pinned 320 x 220 fixture PNG, fail-closed in-memory transport, and MapLibre browser proof.",
           "attribution": "Honua protocol contract fixture.",
           "freshness": "Versioned with the repository and server contract.",
           "configClassifications": []
@@ -651,36 +642,23 @@
             "mode": "fixture",
             "status": "executed",
             "commands": [
-              "npm run demo:coverages-wcs:build"
+              "npm run demo:coverages-wcs:build",
+              "npm run test:playwright:coverages-wcs"
             ]
           },
           "live": {
-            "mode": "unavailable",
-            "status": "not-applicable",
+            "mode": "public-live",
+            "status": "planned",
             "commands": []
           }
         },
-        "expectedDegradation": "Unbounded, oversized, unsupported-format, and OWS exception responses fail with typed errors.",
+        "expectedDegradation": "Aborted superseded requests, invalid OGC properties, and invalid WCS range subsets leave the active bounded raster visible; unbounded, oversized, unsupported-format, and OWS exception responses fail with typed errors.",
         "validationProfile": "browser-recipe",
         "validation": [
           "npm run demo:coverages-wcs:typecheck",
-          "npm run demo:coverages-wcs:build"
+          "npm run demo:coverages-wcs:build",
+          "npm run test:playwright:coverages-wcs"
         ],
-        "playground": {
-          "projectPath": "playgrounds/coverages-wcs-basic",
-          "providers": [
-            {
-              "id": "stackblitz",
-              "title": "StackBlitz",
-              "url": "https://stackblitz.com/github/honua-io/honua-sdk-js/tree/trunk/playgrounds/coverages-wcs-basic"
-            },
-            {
-              "id": "codesandbox",
-              "title": "CodeSandbox",
-              "url": "https://codesandbox.io/s/github/honua-io/honua-sdk-js/tree/trunk/playgrounds/coverages-wcs-basic"
-            }
-          ]
-        },
         "capabilityKeys": [
           "raster.multidim-coverage",
           "serve.ogc-api-coverages",
@@ -946,7 +924,7 @@
               "npm run evidence:cog:live"
             ],
             "evidencePath": "samples/evidence/imagery-cog-quickstart/live.v1.json",
-            "expiresAt": "2026-09-11T03:37:59.460Z"
+            "expiresAt": "2026-09-13T04:14:51.870Z"
           }
         },
         "expectedDegradation": "Credential-bearing URLs, CORS, missing or oversized range responses, unsupported CRS/format, and nodata return structured outcomes while published imagery remains usable. Public live proof covers classified COG inspection and a bounded decoded window in EPSG:32621; browser-side UTM reprojection and a georeferenced live MapLibre mount remain explicitly unclaimed.",
@@ -1194,7 +1172,7 @@
               "npm run evidence:first-map:live"
             ],
             "evidencePath": "samples/evidence/maplibre-quickstart/live.v1.json",
-            "expiresAt": "2026-09-11T03:36:17.204Z"
+            "expiresAt": "2026-09-13T04:12:56.975Z"
           }
         },
         "expectedDegradation": "Capability misses, plan warnings, and bounded fallback are shown rather than silently returning an empty map.",
@@ -1316,7 +1294,7 @@
               "npm run evidence:migration-workbench:live"
             ],
             "evidencePath": "samples/evidence/migration-workbench/live.v1.json",
-            "expiresAt": "2026-09-11T03:38:19.382Z"
+            "expiresAt": "2026-09-13T04:15:14.882Z"
           }
         },
         "expectedDegradation": "Unsupported ArcGIS modules are reported as manual work, never silently removed.",
@@ -2231,7 +2209,7 @@
               "npm run demo:service-explorer:live-evidence"
             ],
             "evidencePath": "samples/evidence/service-explorer/live.v1.json",
-            "expiresAt": "2026-09-11T03:39:07.486Z"
+            "expiresAt": "2026-09-13T04:16:14.075Z"
           }
         },
         "expectedDegradation": "Partial discovery and unsupported source actions remain visible with structured state, code, and reason; the sample does not synthesize success.",
@@ -2557,34 +2535,23 @@
       {
         "id": "stac-imagery-browser",
         "title": "STAC imagery browser",
-        "summary": "Discovers STAC collections and previews supported imagery assets.",
+        "summary": "Searches Maui imagery by bounds and time, renders a selected preview, and inspects a signed PMTiles v3 handoff.",
         "sourceKind": "root-example",
         "track": "recipe",
-        "supportTier": "supported",
+        "supportTier": "experimental",
         "lifecycle": {
           "state": "active",
           "reason": "Retain as the small credential-free STAC discovery recipe; the imagery journey owns full range, comparison, elevation, and terrain qualification."
         },
         "sourcePath": "examples/stac-imagery-browser",
         "docsPath": "examples/stac-imagery-browser/README.md",
-        "playground": {
-          "projectPath": "playgrounds/stac-imagery-browser",
-          "providers": [
-            {
-              "id": "stackblitz",
-              "title": "StackBlitz",
-              "url": "https://stackblitz.com/github/honua-io/honua-sdk-js/tree/trunk/playgrounds/stac-imagery-browser"
-            },
-            {
-              "id": "codesandbox",
-              "title": "CodeSandbox",
-              "url": "https://codesandbox.io/s/github/honua-io/honua-sdk-js/tree/trunk/playgrounds/stac-imagery-browser"
-            }
-          ]
-        },
         "capabilities": [
+          "cancellation",
           "cog",
+          "geoparquet",
           "imagery",
+          "pmtiles",
+          "raster",
           "stac"
         ],
         "capabilityKeys": [
@@ -2592,6 +2559,7 @@
           "serve.stac"
         ],
         "protocols": [
+          "pmtiles",
           "stac"
         ],
         "renderers": [
@@ -2601,9 +2569,9 @@
           "mode": "fixture",
           "authMode": "none",
           "config": [],
-          "provenance": "Committed deterministic STAC catalog.",
-          "attribution": "Asset-provider attribution from STAC metadata.",
-          "freshness": "Fixture item datetime and catalog version.",
+          "provenance": "Committed deterministic Maui STAC API responses, preview bytes, and an exact PMTiles v3 range fixture; no live service claim.",
+          "attribution": "Honua synthetic Maui product-evidence fixture.",
+          "freshness": "Pinned April-May 2026 fixture observations.",
           "configurationStatus": "not-required",
           "configClassifications": []
         },
@@ -2612,7 +2580,8 @@
             "mode": "fixture",
             "status": "executed",
             "commands": [
-              "npm run demo:stac-browser:build"
+              "npm run demo:stac-browser:build",
+              "npm run test:playwright:stac-browser"
             ]
           },
           "live": {
@@ -2621,11 +2590,12 @@
             "commands": []
           }
         },
-        "expectedDegradation": "Unsupported asset types retain metadata but disable rendering with a reason.",
+        "expectedDegradation": "Unsupported or metadata-only assets remain visible without a handoff, signing is skipped for filtered assets, and cancelled or failed PMTiles inspection never becomes a tile-rendering claim.",
         "validationProfile": "browser-recipe",
         "validation": [
           "npm run demo:stac-browser:typecheck",
-          "npm run demo:stac-browser:build"
+          "npm run demo:stac-browser:build",
+          "npm run test:playwright:stac-browser"
         ]
       },
       {
