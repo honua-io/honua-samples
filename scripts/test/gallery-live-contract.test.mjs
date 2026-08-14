@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { detailStructureFailures, geocodingProofFailures } from "../lib/gallery-live-contract.mjs";
+import {
+  columnarProofFailures,
+  coverageProofFailures,
+  detailStructureFailures,
+  geocodingProofFailures,
+  imageryCogProofFailures,
+  stacFixtureProjectionProofFailures,
+} from "../lib/gallery-live-contract.mjs";
 import { viewportFailure } from "../lib/gallery-visual-contract.mjs";
 
 test("runnable examples must render inline code before runtime evidence", () => {
@@ -66,5 +73,152 @@ test("geocoding semantic proof requires the existing selected fixture result con
       "geocoding selected address is empty",
       "geocoding did not mount a map canvas",
     ],
+  );
+});
+
+test("coverage proof accepts only the exact rendered fixture", () => {
+  const proof = {
+    ready: true,
+    phase: "ready",
+    activeProtocol: "ogc",
+    collectionId: "7",
+    selectedBand: "elevation",
+    mapSourceId: "ogc-elevation",
+    imageWidth: 320,
+    imageHeight: 220,
+    fixtureDigest: "8c7b5b3f8bd31bca2df07c4a70254d75e70d63838c2f77e033def3c1b8d2acff",
+    centerPixelValue: 450,
+    centerPixelColor: [221, 174, 82],
+    ogcByteLength: 281908,
+    wcsByteLength: 281908,
+    requestCount: 8,
+    error: null,
+  };
+  assert.deepEqual(coverageProofFailures(proof, 1), []);
+  assert.ok(coverageProofFailures({ ...proof, fixtureDigest: "0".repeat(64) }, 1).length > 0);
+  assert.ok(coverageProofFailures({ ready: true }, 1).length > 0);
+});
+
+test("imagery COG proof rejects unmounted or non-fixture transfers", () => {
+  const validator = 'etag:"sha256-59ba6110a96c0aba2ab5f5ee27b0eed6ec436956df27bb6312b94573f35190bd"';
+  const proof = {
+    ready: true,
+    disposed: false,
+    selectedAssetKey: "cog",
+    inspectionStatus: "ready",
+    activeLayerCount: 3,
+    resources: { activeRequests: 0, disposed: false },
+    directCog: {
+      phase: "ready",
+      selectedAssetKey: "cog",
+      candidateCount: 9,
+      mapSourceMounted: true,
+      mapLayerMounted: true,
+      decoderModuleLoads: 1,
+      decoderLoads: 1,
+      decoderDisposals: 0,
+      renderState: "ready",
+      renderMounted: true,
+      transferRequests: 3,
+      transferBytes: 28672,
+      assetValidator: validator,
+      ranges: [4096, 12288, 12288].map((length) => ({
+        length,
+        bytesReceived: length,
+        outcome: "success",
+        status: 206,
+        validator,
+      })),
+    },
+    fixtureImagePaths: [
+      "/sdk/imagery-cog-quickstart/app/fixtures/cog/tiles/wms-natural-color.png",
+      "/sdk/imagery-cog-quickstart/app/fixtures/cog/tiles/image-server-natural-color.png",
+    ],
+  };
+  assert.deepEqual(imageryCogProofFailures(proof, 1), []);
+  assert.ok(imageryCogProofFailures({ ...proof, directCog: { ...proof.directCog, mapLayerMounted: false } }, 1).length > 0);
+  assert.ok(imageryCogProofFailures({ ...proof, directCog: { ...proof.directCog, assetValidator: "mutable" } }, 1).length > 0);
+});
+
+test("columnar proof requires the bounded Arrow query and decoded row", () => {
+  const proof = {
+    ready: true,
+    running: false,
+    status: "ready",
+    completedRuns: 1,
+    cancelledRuns: 0,
+    featureCount: 1,
+    sourceFeatureCount: 4,
+    evidence: {
+      rows: 1,
+      batches: 1,
+      transferBytes: 4160,
+      peakBackingBytes: 55,
+      ceilings: { maxRows: 25, maxBatches: 2, maxTransferBytes: 16384, maxBackingBytes: 65536 },
+    },
+    plan: {
+      execution: "server-pushdown",
+      format: "arrow",
+      pushdown: ["columns", "filter", "bbox", "limit", "orderBy"],
+    },
+    request: {
+      method: "GET",
+      url: "https://example.invalid/rest/services/Interoperability/Harbors/FeatureServer/0/query?f=arrow&resultRecordCount=25",
+    },
+    rows: [
+      {
+        featureId: 1,
+        name: "Honolulu Harbor",
+        coordinate: [-157.8583, 21.3069],
+        timestamp: "1704164645000",
+      },
+    ],
+  };
+  assert.deepEqual(columnarProofFailures(proof, 1), []);
+  assert.ok(
+    columnarProofFailures(
+      { ...proof, request: { ...proof.request, url: proof.request.url.replace("f=arrow", "f=json") } },
+      1,
+    ).length > 0,
+  );
+  assert.ok(columnarProofFailures({ ...proof, rows: [] }, 1).length > 0);
+});
+
+test("STAC proof requires fixture count, selection, projection, and trace together", () => {
+  const proof = {
+    ready: true,
+    loadedCount: 2,
+    paginationStatus: "ready for next page",
+    selectedItemId: "S2B_MAUI_20260502_WEST",
+    selectedAssetKey: "preview",
+    selectedAssetFormat: "raster",
+    mapReady: true,
+    mapImageSourceActive: true,
+    mapFootprintSourceActive: true,
+    mapSelectionSourceIds: ["selected-stac-image", "selected-stac-footprint"],
+    mapSelectionLayerIds: [
+      "selected-stac-image-raster",
+      "selected-stac-footprint-fill",
+      "selected-stac-footprint-line",
+    ],
+    mappedItemId: "S2B_MAUI_20260502_WEST",
+    mappedCoordinates: [
+      [-156.72, 20.99],
+      [-156.33, 20.99],
+      [-156.33, 20.69],
+      [-156.72, 20.69],
+    ],
+    searchRequests: [{ method: "POST", pathname: "/v1/search" }],
+    signedAssetKeys: ["preview"],
+    previewRequestPaths: ["/v1/collections/sentinel-2-l2a/items/assets/west-maui-preview.png"],
+  };
+  assert.deepEqual(stacFixtureProjectionProofFailures(proof, 1), []);
+  assert.ok(stacFixtureProjectionProofFailures({ loadedCount: 2 }, 1).length > 0);
+  assert.ok(stacFixtureProjectionProofFailures({ ...proof, mappedItemId: "different-item" }, 1).length > 0);
+  assert.ok(
+    stacFixtureProjectionProofFailures(
+      { ...proof, searchRequests: [{ method: "GET", pathname: "/v1/search" }] },
+      1,
+    ).length > 0,
   );
 });

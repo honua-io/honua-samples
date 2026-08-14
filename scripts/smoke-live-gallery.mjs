@@ -7,7 +7,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
-import { detailStructureFailures, geocodingProofFailures } from "./lib/gallery-live-contract.mjs";
+import {
+  columnarProofFailures,
+  coverageProofFailures,
+  detailStructureFailures,
+  geocodingProofFailures,
+  imageryCogProofFailures,
+  stacFixtureProjectionProofFailures,
+} from "./lib/gallery-live-contract.mjs";
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -91,10 +98,135 @@ const semanticAssertions = new Map([
     const snapshot = await frame.evaluate(() => window.__HONUA_SKETCH_EDITING_DEMO__?.snapshot());
     if (!snapshot || snapshot.valid !== true) throw new Error(`Sketch workflow is not ready: ${JSON.stringify(snapshot)}`);
   }],
+  ["coverages-wcs-basic", async (frame) => {
+    await frame.waitForFunction(() => window.__HONUA_COVERAGES_WCS__?.ready === true, null, markerOptions());
+    const proof = await frame.evaluate(() => {
+      const runtime = window.__HONUA_COVERAGES_WCS__;
+      return {
+        ready: runtime?.ready,
+        phase: runtime?.phase,
+        activeProtocol: runtime?.activeProtocol,
+        collectionId: runtime?.collectionId,
+        selectedBand: runtime?.selectedBand,
+        mapSourceId: runtime?.mapSourceId,
+        imageWidth: runtime?.imageWidth,
+        imageHeight: runtime?.imageHeight,
+        fixtureDigest: runtime?.fixtureDigest,
+        centerPixelValue: runtime?.centerPixelValue,
+        centerPixelColor: runtime?.centerPixelColor,
+        ogcByteLength: runtime?.ogcByteLength,
+        wcsByteLength: runtime?.wcsByteLength,
+        requestCount: runtime?.requestCount,
+        error: runtime?.error,
+      };
+    });
+    const failures = coverageProofFailures(proof, await frame.locator(".maplibregl-canvas").count());
+    if (failures.length > 0) throw new Error(`Coverage fixture proof failed: ${failures.join("; ")}`);
+  }],
+  ["imagery-cog-quickstart", async (frame) => {
+    await frame.waitForFunction(() => window.__HONUA_IMAGERY_TERRAIN_RUNTIME__?.ready === true, null, markerOptions());
+    const proof = await frame.evaluate(() => {
+      const runtime = window.__HONUA_IMAGERY_TERRAIN_RUNTIME__;
+      const directCog = runtime?.directCog;
+      return {
+        ready: runtime?.ready,
+        disposed: runtime?.disposed,
+        selectedAssetKey: runtime?.selectedAssetKey,
+        inspectionStatus: runtime?.inspectionStatus,
+        activeLayerCount: runtime?.activeLayerCount,
+        resources: runtime?.resources,
+        directCog: {
+          phase: directCog?.phase,
+          selectedAssetKey: directCog?.selectedAssetKey,
+          candidateCount: directCog?.candidateCount,
+          mapSourceMounted: directCog?.mapSourceMounted,
+          mapLayerMounted: directCog?.mapLayerMounted,
+          decoderModuleLoads: directCog?.decoderModuleLoads,
+          decoderLoads: directCog?.decoderLoads,
+          decoderDisposals: directCog?.decoderDisposals,
+          renderState: directCog?.render?.state,
+          renderMounted: directCog?.render?.mounted,
+          transferRequests: directCog?.transfer?.requests,
+          transferBytes: directCog?.transfer?.bytesFetched,
+          assetValidator: directCog?.inspection?.provenance?.assetValidator,
+          ranges: directCog?.transfer?.ranges?.map(({ length, bytesReceived, outcome, status, validator }) => ({
+            length,
+            bytesReceived,
+            outcome,
+            status,
+            validator,
+          })),
+        },
+        fixtureImagePaths: runtime?.fixtureImageSources?.map((source) => new URL(source.url, window.location.href).pathname),
+      };
+    });
+    const failures = imageryCogProofFailures(proof, await frame.locator(".maplibregl-canvas").count());
+    if (failures.length > 0) throw new Error(`Imagery COG fixture proof failed: ${failures.join("; ")}`);
+  }],
+  ["columnar-query-quickstart", async (frame) => {
+    await frame.waitForFunction(() => window.__HONUA_COLUMNAR_QUERY_QUICKSTART__?.ready === true, null, markerOptions());
+    const proof = await frame.evaluate(() => {
+      const runtime = window.__HONUA_COLUMNAR_QUERY_QUICKSTART__;
+      return {
+        ready: runtime?.ready,
+        running: runtime?.running,
+        status: runtime?.status,
+        completedRuns: runtime?.completedRuns,
+        cancelledRuns: runtime?.cancelledRuns,
+        featureCount: runtime?.featureCount,
+        sourceFeatureCount: runtime?.sourceFeatureCount(),
+        evidence: runtime?.lastEvidence,
+        plan: runtime?.lastPlan,
+        request: runtime?.lastRequest,
+        rows: runtime?.lastRows,
+      };
+    });
+    const failures = columnarProofFailures(proof, await frame.locator(".maplibregl-canvas").count());
+    if (failures.length > 0) throw new Error(`Columnar Arrow fixture proof failed: ${failures.join("; ")}`);
+  }],
   ["stac-imagery-browser", async (frame) => {
-    await frame.waitForFunction(() => (window.__HONUA_STAC_BROWSER__?.ready === true && (window.__HONUA_STAC_BROWSER__?.loadedCount ?? 0) > 0), null, markerOptions());
-    const proof = await frame.evaluate(() => ({ loadedCount: window.__HONUA_STAC_BROWSER__?.loadedCount, projectionMessage: window.__HONUA_STAC_BROWSER__?.projectionMessage }));
-    if (!proof.projectionMessage) throw new Error(`STAC projection proof missing: ${JSON.stringify(proof)}`);
+    await frame.waitForFunction(
+      () =>
+        window.__HONUA_STAC_BROWSER__?.ready === true &&
+        window.__HONUA_STAC_BROWSER__?.loadedCount === 2 &&
+        window.__HONUA_STAC_BROWSER__?.mapReady === true,
+      null,
+      markerOptions(),
+    );
+    const proof = await frame.evaluate(() => {
+      const runtime = window.__HONUA_STAC_BROWSER__;
+      const safePathname = (value) => {
+        try {
+          return new URL(value, window.location.href).pathname;
+        } catch {
+          return null;
+        }
+      };
+      return {
+        ready: runtime?.ready,
+        loadedCount: runtime?.loadedCount,
+        paginationStatus: runtime?.paginationStatus,
+        selectedItemId: runtime?.selectedItemId,
+        selectedAssetKey: runtime?.selectedAssetKey,
+        selectedAssetFormat: runtime?.selectedAssetFormat,
+        mapReady: runtime?.mapReady,
+        mapImageSourceActive: runtime?.mapImageSourceActive,
+        mapFootprintSourceActive: runtime?.mapFootprintSourceActive,
+        mapSelectionSourceIds: runtime?.mapSelectionSourceIds,
+        mapSelectionLayerIds: runtime?.mapSelectionLayerIds,
+        mappedItemId: runtime?.mappedItemId,
+        mappedCoordinates: runtime?.mappedCoordinates,
+        searchRequests: runtime?.trace
+          ?.filter((entry) => entry.stage === "request" && safePathname(entry.url)?.endsWith("/search"))
+          .map((entry) => ({ method: entry.method, pathname: safePathname(entry.url) })),
+        signedAssetKeys: runtime?.trace?.filter((entry) => entry.stage === "sign").map((entry) => entry.assetKey),
+        previewRequestPaths: runtime?.trace
+          ?.filter((entry) => entry.stage === "request" && safePathname(entry.url)?.endsWith(".png"))
+          .map((entry) => safePathname(entry.url)),
+      };
+    });
+    const failures = stacFixtureProjectionProofFailures(proof, await frame.locator(".maplibregl-canvas").count());
+    if (failures.length > 0) throw new Error(`STAC fixture projection proof failed: ${failures.join("; ")}`);
   }],
   ["overture-geoparquet", async (frame) => {
     await frame.waitForFunction(() => window.__HONUA_OVERTURE__?.ready === true && !window.__HONUA_OVERTURE__?.running, null, markerOptions(60_000));
