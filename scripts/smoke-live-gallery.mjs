@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
 import { detailStructureFailures, geocodingProofFailures } from "./lib/gallery-live-contract.mjs";
+import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(repoRoot, "site");
@@ -387,11 +388,12 @@ function isAllowedAbort(sampleId, request) {
 }
 
 function isSdkExampleFolder(href, id) {
-  return href === `https://github.com/honua-io/honua-sdk-js/tree/trunk/examples/${id}`;
+  return href === `https://github.com/honua-io/honua-sdk-js/tree/${SDK_PRODUCER_LOCK.revision}/examples/${id}`;
 }
 
 function isJobContract(href, id) {
-  return href === `https://github.com/honua-io/honua-samples/blob/trunk/jobs/${id}.json`;
+  const match = String(href ?? "").match(new RegExp(`^https://github\\.com/honua-io/honua-samples/blob/([0-9a-f]{40})/jobs/${id}\\.json$`, "i"));
+  return Boolean(match) && (!expectedSourceCommit || match[1].toLowerCase() === expectedSourceCommit.toLowerCase());
 }
 
 function normalizeText(value) {

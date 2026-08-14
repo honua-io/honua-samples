@@ -9,7 +9,7 @@ test("the gallery portfolio classifies the 32 SDK and seven owned cards", async 
     return result;
   }, {});
   assert.equal(portfolio.entries.length, 39);
-  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, public: 9 });
+  assert.deepEqual(counts, { "internal-qualification": 17, "rework-map-first": 11, public: 11 });
 });
 
 test("only explicitly public technically qualified cards are admitted", async () => {

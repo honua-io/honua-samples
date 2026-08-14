@@ -9,10 +9,13 @@ on:
       - "scripts/**"
       - "site/**"
       - "config/**"
+      - "vendor/**"
       - "audits/**"
       - "generated/**"
       - "docs/release-certification.md"
       - ".github/workflows/validate.yml"
+      - "package.json"
+      - "package-lock.json"
   push:
     branches: [trunk]
     paths:
@@ -22,10 +25,16 @@ on:
       - "scripts/**"
       - "site/**"
       - "config/**"
+      - "vendor/**"
       - "audits/**"
       - "generated/**"
       - "docs/release-certification.md"
       - ".github/workflows/validate.yml"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
 
 jobs:
   validate-manifests:
@@ -97,3 +106,48 @@ jobs:
         env:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
         run: node scripts/build-gallery.mjs --check
+
+  exact-head-browser:
+    name: exact head gallery browser (11 apps / 4 jobs)
+    runs-on: ubuntu-latest
+    env:
+      SDK_PRODUCER_ENFORCE_LOCK: "1"
+      MIN_RUNNABLE_BUNDLES: "11"
+      MIN_PUBLISHED_RUNNABLE_APPS: "11"
+      MIN_JOB_PAGES: "4"
+      EXPECTED_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Stage the vendored immutable SDK release
+        run: node scripts/lib/sample-bundles.mjs
+
+      - name: Build the exact-head gallery
+        env:
+          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+        run: node scripts/build-gallery.mjs --check
+
+      - name: Run every admitted SDK app
+        run: npm run test:gallery:browser
+
+      - name: Run every admitted job page
+        run: npm run test:job-pages:browser
+
+      - name: Upload exact-head browser receipts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: exact-head-gallery-browser
+          path: .artifacts/gallery-browser-smoke
+          if-no-files-found: error

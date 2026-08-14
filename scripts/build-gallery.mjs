@@ -38,7 +38,7 @@
 // Detail pages also embed the ACTUAL RUNNING SAMPLE wherever a
 // sha256-verified static browser bundle has been staged for it
 // (honua-io/honua-samples#11, consuming honua-sdk-js#642/#648's
-// sample-bundles-latest release via scripts/lib/sample-bundles.mjs) --
+// immutable content-locked release via scripts/lib/sample-bundles.mjs) --
 // never a fake/broken iframe: an sdk-js entry with no staged bundle gets an
 // explicit "no runnable build published yet" panel, and this repo's own
 // headless/CLI samples get a labeled "headless sample" panel instead of an
@@ -74,6 +74,8 @@ import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs"
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
 import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
+import { bindSdkSourceToBundle, isFullGitSha, validateBoundSdkUrl } from "./lib/sdk-source-binding.mjs";
+import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
 
@@ -121,6 +123,12 @@ const SDK_CONTENT_KIND_OVERRIDES = new Map([
   ["stac-imagery-browser", "walkthrough"],
   ["sketch-editing", "walkthrough"],
 ]);
+const SDK_SEARCH_ALIASES = new Map([
+  ["imagery-cog-quickstart", ["COG", "Cloud Optimized GeoTIFF", "STAC", "terrain"]],
+  ["columnar-query-quickstart", ["GeoArrow", "Arrow IPC", "GeoParquet", "columnar"]],
+  ["coverages-wcs-basic", ["OGC API Coverages", "WCS", "multidimensional raster"]],
+  ["overture-geoparquet", ["GeoParquet", "GeoArrow", "Overture", "columnar"]],
+]);
 const WALKTHROUGH_GUIDES = new Map([
   ["wms-getmap-check", {
     steps: [
@@ -160,6 +168,10 @@ const CHECK_MODE = process.argv.includes("--check");
 
 async function main() {
   const problems = [];
+  const sourceCommit = resolveSourceCommit();
+  if (!isFullGitSha(sourceCommit)) {
+    throw new Error(`gallery source links require an immutable samples commit, received ${JSON.stringify(sourceCommit)}`);
+  }
 
   const { records: keyRecords } = await loadCapabilityKeyRecords();
   const keyByKey = new Map(keyRecords.map((r) => [r.key, r]));
@@ -203,10 +215,10 @@ async function main() {
   const stagedBundleIds = new Set(bundleState.stagedIds);
 
   const portfolio = await loadGalleryPublicPortfolio();
-  const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
+  const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems, sourceCommit));
   const ownPortfolioResult = applyGalleryPublicPortfolio(ownCandidates, portfolio);
   const ownCards = ownPortfolioResult.publicCards;
-  const jobCards = jobPages.map((job) => toJobCard(job, keyByKey, problems));
+  const jobCards = jobPages.map((job) => toJobCard(job, keyByKey, problems, sourceCommit));
   const sdkCandidates = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
   const technicallyQualifiedSdkCards = sdkCandidates.filter(
     (card) =>
@@ -240,7 +252,6 @@ async function main() {
 
   const contentSections = groupByContentKind(cards, keyByKey);
   const generatedAt = new Date().toISOString();
-  const sourceCommit = resolveSourceCommit();
   const bundleNotice = bundleState.degraded
     ? `Sample bundle fetch degraded this deploy: ${bundleState.degradedReason} -- no sdk-js samples are embedded; each shows "no runnable build published yet".`
     : null;
@@ -294,6 +305,7 @@ async function main() {
       // site/sdk/ cleanup -- the staging root (scripts/lib/sample-bundles.mjs)
       // lives outside site/ entirely for exactly this reason.
       await cp(path.join(bundleState.stagingRoot, card.id), path.join(dir, "app"), { recursive: true });
+      await bindEmbeddedBundleDocumentationLinks(card, path.join(dir, "app"));
       embeddedCount += 1;
     }
     await writeFile(
@@ -317,6 +329,8 @@ async function main() {
       "utf8",
     );
   }
+
+  await assertNoMutableTrunkLinks(SITE_DIR);
 
   const pageCount = 1 + ownCards.length + jobCards.length + sdkCards.length + merge.fixtureOnlyEntries.length;
   console.log(
@@ -396,7 +410,7 @@ async function loadRunResults() {
 
 // ---- card normalization -------------------------------------------------
 
-function toOwnCard(sample, runResults, keyByKey, problems) {
+function toOwnCard(sample, runResults, keyByKey, problems, sourceCommit) {
   const { dirName, manifest, readme, sourcePath, sourceText } = sample;
   const id = manifest.id ?? dirName;
   const capabilities = manifest.capabilities ?? [];
@@ -426,7 +440,7 @@ function toOwnCard(sample, runResults, keyByKey, problems) {
     sourceRepo: "honua-samples",
     detailUrl: `${GALLERY_BASE_URL}/${id}/`,
     detailPath: `/${id}/`,
-    githubUrl: `https://github.com/${OWN_REPO}/tree/trunk/samples/${dirName}`,
+    githubUrl: `https://github.com/${OWN_REPO}/tree/${sourceCommit}/samples/${dirName}`,
     readmeHtml: readme ? renderMarkdown(readme) : null,
     sourcePath,
     sourceText,
@@ -455,7 +469,7 @@ function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
   };
 }
 
-function toJobCard(job, keyByKey, problems) {
+function toJobCard(job, keyByKey, problems, sourceCommit) {
   const capabilities = job.server.capabilityIds;
   for (const key of capabilities) {
     if (!keyByKey.has(key)) problems.push(`jobs/${job.id}.json references unknown capability key "${key}"`);
@@ -490,7 +504,7 @@ function toJobCard(job, keyByKey, problems) {
     sourceRepo: "honua-samples",
     detailUrl: `${GALLERY_BASE_URL}/jobs/${job.id}/`,
     detailPath: `/jobs/${job.id}/`,
-    githubUrl: `https://github.com/${OWN_REPO}/blob/trunk/jobs/${job.id}.json`,
+    githubUrl: `https://github.com/${OWN_REPO}/blob/${sourceCommit}/jobs/${job.id}.json`,
     sourcePath: `jobs/${job.id}.json`,
     bundleRunnable: false,
     job,
@@ -500,6 +514,15 @@ function toJobCard(job, keyByKey, problems) {
 function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
   const entry = record.card;
   const id = entry.id;
+  const bundleSample = bundleById.get(id) ?? null;
+  const sourceBinding = bundleSample
+    ? bindSdkSourceToBundle({
+        repository: SDKJS_REPO,
+        sourcePath: entry.source.path,
+        docsPath: entry.source.docsPath ?? null,
+        bundleSample,
+      })
+    : null;
   for (const key of record.capabilityKeys) {
     if (!keyByKey.has(key)) {
       problems.push(`${SDKJS_REPO} handoff card "${id}" references unknown capability key "${key}" -- crosswalk or catalog is out of sync with the canonical key list`);
@@ -533,7 +556,10 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     protocols: entry.protocols ?? [],
     renderers: entry.renderers ?? [],
     dataMode: entry.data?.mode ?? null,
+    data: entry.data ?? null,
     auth: entry.data?.authMode ?? null,
+    expectedDegradation: entry.expectedDegradation ?? null,
+    searchAliases: SDK_SEARCH_ALIASES.get(id) ?? [],
     qualification: entry.qualification ?? null,
     evidence: entry.evidence ?? null,
     evidenceBindingId: entry.evidenceBindingId ?? null,
@@ -545,14 +571,16 @@ function toSdkCard(record, keyByKey, problems, bundleById, stagedBundleIds) {
     sourceRepo: "honua-sdk-js",
     detailUrl: `${GALLERY_BASE_URL}/sdk/${id}/`,
     detailPath: `/sdk/${id}/`,
-    githubUrl: `https://github.com/${SDKJS_REPO}/tree/trunk/${entry.source.path}`,
+    githubUrl: sourceBinding?.sourceTreeUrl ?? null,
     sourcePath: entry.source.path,
-    docsUrl: entry.source.docsPath ? `https://github.com/${SDKJS_REPO}/blob/trunk/${entry.source.docsPath}` : null,
+    docsUrl: sourceBinding?.docsUrl ?? null,
+    sourceRevision: sourceBinding?.revision ?? null,
+    sourceRawRoot: sourceBinding?.rawRoot ?? null,
     // Populated only when scripts/lib/sample-bundles.mjs's manifest has this
     // id AND this build actually staged sha256-verified files for it this
     // run (bundleSample can be non-null while bundleStaged is false in a
     // degraded run -- see the file header comment on scripts/lib/sample-bundles.mjs).
-    bundleSample: bundleById.get(id) ?? null,
+    bundleSample,
     bundleStaged: stagedBundleIds.has(id),
     bundleRunnable:
       stagedBundleIds.has(id) && bundleById.get(id)?.runnability === "standalone",
@@ -899,7 +927,7 @@ function renderCard(card) {
   const extra =
     card.kind === "own"
       ? runBadgeHtml(card.runBadge)
-      : chip(`support: ${card.supportTier}`, "support-tier");
+      : `${chip(`support: ${card.supportTier}`, "support-tier")}${renderCardEvidenceBadges(card)}`;
   const runnableBadge = runnable
     ? `<span class="badge runnable" title="Runs in the browser on this page">&#9654; Runnable</span>`
     : "";
@@ -913,7 +941,7 @@ function renderCard(card) {
   const actions = card.contentKind === "project"
     ? `<a class="card-open" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">${card.kind === "job" ? "Open governed project contract" : "Open project source"} &nearr;</a><a href="${card.detailPath}">Project overview &rarr;</a>`
     : `<a class="card-open" href="${card.detailPath}">${runnable ? "Run and view code" : "View code"} &rarr;</a><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">GitHub &nearr;</a>`;
-  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")}`)}">
+  return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")} ${(card.searchAliases ?? []).join(" ")}`)}">
   <div class="card-topline"><span class="content-kind-label kind-${escapeAttr(card.contentKind)}">${escapeHtml(contentKind.singular)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
   <p class="summary">${escapeHtml(card.summary)}</p>
@@ -928,6 +956,16 @@ function renderCard(card) {
   <div class="card-evidence">${runnableBadge}${extra}</div>
   <div class="card-actions">${actions}</div>
 </article>`;
+}
+
+function renderCardEvidenceBadges(card) {
+  if (card.kind !== "sdk") return "";
+  const fixture = card.evidence?.fixture;
+  const live = card.evidence?.live;
+  const badges = [];
+  if (fixture?.status) badges.push(chip(`fixture: ${fixture.status}`, "fixture-state"));
+  if (live?.status) badges.push(chip(`live: ${live.status}`, `live-state-${live.status}`));
+  return badges.join("");
 }
 
 function renderContentKindSection(section) {
@@ -1053,7 +1091,7 @@ function renderJobServerPanel(job, keyByKey) {
   const fixture = job.server.fixture;
   const evidence = job.maturity.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const limitations = job.maturity.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  const docs = job.server.docs.map((url) => `<li><a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></li>`).join("");
+  const docs = job.server.docs.map((url) => `<li>${renderPublishedSourceLink(url, url)}</li>`).join("");
   return `<section class="server-contract" aria-labelledby="server-contract-${escapeAttr(job.id)}">
   <div class="job-section-heading"><div><p class="eyebrow">Server contract first</p><h2 id="server-contract-${escapeAttr(job.id)}">${escapeHtml(job.server.operation)}</h2></div><span class="contract-state state-${escapeAttr(job.maturity.state)}">${escapeHtml(job.maturity.state)}</span></div>
   <dl class="server-facts">
@@ -1103,7 +1141,7 @@ function renderJobLanguageTabs(job) {
     const ref = refs.get(surface);
     const tab = tabs.get(surface);
     const symbol = ref.symbolOrCommand ? `<code>${escapeHtml(ref.symbolOrCommand)}</code>` : "No public symbol";
-    const link = isSafeHttpsUrl(ref.deepLink) ? `<a href="${escapeAttr(ref.deepLink)}" target="_blank" rel="noopener noreferrer">Exact API reference &nearr;</a>` : "";
+    const link = ref.deepLink ? renderPublishedSourceLink(ref.deepLink, "Exact API reference &nearr;") : "";
     const content = tab
       ? `<section class="code-view job-code-view"><div class="code-toolbar"><div><span>${escapeHtml(tab.language.toUpperCase())}</span><strong>${escapeHtml(ref.label)}</strong></div>${link}</div><pre tabindex="0"><code>${escapeHtml(tab.code)}</code></pre></section>`
       : `<div class="language-gap"><strong>Unavailable - no pseudocode shown.</strong><p>${escapeHtml(ref.gap ?? "No admitted implementation is available for this surface.")}</p></div>`;
@@ -1112,11 +1150,26 @@ function renderJobLanguageTabs(job) {
   return `<section class="job-language-section" aria-labelledby="language-heading-${escapeAttr(job.id)}"><p class="eyebrow">Equivalent client surfaces</p><h2 id="language-heading-${escapeAttr(job.id)}">Choose a language without changing the job.</h2><div class="job-tabs" role="tablist" aria-label="SDK language">${tabButtons}</div><div class="job-tab-panels">${panels}</div></section>`;
 }
 
+function isPublishableSourceLink(value) {
+  return isSafeHttpsUrl(value) && !value.includes("/trunk/");
+}
+
+function renderPublishedSourceLink(value, label) {
+  if (isPublishableSourceLink(value)) {
+    return `<a href="${escapeAttr(value)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+  }
+  return value?.includes("/trunk/")
+    ? '<span class="reference-gap">Unpinned upstream reference withheld</span>'
+    : escapeHtml(label);
+}
+
 function renderJobReferenceMatrix(job) {
   const surfaceLabels = { http: "Raw HTTP", cli: "CLI", javascript: "JavaScript", python: "Python", dotnet: ".NET" };
   const rows = job.references.map((ref) => {
     const exact = ref.symbolOrCommand ? `<code>${escapeHtml(ref.symbolOrCommand)}</code>` : `<span class="reference-gap">Gap: ${escapeHtml(ref.gap)}</span>`;
-    const linked = isSafeHttpsUrl(ref.deepLink) ? `<a href="${escapeAttr(ref.deepLink)}" target="_blank" rel="noopener noreferrer">${exact}</a>` : exact;
+    const linked = isPublishableSourceLink(ref.deepLink)
+      ? `<a href="${escapeAttr(ref.deepLink)}" target="_blank" rel="noopener noreferrer">${exact}</a>`
+      : `${exact}${ref.deepLink?.includes("/trunk/") ? '<br><small class="reference-gap">Unpinned upstream link withheld</small>' : ""}`;
     return `<tr data-reference-surface="${escapeAttr(ref.surface)}" data-state="${escapeAttr(ref.availability)}"><th scope="row">${escapeHtml(surfaceLabels[ref.surface] ?? ref.surface)}<small>${escapeHtml(ref.availability)}</small></th><td>${linked}</td><td>${escapeHtml(ref.package ?? "Not applicable")}<br><small>min ${escapeHtml(ref.minVersion ?? "n/a")} - ${escapeHtml(ref.supportTier)}</small></td><td><strong>${escapeHtml(ref.owner)}</strong><br>Auth: ${escapeHtml(ref.auth)}<br>Cancel: ${escapeHtml(ref.cancellation)}<br>Errors: ${escapeHtml(ref.errors)}</td></tr>`;
   }).join("");
   return `<section class="job-reference" aria-labelledby="reference-heading-${escapeAttr(job.id)}"><p class="eyebrow">Exact reference matrix</p><h2 id="reference-heading-${escapeAttr(job.id)}">Raw contract and public symbols</h2><div class="reference-scroll"><table><thead><tr><th>Surface</th><th>Operation or symbol</th><th>Package and version</th><th>Ownership and behavior</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
@@ -1220,8 +1273,8 @@ ${capabilityChips(card.capabilities, keyByKey)}
 ${renderSdkEvidenceSection(card)}
 ${card.contentKind === "project" ? renderProjectSourcePanel(card) : ""}
 <p>
-  ${card.githubUrl ? `<a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a>` : ""}
-  ${card.docsUrl ? ` · <a href="${card.docsUrl}" target="_blank" rel="noopener noreferrer">Docs ↗</a>` : ""}
+  ${card.githubUrl ? `<a href="${escapeAttr(card.githubUrl)}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a>` : ""}
+  ${card.docsUrl ? ` · <a href="${escapeAttr(card.docsUrl)}" target="_blank" rel="noopener noreferrer">Docs ↗</a>` : ""}
 </p>
 `;
   return pageShell({
@@ -1236,12 +1289,14 @@ ${card.contentKind === "project" ? renderProjectSourcePanel(card) : ""}
 }
 
 function renderRemoteCodePanel(card) {
-  const root = `https://raw.githubusercontent.com/${SDKJS_REPO}/trunk/${card.sourcePath}`;
-  return `<section class="code-view remote-code code-first-preview" data-source-root="${escapeAttr(root)}" data-source-path="${escapeAttr(card.sourcePath)}" data-github-url="${escapeAttr(card.githubUrl)}">
+  if (!card.sourceRevision || !card.sourceRawRoot) {
+    return renderNoBundlePanel("The producer did not publish an immutable source revision for this bundle.");
+  }
+  return `<section class="code-view remote-code code-first-preview" data-source-root="${escapeAttr(card.sourceRawRoot)}" data-source-path="${escapeAttr(card.sourcePath)}" data-source-revision="${escapeAttr(card.sourceRevision)}" data-github-url="${escapeAttr(card.githubUrl)}">
   <details class="remote-code-details"><summary><span>CODE FIRST</span><strong data-source-name>Finding the primary source file…</strong><em>Expand source</em></summary>
-    <div class="code-toolbar"><div><span>PRODUCER TRUNK PREVIEW</span><strong>Focused implementation before runtime evidence</strong></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
+    <div class="code-toolbar"><div><span>EXACT BUNDLE SOURCE</span><strong>honua-sdk-js @ ${escapeHtml(card.sourceRevision.slice(0, 12))}</strong></div><a href="${escapeAttr(card.githubUrl)}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
     <pre tabindex="0"><code data-source-code>Loading source from honua-sdk-js…</code></pre>
-    <p class="source-note" data-source-note>This preview follows producer trunk and is not the integrity-bound browser bundle shown next.</p>
+    <p class="source-note" data-source-note>This preview and the runnable browser bundle are bound to the same immutable producer commit.</p>
   </details>
 </section>`;
 }
@@ -1262,14 +1317,42 @@ function renderSdkLifecycleNotice(notice) {
 // repo -- nothing is vendored or re-hosted here.
 function renderSdkEvidenceSection(card) {
   const rows = [];
+  if (card.sourceRevision) {
+    rows.push(
+      `<li>Runnable bytes and inline source are bound to producer commit <a href="https://github.com/${SDKJS_REPO}/commit/${escapeAttr(card.sourceRevision)}" target="_blank" rel="noopener noreferrer"><code>${escapeHtml(card.sourceRevision)}</code></a>.</li>`,
+    );
+  }
+  if (card.evidence?.fixture) {
+    rows.push(
+      `<li>Fixture lane: <code>${escapeHtml(card.evidence.fixture.mode ?? "fixture")}</code> / <strong>${escapeHtml(card.evidence.fixture.status ?? "unknown")}</strong>. ${escapeHtml(card.data?.provenance ?? "See the immutable producer source for fixture provenance and digests.")}</li>`,
+    );
+  }
+  if (card.evidence?.live) {
+    const live = card.evidence.live;
+    const evidenceRevision = isFullGitSha(card.sourceRevision) ? card.sourceRevision : null;
+    const evidenceLink = live.evidencePath && evidenceRevision
+      ? ` <a href="https://github.com/${SDKJS_REPO}/blob/${escapeAttr(evidenceRevision)}/${escapeAttr(live.evidencePath)}" target="_blank" rel="noopener noreferrer">Receipt ↗</a>`
+      : "";
+    rows.push(
+      `<li>Live lane: <code>${escapeHtml(live.mode ?? "unavailable")}</code> / <strong>${escapeHtml(live.status ?? "unknown")}</strong>${live.expiresAt ? `, expires ${escapeHtml(live.expiresAt)}` : ""}.${evidenceLink}</li>`,
+    );
+  }
+  if (card.expectedDegradation) {
+    rows.push(`<li>Expected degradation: ${escapeHtml(card.expectedDegradation)}</li>`);
+  }
   for (const journey of card.qualifiedJourneys ?? []) {
     const ve = journey.visualEvidence ?? {};
-    const shots = (ve.screenshots ?? [])
+    const evidenceRevision = isFullGitSha(ve.source?.revision)
+      ? ve.source.revision
+      : isFullGitSha(card.sourceRevision)
+        ? card.sourceRevision
+        : null;
+    const shots = evidenceRevision ? (ve.screenshots ?? [])
       .map(
         (s) =>
-          `<a href="https://github.com/${SDKJS_REPO}/blob/trunk/${escapeAttr(s.sourcePath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.variant)} ↗</a>`,
+          `<a href="https://github.com/${SDKJS_REPO}/blob/${escapeAttr(evidenceRevision)}/${escapeAttr(s.sourcePath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.variant)} ↗</a>`,
       )
-      .join(" · ");
+      .join(" · ") : "";
     rows.push(
       `<li>Qualified journey <code>${escapeHtml(journey.journeyId)}</code> — evidence binding <code>${escapeHtml(journey.evidenceBindingId ?? "—")}</code>, observed ${escapeHtml(ve.observedAt ?? "unknown")}, window until ${escapeHtml(ve.expiresAt ?? "unknown")}${shots ? ` — screenshots: ${shots}` : ""}</li>`,
     );
@@ -1300,7 +1383,7 @@ function renderSdkStatusStubPage(entry, generatedAt, sourceCommit, bundleNotice)
 <div class="no-bundle-panel"><p><strong>Internal SDK fixture — not a public sample.</strong>
 The authoritative honua-sdk-js site-consumer handoff does not publish this entry as a public card
 ${entry.lifecycle?.reason ? `(${escapeHtml(entry.lifecycle.reason)})` : ""}, so it is not listed in the gallery.</p></div>
-${entry.sourcePath ? `<p><a href="https://github.com/${SDKJS_REPO}/tree/trunk/${escapeAttr(entry.sourcePath)}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a></p>` : ""}
+${entry.sourcePath ? `<p><a href="https://github.com/${SDKJS_REPO}/tree/${SDK_PRODUCER_LOCK.revision}/${escapeAttr(entry.sourcePath)}" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a></p>` : ""}
 `;
   return pageShell({
     title: `${entry.title ?? entry.id} — Honua Samples`,
@@ -1329,6 +1412,58 @@ function assertNoDuplicateArticles(indexHtml) {
 }
 
 // ---- misc ----------------------------------------------------------------
+
+const EMBEDDED_BUNDLE_DOCUMENTATION_LINKS = Object.freeze({
+  "stac-imagery-browser": [
+    {
+      file: "index.html",
+      from: 'href="../../docs/walkthroughs/search-stac-and-open-assets.md"',
+    },
+  ],
+});
+
+async function bindEmbeddedBundleDocumentationLinks(card, appDir) {
+  const links = EMBEDDED_BUNDLE_DOCUMENTATION_LINKS[card.id] ?? [];
+  for (const link of links) {
+    const filePath = path.join(appDir, link.file);
+    const html = await readFile(filePath, "utf8");
+    if (!html.includes(link.from)) {
+      throw new Error(`bundle ${card.id} no longer contains governed documentation link ${link.from}`);
+    }
+    const docsUrl = validateBoundSdkUrl(card.docsUrl, {
+      repository: SDK_PRODUCER_LOCK.repository,
+      revision: card.sourceRevision,
+      kind: "blob",
+    });
+    await writeFile(filePath, html.replace(link.from, `href="${escapeAttr(docsUrl)}"`), "utf8");
+  }
+
+  const entries = await readdir(appDir, { recursive: true, withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile() || !/\.(?:css|html|js|json|mjs|txt)$/u.test(entry.name)) continue;
+    const filePath = path.join(entry.parentPath ?? entry.path, entry.name);
+    const text = await readFile(filePath, "utf8");
+    const bound = text
+      .replaceAll(`https://github.com/${SDKJS_REPO}/tree/trunk/`, `https://github.com/${SDKJS_REPO}/tree/${card.sourceRevision}/`)
+      .replaceAll(`https://github.com/${SDKJS_REPO}/blob/trunk/`, `https://github.com/${SDKJS_REPO}/blob/${card.sourceRevision}/`)
+      .replaceAll(`https://raw.githubusercontent.com/${SDKJS_REPO}/trunk/`, `https://raw.githubusercontent.com/${SDKJS_REPO}/${card.sourceRevision}/`);
+    if (bound !== text) await writeFile(filePath, bound, "utf8");
+  }
+}
+
+async function assertNoMutableTrunkLinks(root) {
+  const entries = await readdir(root, { recursive: true, withFileTypes: true });
+  const offenders = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !/\.(?:css|html|js|json|mjs|txt)$/u.test(entry.name)) continue;
+    const filePath = path.join(entry.parentPath ?? entry.path, entry.name);
+    const text = await readFile(filePath, "utf8");
+    if (text.includes("/trunk/")) offenders.push(path.relative(root, filePath));
+  }
+  if (offenders.length > 0) {
+    throw new Error(`published gallery contains mutable /trunk/ source link(s): ${offenders.sort().join(", ")}`);
+  }
+}
 
 async function copyAssets() {
   const destDir = path.join(SITE_DIR, "assets");

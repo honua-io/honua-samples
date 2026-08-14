@@ -275,7 +275,7 @@ from **two inputs**:
    SDK projection since
    [honua-io/honua-samples#16](https://github.com/honua-io/honua-samples/issues/16),
    fetched live from
-   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/dist/honua-site-consumer-handoff.v2.json)
+   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/dist/honua-site-consumer-handoff.v2.json)
    together with its v4 consumer fixture, which content-binds the handoff by
    exact bytes + sha256. `scripts/lib/sdkjs-handoff.mjs` admits the pair
    through a fail-closed gate (schema/version compatibility, fixture digest
@@ -288,7 +288,7 @@ from **two inputs**:
    qualified-journey evidence, and explicit coverage gaps survive the merge
    as card/detail metadata, never as cloned cards. Nothing is vendored:
    every card links out to its GitHub source and docs in honua-sdk-js.
-   [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/catalog.v2.json)
+   [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/catalog.v2.json)
    is still consumed, but only to enrich each admitted card with its
    materialized canonical `capabilityKeys`
    ([honua-io/honua-sdk-js#635](https://github.com/honua-io/honua-sdk-js/issues/635));

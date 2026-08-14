@@ -21,6 +21,7 @@ on:
       - "schemas/**"
       - "scripts/**"
       - "config/**"
+      - "vendor/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/pages.yml"
@@ -39,6 +40,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      SDK_PRODUCER_ENFORCE_LOCK: "1"
+      SDKJS_ROOT: ${{ github.workspace }}/.sdk-producer/honua-sdk-js
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
@@ -46,16 +50,20 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Checkout local honua-sdk-js sample source for fallback
-        # Staging uses this local checkout to include otherwise-excluded runnable
-        # sample builds from examples/<id>/dist while still requiring every
-        # live bundle to be sha256-verified before embedding.
-        run: |
-          if [ -d ../honua-sdk-js ]; then
-            git -C ../honua-sdk-js pull --ff-only --depth 1 origin trunk
-          else
-            git clone --depth 1 https://github.com/honua-io/honua-sdk-js.git ../honua-sdk-js
-          fi
+      - name: Read immutable SDK producer lock
+        id: sdk-lock
+        run: node scripts/emit-sdk-producer-lock.mjs
+
+      - name: Checkout exact honua-sdk-js producer
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: honua-io/honua-sdk-js
+          ref: ${{ steps.sdk-lock.outputs.revision }}
+          path: .sdk-producer/honua-sdk-js
+          persist-credentials: false
+
+      - name: Verify SDK checkout lease
+        run: test "$(git -C "$SDKJS_ROOT" rev-parse HEAD)" = "${{ steps.sdk-lock.outputs.revision }}"
 
       - name: Build local sdk-js sample bundles for gallery embedding
         # Pages runs from a fresh checkout; local dist directories are not
@@ -63,34 +71,34 @@ jobs:
         # require explicit local fallback to avoid runnable embed regressions.
         run: |
           set -euo pipefail
-          if [ ! -d ../honua-sdk-js/node_modules ]; then
-            npm --prefix ../honua-sdk-js ci --silent
+          if [ ! -d "$SDKJS_ROOT/node_modules" ]; then
+            npm --prefix "$SDKJS_ROOT" ci --silent
           fi
           VITE_HONUA_QUICKSTART_ENDPOINT="https://demo.honua.io/rest/services/maui-buildings/FeatureServer/13" \
           VITE_HONUA_QUICKSTART_BASEMAP_STYLE="./__honua-quickstart__/basemap-style.json" \
           VITE_HONUA_QUICKSTART_WHERE="id <= 25" \
-            npm --prefix ../honua-sdk-js run demo:quickstart:build --silent
-          npm --prefix ../honua-sdk-js run demo:mcp-gis-assistant:build --silent
-          npm --prefix ../honua-sdk-js run demo:spatial-analytics:build --silent
-          npm --prefix ../honua-sdk-js run demo:edit-workflow:build --silent
-          npm --prefix ../honua-sdk-js run demo:geocoding:build --silent
-          npm --prefix ../honua-sdk-js run demo:oauth-signin:build --silent
-          npm --prefix ../honua-sdk-js run demo:service-explorer:build --silent
-          npm --prefix ../honua-sdk-js run demo:incident:build --silent
-          npm --prefix ../honua-sdk-js run demo:pmtiles-static:build --silent
-          npm --prefix ../honua-sdk-js run demo:nl-map-control:build --silent
-          npm --prefix ../honua-sdk-js run demo:app-bootstrap:build --silent
-          npm --prefix ../honua-sdk-js run demo:gp-runner:build --silent
-          npm --prefix ../honua-sdk-js run demo:web-components:build --silent
-          npm --prefix ../honua-sdk-js run demo:runtime-parity:build --silent
-          npm --prefix ../honua-sdk-js run demo:25d:build --silent
-          npm --prefix ../honua-sdk-js run demo:terrain-elevation:build --silent
-          npm --prefix ../honua-sdk-js run demo:unified-ops:build --silent
-          npm --prefix ../honua-sdk-js run demo:planning-workbench:build --silent
-          if [ ! -d ../honua-sdk-js/examples/kepler-analytics/node_modules ]; then
-            npm install --prefix ../honua-sdk-js/examples/kepler-analytics --legacy-peer-deps --include=dev --silent
+            npm --prefix "$SDKJS_ROOT" run demo:quickstart:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:mcp-gis-assistant:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:spatial-analytics:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:edit-workflow:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:geocoding:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:oauth-signin:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:service-explorer:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:incident:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:pmtiles-static:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:nl-map-control:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:app-bootstrap:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:gp-runner:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:web-components:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:runtime-parity:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:25d:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:terrain-elevation:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:unified-ops:build --silent
+          npm --prefix "$SDKJS_ROOT" run demo:planning-workbench:build --silent
+          if [ ! -d "$SDKJS_ROOT/examples/kepler-analytics/node_modules" ]; then
+            npm install --prefix "$SDKJS_ROOT/examples/kepler-analytics" --legacy-peer-deps --include=dev --silent
           fi
-          npm --prefix ../honua-sdk-js/examples/kepler-analytics run build --silent
+          npm --prefix "$SDKJS_ROOT/examples/kepler-analytics" run build --silent
 
       - name: Download latest run-results artifact (best effort)
         # Feeds scripts/build-gallery.mjs's honest per-sample run badges. Not
@@ -114,16 +122,16 @@ jobs:
           fi
 
       - name: Stage & verify sdk-js sample bundles
-        # Fetches honua-sdk-js's sample-bundles-latest release, sha256-verifies
+        # Reads the lock's content-addressed vendored release and SHA-256-verifies
         # every file against its manifest, and stages verified files outside
         # site/ (see scripts/lib/sample-bundles.mjs). Integrity or manifest
         # errors fail immediately. The production runnable-app floor also
         # makes a fetch failure fatal here; snapshot-only degraded mode stays
         # available to local development without that floor.
         env:
-          SAMPLE_BUNDLES_MANIFEST_URL: ${{ vars.SAMPLE_BUNDLES_MANIFEST_URL }}
-          SAMPLE_BUNDLES_TARBALL_URL: ${{ vars.SAMPLE_BUNDLES_TARBALL_URL }}
-          SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT: ${{ github.workspace }}/../honua-sdk-js
+          SAMPLE_BUNDLES_MANIFEST_URL: ${{ steps.sdk-lock.outputs.bundle_manifest_url }}
+          SAMPLE_BUNDLES_TARBALL_URL: ${{ steps.sdk-lock.outputs.bundle_archive_url }}
+          SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT: ${{ env.SDKJS_ROOT }}
           SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,maplibre-quickstart,oauth-signin,kepler-analytics,app-bootstrap-basic,geoprocessing-job-runner,runtime-parity-showcase,storytelling-25d-map,terrain-rgb-elevation,unified-ops-workspace,web-components-basic,planning-permitting-workbench,service-explorer,nl-map-control,realtime-incident-dashboard,pmtiles-static"
           # Production must never publish a gallery with zero runnable apps.
           MIN_RUNNABLE_BUNDLES: "11"
@@ -154,10 +162,12 @@ jobs:
           # Bundle supply is already gated at 11 above. The curated public
           # portfolio intentionally withholds technically runnable labs until
           # they demonstrate a product-grade result, so gate its own floor.
-          MIN_PUBLISHED_RUNNABLE_APPS: "8"
+          MIN_PUBLISHED_RUNNABLE_APPS: "11"
         run: npm run test:gallery:browser
 
       - name: Verify server-first job pages
+        env:
+          MIN_JOB_PAGES: "4"
         run: npm run test:job-pages:browser
 
       - name: Upload gallery browser evidence

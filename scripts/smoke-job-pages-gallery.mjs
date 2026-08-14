@@ -11,6 +11,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(root, "site");
 const evidenceDir = path.join(root, ".artifacts", "gallery-browser-smoke");
 const jobs = await loadJobPages({ root });
+const minimumJobs = parseMinimum(process.env.MIN_JOB_PAGES ?? "1");
+if (jobs.length < minimumJobs) {
+  throw new Error(`job browser gate requires ${minimumJobs} job page(s), found ${jobs.length}`);
+}
 const server = createStaticServer();
 await new Promise((resolve, reject) => server.listen(0, "127.0.0.1", resolve).once("error", reject));
 const baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -102,13 +106,21 @@ try {
 }
 
 await mkdir(evidenceDir, { recursive: true });
-const receipt = { format: "honua.samples.job-pages-browser.v1", generatedAt: new Date().toISOString(), summary: { total: results.length, passed: results.filter((result) => result.passed).length, failed: results.filter((result) => !result.passed).length }, results };
+const receipt = { format: "honua.samples.job-pages-browser.v1", generatedAt: new Date().toISOString(), samplesSourceCommit: process.env.EXPECTED_SOURCE_COMMIT ?? null, summary: { required: minimumJobs, total: results.length, passed: results.filter((result) => result.passed).length, failed: results.filter((result) => !result.passed).length }, results };
 await writeFile(path.join(evidenceDir, "job-pages.json"), `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
 for (const result of results) {
   console.log(`${result.passed ? "PASS" : "FAIL"} ${result.route}`);
   for (const failure of result.failures) console.log(`  ${failure}`);
 }
 if (receipt.summary.failed) process.exitCode = 1;
+
+function parseMinimum(value) {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    throw new Error(`MIN_JOB_PAGES must be a positive integer, received ${JSON.stringify(value)}`);
+  }
+  return parsed;
+}
 
 function createStaticServer() {
   return createServer(async (request, response) => {

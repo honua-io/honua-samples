@@ -26,16 +26,17 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { SDK_PRODUCER_LOCK, assertLockedProducerUrl, sdkProducerLockEnforced } from "./sdk-producer-lock.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
 export const DEFAULT_CATALOG_URL =
-  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/samples/catalog.v2.json";
+  SDK_PRODUCER_LOCK.urls.catalog;
 export const DEFAULT_CROSSWALK_URL =
-  "https://raw.githubusercontent.com/honua-io/honua-sdk-js/trunk/config/capability-crosswalk.v1.json";
+  SDK_PRODUCER_LOCK.urls.crosswalk;
 export const DEFAULT_SNAPSHOT_PATH = path.join(REPO_ROOT, "config", "sdkjs-catalog.snapshot.json");
-export const SDKJS_REPO = "honua-io/honua-sdk-js";
+export const SDKJS_REPO = SDK_PRODUCER_LOCK.repository;
 
 /**
  * @returns {Promise<{ catalog: object, source: string }>}
@@ -45,6 +46,7 @@ export async function loadSdkJsCatalog({
   snapshotPath = DEFAULT_SNAPSHOT_PATH,
   refreshSnapshot = true,
 } = {}) {
+  assertLockedProducerUrl("catalog", catalogUrl);
   try {
     const response = await fetch(catalogUrl);
     if (!response.ok) {
@@ -62,6 +64,7 @@ export async function loadSdkJsCatalog({
         `falling back to the committed snapshot at ${path.relative(REPO_ROOT, snapshotPath)}`,
     );
     const raw = JSON.parse(await readFile(snapshotPath, "utf8"));
+    assertLockedProducerUrl("catalog", raw.sourceUrl);
     return {
       catalog: raw.catalog,
       source: `committed snapshot (${path.relative(REPO_ROOT, snapshotPath)}, fetched ${raw.fetchedAt} from ${raw.sourceUrl})`,
@@ -89,6 +92,7 @@ async function writeSnapshot(snapshotPath, sourceUrl, catalog) {
 export async function loadCapabilityCrosswalk({
   crosswalkUrl = process.env.SDKJS_CROSSWALK_URL?.trim() || DEFAULT_CROSSWALK_URL,
 } = {}) {
+  assertLockedProducerUrl("crosswalk", crosswalkUrl);
   try {
     const response = await fetch(crosswalkUrl);
     if (!response.ok) {
@@ -97,6 +101,7 @@ export async function loadCapabilityCrosswalk({
     const json = await response.json();
     return { crosswalk: json.crosswalk ?? {}, source: `live fetch (${crosswalkUrl})` };
   } catch (err) {
+    if (sdkProducerLockEnforced()) throw err;
     console.warn(
       `build-gallery: sdk-js capability crosswalk live fetch failed (${err.message}) -- ` +
         `catalog entries without a materialized capabilityKeys field will show none derived`,
