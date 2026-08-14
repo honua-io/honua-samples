@@ -136,7 +136,7 @@ jobs:
       - name: Build the exact-head gallery
         env:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
-        run: node scripts/build-gallery.mjs --check
+        run: GITHUB_SHA="$EXPECTED_SOURCE_COMMIT" node scripts/build-gallery.mjs --check
 
       - name: Run every admitted SDK app
         run: npm run test:gallery:browser
