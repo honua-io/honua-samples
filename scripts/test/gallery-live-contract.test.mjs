@@ -10,6 +10,7 @@ import {
   stacFixtureProjectionProofFailures,
 } from "../lib/gallery-live-contract.mjs";
 import { viewportFailure } from "../lib/gallery-visual-contract.mjs";
+import { convergeSemanticAssertion } from "../lib/semantic-convergence.mjs";
 
 test("runnable examples must render inline code before runtime evidence", () => {
   const shared = {
@@ -222,3 +223,119 @@ test("STAC proof requires fixture count, selection, projection, and trace togeth
     ).length > 0,
   );
 });
+
+test("columnar semantic convergence accepts only the exact proof within the attempt bound", async () => {
+  const sourceFeatureCounts = [0, 2, 4];
+  let proofIndex = 0;
+  const result = await convergeSemanticAssertion(
+    async () => {
+      const failures = columnarProofFailures(columnarProof(sourceFeatureCounts[proofIndex++]), 1);
+      if (failures.length > 0) throw new Error(failures.join("; "));
+    },
+    { maxAttempts: 5, timeoutMs: 1_000, intervalMs: 10, now: () => 0, sleep: async () => {} },
+  );
+  assert.deepEqual(result, {
+    passed: true,
+    attempts: 3,
+    maxAttempts: 5,
+    timeoutMs: 1_000,
+    timedOut: false,
+    lastError: "columnar sourceFeatureCount must equal 4",
+  });
+});
+
+test("columnar semantic convergence rejects persistent partial proof at the attempt bound", async () => {
+  const result = await convergeSemanticAssertion(
+    async () => {
+      const failures = columnarProofFailures(columnarProof(2), 1);
+      if (failures.length > 0) throw new Error(failures.join("; "));
+    },
+    { maxAttempts: 3, timeoutMs: 1_000, intervalMs: 10, now: () => 0, sleep: async () => {} },
+  );
+  assert.deepEqual(result, {
+    passed: false,
+    attempts: 3,
+    maxAttempts: 3,
+    timeoutMs: 1_000,
+    timedOut: false,
+    lastError: "columnar sourceFeatureCount must equal 4",
+  });
+});
+
+test("columnar semantic convergence fails at the strict timeout", async () => {
+  let clockMs = 0;
+  const result = await convergeSemanticAssertion(
+    async () => {
+      const failures = columnarProofFailures(columnarProof(0), 1);
+      if (failures.length > 0) throw new Error(failures.join("; "));
+    },
+    {
+      maxAttempts: 10,
+      timeoutMs: 25,
+      intervalMs: 10,
+      now: () => clockMs,
+      sleep: async (delayMs) => {
+        clockMs += delayMs;
+      },
+    },
+  );
+  assert.deepEqual(result, {
+    passed: false,
+    attempts: 3,
+    maxAttempts: 10,
+    timeoutMs: 25,
+    timedOut: true,
+    lastError: "columnar sourceFeatureCount must equal 4",
+  });
+});
+
+test("semantic convergence does not admit a non-fixture columnar request", async () => {
+  const proof = columnarProof(4);
+  proof.request.url = proof.request.url.replace("https://example.invalid", "https://samples.honua.io");
+  const result = await convergeSemanticAssertion(
+    async () => {
+      const failures = columnarProofFailures(proof, 1);
+      if (failures.length > 0) throw new Error(failures.join("; "));
+    },
+    { maxAttempts: 2, timeoutMs: 1_000, intervalMs: 10, now: () => 0, sleep: async () => {} },
+  );
+  assert.equal(result.passed, false);
+  assert.equal(result.attempts, 2);
+  assert.match(result.lastError, /bounded fixture Arrow query/u);
+});
+
+function columnarProof(sourceFeatureCount) {
+  return {
+    ready: true,
+    running: false,
+    status: "ready",
+    completedRuns: 1,
+    cancelledRuns: 0,
+    featureCount: 1,
+    sourceFeatureCount,
+    evidence: {
+      rows: 1,
+      batches: 1,
+      transferBytes: 4160,
+      peakBackingBytes: 55,
+      ceilings: { maxRows: 25, maxBatches: 2, maxTransferBytes: 16384, maxBackingBytes: 65536 },
+    },
+    plan: {
+      execution: "server-pushdown",
+      format: "arrow",
+      pushdown: ["columns", "filter", "bbox", "limit", "orderBy"],
+    },
+    request: {
+      method: "GET",
+      url: "https://example.invalid/rest/services/Interoperability/Harbors/FeatureServer/0/query?f=arrow&resultRecordCount=25",
+    },
+    rows: [
+      {
+        featureId: 1,
+        name: "Honolulu Harbor",
+        coordinate: [-157.8583, 21.3069],
+        timestamp: "1704164645000",
+      },
+    ],
+  };
+}
