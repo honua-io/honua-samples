@@ -16,6 +16,7 @@ import {
   stacFixtureProjectionProofFailures,
 } from "./lib/gallery-live-contract.mjs";
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
+import { convergeSemanticAssertion } from "./lib/semantic-convergence.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(repoRoot, "site");
@@ -24,6 +25,7 @@ const evidencePath = path.join(evidenceDir, "browser-smoke.v1.json");
 const configuredBaseUrl = process.env.GALLERY_BASE_URL?.trim();
 const expectedSourceCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim();
 const navigationTimeoutMs = parsePositiveInteger(process.env.GALLERY_LIVE_TIMEOUT_MS ?? "45000", "GALLERY_LIVE_TIMEOUT_MS");
+const columnarConvergenceOptions = Object.freeze({ maxAttempts: 8, timeoutMs: 4_000, intervalMs: 250 });
 
 const mediaTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -165,24 +167,35 @@ const semanticAssertions = new Map([
   }],
   ["columnar-query-quickstart", async (frame) => {
     await frame.waitForFunction(() => window.__HONUA_COLUMNAR_QUERY_QUICKSTART__?.ready === true, null, markerOptions());
-    const proof = await frame.evaluate(() => {
-      const runtime = window.__HONUA_COLUMNAR_QUERY_QUICKSTART__;
-      return {
-        ready: runtime?.ready,
-        running: runtime?.running,
-        status: runtime?.status,
-        completedRuns: runtime?.completedRuns,
-        cancelledRuns: runtime?.cancelledRuns,
-        featureCount: runtime?.featureCount,
-        sourceFeatureCount: runtime?.sourceFeatureCount(),
-        evidence: runtime?.lastEvidence,
-        plan: runtime?.lastPlan,
-        request: runtime?.lastRequest,
-        rows: runtime?.lastRows,
-      };
-    });
-    const failures = columnarProofFailures(proof, await frame.locator(".maplibregl-canvas").count());
-    if (failures.length > 0) throw new Error(`Columnar Arrow fixture proof failed: ${failures.join("; ")}`);
+    const convergence = await convergeSemanticAssertion(async () => {
+      const proof = await frame.evaluate(() => {
+        const runtime = window.__HONUA_COLUMNAR_QUERY_QUICKSTART__;
+        return {
+          ready: runtime?.ready,
+          running: runtime?.running,
+          status: runtime?.status,
+          completedRuns: runtime?.completedRuns,
+          cancelledRuns: runtime?.cancelledRuns,
+          featureCount: runtime?.featureCount,
+          sourceFeatureCount: runtime?.sourceFeatureCount(),
+          evidence: runtime?.lastEvidence,
+          plan: runtime?.lastPlan,
+          request: runtime?.lastRequest,
+          rows: runtime?.lastRows,
+        };
+      });
+      const failures = columnarProofFailures(proof, await frame.locator(".maplibregl-canvas").count());
+      if (failures.length > 0) throw new Error(`Columnar Arrow fixture proof failed: ${failures.join("; ")}`);
+    }, columnarConvergenceOptions);
+    if (!convergence.passed) {
+      const timeout = convergence.timedOut ? " within the timeout" : "";
+      const error = new Error(
+        `Columnar Arrow fixture proof did not converge${timeout} after ${convergence.attempts}/${convergence.maxAttempts} attempts: ${convergence.lastError}`,
+      );
+      error.semanticConvergence = convergence;
+      throw error;
+    }
+    return { semanticConvergence: convergence };
   }],
   ["stac-imagery-browser", async (frame) => {
     await frame.waitForFunction(
@@ -344,6 +357,7 @@ async function verifyCard(browser, baseUrl, card) {
   const page = await browser.newPage();
   const failures = [];
   let screenshot = null;
+  let semanticConvergence = null;
   const appFailures = [];
   const isAppUrl = (value) => {
     try {
@@ -407,8 +421,10 @@ async function verifyCard(browser, baseUrl, card) {
               if (body.includes(signal)) failures.push(`visible iframe failure signal: ${signal}`);
             }
             try {
-              await assertion(frame);
+              const assertionEvidence = await assertion(frame);
+              semanticConvergence = assertionEvidence?.semanticConvergence ?? null;
             } catch (error) {
+              semanticConvergence = error?.semanticConvergence ?? null;
               failures.push(`semantic assertion: ${error instanceof Error ? error.message : String(error)}`);
             }
           }
@@ -428,7 +444,17 @@ async function verifyCard(browser, baseUrl, card) {
     await page.screenshot({ path: path.join(evidenceDir, screenshot), fullPage: true });
   }
   await page.close();
-  return { id: card.id, title: card.title, contentKind: card.contentKind, source: card.source, runnable: card.runnable, passed: uniqueFailures.length === 0, failures: uniqueFailures, screenshot };
+  return {
+    id: card.id,
+    title: card.title,
+    contentKind: card.contentKind,
+    source: card.source,
+    runnable: card.runnable,
+    passed: uniqueFailures.length === 0,
+    failures: uniqueFailures,
+    screenshot,
+    ...(semanticConvergence ? { semanticConvergence } : {}),
+  };
 }
 
 function validateRootCardContract(card, baseUrl, failures) {
