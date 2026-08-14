@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sdkjs-catalog.mjs (via scripts/build-gallery.mjs) when the live fetch of samples/catalog.v2.json fails, so samples.honua.io deploys never break on an sdk-js-side hiccup. Rewritten automatically whenever the live fetch succeeds -- commit the change to keep the offline fallback current. See honua-io/honua-samples#3.",
-  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/2284c9b032b2c81227dc86ff1ff9a46dc61cde6c/samples/catalog.v2.json",
-  "fetchedAt": "2026-08-13T07:16:30.739Z",
+  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/catalog.v2.json",
+  "fetchedAt": "2026-08-14T08:23:07.891Z",
   "catalog": {
     "$schema": "./contract/v2/schemas/sample-catalog.schema.json",
     "format": "honua.sdk.sample-catalog.v2",
@@ -570,8 +570,8 @@
           "mode": "fixture",
           "authMode": "none",
           "config": [],
-          "provenance": "Base64 text embedding of the exact 1,336-byte Honua Server geoarrow.wkb fixture produced by commit fd1c651efa7078c269742152a2777298e3b1c4d4 and pinned by SHA-256.",
-          "attribution": "Honua Server interoperability fixture; application-pinned WGS84 display convention is not inferred from Arrow CRS metadata.",
+          "provenance": "Base64 text embedding of the exact 4,160-byte Honua Server geoarrow.wkb workflow artifact produced by reviewed head 66a9d34496c6f6a03dd571957062f773bfef7f0a, merged as 4ef53ce7f49b78aad3572db1dfc3be88a6654a43, and pinned by SHA-256, with its producer receipt and digest sidecar retained byte-for-byte.",
+          "attribution": "Honua Server interoperability fixture; the field extension declares EPSG:4326 PROJJSON and schema-level GeoParquet metadata declares Point.",
           "freshness": "Fixture producer commit, schema contract, byte length, and SHA-256 are release-gated.",
           "configurationStatus": "not-required",
           "configClassifications": []
@@ -924,7 +924,7 @@
               "npm run evidence:cog:live"
             ],
             "evidencePath": "samples/evidence/imagery-cog-quickstart/live.v1.json",
-            "expiresAt": "2026-09-13T04:14:51.870Z"
+            "expiresAt": "2026-09-13T22:38:46.584Z"
           }
         },
         "expectedDegradation": "Credential-bearing URLs, CORS, missing or oversized range responses, unsupported CRS/format, and nodata return structured outcomes while published imagery remains usable. Public live proof covers classified COG inspection and a bounded decoded window in EPSG:32621; browser-side UTM reprojection and a georeferenced live MapLibre mount remain explicitly unclaimed.",
@@ -1172,7 +1172,7 @@
               "npm run evidence:first-map:live"
             ],
             "evidencePath": "samples/evidence/maplibre-quickstart/live.v1.json",
-            "expiresAt": "2026-09-13T04:12:56.975Z"
+            "expiresAt": "2026-09-13T22:36:47.535Z"
           }
         },
         "expectedDegradation": "Capability misses, plan warnings, and bounded fallback are shown rather than silently returning an empty map.",
@@ -1294,7 +1294,7 @@
               "npm run evidence:migration-workbench:live"
             ],
             "evidencePath": "samples/evidence/migration-workbench/live.v1.json",
-            "expiresAt": "2026-09-13T04:15:14.882Z"
+            "expiresAt": "2026-09-13T22:39:12.002Z"
           }
         },
         "expectedDegradation": "Unsupported ArcGIS modules are reported as manual work, never silently removed.",
@@ -2209,7 +2209,7 @@
               "npm run demo:service-explorer:live-evidence"
             ],
             "evidencePath": "samples/evidence/service-explorer/live.v1.json",
-            "expiresAt": "2026-09-13T04:16:14.075Z"
+            "expiresAt": "2026-09-13T22:40:14.477Z"
           }
         },
         "expectedDegradation": "Partial discovery and unsupported source actions remain visible with structured state, code, and reason; the sample does not synthesize success.",

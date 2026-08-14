@@ -4,7 +4,7 @@ import test from "node:test";
 import { bindSdkSourceToBundle } from "../lib/sdk-source-binding.mjs";
 import { validateManifestShape } from "../lib/sample-bundles.mjs";
 
-const SDK_REVISION = "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c";
+const SDK_REVISION = "d68f221a3ee49b86f06f0d587faf2c627263283d";
 
 async function json(path) {
   return JSON.parse(await readFile(new URL(`../../${path}`, import.meta.url), "utf8"));
@@ -40,7 +40,7 @@ test("binds inline source and GitHub links to the bundle commit", () => {
   );
 });
 
-test("requires every release bundle to carry immutable source provenance", async () => {
+test("requires every governed bundle to carry immutable source provenance", async () => {
   const snapshot = await json("config/sample-bundles.snapshot.json");
   assert.doesNotThrow(() => validateManifestShape(snapshot.manifest));
   assert.equal(snapshot.manifest.samples.length, 17);

@@ -392,7 +392,8 @@ function isSdkExampleFolder(href, id) {
 }
 
 function isJobContract(href, id) {
-  return href === `https://github.com/honua-io/honua-samples/blob/trunk/jobs/${id}.json`;
+  const match = String(href ?? "").match(new RegExp(`^https://github\\.com/honua-io/honua-samples/blob/([0-9a-f]{40})/jobs/${id}\\.json$`, "i"));
+  return Boolean(match) && (!expectedSourceCommit || match[1].toLowerCase() === expectedSourceCommit.toLowerCase());
 }
 
 function normalizeText(value) {

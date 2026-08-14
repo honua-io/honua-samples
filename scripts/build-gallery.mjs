@@ -168,6 +168,10 @@ const CHECK_MODE = process.argv.includes("--check");
 
 async function main() {
   const problems = [];
+  const sourceCommit = resolveSourceCommit();
+  if (!isFullGitSha(sourceCommit)) {
+    throw new Error(`gallery source links require an immutable samples commit, received ${JSON.stringify(sourceCommit)}`);
+  }
 
   const { records: keyRecords } = await loadCapabilityKeyRecords();
   const keyByKey = new Map(keyRecords.map((r) => [r.key, r]));
@@ -211,10 +215,10 @@ async function main() {
   const stagedBundleIds = new Set(bundleState.stagedIds);
 
   const portfolio = await loadGalleryPublicPortfolio();
-  const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems));
+  const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems, sourceCommit));
   const ownPortfolioResult = applyGalleryPublicPortfolio(ownCandidates, portfolio);
   const ownCards = ownPortfolioResult.publicCards;
-  const jobCards = jobPages.map((job) => toJobCard(job, keyByKey, problems));
+  const jobCards = jobPages.map((job) => toJobCard(job, keyByKey, problems, sourceCommit));
   const sdkCandidates = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
   const technicallyQualifiedSdkCards = sdkCandidates.filter(
     (card) =>
@@ -248,7 +252,6 @@ async function main() {
 
   const contentSections = groupByContentKind(cards, keyByKey);
   const generatedAt = new Date().toISOString();
-  const sourceCommit = resolveSourceCommit();
   const bundleNotice = bundleState.degraded
     ? `Sample bundle fetch degraded this deploy: ${bundleState.degradedReason} -- no sdk-js samples are embedded; each shows "no runnable build published yet".`
     : null;
@@ -326,6 +329,8 @@ async function main() {
       "utf8",
     );
   }
+
+  await assertNoMutableTrunkLinks(SITE_DIR);
 
   const pageCount = 1 + ownCards.length + jobCards.length + sdkCards.length + merge.fixtureOnlyEntries.length;
   console.log(
@@ -405,7 +410,7 @@ async function loadRunResults() {
 
 // ---- card normalization -------------------------------------------------
 
-function toOwnCard(sample, runResults, keyByKey, problems) {
+function toOwnCard(sample, runResults, keyByKey, problems, sourceCommit) {
   const { dirName, manifest, readme, sourcePath, sourceText } = sample;
   const id = manifest.id ?? dirName;
   const capabilities = manifest.capabilities ?? [];
@@ -435,7 +440,7 @@ function toOwnCard(sample, runResults, keyByKey, problems) {
     sourceRepo: "honua-samples",
     detailUrl: `${GALLERY_BASE_URL}/${id}/`,
     detailPath: `/${id}/`,
-    githubUrl: `https://github.com/${OWN_REPO}/tree/trunk/samples/${dirName}`,
+    githubUrl: `https://github.com/${OWN_REPO}/tree/${sourceCommit}/samples/${dirName}`,
     readmeHtml: readme ? renderMarkdown(readme) : null,
     sourcePath,
     sourceText,
@@ -464,7 +469,7 @@ function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
   };
 }
 
-function toJobCard(job, keyByKey, problems) {
+function toJobCard(job, keyByKey, problems, sourceCommit) {
   const capabilities = job.server.capabilityIds;
   for (const key of capabilities) {
     if (!keyByKey.has(key)) problems.push(`jobs/${job.id}.json references unknown capability key "${key}"`);
@@ -499,7 +504,7 @@ function toJobCard(job, keyByKey, problems) {
     sourceRepo: "honua-samples",
     detailUrl: `${GALLERY_BASE_URL}/jobs/${job.id}/`,
     detailPath: `/jobs/${job.id}/`,
-    githubUrl: `https://github.com/${OWN_REPO}/blob/trunk/jobs/${job.id}.json`,
+    githubUrl: `https://github.com/${OWN_REPO}/blob/${sourceCommit}/jobs/${job.id}.json`,
     sourcePath: `jobs/${job.id}.json`,
     bundleRunnable: false,
     job,
@@ -1086,7 +1091,7 @@ function renderJobServerPanel(job, keyByKey) {
   const fixture = job.server.fixture;
   const evidence = job.maturity.evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const limitations = job.maturity.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  const docs = job.server.docs.map((url) => `<li><a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></li>`).join("");
+  const docs = job.server.docs.map((url) => `<li>${renderPublishedSourceLink(url, url)}</li>`).join("");
   return `<section class="server-contract" aria-labelledby="server-contract-${escapeAttr(job.id)}">
   <div class="job-section-heading"><div><p class="eyebrow">Server contract first</p><h2 id="server-contract-${escapeAttr(job.id)}">${escapeHtml(job.server.operation)}</h2></div><span class="contract-state state-${escapeAttr(job.maturity.state)}">${escapeHtml(job.maturity.state)}</span></div>
   <dl class="server-facts">
@@ -1136,7 +1141,7 @@ function renderJobLanguageTabs(job) {
     const ref = refs.get(surface);
     const tab = tabs.get(surface);
     const symbol = ref.symbolOrCommand ? `<code>${escapeHtml(ref.symbolOrCommand)}</code>` : "No public symbol";
-    const link = isSafeHttpsUrl(ref.deepLink) ? `<a href="${escapeAttr(ref.deepLink)}" target="_blank" rel="noopener noreferrer">Exact API reference &nearr;</a>` : "";
+    const link = ref.deepLink ? renderPublishedSourceLink(ref.deepLink, "Exact API reference &nearr;") : "";
     const content = tab
       ? `<section class="code-view job-code-view"><div class="code-toolbar"><div><span>${escapeHtml(tab.language.toUpperCase())}</span><strong>${escapeHtml(ref.label)}</strong></div>${link}</div><pre tabindex="0"><code>${escapeHtml(tab.code)}</code></pre></section>`
       : `<div class="language-gap"><strong>Unavailable - no pseudocode shown.</strong><p>${escapeHtml(ref.gap ?? "No admitted implementation is available for this surface.")}</p></div>`;
@@ -1145,11 +1150,26 @@ function renderJobLanguageTabs(job) {
   return `<section class="job-language-section" aria-labelledby="language-heading-${escapeAttr(job.id)}"><p class="eyebrow">Equivalent client surfaces</p><h2 id="language-heading-${escapeAttr(job.id)}">Choose a language without changing the job.</h2><div class="job-tabs" role="tablist" aria-label="SDK language">${tabButtons}</div><div class="job-tab-panels">${panels}</div></section>`;
 }
 
+function isPublishableSourceLink(value) {
+  return isSafeHttpsUrl(value) && !value.includes("/trunk/");
+}
+
+function renderPublishedSourceLink(value, label) {
+  if (isPublishableSourceLink(value)) {
+    return `<a href="${escapeAttr(value)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+  }
+  return value?.includes("/trunk/")
+    ? '<span class="reference-gap">Unpinned upstream reference withheld</span>'
+    : escapeHtml(label);
+}
+
 function renderJobReferenceMatrix(job) {
   const surfaceLabels = { http: "Raw HTTP", cli: "CLI", javascript: "JavaScript", python: "Python", dotnet: ".NET" };
   const rows = job.references.map((ref) => {
     const exact = ref.symbolOrCommand ? `<code>${escapeHtml(ref.symbolOrCommand)}</code>` : `<span class="reference-gap">Gap: ${escapeHtml(ref.gap)}</span>`;
-    const linked = isSafeHttpsUrl(ref.deepLink) ? `<a href="${escapeAttr(ref.deepLink)}" target="_blank" rel="noopener noreferrer">${exact}</a>` : exact;
+    const linked = isPublishableSourceLink(ref.deepLink)
+      ? `<a href="${escapeAttr(ref.deepLink)}" target="_blank" rel="noopener noreferrer">${exact}</a>`
+      : `${exact}${ref.deepLink?.includes("/trunk/") ? '<br><small class="reference-gap">Unpinned upstream link withheld</small>' : ""}`;
     return `<tr data-reference-surface="${escapeAttr(ref.surface)}" data-state="${escapeAttr(ref.availability)}"><th scope="row">${escapeHtml(surfaceLabels[ref.surface] ?? ref.surface)}<small>${escapeHtml(ref.availability)}</small></th><td>${linked}</td><td>${escapeHtml(ref.package ?? "Not applicable")}<br><small>min ${escapeHtml(ref.minVersion ?? "n/a")} - ${escapeHtml(ref.supportTier)}</small></td><td><strong>${escapeHtml(ref.owner)}</strong><br>Auth: ${escapeHtml(ref.auth)}<br>Cancel: ${escapeHtml(ref.cancellation)}<br>Errors: ${escapeHtml(ref.errors)}</td></tr>`;
   }).join("");
   return `<section class="job-reference" aria-labelledby="reference-heading-${escapeAttr(job.id)}"><p class="eyebrow">Exact reference matrix</p><h2 id="reference-heading-${escapeAttr(job.id)}">Raw contract and public symbols</h2><div class="reference-scroll"><table><thead><tr><th>Surface</th><th>Operation or symbol</th><th>Package and version</th><th>Ownership and behavior</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
@@ -1416,6 +1436,32 @@ async function bindEmbeddedBundleDocumentationLinks(card, appDir) {
       kind: "blob",
     });
     await writeFile(filePath, html.replace(link.from, `href="${escapeAttr(docsUrl)}"`), "utf8");
+  }
+
+  const entries = await readdir(appDir, { recursive: true, withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile() || !/\.(?:css|html|js|json|mjs|txt)$/u.test(entry.name)) continue;
+    const filePath = path.join(entry.parentPath ?? entry.path, entry.name);
+    const text = await readFile(filePath, "utf8");
+    const bound = text
+      .replaceAll(`https://github.com/${SDKJS_REPO}/tree/trunk/`, `https://github.com/${SDKJS_REPO}/tree/${card.sourceRevision}/`)
+      .replaceAll(`https://github.com/${SDKJS_REPO}/blob/trunk/`, `https://github.com/${SDKJS_REPO}/blob/${card.sourceRevision}/`)
+      .replaceAll(`https://raw.githubusercontent.com/${SDKJS_REPO}/trunk/`, `https://raw.githubusercontent.com/${SDKJS_REPO}/${card.sourceRevision}/`);
+    if (bound !== text) await writeFile(filePath, bound, "utf8");
+  }
+}
+
+async function assertNoMutableTrunkLinks(root) {
+  const entries = await readdir(root, { recursive: true, withFileTypes: true });
+  const offenders = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !/\.(?:css|html|js|json|mjs|txt)$/u.test(entry.name)) continue;
+    const filePath = path.join(entry.parentPath ?? entry.path, entry.name);
+    const text = await readFile(filePath, "utf8");
+    if (text.includes("/trunk/")) offenders.push(path.relative(root, filePath));
+  }
+  if (offenders.length > 0) {
+    throw new Error(`published gallery contains mutable /trunk/ source link(s): ${offenders.sort().join(", ")}`);
   }
 }
 

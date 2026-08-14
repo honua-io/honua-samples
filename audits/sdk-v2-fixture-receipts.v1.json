@@ -2,32 +2,118 @@
   "format": "honua.samples.sdk-fixture-receipts.v1",
   "producer": {
     "repository": "honua-io/honua-sdk-js",
-    "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c"
+    "commit": "d68f221a3ee49b86f06f0d587faf2c627263283d"
   },
   "claims": {
     "imagery-cog-quickstart": {
+      "evidenceState": "fixture-only",
+      "sourcePath": "samples/evidence/imagery-cog-quickstart/runs/4b3177b0-4e08-43cd-9402-4b6ac2f1e69d/artifacts/packed-sample-dist/fixtures/cog/chunks",
+      "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/evidence/imagery-cog-quickstart/runs/4b3177b0-4e08-43cd-9402-4b6ac2f1e69d/artifacts/packed-sample-dist/fixtures/cog/chunks",
       "bytes": 163840,
       "sha256": "59ba6110a96c0aba2ab5f5ee27b0eed6ec436956df27bb6312b94573f35190bd",
+      "producerReceipt": {
+        "localPath": "audits/fixtures/sdk-d68f221/imagery-cog-quickstart/fixture-gate-receipt.v1.json",
+        "sourcePath": "samples/evidence/imagery-cog-quickstart/receipts/fixture.v1.json",
+        "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/evidence/imagery-cog-quickstart/receipts/fixture.v1.json",
+        "bytes": 1255,
+        "sha256": "ffa4bf79c1d3d35e586d55a5c3faa9c1000468c7210a9d2d2a27ee6bf448d2dd",
+        "gitBlobSha1": "51e4202068bbb3e9844b6bcd3bc2b6a381e79485"
+      },
       "chunks": [
-        { "localPath": "audits/fixtures/sdk-2284c9b/cog/0000.bin", "sourcePath": "samples/evidence/imagery-cog-quickstart/runs/c90d7e68-a82e-4685-81de-2cd4b5f0c571/artifacts/packed-sample-dist/fixtures/cog/chunks/0000.bin", "gitBlobSha1": "50889423f364f3bb89c9abb796c7a13c45c68063", "storedBytes": 5672, "storedSha256": "3e9ed08c2e9482791c98e9e316dcf2f117c459f9988f6f20409e11ee051ca3b5", "inflatedBytes": 65536, "inflatedSha256": "324d417eaf750c7d442d2fa799c0729ed8086b990a68cc62a8a6c2be7d34948f" },
-        { "localPath": "audits/fixtures/sdk-2284c9b/cog/0001.bin", "sourcePath": "samples/evidence/imagery-cog-quickstart/runs/c90d7e68-a82e-4685-81de-2cd4b5f0c571/artifacts/packed-sample-dist/fixtures/cog/chunks/0001.bin", "gitBlobSha1": "b21d89ffd4ea14df3f00cdc9e9f9786580262b77", "storedBytes": 12376, "storedSha256": "73b3f20c8a1b0078c270f9f57812709a6f2f1746ca35edace22adf17e2b38849", "inflatedBytes": 65536, "inflatedSha256": "a765fa2c940d26bbbee5b0355a2e038239a7d54c5488522d9a10e5d7d7287cb8" },
-        { "localPath": "audits/fixtures/sdk-2284c9b/cog/0002.bin", "sourcePath": "samples/evidence/imagery-cog-quickstart/runs/c90d7e68-a82e-4685-81de-2cd4b5f0c571/artifacts/packed-sample-dist/fixtures/cog/chunks/0002.bin", "gitBlobSha1": "57a74292f36eb39febd98ae3a65d0122a2e69fe6", "storedBytes": 2799, "storedSha256": "c982f82cb84a5d80e2b03d741ff4ab2ce1bde928f6d7c670e234ae0e091e2205", "inflatedBytes": 32768, "inflatedSha256": "5f3df38a0012c98f2ef0a2a0498626b4bd7434329ae5e9453a0a9ba31d75253e" }
+        {
+          "localPath": "audits/fixtures/sdk-d68f221/imagery-cog-quickstart/chunks/0000.bin",
+          "sourcePath": "samples/evidence/imagery-cog-quickstart/runs/4b3177b0-4e08-43cd-9402-4b6ac2f1e69d/artifacts/packed-sample-dist/fixtures/cog/chunks/0000.bin",
+          "storedBytes": 5672,
+          "storedSha256": "3e9ed08c2e9482791c98e9e316dcf2f117c459f9988f6f20409e11ee051ca3b5",
+          "gitBlobSha1": "50889423f364f3bb89c9abb796c7a13c45c68063",
+          "inflatedBytes": 65536,
+          "inflatedSha256": "324d417eaf750c7d442d2fa799c0729ed8086b990a68cc62a8a6c2be7d34948f"
+        },
+        {
+          "localPath": "audits/fixtures/sdk-d68f221/imagery-cog-quickstart/chunks/0001.bin",
+          "sourcePath": "samples/evidence/imagery-cog-quickstart/runs/4b3177b0-4e08-43cd-9402-4b6ac2f1e69d/artifacts/packed-sample-dist/fixtures/cog/chunks/0001.bin",
+          "storedBytes": 12376,
+          "storedSha256": "73b3f20c8a1b0078c270f9f57812709a6f2f1746ca35edace22adf17e2b38849",
+          "gitBlobSha1": "b21d89ffd4ea14df3f00cdc9e9f9786580262b77",
+          "inflatedBytes": 65536,
+          "inflatedSha256": "a765fa2c940d26bbbee5b0355a2e038239a7d54c5488522d9a10e5d7d7287cb8"
+        },
+        {
+          "localPath": "audits/fixtures/sdk-d68f221/imagery-cog-quickstart/chunks/0002.bin",
+          "sourcePath": "samples/evidence/imagery-cog-quickstart/runs/4b3177b0-4e08-43cd-9402-4b6ac2f1e69d/artifacts/packed-sample-dist/fixtures/cog/chunks/0002.bin",
+          "storedBytes": 2799,
+          "storedSha256": "c982f82cb84a5d80e2b03d741ff4ab2ce1bde928f6d7c670e234ae0e091e2205",
+          "gitBlobSha1": "57a74292f36eb39febd98ae3a65d0122a2e69fe6",
+          "inflatedBytes": 32768,
+          "inflatedSha256": "5f3df38a0012c98f2ef0a2a0498626b4bd7434329ae5e9453a0a9ba31d75253e"
+        }
       ]
     },
     "columnar-query-quickstart": {
-      "localPath": "audits/fixtures/sdk-2284c9b/columnar/honua-server-geoarrow-wkb.arrow",
-      "sourcePath": "test/fixtures/columnar/honua-server-geoarrow-wkb.arrow",
-      "gitBlobSha1": "309a210d17203dcd186f676b70831dea5e4fd00b",
-      "bytes": 1336,
-      "sha256": "c5d9c789171970b19ca9c54d5eda97f045f28adf66324f949c14813e8f90d001"
+      "evidenceState": "fixture-only-live-unavailable",
+      "localPath": "audits/fixtures/sdk-d68f221/columnar-query-quickstart/honua-server-geoarrow-02-point.arrow",
+      "sourcePath": "test/fixtures/columnar/honua-server-geoarrow-02-point.arrow",
+      "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/test/fixtures/columnar/honua-server-geoarrow-02-point.arrow",
+      "mediaType": "application/vnd.apache.arrow.stream",
+      "bytes": 4160,
+      "sha256": "da4ccf9aa159e6e34b448c87712e074438a64f7eb57f38c39bad24a821170f52",
+      "gitBlobSha1": "2bcfee0ece0c1914c5767ba0076a212f3bcc1b59",
+      "serverProducer": {
+        "repository": "honua-io/honua-server",
+        "authoredCommit": "66a9d34496c6f6a03dd571957062f773bfef7f0a",
+        "mergeCommit": "4ef53ce7f49b78aad3572db1dfc3be88a6654a43",
+        "artifactRun": 31767388217,
+        "artifactName": "honua-server-geoarrow-02-66a9d34496c6f6a03dd571957062f773bfef7f0a",
+        "contract": "GeoArrow 0.2 geoarrow.wkb with EPSG:4326 PROJJSON and Point metadata"
+      },
+      "sidecars": [
+        {
+          "localPath": "audits/fixtures/sdk-d68f221/columnar-query-quickstart/honua-server-geoarrow-02-point.arrow.provenance.json",
+          "sourcePath": "test/fixtures/columnar/honua-server-geoarrow-02-point.arrow.provenance.json",
+          "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/test/fixtures/columnar/honua-server-geoarrow-02-point.arrow.provenance.json",
+          "bytes": 1014,
+          "sha256": "9f52a0e8289d0e29df01f850af84a7bc0577649df7a68684f7558b127653bf5e",
+          "gitBlobSha1": "f2aa5beec05957d1c12d2eb6022ba4c078c05fda"
+        },
+        {
+          "localPath": "audits/fixtures/sdk-d68f221/columnar-query-quickstart/honua-server-geoarrow-02-point.arrow.sha256",
+          "sourcePath": "test/fixtures/columnar/honua-server-geoarrow-02-point.arrow.sha256",
+          "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/test/fixtures/columnar/honua-server-geoarrow-02-point.arrow.sha256",
+          "bytes": 103,
+          "sha256": "e6beabc28e78a8383550f1fb8d08ee848e259f19596ba834519abd19759ced80",
+          "gitBlobSha1": "b09e3ab4599709c426efeefb5107fbe81cb2eadf"
+        },
+        {
+          "localPath": "audits/fixtures/sdk-d68f221/columnar-query-quickstart/honua-server-geoarrow-02-point.manifest.json",
+          "sourcePath": "test/fixtures/columnar/honua-server-geoarrow-02-point.manifest.json",
+          "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/test/fixtures/columnar/honua-server-geoarrow-02-point.manifest.json",
+          "bytes": 2029,
+          "sha256": "b2912b1ce51b24ffd99e0872da906167c4c01a1b399438c372d20c56e4f23c79",
+          "gitBlobSha1": "3963b228bd9103f4d82e74f81d8c2e417ca64e65"
+        }
+      ]
     },
     "coverages-wcs-basic": {
-      "localPath": "audits/fixtures/sdk-2284c9b/coverages/pinned-fixtures.ts",
+      "evidenceState": "fixture-only-live-planned",
+      "localPath": "audits/fixtures/sdk-d68f221/coverages-wcs-basic/pinned-fixtures.ts",
       "sourcePath": "examples/coverages-wcs-basic/src/pinned-fixtures.ts",
-      "gitBlobSha1": "124c1d35859cd788226e66748b0d1be972f366fd",
+      "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/examples/coverages-wcs-basic/src/pinned-fixtures.ts",
       "sourceBytes": 16712,
       "sourceSha256": "c97fa9ca81b165a6b23a254172e65bd36f6ee204ca5fb154e2493707d8930b10",
-      "image": { "width": 320, "height": 220, "bytes": 281908, "sha256": "8c7b5b3f8bd31bca2df07c4a70254d75e70d63838c2f77e033def3c1b8d2acff" }
+      "gitBlobSha1": "124c1d35859cd788226e66748b0d1be972f366fd",
+      "image": {
+        "width": 320,
+        "height": 220,
+        "bytes": 281908,
+        "sha256": "8c7b5be9ba372749f2a4bbb37e57fd864378417050301ece26a576dcddfef839"
+      }
     }
+  },
+  "sdkProducer": {
+    "repository": "honua-io/honua-sdk-js",
+    "commit": "d68f221a3ee49b86f06f0d587faf2c627263283d",
+    "tree": "01b6358736d43b00b2fcf24d5bc6b4332b3cfc2b",
+    "handoff": "samples/dist/honua-site-consumer-handoff.v2.json",
+    "fixtureContract": "samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json"
   }
 }

@@ -1,52 +1,36 @@
-# JavaScript SDK v2 capability refresh
+# SDK v2 capability refresh
 
-This phase consumes the 17-bundle rolling release built from exactly
-`honua-sdk-js@2284c9b032b2c81227dc86ff1ff9a46dc61cde6c`. The producer's v2
-handoff and v4 consumer fixture remain the authority for sample titles,
-support tiers, lifecycle, qualification, fixture status, and live status.
+Status: **HOLD - validation and review only. Do not deploy.**
 
-## Source and bundle binding
+This refresh consumes the exact merged honua-sdk-js source at d68f221a3ee49b86f06f0d587faf2c627263283d (tree 01b6358736d43b00b2fcf24d5bc6b4332b3cfc2b). It does not consume or claim an SDK release. The bundle was built and packed deterministically from that checkout, then vendored with its pack receipt.
 
-Every runnable SDK detail page derives its inline-source URL, GitHub tree URL,
-and documentation URL from that sample bundle's `builtFrom.commit`. The
-gallery does not fetch displayed source from mutable producer `trunk`. The
-browser bytes remain admitted separately through the release manifest's file
-sizes and SHA-256 values.
+## Exact producer inputs
 
-The consumed release assets are:
+- Handoff: https://github.com/honua-io/honua-sdk-js/blob/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/dist/honua-site-consumer-handoff.v2.json
+- Consumer fixture contract: https://github.com/honua-io/honua-sdk-js/blob/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json
+- Catalog: https://github.com/honua-io/honua-sdk-js/blob/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/catalog.v2.json
+- Bundle manifest: 85,856 bytes, SHA-256 aa05bb75d112f3a079a06693ccae76e3b2b3c566e75e9d5b062adf06ff187198
+- Bundle archive: 73,615,366 bytes, SHA-256 f46278273e98d98599922a5db0d12c30128d737dfb7bbd2838bd5f21a0e9b1c6
+- Pack receipt: vendor/sdk-producer/d68f221a3ee49b86f06f0d587faf2c627263283d/pack-metadata.json, source date epoch 1786693934
 
-- `sample-bundles.v2.json`: SHA-256 `d87e3c9ab740d1c3393ab549a92ec5b933159e089e059fb8d1287a942e305e96`
-- `sample-bundles.tar.gz`: SHA-256 `8b801b803893e28bc055fa03d92253af1977f496cc8af1f0f8b594f281ba084d`
+## Capability scope
 
-## Admitted cloud-native curriculum
+| Task | Published shape | Evidence boundary |
+| --- | --- | --- |
+| COG and STAC imagery | Focused fixture walkthroughs with inline runnable code and exact SDK project links | Deterministic fixture/task evidence only. No samples-owned deployed STAC/COG canary is claimed. |
+| GeoArrow query | Focused bounded-query example | Exact 4,160-byte GeoArrow 0.2 server artifact, SHA-256 da4ccf9aa159e6e34b448c87712e074438a64f7eb57f38c39bad24a821170f52; live Arrow/GeoArrow service unavailable. |
+| GeoParquet | Production-shaped Overture walkthrough/project source | Complete client project, not proof of a deployed Honua columnar service. |
+| OGC API Coverages and WCS | Task-oriented fixture walkthrough | Deterministic 320 x 220 PNG proof; anonymous live canary remains planned. |
+| Zarr, NetCDF, HDF5 | Architecture preview only | Non-runnable and not publicly admitted; no SDK export, deployment, migration, or release claim. |
 
-| Route | Support | Fixture | Live | Boundary |
-| --- | --- | --- | --- | --- |
-| `/sdk/imagery-cog-quickstart/` | supported | executed | public-live, executed | Live proof covers classified COG inspection and a bounded decoded window; it does not claim browser-side UTM reprojection or a georeferenced live MapLibre mount. |
-| `/sdk/columnar-query-quickstart/` | experimental | executed | unavailable, not applicable | Executes the exact 1,336-byte Honua GeoArrow fixture, SHA-256 `c5d9c789171970b19ca9c54d5eda97f045f28adf66324f949c14813e8f90d001`; no public live Arrow or GeoParquet endpoint is claimed. |
-| `/sdk/coverages-wcs-basic/` | experimental | executed | public-live, planned | Renders the deterministic 320 x 220 fixture PNG, SHA-256 `8c7b5b3f8bd31bca2df07c4a70254d75e70d63838c2f77e033def3c1b8d2acff`; no live execution is claimed. |
-| `/sdk/overture-geoparquet/` | experimental | producer-governed | producer-governed | Production-shaped GeoParquet walkthrough; GeoArrow remains discoverable through the bounded recipe above. |
+The GeoArrow bytes originate from honua-server authored commit 66a9d34496c6f6a03dd571957062f773bfef7f0a, merged as 4ef53ce7f49b78aad3572db1dfc3be88a6654a43, artifact run 31767388217. The exact artifact is 4,160 bytes with SHA-256 da4ccf9aa159e6e34b448c87712e074438a64f7eb57f38c39bad24a821170f52.
 
-The imagery fixture source at the same SDK commit pins its synthetic COG asset
-to SHA-256 `59ba6110a96c0aba2ab5f5ee27b0eed6ec436956df27bb6312b94573f35190bd`.
-The release manifest independently hashes every staged browser file.
+## Integrity and publication rules
 
-## Multidimensional preview boundary
-
-`/jobs/multidimensional-format-maturity/` is a non-runnable, non-GA
-walkthrough. It carries the producer's three-layer states without converting
-server source evidence into a client claim:
-
-| Format | Client | Server | End to end |
-| --- | --- | --- | --- |
-| Zarr v2/v3 | unavailable | experimental | unavailable |
-| NetCDF-4 | unavailable | metadata-only | unavailable |
-| Geospatial HDF5 | unavailable | metadata-only | unavailable |
-
-The walkthrough publishes no executable code, endpoint, Run action, live
-receipt, Studio action, CLI command, or full-file browser fallback. The
-fixture-backed Coverages/WCS quickstart is the current runnable alternative.
-
-Final anonymous live discovery and deployment remain dependent on the
-`demo.honua.io` service manifest and the samples release phase; this refresh
-does not alter or deploy demo infrastructure.
+- SDK handoff, fixture contract, catalog, bundle manifest, bundle archive, and inline source links are bound to the exact SDK commit.
+- Samples-owned project and job links are bound to the exact checked-out samples commit.
+- Published gallery output rejects mutable /trunk/ links.
+- COG chunks, GeoArrow bytes and sidecars, and the Coverages/WCS fixture source are independently byte-, SHA-256-, and Git-blob-checked.
+- The fixture receipt is mutation-tested.
+- Public portfolio text states fixture-only, planned, or unavailable live states explicitly.
+- Deployment remains on hold.

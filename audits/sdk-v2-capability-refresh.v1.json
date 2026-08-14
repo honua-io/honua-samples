@@ -4,48 +4,83 @@
   "issue": "https://github.com/honua-io/honua-samples/issues/38",
   "producer": {
     "repository": "honua-io/honua-sdk-js",
-    "commit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
-    "handoff": "samples/dist/honua-site-consumer-handoff.v2.json",
-    "consumerFixture": "samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json"
-  },
-  "release": {
-    "tag": "sample-bundles-latest",
-    "targetCommit": "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c",
-    "sampleCount": 17,
-    "assets": [
-      {
-        "name": "sample-bundles.v2.json",
-        "sha256": "d87e3c9ab740d1c3393ab549a92ec5b933159e089e059fb8d1287a942e305e96",
-        "bytes": 85856
-      },
-      {
-        "name": "sample-bundles.tar.gz",
-        "sha256": "8b801b803893e28bc055fa03d92253af1977f496cc8af1f0f8b594f281ba084d",
-        "bytes": 17542136
-      }
-    ]
-  },
-  "semanticFixtures": [
-    {
-      "sampleId": "imagery-cog-quickstart",
-      "artifact": "synthetic COG asset",
-      "sha256": "59ba6110a96c0aba2ab5f5ee27b0eed6ec436956df27bb6312b94573f35190bd"
+    "commit": "d68f221a3ee49b86f06f0d587faf2c627263283d",
+    "tree": "01b6358736d43b00b2fcf24d5bc6b4332b3cfc2b",
+    "handoff": {
+      "localPath": "config/sdkjs-handoff.v2.snapshot.json",
+      "sourcePath": "samples/dist/honua-site-consumer-handoff.v2.json",
+      "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/dist/honua-site-consumer-handoff.v2.json"
     },
-    {
-      "sampleId": "columnar-query-quickstart",
-      "artifact": "1,336-byte Honua Server geoarrow.wkb Arrow fixture",
-      "sha256": "c5d9c789171970b19ca9c54d5eda97f045f28adf66324f949c14813e8f90d001"
+    "fixtureContract": {
+      "localPath": "config/sdkjs-handoff-fixture.v4.snapshot.json",
+      "sourcePath": "samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json",
+      "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/contract/v2/consumer-fixtures/honua-site-consumer.v4.json"
     },
-    {
-      "sampleId": "coverages-wcs-basic",
-      "artifact": "320 x 220 deterministic PNG",
-      "sha256": "8c7b5b3f8bd31bca2df07c4a70254d75e70d63838c2f77e033def3c1b8d2acff"
+    "catalog": {
+      "localPath": "config/sdkjs-catalog.snapshot.json",
+      "sourcePath": "samples/catalog.v2.json",
+      "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/catalog.v2.json"
     }
-  ],
+  },
+  "semanticFixtures": {
+    "imageryCog": {
+      "state": "fixture-only",
+      "bytes": 163840,
+      "sha256": "59ba6110a96c0aba2ab5f5ee27b0eed6ec436956df27bb6312b94573f35190bd",
+      "receipt": "audits/sdk-v2-fixture-receipts.v1.json"
+    },
+    "geoArrow": {
+      "state": "fixture-only-live-unavailable",
+      "bytes": 4160,
+      "sha256": "da4ccf9aa159e6e34b448c87712e074438a64f7eb57f38c39bad24a821170f52",
+      "sdkCommit": "d68f221a3ee49b86f06f0d587faf2c627263283d",
+      "serverAuthoredCommit": "66a9d34496c6f6a03dd571957062f773bfef7f0a",
+      "serverMergeCommit": "4ef53ce7f49b78aad3572db1dfc3be88a6654a43",
+      "artifactRun": 31767388217,
+      "receipt": "audits/sdk-v2-fixture-receipts.v1.json"
+    },
+    "coveragesWcs": {
+      "state": "fixture-only-live-planned",
+      "generatedPngBytes": 281908,
+      "generatedPngSha256": "8c7b5be9ba372749f2a4bbb37e57fd864378417050301ece26a576dcddfef839",
+      "receipt": "audits/sdk-v2-fixture-receipts.v1.json"
+    }
+  },
   "admission": {
     "sourceBinding": "Each runnable SDK card resolves source and docs from its bundle builtFrom.commit.",
     "states": "Support, lifecycle, qualification, fixture, and live states are read from the admitted producer handoff without promotion.",
     "multidimensional": "Preview-only and non-runnable; no client, GA, fixture, or live claim is added."
   },
-  "remainingDependency": "Final demo.honua.io capability discovery, public canaries, samples.honua.io deployment, and post-deploy audit are outside this phase."
+  "remainingDependency": "Final demo.honua.io capability discovery, public canaries, samples.honua.io deployment, and post-deploy audit are outside this phase.",
+  "governedProducerBundle": {
+    "acquisition": "deterministic local build from the exact merged SDK source; no SDK release is claimed",
+    "sourceCommit": "d68f221a3ee49b86f06f0d587faf2c627263283d",
+    "sourceTree": "01b6358736d43b00b2fcf24d5bc6b4332b3cfc2b",
+    "sourceDateEpoch": 1786693934,
+    "commands": [
+      "npm run samples:bundles:build",
+      "node scripts/pack-sample-bundles.mjs --bundle-root .artifacts/sample-bundles --output .artifacts/sample-bundle-release-d68f/sample-bundles.tar.gz --source-commit d68f221a3ee49b86f06f0d587faf2c627263283d --source-date-epoch 1786693934 --metadata .artifacts/sample-bundle-release-d68f/pack-metadata.json"
+    ],
+    "manifest": {
+      "localPath": "vendor/sdk-producer/d68f221a3ee49b86f06f0d587faf2c627263283d/sample-bundles.v2.json",
+      "bytes": 85856,
+      "sha256": "aa05bb75d112f3a079a06693ccae76e3b2b3c566e75e9d5b062adf06ff187198"
+    },
+    "archive": {
+      "localPath": "vendor/sdk-producer/d68f221a3ee49b86f06f0d587faf2c627263283d/sample-bundles.tar.gz",
+      "bytes": 73615366,
+      "sha256": "f46278273e98d98599922a5db0d12c30128d737dfb7bbd2838bd5f21a0e9b1c6"
+    },
+    "packReceipt": {
+      "localPath": "vendor/sdk-producer/d68f221a3ee49b86f06f0d587faf2c627263283d/pack-metadata.json",
+      "bytes": 390,
+      "sha256": "ce056ba991a3177d0fc419f3ee67ea8f81bbd33eae7bc96cfa76ef298ee74274"
+    }
+  },
+  "publicationBoundary": {
+    "cogAndStac": "Published as deterministic fixture/task content only; no samples-owned live Honua canary is claimed.",
+    "geoArrowAndGeoParquet": "Exact server GeoArrow fixture and production-shaped client source only; live Honua columnar service remains unavailable.",
+    "coveragesAndWcs": "Deterministic fixture evidence only; anonymous live canary remains planned.",
+    "multidimensional": "Zarr, NetCDF, and HDF5 remain a non-runnable architecture preview with no public SDK export or deployment claim."
+  }
 }

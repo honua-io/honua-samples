@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-const revision = "2284c9b032b2c81227dc86ff1ff9a46dc61cde6c";
+const revision = "d68f221a3ee49b86f06f0d587faf2c627263283d";
 const repository = "honua-io/honua-sdk-js";
 const rawRoot = `https://raw.githubusercontent.com/${repository}/${revision}`;
 const vendoredReleaseRoot = new URL(`../../vendor/sdk-producer/${revision}/`, import.meta.url);
@@ -21,14 +21,14 @@ export const SDK_PRODUCER_LOCK = Object.freeze({
   }),
   assets: Object.freeze({
     bundleManifest: Object.freeze({
-      sourceAssetId: 512561231,
       bytes: 85_856,
-      sha256: "d87e3c9ab740d1c3393ab549a92ec5b933159e089e059fb8d1287a942e305e96",
+      sha256: "aa05bb75d112f3a079a06693ccae76e3b2b3c566e75e9d5b062adf06ff187198",
+      provenance: "governed-local-build",
     }),
     bundleArchive: Object.freeze({
-      sourceAssetId: 512561230,
-      bytes: 17_542_136,
-      sha256: "8b801b803893e28bc055fa03d92253af1977f496cc8af1f0f8b594f281ba084d",
+      bytes: 73_615_366,
+      sha256: "f46278273e98d98599922a5db0d12c30128d737dfb7bbd2838bd5f21a0e9b1c6",
+      provenance: "governed-local-build",
     }),
   }),
 });

@@ -30,6 +30,7 @@ export async function validateSdkFixtureReceipts(receipt, { root, readFileFn = r
 
   const columnar = receipt.claims["columnar-query-quickstart"];
   await readVerified(columnar, "bytes", "sha256");
+  for (const sidecar of columnar.sidecars ?? []) await readVerified(sidecar, "bytes", "sha256");
 
   const coverages = receipt.claims["coverages-wcs-basic"];
   const source = await readVerified(coverages, "sourceBytes", "sourceSha256");
