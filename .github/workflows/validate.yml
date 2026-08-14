@@ -141,6 +141,11 @@ jobs:
       - name: Run every admitted SDK app
         run: npm run test:gallery:browser
 
+      - name: Run exact-head gallery semantic canaries
+        # Keep GALLERY_BASE_URL unset: the verifier serves this job's exact
+        # generated site/ artifact locally and exercises packaged fixtures.
+        run: npm run test:gallery:live
+
       - name: Run every admitted job page
         run: npm run test:job-pages:browser
 
