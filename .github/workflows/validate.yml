@@ -58,6 +58,14 @@ jobs:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
         run: node scripts/validate-manifests.mjs
 
+      # honua-samples#48: the bundle consumer pointed at a retired rolling tag
+      # and a v1 manifest for weeks without going red, because samples.honua.io
+      # degrades honestly. This step is what makes the next producer retirement
+      # a failing check instead of a discovery, so it must reach the network --
+      # do not add --offline here.
+      - name: Verify every pinned SDK producer acquisition still resolves
+        run: node scripts/validate-producer-lock-resolution.mjs
+
       - name: Validate release certification dossiers and generated outputs
         run: node scripts/release-certification.mjs check
 
