@@ -3,8 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { bindSdkSourceToBundle } from "../lib/sdk-source-binding.mjs";
 import { validateManifestShape } from "../lib/sample-bundles.mjs";
+import { SDK_PRODUCER_LOCK } from "../lib/sdk-producer-lock.mjs";
 
-const SDK_REVISION = "d68f221a3ee49b86f06f0d587faf2c627263283d";
+// Derived from the lock, not pinned again here. A second literal makes a
+// producer re-pin a multi-place edit and adds no coverage: the lock is the
+// single thing every consumer resolves through, so that is what these URL and
+// provenance assertions must be checked against.
+const SDK_REVISION = SDK_PRODUCER_LOCK.revision;
 
 async function json(path) {
   return JSON.parse(await readFile(new URL(`../../${path}`, import.meta.url), "utf8"));

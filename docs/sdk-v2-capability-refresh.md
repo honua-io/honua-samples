@@ -2,6 +2,23 @@
 
 Status: **HOLD - validation and review only. Do not deploy.**
 
+> [!IMPORTANT]
+> **The producer pin has moved on; this document is the record of the refresh performed against
+> d68f221a3e, not a description of what is vendored today.**
+>
+> The visual-evidence windows in that revision's handoff lapsed on 2026-08-20, which turned every
+> honua-samples pull request red (honua-io/honua-samples#50). The live pin in
+> `scripts/lib/sdk-producer-lock.mjs` is now `86988113f5f84301546e1b8a848d327e8cede5a2`, and the
+> vendored bundle manifest (86,482 bytes, SHA-256
+> `a5d461d6c5df4c32bcd1f7940dc825fa9b8e85855856c4813edd06a89503fcaa`) and archive (73,757,712 bytes,
+> SHA-256 `53101b7ab0b7b2d4034b344a8e3d163bdfbc76b6b51aea4e91b569bb9edf4471`) are packed from that
+> checkout with `sourceDateEpoch` 1787443839.
+>
+> The exact inputs, digests, and capability scope recorded below are **left unmodified on purpose**.
+> They are the evidence of an audit that was carried out against a specific commit; restating them
+> against a commit nobody re-audited would falsify the record. A fresh capability refresh against the
+> current pin is separate work with an owner, not a side effect of unblocking CI.
+
 This refresh consumes the exact merged honua-sdk-js source at d68f221a3ee49b86f06f0d587faf2c627263283d (tree 01b6358736d43b00b2fcf24d5bc6b4332b3cfc2b). It does not consume or claim an SDK release. The bundle was built and packed deterministically from that checkout, then vendored with its pack receipt.
 
 ## Exact producer inputs
