@@ -96,10 +96,13 @@ fi
 
 log "3/6 publishing layer \"$LAYER_NAME\" on service \"$SERVICE_NAME\"..."
 publish_body=$(jq -n --arg table "$physical_table_name" --arg layer "$LAYER_NAME" --arg service "$SERVICE_NAME" '{
-  schema: "honua_data", table: $table, layerName: $layer, srid: 4326, serviceName: $service
+  schema: "honua_data", table: $table, layerName: $layer, srid: 4326, serviceName: $service,
+  enabled: true
 }')
 publish_status=$(http_json POST "/api/v1/admin/connections/$CONNECTION_NAME/layers" "$SCRATCH_DIR/publish.json" "$publish_body")
 [[ "$publish_status" == "200" || "$publish_status" == "201" ]] || fail "layer publish failed (HTTP $publish_status): $(cat "$SCRATCH_DIR/publish.json")"
+[[ "$(jq -r '.data.enabled // false' "$SCRATCH_DIR/publish.json")" == "true" ]] \
+  || fail "layer publish response did not confirm serving enablement: $(cat "$SCRATCH_DIR/publish.json")"
 
 log "4/6 enabling Wms protocol + anonymous reads..."
 protocols_status=$(http_json PUT "/api/v1/admin/services/$SERVICE_NAME/protocols" "$SCRATCH_DIR/protocols.json" '{"enabledProtocols":["Wms"]}')
