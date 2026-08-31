@@ -160,6 +160,17 @@ test("stale handoff (expired qualified visual evidence) is rejected", () => {
   assert.match(result.errors.join("\n"), /stale handoff: qualified journey/);
 });
 
+test("content-bound identity consumers may validate an expired handoff without admitting stale evidence", () => {
+  const result = admitSdkJsHandoff({
+    handoffText,
+    fixtureText,
+    now: new Date("2026-09-01T00:00:00.000Z"),
+    requireFreshEvidence: false,
+  });
+  assert.equal(result.ok, true);
+  assert.ok(result.handoff.cards.length > 0);
+});
+
 test("duplicate stable identities inside the handoff are rejected", () => {
   const handoff = JSON.parse(handoffText);
   handoff.cards.push(structuredClone(handoff.cards[0]));

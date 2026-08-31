@@ -108,11 +108,21 @@ access_status=$(http_json PUT "/api/v1/admin/services/$SERVICE_NAME/access-polic
 [[ "$access_status" == "200" ]] || fail "access-policy update failed (HTTP $access_status): $(cat "$SCRATCH_DIR/access.json")"
 
 log "5/6 requesting GetCapabilities..."
-capabilities_status=$(curl -s -o "$SCRATCH_DIR/capabilities.xml" -w '%{http_code}' \
-  "$BASE_URL/ogc/services/$SERVICE_NAME/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities")
-[[ "$capabilities_status" == "200" ]] || fail "GetCapabilities failed (HTTP $capabilities_status)"
-grep -q "<Name>$LAYER_NAME</Name>" "$SCRATCH_DIR/capabilities.xml" \
-  || fail "GetCapabilities response did not list layer \"$LAYER_NAME\""
+# Publishing and protocol changes invalidate metadata asynchronously on the
+# current trunk server. Poll the real WMS document to convergence instead of
+# mistaking the first, pre-invalidation snapshot for the final contract.
+capabilities_deadline=$((SECONDS + 30))
+while true; do
+  capabilities_status=$(curl -s -o "$SCRATCH_DIR/capabilities.xml" -w '%{http_code}' \
+    "$BASE_URL/ogc/services/$SERVICE_NAME/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities")
+  if [[ "$capabilities_status" == "200" ]] && grep -q "<Name>$LAYER_NAME</Name>" "$SCRATCH_DIR/capabilities.xml"; then
+    break
+  fi
+  if (( SECONDS >= capabilities_deadline )); then
+    fail "GetCapabilities did not converge on layer \"$LAYER_NAME\" within 30s (last HTTP $capabilities_status): $(cat "$SCRATCH_DIR/capabilities.xml")"
+  fi
+  sleep 1
+done
 
 log "6/6 requesting GetMap (${MAP_WIDTH}x${MAP_HEIGHT})..."
 map_file="$SCRATCH_DIR/map.png"

@@ -129,11 +129,11 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
  * decision (NFR-002); no network, no filesystem, no ambient clock unless
  * `now` is omitted.
  *
- * @param {{ handoffText: string, fixtureText: string, now?: Date }} input
+ * @param {{ handoffText: string, fixtureText: string, now?: Date, requireFreshEvidence?: boolean }} input
  * @returns {{ ok: true, handoff: object, fixture: object, errors: [] } |
  *           { ok: false, handoff: object|null, fixture: object|null, errors: string[] }}
  */
-export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }) {
+export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date(), requireFreshEvidence = true }) {
   const errors = [];
   const reject = (handoff = null, fixture = null, contract = null) => ({
     ok: false,
@@ -341,7 +341,7 @@ export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date() }
       errors.push(
         `qualified journey "${journey.journeyId}" claims evidence observed in the future (${journey.visualEvidence.observedAt})`,
       );
-    } else if (expiresAt <= now.getTime()) {
+    } else if (requireFreshEvidence && expiresAt <= now.getTime()) {
       errors.push(
         `stale handoff: qualified journey "${journey.journeyId}" visual evidence expired ${journey.visualEvidence.expiresAt} ` +
           `(validation clock ${now.toISOString()}) -- refresh from the producer instead of publishing an expired qualification`,
@@ -616,11 +616,13 @@ export async function loadSdkJsHandoffSnapshots({
   snapshotPath = DEFAULT_HANDOFF_SNAPSHOT_PATH,
   fixtureSnapshotPath = DEFAULT_FIXTURE_SNAPSHOT_PATH,
   now = new Date(),
+  requireFreshEvidence = true,
 } = {}) {
   const nextSnapshot = await acquireSnapshotPair({
     snapshotPath: nextSnapshotPath,
     fixtureSnapshotPath: nextFixtureSnapshotPath,
     now,
+    requireFreshEvidence,
   });
   if (nextSnapshot.state === "valid") {
     return admittedResult(nextSnapshot, `next committed snapshot (${path.relative(REPO_ROOT, nextSnapshotPath)})`);
@@ -629,7 +631,7 @@ export async function loadSdkJsHandoffSnapshots({
     throw presentInvalidError(`next snapshot (${path.relative(REPO_ROOT, nextSnapshotPath)})`, nextSnapshot);
   }
 
-  const legacySnapshot = await acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now });
+  const legacySnapshot = await acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now, requireFreshEvidence });
   if (legacySnapshot.state === "valid") {
     return admittedResult(legacySnapshot, `legacy committed snapshot (${path.relative(REPO_ROOT, snapshotPath)})`);
   }
@@ -666,7 +668,7 @@ async function acquireLivePair({ handoffUrl, fixtureUrl, now, fetchTextFn }) {
     : { state: "invalid", admission, handoffText, fixtureText };
 }
 
-async function acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now }) {
+async function acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now, requireFreshEvidence = true }) {
   let handoffText;
   let fixtureText;
   try {
@@ -677,7 +679,7 @@ async function acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now }) {
   } catch (error) {
     return { state: "unavailable", error };
   }
-  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now });
+  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now, requireFreshEvidence });
   return admission.ok
     ? { state: "valid", admission, handoffText, fixtureText }
     : { state: "invalid", admission, handoffText, fixtureText };

@@ -145,6 +145,11 @@ async function loadSdkProjectedIdentities() {
       snapshotPath: process.env.SDKJS_HANDOFF_SNAPSHOT_PATH?.trim() || DEFAULT_HANDOFF_SNAPSHOT_PATH,
       fixtureSnapshotPath:
         process.env.SDKJS_HANDOFF_FIXTURE_SNAPSHOT_PATH?.trim() || DEFAULT_FIXTURE_SNAPSHOT_PATH,
+      // Coverage uses this pair only as a content-bound stable-identity
+      // registry. Gallery publication still requires current qualification
+      // evidence; an elapsed badge lease must not erase collision protection
+      // or block publication of fresh real-server sample results.
+      requireFreshEvidence: false,
     });
     return listSdkProjectedIdentities(handoff);
   } catch (err) {
