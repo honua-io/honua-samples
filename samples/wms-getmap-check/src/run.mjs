@@ -83,7 +83,7 @@ async function registerConnection() {
 }
 
 async function publishLayer(physicalTableName) {
-  await requireJson(
+  const body = await requireJson(
     await fetch(`${BASE_URL}/api/v1/admin/connections/${encodeURIComponent(CONNECTION_NAME)}/layers`, {
       method: "POST",
       headers: adminHeaders({ "Content-Type": "application/json" }),
@@ -93,10 +93,14 @@ async function publishLayer(physicalTableName) {
         layerName: LAYER_NAME,
         srid: 4326,
         serviceName: SERVICE_NAME,
+        enabled: true,
       }),
     }),
     "publish layer",
   );
+  if (body.data?.enabled !== true) {
+    throw new Error(`layer publish response did not confirm serving enablement: ${JSON.stringify(body)}`);
+  }
 }
 
 async function configureService() {
@@ -120,11 +124,23 @@ async function configureService() {
 }
 
 async function verifyCapabilities() {
+  // Publishing and protocol changes invalidate metadata asynchronously on the
+  // current trunk server. Poll the real WMS document to convergence instead of
+  // mistaking the first, pre-invalidation snapshot for the final contract.
   const parameters = new URLSearchParams({ SERVICE: "WMS", VERSION: "1.3.0", REQUEST: "GetCapabilities" });
-  const response = await fetch(`${BASE_URL}/ogc/services/${encodeURIComponent(SERVICE_NAME)}/wms?${parameters}`);
-  const xml = await response.text();
-  if (!response.ok) throw new Error(`GetCapabilities failed (HTTP ${response.status})`);
-  if (!xml.includes(`<Name>${LAYER_NAME}</Name>`)) throw new Error(`GetCapabilities omitted layer ${LAYER_NAME}`);
+  const url = `${BASE_URL}/ogc/services/${encodeURIComponent(SERVICE_NAME)}/wms?${parameters}`;
+  const deadline = Date.now() + 30_000;
+  for (;;) {
+    const response = await fetch(url);
+    const xml = await response.text();
+    if (response.ok && xml.includes(`<Name>${LAYER_NAME}</Name>`)) return;
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `GetCapabilities did not converge on layer ${LAYER_NAME} within 30s (last HTTP ${response.status}): ${xml.slice(0, 500)}`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 }
 
 async function verifyMap() {

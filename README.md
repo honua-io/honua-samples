@@ -222,7 +222,7 @@ yet, so the overlay uses its documented dev/test bypass instead --
 `Licensing__DevGrantEdition` (backed by `DevLicenseEntitlementService` in
 honua-server), which fails closed outside `Development`/`Staging`
 environments. Verify the effective edition in Console under **Operate →
-Licensing**, or use the generated API explorer's
+License**, or use the generated API explorer's
 `GET /api/v1/admin/license/status` operation with the configured admin key;
 the returned `data.edition` value should be `Pro`.
 
