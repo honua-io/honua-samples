@@ -6,7 +6,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { BROWSER_ORIGIN_PORT, loadFixture, seedFeatureService, serverEnv } from "../../../scripts/browser-verification/harness.mjs";
+import {
+  BROWSER_ORIGIN_PORT,
+  importedProperties,
+  loadFixture,
+  seedFeatureService,
+  serverEnv,
+} from "../../../scripts/browser-verification/harness.mjs";
 import { startStaticServer } from "../../../scripts/lib/browser-lane.mjs";
 
 const SAMPLES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -47,11 +53,11 @@ test("queries the fixture layer and renders its features", async ({ page }) => {
   await expect(page.locator("#status")).toHaveAttribute("data-state", "pass");
 
   const rendered = JSON.parse(await page.locator("#output").textContent());
-  const byFixtureId = new Map(rendered.map((feature) => [feature.attributes.properties.fixtureId, feature]));
+  const byFixtureId = new Map(rendered.map((feature) => [importedProperties(feature.attributes).fixtureId, feature]));
   expect([...byFixtureId.keys()].sort()).toEqual(fixture.features.map((feature) => feature.fixtureId).sort());
   for (const expected of fixture.features) {
     const actual = byFixtureId.get(expected.fixtureId);
-    expect(actual.attributes.properties.name).toBe(expected.name);
+    expect(importedProperties(actual.attributes).name).toBe(expected.name);
     expect(actual.geometry.rings[0]).toEqual(expected.ring);
   }
 });

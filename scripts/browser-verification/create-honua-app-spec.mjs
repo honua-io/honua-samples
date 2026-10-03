@@ -16,6 +16,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   colourDistance,
+  importedProperties,
   loadFixture,
   outsidePoint,
   prepareTemplateApp,
@@ -89,7 +90,7 @@ function defineTests(template) {
 
       await expect(page.locator(template.statusSelector)).toHaveText(template.mountedText, { timeout: 30_000 });
       const answer = await (await queryResponse).json();
-      expect(answer.features.map((feature) => feature.attributes.properties.fixtureId).sort()).toEqual(
+      expect(answer.features.map((feature) => importedProperties(feature.attributes).fixtureId).sort()).toEqual(
         fixture.features.map((feature) => feature.fixtureId).sort(),
       );
       if (template.featureCountSelector) {
