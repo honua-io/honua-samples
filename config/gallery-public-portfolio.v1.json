@@ -201,6 +201,18 @@
     },
     {
       "sourceRepo": "honua-samples",
+      "id": "create-honua-app-react-ts",
+      "disposition": "internal-qualification",
+      "reason": "Release verification that the published react-ts starter scaffolds, builds, and mounts a Honua layer; the public first-map story stays with create-honua-app's own docs."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "create-honua-app-vanilla-ts",
+      "disposition": "internal-qualification",
+      "reason": "Release verification that the published vanilla-ts starter scaffolds, builds, and mounts a Honua layer; the public first-map story stays with create-honua-app's own docs."
+    },
+    {
+      "sourceRepo": "honua-samples",
       "id": "geocode-single-line",
       "disposition": "rework-map-first",
       "reason": "Render the matched location and score on a map before showing the raw geocoding request."

@@ -13,12 +13,13 @@
 </head>
 <body>
   <h1>Query a public FeatureServer</h1>
-  <p id="status">Loading three building features...</p>
+  <p id="status">Loading three features...</p>
   <pre id="output" aria-live="polite"></pre>
   <script type="module">
     const params = new URLSearchParams(location.search);
     const baseUrl = params.get("baseUrl") ?? "https://demo.honua.io";
-    const serviceName = "maui-buildings";
+    const serviceName = params.get("service") ?? "maui-buildings";
+    const where = params.get("where") ?? "1=1";
     const status = document.querySelector("#status");
     const output = document.querySelector("#output");
 
@@ -37,7 +38,7 @@
       if (!layer) throw new Error("The service did not advertise a layer.");
 
       const query = new URLSearchParams({
-        where: "1=1",
+        where,
         outFields: "*",
         returnGeometry: "true",
         resultRecordCount: "3",
