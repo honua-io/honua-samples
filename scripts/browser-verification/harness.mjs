@@ -70,6 +70,20 @@ export async function loadFixture() {
   return { geojson, features, count: features.length };
 }
 
+/**
+ * The fixture's GeoJSON properties as a published feature carries them. A
+ * file import keeps them in one `properties` field, which the server returns
+ * either as an object (the 2026-09 candidate) or as the JSON string its
+ * esriFieldTypeString declaration implies (trunk since 2026-10); accept both
+ * so the oracle compares fixture values, not the field's encoding.
+ */
+export function importedProperties(attributes) {
+  const value = attributes?.properties;
+  if (typeof value === "string") return JSON.parse(value);
+  if (value && typeof value === "object") return value;
+  throw new Error(`feature has no imported properties field: ${JSON.stringify(attributes).slice(0, 200)}`);
+}
+
 function bboxCenter(ring) {
   const xs = ring.map(([x]) => x);
   const ys = ring.map(([, y]) => y);
