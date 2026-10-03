@@ -154,18 +154,42 @@ honua-server + PostGIS, waits for `/healthz/ready`, executes every `active`
 sample's `entrypoint.command`, and writes
 [`results/run-results.v1.json`](schemas/run-results.v1.schema.json).
 
+You need, from a clone of this repository:
+
+- Docker with Compose v2 (`docker compose`), and ports `8080` and `5432` free.
+- Node.js 22+ with `npm` (`wms-getmap-check` needs 22; the `honua` CLI from
+  `@honua/sdk-js` needs 20.19 or later).
+- Port `3000` free as well: the browser lane serves its pages from
+  `http://localhost:3000`, the one origin `docker/compose.yml` allows through
+  CORS.
+- Python 3 on `PATH` as `python` (`ogc-features-python` runs `python src/run.py`).
+- Internet access: the `public-live` samples query `https://demo.honua.io`.
+- Chromium for the [browser lane](#browser-lane). Playwright is locked in
+  `package.json`; `--with-deps` also installs Chromium's system libraries
+  (it uses `sudo` on Linux).
+
+Install the browser lane once:
+
 ```bash
-docker compose -f docker/compose.yml up -d
+npm ci
+npx playwright install --with-deps chromium
+```
+
+Then start the 2026.1 release server, run every sample, and stop the stack:
+
+```bash
+export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-87966c3@sha256:069f196bfa5c7201223d4d89868934242c4ace8805a6e48c122a88d84fa6eb1a
+docker compose -f docker/compose.yml up -d --wait
 node scripts/run-samples.mjs
 docker compose -f docker/compose.yml down -v
 ```
 
 `docker/compose.yml` pulls the published `ghcr.io/honua-io/honua-server`
-image (there is no versioned release yet, so it defaults to the
-trunk-tracking tag -- override with `HONUA_SERVER_IMAGE=<image>:<tag>` to
-pin something else). PostGIS auto-starts via `docker/init-db.sql` (a vendored
+image. Without `HONUA_SERVER_IMAGE` it uses the trunk-tracking `:trunk` tag,
+which is not the release; the value above is the image digest the 2026.1
+release pins. PostGIS auto-starts via `docker/init-db.sql` (a vendored
 copy of honua-server's own init script); the server's readiness probe is
-`GET /healthz/ready`.
+`GET /healthz/ready`, which `--wait` and the runner both wait for.
 
 Env vars (all optional): `HONUA_BASE_URL` (default `http://localhost:8080`),
 `HONUA_READY_TIMEOUT_MS` (default `120000`), `HONUA_SAMPLE_MAX_ATTEMPTS`
@@ -212,19 +236,37 @@ Some samples require more than Community edition (`edition: "pro"` or
 grants a higher edition to the composed server:
 
 ```bash
-docker compose -f docker/compose.yml -f docker/compose.pro.yml up -d
-node scripts/run-samples.mjs --edition pro
-docker compose -f docker/compose.yml -f docker/compose.pro.yml down -v
+docker compose -f docker/compose.yml -f docker/compose.pro.yml up -d --wait
 ```
 
 honua-server has no published, purchasable license mechanism for this repo
 yet, so the overlay uses its documented dev/test bypass instead --
 `Licensing__DevGrantEdition` (backed by `DevLicenseEntitlementService` in
 honua-server), which fails closed outside `Development`/`Staging`
-environments. Verify the effective edition in Console under **Operate →
-License**, or use the generated API explorer's
-`GET /api/v1/admin/license/status` operation with the configured admin key;
-the returned `data.edition` value should be `Pro`.
+environments. Verify it took effect with the `honua` CLI from the published
+`@honua/sdk-js` package. The admin key is the stack's `HONUA_ADMIN_PASSWORD`,
+which `docker/compose.yml` defaults to `quickstart-admin-password`. (Console
+shows the same value under **Operate → License**.)
+
+```bash
+HONUA_ADMIN_KEY="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}" \
+  npx -y -p @honua/sdk-js@0.1.12 honua admin operate getPlatformLicenseStatus \
+  --base-url http://localhost:8080 | grep '"edition"'
+```
+
+It prints:
+
+<!-- doc-run: output -->
+```text
+    "edition": "Pro",
+```
+
+Then run the samples as Pro and stop the stack:
+
+```bash
+node scripts/run-samples.mjs --edition pro
+docker compose -f docker/compose.yml -f docker/compose.pro.yml down -v
+```
 
 `scripts/run-samples.mjs --edition <community|pro|enterprise>` (default
 `community`) is the other half: a sample whose manifest `edition` exceeds the
@@ -403,6 +445,13 @@ migration footprint scanner, lands here pre-filtered to the matching samples.
 
 ### Validate it locally
 
+The build fetches honua-sdk-js's handoff, catalog and sample bundles, so it
+needs internet access. It currently refuses the pinned producer's handoff
+because that handoff's visual evidence expired on 2026-09-07, and it exits
+non-zero until the producer is re-pinned
+([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)).
+
+<!-- doc-run: blocked https://github.com/honua-io/honua-samples/issues/57 -->
 ```bash
 node scripts/build-gallery.mjs          # builds site/ (index + one page per sample/entry);
                                          # also fetches + integrity-verifies + stages sdk-js
