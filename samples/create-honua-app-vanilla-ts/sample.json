@@ -1,0 +1,33 @@
+{
+  "id": "create-honua-app-vanilla-ts",
+  "title": "Your first Honua app: create-honua-app vanilla-ts",
+  "description": "Scaffolds the Vanilla TypeScript starter from the published create-honua-app package, builds it, and points it at a Honua FeatureServer layer: connect -> inspect -> explain -> query -> mount, where the SDK owns the MapLibre map. Its Playwright verification is the proof that a new user's first app works against the release.",
+  "contentKind": "project",
+  "learning": {
+    "goal": "build-map",
+    "level": "beginner",
+    "estimatedMinutes": 10,
+    "prerequisites": [
+      "Node.js 20.19 or later",
+      "Modern web browser",
+      "Local Honua Server"
+    ]
+  },
+  "dataMode": "local-integration",
+  "auth": "anonymous",
+  "capabilities": [
+    "serve.geoservices-featureserver"
+  ],
+  "sdks": [
+    "js"
+  ],
+  "protocols": [
+    "geoservices-rest"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "browser",
+    "command": "app/index.html"
+  },
+  "status": "active"
+}

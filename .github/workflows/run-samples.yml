@@ -10,7 +10,12 @@ name: run-samples
 # #2's three deferred items now land here:
 #   - a headless-browser lane (entrypoint.type: "browser",
 #     scripts/lib/browser-lane.mjs) for JS/SDK samples that need real DOM/
-#     fetch behavior, not just a Node child process.
+#     fetch behavior, not just a Node child process. Each browser sample is
+#     proven by its Playwright specs (samples/<id>/verify/*.spec.mjs,
+#     playwright.config.ts, docs/browser-verification/) against this job's
+#     composed server: Chromium only, one attempt, retries 0 -- a failed spec
+#     fails the job. Per-sample run-results.v1 envelopes are uploaded always;
+#     traces and screenshots exist (and are uploaded) only when a spec failed.
 #   - a Pro-licensed compose profile (docker/compose.pro.yml) + the
 #     "Determine edition" step below, which only enables it when the
 #     optional HONUA_LICENSE_DEV_GRANT_EDITION secret is configured --
@@ -30,8 +35,12 @@ on:
       - "scripts/run-samples.mjs"
       - "scripts/generate-samples-coverage.mjs"
       - "scripts/lib/**"
+      - "scripts/browser-verification/**"
       - "schemas/samples-coverage.v1.schema.json"
       - "docker/**"
+      - "playwright.config.ts"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/run-samples.yml"
   push:
     branches: [trunk]
@@ -40,8 +49,12 @@ on:
       - "scripts/run-samples.mjs"
       - "scripts/generate-samples-coverage.mjs"
       - "scripts/lib/**"
+      - "scripts/browser-verification/**"
       - "schemas/samples-coverage.v1.schema.json"
       - "docker/**"
+      - "playwright.config.ts"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/run-samples.yml"
   schedule:
     - cron: "17 5 * * *" # nightly
@@ -114,6 +127,26 @@ jobs:
           name: run-results
           path: results/run-results.v1.json
           if-no-files-found: warn
+
+      - name: Upload browser verification results
+        # One run-results.v1 envelope per browser sample, plus its per-spec
+        # results and the raw Playwright JSON report.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-verification-results
+          path: results/browser-verification/*.json
+          if-no-files-found: warn
+
+      - name: Upload browser verification traces
+        # playwright.config.ts retains traces and screenshots only for failed
+        # specs, so this only has content when a browser sample failed.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-verification-traces
+          path: results/browser-verification/artifacts
+          if-no-files-found: ignore
 
       - name: Summarize flaky samples (nightly)
         # Only meaningful on the nightly schedule -- PR/push runs are small

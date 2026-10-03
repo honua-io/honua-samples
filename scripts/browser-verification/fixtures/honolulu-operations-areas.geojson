@@ -1,0 +1,113 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "fixtureId": "ops-1",
+        "name": "Civic center service zone",
+        "status": "Monitoring",
+        "category": "Operations"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -157.866,
+              21.311
+            ],
+            [
+              -157.856,
+              21.311
+            ],
+            [
+              -157.856,
+              21.302
+            ],
+            [
+              -157.866,
+              21.302
+            ],
+            [
+              -157.866,
+              21.311
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "fixtureId": "ops-2",
+        "name": "Harbor response district",
+        "status": "Field review",
+        "category": "Maritime"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -157.891,
+              21.304
+            ],
+            [
+              -157.879,
+              21.304
+            ],
+            [
+              -157.879,
+              21.294
+            ],
+            [
+              -157.891,
+              21.294
+            ],
+            [
+              -157.891,
+              21.304
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "fixtureId": "ops-3",
+        "name": "Kakaako utility corridor",
+        "status": "Ready",
+        "category": "Infrastructure"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -157.87,
+              21.296
+            ],
+            [
+              -157.856,
+              21.296
+            ],
+            [
+              -157.856,
+              21.286
+            ],
+            [
+              -157.87,
+              21.286
+            ],
+            [
+              -157.87,
+              21.296
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
