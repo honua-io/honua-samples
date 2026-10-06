@@ -3,6 +3,11 @@ name: validate
 on:
   pull_request:
     paths:
+      # Every file the maintained-documentation command policy scans.
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.rst"
+      - "**/*.txt"
       - "samples/**"
       - "jobs/**"
       - "schemas/**"
@@ -19,6 +24,11 @@ on:
   push:
     branches: [trunk]
     paths:
+      # Every file the maintained-documentation command policy scans.
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.rst"
+      - "**/*.txt"
       - "samples/**"
       - "jobs/**"
       - "schemas/**"
@@ -42,6 +52,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Enforce maintained documentation command policy
+        run: |
+          if git grep -n -i -w curl -- '*.md' '*.mdx' '*.rst' '*.txt'; then
+            echo "::error::Maintained documentation must use supported SDK, CLI, or API-reference workflows."
+            exit 1
+          fi
 
       - uses: actions/setup-node@v4
         with:
