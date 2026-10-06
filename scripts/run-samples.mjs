@@ -9,36 +9,40 @@
 //
 // Three things beyond the original scaffold (see this repo's #2 for the
 // full history):
-//   - `entrypoint.type: "browser"` samples run headless via Playwright
-//     against a tiny static server (scripts/lib/browser-lane.mjs).
+//   - `entrypoint.type: "browser"` samples are proven by their Playwright
+//     specs (samples/<id>/verify/*.spec.mjs, scripts/lib/browser-lane.mjs,
+//     docs/browser-verification/) against the composed server. They get one
+//     attempt -- a failed spec is never retried to green -- and each also
+//     gets its own run-results.v1 envelope under results/browser-verification/.
 //   - `--edition <community|pro|enterprise>` (default "community") gates
 //     which samples actually execute: a sample whose manifest `edition`
 //     exceeds this is recorded with outcome "skipped", never run. Pair with
 //     `docker compose -f docker/compose.yml -f docker/compose.pro.yml` (see
 //     that file) to actually grant a higher edition to the composed server.
-//   - Every sample gets up to HONUA_SAMPLE_MAX_ATTEMPTS attempts (default 2,
-//     i.e. one retry) on failure; every attempt is recorded in the result's
+//   - Every non-browser sample gets up to HONUA_SAMPLE_MAX_ATTEMPTS attempts
+//     (default 2, i.e. one retry) on failure; every attempt is recorded in the result's
 //     `attempts[]`, and a pass that only happened after a retry is flagged
 //     `flaky: true` so nightly runs can call it out separately from a clean
 //     pass.
 //
 // Zero npm dependencies for everything except the browser lane: fetch is a
 // Node >=18 built-in, everything else is node:child_process/node:fs/node:http.
-// See scripts/lib/browser-lane.mjs for why Playwright is the one exception
-// and how it's kept out of any package.json.
+// Playwright (locked in package.json) is the one exception; see
+// scripts/lib/browser-lane.mjs.
 
 import { spawn } from "node:child_process";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateAgainstSchema } from "./lib/mini-schema.mjs";
-import { ensureBrowserReady, runBrowserSample, startStaticServer } from "./lib/browser-lane.mjs";
+import { assertPlaywrightInstalled, browserSampleEnv, runPlaywrightSample } from "./lib/browser-lane.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const SAMPLES_DIR = path.join(REPO_ROOT, "samples");
 const RESULTS_DIR = path.join(REPO_ROOT, "results");
 const RESULTS_PATH = path.join(RESULTS_DIR, "run-results.v1.json");
+const BROWSER_RESULTS_DIR = path.join(RESULTS_DIR, "browser-verification");
 const SCHEMA_PATH = path.join(REPO_ROOT, "schemas", "run-results.v1.schema.json");
 
 const BASE_URL = process.env.HONUA_BASE_URL ?? "http://localhost:8080";
@@ -46,8 +50,6 @@ const PUBLIC_BASE_URL = process.env.HONUA_PUBLIC_BASE_URL ?? "https://demo.honua
 const READY_TIMEOUT_MS = Number(process.env.HONUA_READY_TIMEOUT_MS ?? 120_000);
 const READY_POLL_INTERVAL_MS = 2_000;
 const MAX_ATTEMPTS = Math.max(1, Number(process.env.HONUA_SAMPLE_MAX_ATTEMPTS ?? 2));
-const BROWSER_STATIC_PORT = Number(process.env.HONUA_BROWSER_STATIC_PORT ?? 3000);
-const BROWSER_TIMEOUT_MS = Number(process.env.HONUA_BROWSER_TIMEOUT_MS ?? 30_000);
 
 const EDITION_RANK = { community: 0, pro: 1, enterprise: 2 };
 let RUNNER_EDITION;
@@ -89,32 +91,24 @@ async function main() {
     ({ manifest }) => requiredEdition(manifest) <= EDITION_RANK[RUNNER_EDITION] && manifest.entrypoint?.type === "browser",
   );
 
-  /** @type {{ browser: import("playwright").Browser, close: () => Promise<void> } | undefined} */
-  let browserLane;
   if (hasBrowserSample) {
-    browserLane = await setUpBrowserLane();
+    const version = await assertPlaywrightInstalled({ repoRoot: REPO_ROOT });
+    console.log(`run-samples: browser lane uses lockfile-managed @playwright/test ${version}`);
   }
 
   const results = [];
-  try {
-    for (const { dirName, manifest } of active) {
-      results.push(await runSampleWithGating(dirName, manifest, serverVersion, browserLane));
-    }
-  } finally {
-    if (browserLane) {
-      await browserLane.close();
+  for (const { dirName, manifest } of active) {
+    // Per-spec detail stays out of the run-results.v1 shape; it is written
+    // next to the browser sample's own envelope instead.
+    const { specs, ...result } = await runSampleWithGating(dirName, manifest, serverVersion);
+    results.push(result);
+    if (manifest.entrypoint?.type === "browser") {
+      await writeBrowserSampleEnvelope(dirName, result, specs, serverVersion);
     }
   }
 
   await mkdir(RESULTS_DIR, { recursive: true });
-  const envelope = {
-    schema: "run-results.v1",
-    generatedAt: new Date().toISOString(),
-    serverVersion,
-    baseUrl: BASE_URL,
-    edition: RUNNER_EDITION,
-    results,
-  };
+  const envelope = runResultsEnvelope(serverVersion, results);
   await selfCheckEnvelope(envelope);
   await writeFile(RESULTS_PATH, JSON.stringify(envelope, null, 2) + "\n", "utf8");
   console.log(`run-samples: wrote ${results.length} result(s) to ${path.relative(REPO_ROOT, RESULTS_PATH)}`);
@@ -131,18 +125,36 @@ async function main() {
   }
 }
 
-async function setUpBrowserLane() {
-  const chromium = await ensureBrowserReady({ repoRoot: REPO_ROOT, log: console.log });
-  const staticServer = await startStaticServer({ rootDir: SAMPLES_DIR, port: BROWSER_STATIC_PORT });
-  console.log(`run-samples: browser lane static server listening at ${staticServer.url}`);
-  const browser = await chromium.launch();
+function runResultsEnvelope(serverVersion, results) {
   return {
-    browser,
-    async close() {
-      await browser.close();
-      await staticServer.close();
-    },
+    schema: "run-results.v1",
+    generatedAt: new Date().toISOString(),
+    serverVersion,
+    baseUrl: BASE_URL,
+    edition: RUNNER_EDITION,
+    results,
   };
+}
+
+/**
+ * Per-sample evidence for a browser sample: the same run-results.v1 envelope
+ * the runner publishes, holding just this sample, next to the Playwright JSON
+ * report the per-spec results came from.
+ */
+async function writeBrowserSampleEnvelope(dirName, result, specs, serverVersion) {
+  await mkdir(BROWSER_RESULTS_DIR, { recursive: true });
+  const envelope = runResultsEnvelope(serverVersion, [result]);
+  await selfCheckEnvelope(envelope);
+  const target = path.join(BROWSER_RESULTS_DIR, `${dirName}.run-results.v1.json`);
+  await writeFile(target, JSON.stringify(envelope, null, 2) + "\n", "utf8");
+  if (specs) {
+    await writeFile(
+      path.join(BROWSER_RESULTS_DIR, `${dirName}.specs.json`),
+      JSON.stringify({ sample: result.id, outcome: result.outcome, specs }, null, 2) + "\n",
+      "utf8",
+    );
+  }
+  console.log(`run-samples: [${result.id}] wrote ${path.relative(REPO_ROOT, target)}`);
 }
 
 function requiredEdition(manifest) {
@@ -150,7 +162,7 @@ function requiredEdition(manifest) {
   return EDITION_RANK[key] ?? EDITION_RANK.community;
 }
 
-async function runSampleWithGating(dirName, manifest, serverVersion, browserLane) {
+async function runSampleWithGating(dirName, manifest, serverVersion) {
   if (requiredEdition(manifest) > EDITION_RANK[RUNNER_EDITION]) {
     const reason = `sample requires edition "${manifest.edition}" but runner is running as "${RUNNER_EDITION}"`;
     console.log(`run-samples: [${manifest.id}] skipped -- ${reason}`);
@@ -163,20 +175,24 @@ async function runSampleWithGating(dirName, manifest, serverVersion, browserLane
       error: reason,
     };
   }
-  return runSampleWithRetries(dirName, manifest, serverVersion, browserLane);
+  return runSampleWithRetries(dirName, manifest, serverVersion);
 }
 
-async function runSampleWithRetries(dirName, manifest, serverVersion, browserLane) {
+async function runSampleWithRetries(dirName, manifest, serverVersion) {
+  const isBrowser = manifest.entrypoint?.type === "browser";
+  // Browser samples are judged by their Playwright specs, which never retry
+  // (playwright.config.ts retries: 0); retrying the whole sample would be a
+  // retry to green by another name.
+  const maxAttempts = isBrowser ? 1 : MAX_ATTEMPTS;
   const attempts = [];
-  for (let attemptNum = 1; attemptNum <= MAX_ATTEMPTS; attemptNum++) {
+  let specs;
+  for (let attemptNum = 1; attemptNum <= maxAttempts; attemptNum++) {
     if (attemptNum > 1) {
-      console.log(`run-samples: [${manifest.id}] retrying (attempt ${attemptNum}/${MAX_ATTEMPTS})...`);
+      console.log(`run-samples: [${manifest.id}] retrying (attempt ${attemptNum}/${maxAttempts})...`);
     }
     const started = Date.now();
-    const attemptResult =
-      manifest.entrypoint?.type === "browser"
-        ? await runBrowserAttempt(dirName, manifest, browserLane)
-        : await runProcessAttempt(dirName, manifest);
+    const attemptResult = isBrowser ? await runBrowserAttempt(dirName, manifest) : await runProcessAttempt(dirName, manifest);
+    specs = attemptResult.specs;
     const durationMs = Date.now() - started;
     attempts.push({
       attempt: attemptNum,
@@ -201,17 +217,28 @@ async function runSampleWithRetries(dirName, manifest, serverVersion, browserLan
     ...(finalAttempt.error ? { error: finalAttempt.error } : {}),
     ...(flaky ? { flaky: true } : {}),
     attempts,
+    ...(specs ? { specs } : {}),
   };
 }
 
-async function runBrowserAttempt(dirName, manifest, browserLane) {
-  const sampleUrl = new URL(`${dirName}/${manifest.entrypoint.command}`, `http://localhost:${BROWSER_STATIC_PORT}/`);
-  sampleUrl.searchParams.set("baseUrl", targetBaseUrl(manifest));
-  if (process.env.HONUA_ADMIN_API_KEY) {
-    sampleUrl.searchParams.set("apiKey", process.env.HONUA_ADMIN_API_KEY);
+async function runBrowserAttempt(dirName, manifest) {
+  // Browser specs seed their own fixture into the composed server (the admin
+  // key is only used by the harness to seed); a public-live sample's specs also
+  // get the public URL its manifest's dataMode selects and must prove it.
+  const env = browserSampleEnv({ env: process.env, manifest, baseUrl: BASE_URL, publicBaseUrl: PUBLIC_BASE_URL });
+  console.log(
+    `run-samples: [${manifest.id}] running Playwright verification samples/${dirName}/verify/ against ${BASE_URL} (data-mode target ${env.HONUA_SAMPLE_TARGET_BASE_URL})`,
+  );
+  const run = await runPlaywrightSample({
+    repoRoot: REPO_ROOT,
+    dirName,
+    outDir: BROWSER_RESULTS_DIR,
+    env,
+  });
+  for (const spec of run.specs) {
+    console.log(`run-samples: [${manifest.id}]   ${spec.outcome.toUpperCase()} ${spec.title}${spec.error ? ` -- ${spec.error}` : ""}`);
   }
-  console.log(`run-samples: [${manifest.id}] opening ${sampleUrl} (headless browser)`);
-  return runBrowserSample({ browser: browserLane.browser, url: sampleUrl.toString(), timeoutMs: BROWSER_TIMEOUT_MS });
+  return run;
 }
 
 function runProcessAttempt(dirName, manifest) {

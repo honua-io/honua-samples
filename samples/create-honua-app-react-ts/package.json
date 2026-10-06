@@ -1,0 +1,8 @@
+{
+  "name": "honua-sample-create-honua-app-react-ts",
+  "private": true,
+  "description": "Pins the published create-honua-app this sample scaffolds its react-ts app from. Bump the exact version (and run npm install --package-lock-only) to verify a newer release.",
+  "devDependencies": {
+    "create-honua-app": "0.1.5"
+  }
+}

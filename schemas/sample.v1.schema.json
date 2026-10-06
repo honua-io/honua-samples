@@ -127,7 +127,7 @@
         },
         "command": {
           "type": "string",
-          "description": "For type 'node' | 'python' | 'dotnet' | 'script': a shell command run with the sample directory as the working directory. For type 'browser': the path (relative to the sample directory) of the static HTML file the runner serves and navigates a headless browser to -- e.g. 'src/index.html'. Browser samples MUST set a `data-sample-status` attribute (value `pass` or `fail`) on an element in the page (conventionally `<body>`) once they finish; the runner polls for the `[data-sample-status]` selector and reads that attribute as the outcome. See 'Browser lane' in README.md.",
+          "description": "For type 'node' | 'python' | 'dotnet' | 'script': a shell command run with the sample directory as the working directory. For type 'browser': the path (relative to the sample directory) of the sample's static HTML page -- e.g. 'src/index.html'. The runner does not navigate to it directly: every browser sample MUST ship Playwright specs at samples/<id>/verify/*.spec.mjs, which serve and drive the page against the composed server, and those specs are the sample's only pass/fail signal (a browser sample with no verify spec fails). Pages conventionally still set a `data-sample-status` attribute (`pass` or `fail`) on `<body>` for their specs to assert on. See 'Browser lane' in README.md and docs/browser-verification/README.md.",
           "minLength": 1
         }
       }
