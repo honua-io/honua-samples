@@ -3,7 +3,11 @@ name: validate
 on:
   pull_request:
     paths:
-      - "README.md"
+      # Every file the maintained-documentation command policy scans.
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.rst"
+      - "**/*.txt"
       - "samples/**"
       - "jobs/**"
       - "schemas/**"
@@ -20,7 +24,11 @@ on:
   push:
     branches: [trunk]
     paths:
-      - "README.md"
+      # Every file the maintained-documentation command policy scans.
+      - "**/*.md"
+      - "**/*.mdx"
+      - "**/*.rst"
+      - "**/*.txt"
       - "samples/**"
       - "jobs/**"
       - "schemas/**"
