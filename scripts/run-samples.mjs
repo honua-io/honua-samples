@@ -35,7 +35,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateAgainstSchema } from "./lib/mini-schema.mjs";
-import { assertPlaywrightInstalled, runPlaywrightSample } from "./lib/browser-lane.mjs";
+import { assertPlaywrightInstalled, browserSampleEnv, runPlaywrightSample } from "./lib/browser-lane.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -222,14 +222,18 @@ async function runSampleWithRetries(dirName, manifest, serverVersion) {
 }
 
 async function runBrowserAttempt(dirName, manifest) {
-  // Browser specs always target the composed server (they seed their own
-  // fixture into it); the admin key is only used by the harness to seed.
-  console.log(`run-samples: [${manifest.id}] running Playwright verification samples/${dirName}/verify/ against ${BASE_URL}`);
+  // Browser specs seed their own fixture into the composed server (the admin
+  // key is only used by the harness to seed); a public-live sample's specs also
+  // get the public URL its manifest's dataMode selects and must prove it.
+  const env = browserSampleEnv({ env: process.env, manifest, baseUrl: BASE_URL, publicBaseUrl: PUBLIC_BASE_URL });
+  console.log(
+    `run-samples: [${manifest.id}] running Playwright verification samples/${dirName}/verify/ against ${BASE_URL} (data-mode target ${env.HONUA_SAMPLE_TARGET_BASE_URL})`,
+  );
   const run = await runPlaywrightSample({
     repoRoot: REPO_ROOT,
     dirName,
     outDir: BROWSER_RESULTS_DIR,
-    env: { ...process.env, HONUA_BASE_URL: BASE_URL },
+    env,
   });
   for (const spec of run.specs) {
     console.log(`run-samples: [${manifest.id}]   ${spec.outcome.toUpperCase()} ${spec.title}${spec.error ? ` -- ${spec.error}` : ""}`);

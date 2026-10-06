@@ -194,40 +194,42 @@ copy of honua-server's own init script); the server's readiness probe is
 Env vars (all optional): `HONUA_BASE_URL` (default `http://localhost:8080`),
 `HONUA_READY_TIMEOUT_MS` (default `120000`), `HONUA_SAMPLE_MAX_ATTEMPTS`
 (default `2`, see [Retry and flaky samples](#retry-and-flaky-samples)),
-`HONUA_BROWSER_STATIC_PORT`/`HONUA_BROWSER_TIMEOUT_MS` (see
+`HONUA_PUBLIC_BASE_URL` (default `https://demo.honua.io`) and `HONUA_BROWSER_STATIC_PORT` (see
 [Browser lane](#browser-lane) below).
 
 ### Browser lane
 
-`entrypoint.type: "browser"` samples (one so far:
-[`browser-featureserver-query`](samples/browser-featureserver-query)) run
-headless in a real browser instead of a Node/Python/.NET child process --
-needed for anything that actually exercises DOM/`fetch()` behavior rather
-than just calling an SDK from a script. `scripts/lib/browser-lane.mjs`:
+`entrypoint.type: "browser"` samples run headless in a real browser instead
+of a Node/Python/.NET child process -- needed for anything that actually
+exercises DOM/`fetch()` behavior rather than just calling an SDK from a
+script. Every browser sample is proven by its own Playwright specs, and a
+browser sample needs both of these to run:
 
-1. Serves `samples/` over plain HTTP on a fixed port (`HONUA_BROWSER_STATIC_PORT`,
-   default `3000` -- matches `docker/compose.yml`'s
-   `Cors:AllowedOrigins` so a sample's cross-origin `fetch()` calls to the
-   composed server aren't blocked by CORS).
-2. Drives it with [Playwright](https://playwright.dev), pinned to a specific
-   version (`PLAYWRIGHT_VERSION` in `scripts/lib/browser-lane.mjs`) and
-   installed on demand into `node_modules/` -- **the one exception to this
-   repo's zero-npm-dependency style**, kept out of any package.json (there
-   isn't one) via a plain `npm install --no-save`, not a manifest entry. See
-   the loud comment at the top of `scripts/lib/browser-lane.mjs` for why this
-   isn't just `npx playwright` end-to-end (short version: npx doesn't make
-   the installed package `import`-able from an arbitrary script, which rules
-   it out for anything beyond a fixed CLI subcommand).
-3. Navigates to the sample's `entrypoint.command` (an HTML file path, not a
-   shell command, for this entrypoint type) and waits for the
-   `[data-sample-status]` DOM marker convention documented in
-   `schemas/sample.v1.schema.json`: the sample sets
-   `document.body.dataset.sampleStatus = "pass" | "fail"` once it's done, and
-   that's the runner's entire success signal.
+1. `entrypoint.command`: the sample's static HTML page (relative to the
+   sample dir, e.g. `src/index.html`), not a shell command.
+2. `samples/<id>/verify/*.spec.mjs`: Playwright specs that serve the page,
+   drive it against the composed server and assert on what it renders. The
+   specs are the sample's **only** pass/fail signal; a browser sample without
+   a `verify/` spec fails. Pages conventionally set
+   `document.body.dataset.sampleStatus = "pass" | "fail"` for the specs to
+   assert on.
+
+`scripts/lib/browser-lane.mjs` runs each sample's specs through
+`playwright.config.ts` (Chromium, no retries). Playwright is locked in
+`package.json` (`PLAYWRIGHT_VERSION` in `scripts/lib/browser-lane.mjs` must
+match), so install it with `npm ci && npx playwright install chromium`
+first. Pages are served from `http://localhost:3000`
+(`HONUA_BROWSER_STATIC_PORT`), the origin `docker/compose.yml`'s
+`Cors:AllowedOrigins` allows, so that port must be free. Specs get
+`HONUA_BASE_URL` (the composed server they seed fixtures into),
+`HONUA_SAMPLE_TARGET_BASE_URL` (the server the manifest's `dataMode`
+selects: `HONUA_PUBLIC_BASE_URL` for `public-live`) and
+`HONUA_SAMPLE_DATA_MODE`. See
+[docs/browser-verification](docs/browser-verification/README.md) for the
+harness, the fixture and the evidence files.
 
 Run it exactly like any other sample -- `node scripts/run-samples.mjs`
-detects the `browser` entrypoint type automatically and starts the static
-server + Playwright only when at least one active sample needs them.
+detects the `browser` entrypoint type automatically.
 
 ### Pro-licensed compose profile
 

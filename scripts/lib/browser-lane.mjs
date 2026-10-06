@@ -96,6 +96,24 @@ export async function assertPlaywrightInstalled({ repoRoot }) {
 }
 
 /**
+ * Environment for one browser sample's Playwright run. Specs always seed their
+ * fixtures into the composed server (`HONUA_BASE_URL`); the server the
+ * manifest's `dataMode` selects is passed separately so a `public-live` sample
+ * also proves its page against the public deployment it is presented with.
+ *
+ * @param {{ env: NodeJS.ProcessEnv, manifest: { dataMode?: string }, baseUrl: string, publicBaseUrl: string }} opts
+ * @returns {NodeJS.ProcessEnv}
+ */
+export function browserSampleEnv({ env, manifest, baseUrl, publicBaseUrl }) {
+  return {
+    ...env,
+    HONUA_BASE_URL: baseUrl,
+    HONUA_SAMPLE_TARGET_BASE_URL: manifest.dataMode === "public-live" ? publicBaseUrl : baseUrl,
+    HONUA_SAMPLE_DATA_MODE: manifest.dataMode ?? "",
+  };
+}
+
+/**
  * Runs one browser sample's Playwright specs (Chromium, no retries) and
  * reduces the JSON report to the runner's outcome.
  *
@@ -179,7 +197,12 @@ export function summarizePlaywrightReport({ exitCode, report }) {
     for (const spec of suite.specs ?? []) {
       for (const run of spec.tests ?? []) {
         const last = run.results?.at(-1);
-        const outcome = run.status === "expected" ? "pass" : run.status === "skipped" ? "skipped" : "fail";
+        // Playwright's aggregate "expected" only means the actual result
+        // matched `expectedStatus`; a test.fail() spec that fails is also
+        // "expected". A spec passes only when it was expected to pass and its
+        // final result actually passed.
+        const passed = run.status === "expected" && run.expectedStatus === "passed" && last?.status === "passed";
+        const outcome = passed ? "pass" : run.status === "skipped" ? "skipped" : "fail";
         const message = last?.error?.message ?? last?.errors?.[0]?.message;
         specs.push({
           title: [...here, spec.title].join(" › "),

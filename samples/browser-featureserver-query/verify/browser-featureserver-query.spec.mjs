@@ -81,3 +81,21 @@ test("reports a service that refuses anonymous reads", async ({ page }) => {
   await expect(page.locator("body")).toHaveAttribute("data-sample-status", "fail");
   await expect(page.locator("#status")).toHaveText("FAIL: Unauthorized");
 });
+
+// The manifest declares dataMode "public-live": the runner passes the public
+// deployment as HONUA_SAMPLE_TARGET_BASE_URL, and the page's own defaults
+// (service maui-buildings, where 1=1) must work there, not only against the
+// seeded composed server. Without the variable the page uses its built-in
+// default base URL, which is the same public deployment.
+test("queries its default public-live service", async ({ page }) => {
+  const url = new URL("/browser-featureserver-query/src/index.html", staticServer.url);
+  const target = (process.env.HONUA_SAMPLE_TARGET_BASE_URL ?? "").replace(/\/+$/, "");
+  if (target) url.searchParams.set("baseUrl", target);
+  await page.goto(url.toString());
+
+  await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass", { timeout: 30_000 });
+  await expect(page.locator("#status")).toHaveText(/^PASS: maui-buildings\/FeatureServer\/\d+ returned [1-9]\d* features\.$/);
+  const rendered = JSON.parse(await page.locator("#output").textContent());
+  expect(rendered.length).toBeGreaterThan(0);
+  for (const feature of rendered) expect(feature.geometry).toBeTruthy();
+});

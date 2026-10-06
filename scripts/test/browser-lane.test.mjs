@@ -6,11 +6,15 @@ import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { runPlaywrightSample, summarizePlaywrightReport } from "../lib/browser-lane.mjs";
+import { browserSampleEnv, runPlaywrightSample, summarizePlaywrightReport } from "../lib/browser-lane.mjs";
 
 const FILE = "sample-a/verify/sample-a.spec.mjs";
 
-function spec(title, status, { error, duration = 10 } = {}) {
+// Mirrors Playwright's JSON reporter: the aggregate `status` compares the
+// actual result with `expectedStatus`, so "expected" alone does not mean the
+// spec passed (a `test.fail()` spec that fails is also "expected").
+function spec(title, status, { error, duration = 10, expectedStatus = "passed", resultStatus } = {}) {
+  const actual = resultStatus ?? (status === "expected" ? expectedStatus : status === "skipped" ? "skipped" : "failed");
   return {
     title,
     file: FILE,
@@ -18,8 +22,10 @@ function spec(title, status, { error, duration = 10 } = {}) {
     tests: [
       {
         projectName: "chromium",
+        expectedStatus,
         status,
-        results: status === "skipped" ? [] : [{ duration, ...(error ? { error: { message: error } } : {}) }],
+        results:
+          status === "skipped" ? [] : [{ status: actual, duration, ...(error ? { error: { message: error } } : {}) }],
       },
     ],
   };
@@ -80,6 +86,38 @@ test("specs skipped after a failed beforeAll are not green", () => {
 test("a flaky status is a failure: nothing is retried to green", () => {
   const result = summarizePlaywrightReport({ exitCode: 0, report: report([spec("renders", "flaky")]) });
   assert.equal(result.outcome, "fail");
+});
+
+test("an expected failure (test.fail()) is a failed verification, not a pass", () => {
+  const result = summarizePlaywrightReport({
+    exitCode: 0,
+    report: report([
+      spec("renders", "expected"),
+      spec("annotated to fail", "expected", { expectedStatus: "failed", error: "Error: no features" }),
+    ]),
+  });
+  assert.equal(result.outcome, "fail");
+  assert.deepEqual(
+    result.specs.map((s) => s.outcome),
+    ["pass", "fail"],
+  );
+  assert.equal(result.specs[1].error, "Error: no features");
+  assert.match(result.error, /^1\/2 spec\(s\) failed; first: group › annotated to fail: Error: no features$/);
+});
+
+test("browser specs seed the composed server and see the manifest's data-mode target", () => {
+  const base = { PATH: "/bin", HONUA_ADMIN_API_KEY: "k" };
+  const urls = { baseUrl: "http://localhost:8080", publicBaseUrl: "https://demo.honua.io" };
+  const publicLive = browserSampleEnv({ env: base, manifest: { dataMode: "public-live" }, ...urls });
+  assert.equal(publicLive.HONUA_BASE_URL, "http://localhost:8080");
+  assert.equal(publicLive.HONUA_SAMPLE_TARGET_BASE_URL, "https://demo.honua.io");
+  assert.equal(publicLive.HONUA_SAMPLE_DATA_MODE, "public-live");
+  assert.equal(publicLive.HONUA_ADMIN_API_KEY, "k");
+
+  const local = browserSampleEnv({ env: base, manifest: { dataMode: "local-integration" }, ...urls });
+  assert.equal(local.HONUA_BASE_URL, "http://localhost:8080");
+  assert.equal(local.HONUA_SAMPLE_TARGET_BASE_URL, "http://localhost:8080");
+  assert.equal(local.HONUA_SAMPLE_DATA_MODE, "local-integration");
 });
 
 test("no specs, no report, a run error, or a non-zero exit is a failure", () => {

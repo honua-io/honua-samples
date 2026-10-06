@@ -6,7 +6,7 @@ browser against a composed Honua server. The specs are the sample's pass/fail si
 
 | Sample | What the spec proves |
 | --- | --- |
-| [`browser-featureserver-query`](../../samples/browser-featureserver-query) | The page queries a FeatureServer seeded from the fixture and renders the fixture's ids, names and rings; a missing service, an invalid `where` and a service that refuses anonymous reads each show the server's error (`FAIL: Not Found`, `FAIL: Bad Request`, `FAIL: Unauthorized`). |
+| [`browser-featureserver-query`](../../samples/browser-featureserver-query) | The page queries a FeatureServer seeded from the fixture and renders the fixture's ids, names and rings; a missing service, an invalid `where` and a service that refuses anonymous reads each show the server's error (`FAIL: Not Found`, `FAIL: Bad Request`, `FAIL: Unauthorized`). Because the manifest is `public-live`, the page's defaults are also proven against the public deployment (`HONUA_SAMPLE_TARGET_BASE_URL`, from `HONUA_PUBLIC_BASE_URL`). |
 | [`create-honua-app-vanilla-ts`](../../samples/create-honua-app-vanilla-ts) | The `vanilla-ts` starter, scaffolded from the published `create-honua-app` at the version the sample pins, installs from the npm registry, typechecks, builds, connects to the seeded layer, reports the fixture's feature count, and draws every fixture polygon where the fixture puts it. Pointed at a layer that refuses anonymous callers, it stops with `The workflow stopped: HTTP 499: Unauthorized` and draws nothing. |
 | [`create-honua-app-react-ts`](../../samples/create-honua-app-react-ts) | The same for the `react-ts` starter (which shows no feature count, so the query answer and map pixels carry the oracle). |
 
@@ -19,7 +19,9 @@ browser against a composed Honua server. The specs are the sample's pass/fail si
   into the composed server through the admin API (import, publish, enable FeatureServer, open anonymous reads where
   the spec needs them) under unique names, and waits until the layer serves the fixture. Every assertion is computed
   from that fixture, not from the server's answer. The base URL and admin API key come from the runner's environment
-  (`HONUA_BASE_URL`, `HONUA_ADMIN_API_KEY`); the pages themselves never see the admin key.
+  (`HONUA_BASE_URL`, `HONUA_ADMIN_API_KEY`); the pages themselves never see the admin key. The runner also passes
+  `HONUA_SAMPLE_TARGET_BASE_URL` and `HONUA_SAMPLE_DATA_MODE`: for a `public-live` manifest the target is the public
+  deployment, and the sample's specs must prove the page there too.
 - Pages are served from `http://localhost:3000`, the one origin `docker/compose.yml` allows through CORS. Static
   samples use the repo's small static server; the create-honua-app samples use `vite preview` on the built app.
 - create-honua-app samples carry a `package.json` and `package-lock.json` that pin `create-honua-app` exactly. The
