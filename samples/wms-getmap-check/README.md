@@ -12,13 +12,21 @@ The runner is zero-dependency Node.js using the platform `fetch()` API.
 
 ## Run
 
-Start the repository compose stack on the 2026.1 release server image, then
-run the sample against it. The admin key is the stack's
+Choose an immutable image from the public
+[Honua Server packages](https://github.com/honua-io/honua-server/pkgs/container/honua-server)
+page. Replace `<CANDIDATE_SERVER_IMAGE>` below with its full
+`ghcr.io/honua-io/honua-server:<tag>@sha256:<digest>` reference.
+The 2026.1 release has not been cut; nightly images are previews, not
+qualified releases. Release certification binds this declared input to its
+exact candidate.
+
+Start the repository compose stack with that image and run the sample.
+The admin key is the stack's
 `HONUA_ADMIN_PASSWORD`, which `docker/compose.yml` defaults to
 `quickstart-admin-password`:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-87966c3@sha256:069f196bfa5c7201223d4d89868934242c4ace8805a6e48c122a88d84fa6eb1a
+export HONUA_SERVER_IMAGE='<CANDIDATE_SERVER_IMAGE>'
 docker compose -f docker/compose.yml up -d --wait
 HONUA_BASE_URL=http://localhost:8080 \
 HONUA_ADMIN_API_KEY="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}" \
