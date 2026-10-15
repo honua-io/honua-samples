@@ -175,10 +175,21 @@ npm ci
 npx playwright install --with-deps chromium
 ```
 
-Then start the 2026.1 release server, run every sample, and stop the stack:
+Choose an immutable image from the public
+[Honua Server packages](https://github.com/honua-io/honua-server/pkgs/container/honua-server)
+page. Replace `<CANDIDATE_SERVER_IMAGE>` below with its full
+`ghcr.io/honua-io/honua-server:<tag>@sha256:<digest>` reference.
+The 2026.1 release has not been cut; a nightly image is a preview and does
+not establish release qualification. Release certification supplies its
+exact candidate reference through this declared input.
+
+Then start that server, run every sample, and stop the stack. The local
+admin password is passed to both Compose and the browser fixture harness:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-87966c3@sha256:069f196bfa5c7201223d4d89868934242c4ace8805a6e48c122a88d84fa6eb1a
+export HONUA_SERVER_IMAGE='<CANDIDATE_SERVER_IMAGE>'
+export HONUA_ADMIN_PASSWORD="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
+export HONUA_ADMIN_API_KEY="$HONUA_ADMIN_PASSWORD"
 docker compose -f docker/compose.yml up -d --wait
 node scripts/run-samples.mjs
 docker compose -f docker/compose.yml down -v
@@ -186,12 +197,13 @@ docker compose -f docker/compose.yml down -v
 
 `docker/compose.yml` pulls the published `ghcr.io/honua-io/honua-server`
 image. Without `HONUA_SERVER_IMAGE` it uses the trunk-tracking `:trunk` tag,
-which is not the release; the value above is the image digest the 2026.1
-release pins. PostGIS auto-starts via `docker/init-db.sql` (a vendored
+which is not a release pin. `HONUA_ADMIN_API_KEY` must match the password
+used by the composed server; the browser specs need it to create their
+fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
 copy of honua-server's own init script); the server's readiness probe is
 `GET /healthz/ready`, which `--wait` and the runner both wait for.
 
-Env vars (all optional): `HONUA_BASE_URL` (default `http://localhost:8080`),
+Additional optional environment variables: `HONUA_BASE_URL` (default `http://localhost:8080`),
 `HONUA_READY_TIMEOUT_MS` (default `120000`), `HONUA_SAMPLE_MAX_ATTEMPTS`
 (default `2`, see [Retry and flaky samples](#retry-and-flaky-samples)),
 `HONUA_PUBLIC_BASE_URL` (default `https://demo.honua.io`) and `HONUA_BROWSER_STATIC_PORT` (see
@@ -252,7 +264,7 @@ shows the same value under **Operate → License**.)
 
 ```bash
 HONUA_ADMIN_KEY="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}" \
-  npx -y -p @honua/sdk-js@0.1.12 honua admin operate getPlatformLicenseStatus \
+  npx -y -p @honua/sdk-js@0.1.16 honua admin operate getPlatformLicenseStatus \
   --base-url http://localhost:8080 | grep '"edition"'
 ```
 
