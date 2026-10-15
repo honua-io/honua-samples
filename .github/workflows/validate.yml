@@ -75,6 +75,14 @@ jobs:
           KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
         run: node scripts/validate-manifests.mjs
 
+      # honua-io/honua-samples#65: templates/gp-python and templates/gp-dotnet are
+      # the source `honua-gp-devkit init` mirrors (honua-io/honua-server#6217).
+      # Every template file is pinned by SHA-256 in TEMPLATE-MANIFEST.json so an
+      # edit without a manifest update, a missing required file, or a golden
+      # digest that no longer matches expected/summary.json fails here.
+      - name: Check GP process templates
+        run: node scripts/gp-templates.mjs check
+
       # honua-samples#48: the bundle consumer pointed at a retired rolling tag
       # and a v1 manifest for weeks without going red, because samples.honua.io
       # degrades honestly. This step is what makes the next producer retirement
