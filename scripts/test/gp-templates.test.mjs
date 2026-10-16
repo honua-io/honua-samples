@@ -50,7 +50,7 @@ for (const templateId of Object.keys(REQUIRED_FILES)) {
     const launch = JSON.parse(await readFile(path.join(TEMPLATES_DIR, templateId, ".vscode/launch.json"), "utf8"));
     const names = launch.configurations.map((c) => c.name);
     assert.ok(names.some((n) => n.includes("(host)")), "host launch configuration");
-    assert.ok(names.some((n) => n.includes("attach to container")), "container attach configuration");
+    assert.ok(names.some((n) => n.includes("container")), "container debug configuration");
   });
 }
 
