@@ -9,12 +9,13 @@ import {
   assertContract,
   checkLocalAsset,
   checkRemote,
+  checkRemoteAsset,
   partitionAcquisitions,
   producerClock,
   sha256,
   unclassifiedKinds,
 } from "../validate-producer-lock-resolution.mjs";
-import { SDK_PRODUCER_LOCK } from "../lib/sdk-producer-lock.mjs";
+import { readDeclaredAssetBytes, SDK_PRODUCER_LOCK } from "../lib/sdk-producer-lock.mjs";
 
 // honua-samples#48: the consumer pointed at a retired rolling tag and a v1
 // manifest for weeks and nothing went red, because the page degraded honestly.
@@ -108,6 +109,44 @@ test("a vendored manifest whose format moved fails the shape check", async () =>
   });
 });
 
+test("a split archive is the concatenation of its declared parts", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "producer-lock-parts-"));
+  try {
+    const partA = Buffer.from("archive-head");
+    const partB = Buffer.from("archive-tail");
+    await writeFile(path.join(dir, "sample-bundles.tar.gz.part-00"), partA);
+    await writeFile(path.join(dir, "sample-bundles.tar.gz.part-01"), partB);
+    const whole = Buffer.concat([partA, partB]);
+    const url = pathToFileURL(path.join(dir, "sample-bundles.tar.gz")).href;
+    const lock = {
+      ...SDK_PRODUCER_LOCK,
+      urls: { ...SDK_PRODUCER_LOCK.urls, bundleArchive: url },
+      assets: {
+        ...SDK_PRODUCER_LOCK.assets,
+        bundleArchive: {
+          bytes: whole.byteLength,
+          sha256: sha256(whole),
+          provenance: "test",
+          parts: [
+            { name: "sample-bundles.tar.gz.part-00", bytes: partA.byteLength, sha256: sha256(partA) },
+            { name: "sample-bundles.tar.gz.part-01", bytes: partB.byteLength, sha256: sha256(partB) },
+          ],
+        },
+      },
+    };
+    const read = await readDeclaredAssetBytes("bundleArchive", url, lock);
+    assert.equal(sha256(read), sha256(whole));
+    assert.match(await checkLocalAsset("bundleArchive", url, lock), /sha256/u);
+
+    await writeFile(path.join(dir, "sample-bundles.tar.gz.part-01"), Buffer.from("mutated-tail"));
+    await assert.rejects(() => readDeclaredAssetBytes("bundleArchive", url, lock), /part sample-bundles.tar.gz.part-01 content mismatch/u);
+    await rm(path.join(dir, "sample-bundles.tar.gz.part-00"));
+    await assert.rejects(() => checkLocalAsset("bundleArchive", url, lock), /does not resolve/u);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("an asset with no declared digest cannot be quietly accepted", async () => {
   await withTempLock(validManifest, async ({ lock }) => {
     const undeclared = { ...lock, assets: { ...lock.assets, bundleManifest: undefined } };
@@ -116,6 +155,44 @@ test("an asset with no declared digest cannot be quietly accepted", async () => 
       /declares no digest/u,
     );
   });
+});
+
+test("a remote bundle asset must use an exact-source immutable release and exact bounded bytes", async () => {
+  const bytes = Buffer.from(JSON.stringify(validManifest));
+  const kind = "bundleManifest";
+  const url = `https://github.com/${SDK_PRODUCER_LOCK.repository}/releases/download/sample-bundles-${SDK_PRODUCER_LOCK.revision}/sample-bundles.v2.json`;
+  const lock = {
+    ...SDK_PRODUCER_LOCK,
+    urls: { ...SDK_PRODUCER_LOCK.urls, [kind]: url },
+    assets: { ...SDK_PRODUCER_LOCK.assets, [kind]: { bytes: bytes.length, sha256: sha256(bytes), provenance: "test" } },
+  };
+  const fetchImpl = async () => new Response(bytes, { status: 200 });
+  assert.equal(partitionAcquisitions(lock).remote.find((entry) => entry.kind === kind)?.url, url);
+  assert.match(await checkRemoteAsset(kind, url, lock, { fetchImpl }), /sha256/u);
+  await assert.rejects(() => checkRemoteAsset(kind, url.replace(lock.revision, "latest"), lock, { fetchImpl }), /exact immutable release/u);
+  await assert.rejects(() => checkRemoteAsset(kind, url, lock, { fetchImpl: async () => new Response("missing", { status: 404 }) }), /HTTP 404/u);
+  await assert.rejects(() => checkRemoteAsset(kind, url, lock, { fetchImpl: async () => new Response(Buffer.concat([bytes, Buffer.from("x")])) }), /exceeds/u);
+  const wrongHash = { ...lock, assets: { ...lock.assets, [kind]: { ...lock.assets[kind], sha256: "f".repeat(64) } } };
+  await assert.rejects(() => checkRemoteAsset(kind, url, wrongHash, { fetchImpl }), /differ/u);
+  const wrongShape = Buffer.from(JSON.stringify({ ...validManifest, format: "honua.sdk.sample-bundles.v3" }));
+  const wrongShapeLock = { ...lock, assets: { ...lock.assets, [kind]: { bytes: wrongShape.length, sha256: sha256(wrongShape) } } };
+  await assert.rejects(() => checkRemoteAsset(kind, url, wrongShapeLock, { fetchImpl: async () => new Response(wrongShape) }), /unexpected manifest format/u);
+});
+
+test("a remote archive uses the same exact-source release and rejects a truncated body", async () => {
+  const bytes = Buffer.from("synthetic archive bytes");
+  const kind = "bundleArchive";
+  const url = `https://github.com/${SDK_PRODUCER_LOCK.repository}/releases/download/sample-bundles-${SDK_PRODUCER_LOCK.revision}/sample-bundles.tar.gz`;
+  const lock = {
+    ...SDK_PRODUCER_LOCK,
+    urls: { ...SDK_PRODUCER_LOCK.urls, [kind]: url },
+    assets: { ...SDK_PRODUCER_LOCK.assets, [kind]: { bytes: bytes.length, sha256: sha256(bytes), provenance: "test" } },
+  };
+  assert.match(await checkRemoteAsset(kind, url, lock, { fetchImpl: async () => new Response(bytes) }), /sha256/u);
+  await assert.rejects(
+    () => checkRemoteAsset(kind, url, lock, { fetchImpl: async () => new Response(bytes.subarray(0, -1)) }),
+    /differ/u,
+  );
 });
 
 test("a retired remote path fails loudly -- the #48 failure mode", async () => {

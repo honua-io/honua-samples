@@ -1,3 +1,4 @@
 config/sdkjs-handoff-fixture.v4.snapshot.json -text
 config/sdkjs-handoff.v2.snapshot.json -text
 config/sdkjs-handoff.v2.snapshot.meta.json -text
+vendor/sdk-producer/**/sample-bundles.tar.gz.part-* binary
