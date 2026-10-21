@@ -23,10 +23,9 @@
 // the gallery will actually accept at build time.
 
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
+import { readDeclaredAssetBytes, SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 import { validateManifestShape } from "./lib/sample-bundles.mjs";
 import { admitSdkJsHandoff } from "./lib/sdkjs-handoff.mjs";
 
@@ -104,15 +103,7 @@ export async function checkLocalAsset(kind, url, lock = SDK_PRODUCER_LOCK) {
   if (!declared) {
     throw new Error(`${kind} is vendored but the producer lock declares no digest for it`);
   }
-  let bytes;
-  try {
-    bytes = await readFile(fileURLToPath(url));
-  } catch (error) {
-    throw new Error(
-      `${kind} does not resolve: ${url} is missing (${error.code ?? error.message}). ` +
-        `The vendored producer revision ${lock.revision} is incomplete.`,
-    );
-  }
+  const bytes = await readDeclaredAssetBytes(kind, url, lock);
   if (bytes.byteLength !== declared.bytes) {
     throw new Error(`${kind} is ${bytes.byteLength} bytes; the lock declares ${declared.bytes}`);
   }

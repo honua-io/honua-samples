@@ -219,6 +219,12 @@
     },
     {
       "sourceRepo": "honua-samples",
+      "id": "gp-process-templates",
+      "disposition": "internal-qualification",
+      "reason": "Draft Python and .NET process templates. The custom-code harness is not a published package, so this stays internal qualification rather than a public gallery sample."
+    },
+    {
+      "sourceRepo": "honua-samples",
       "id": "hello-featureserver-rest",
       "disposition": "rework-map-first",
       "reason": "Turn the raw FeatureServer request into a first mapped feature result with endpoint detail below."

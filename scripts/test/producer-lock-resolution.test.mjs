@@ -15,7 +15,7 @@ import {
   sha256,
   unclassifiedKinds,
 } from "../validate-producer-lock-resolution.mjs";
-import { SDK_PRODUCER_LOCK } from "../lib/sdk-producer-lock.mjs";
+import { readDeclaredAssetBytes, SDK_PRODUCER_LOCK } from "../lib/sdk-producer-lock.mjs";
 
 // honua-samples#48: the consumer pointed at a retired rolling tag and a v1
 // manifest for weeks and nothing went red, because the page degraded honestly.
@@ -107,6 +107,44 @@ test("a vendored manifest whose format moved fails the shape check", async () =>
   await withTempLock({ ...validManifest, format: "honua.sdk.sample-bundles.v3", schemaVersion: 3 }, async ({ lock }) => {
     await assert.rejects(() => checkLocalAsset("bundleManifest", lock.urls.bundleManifest, lock), /unexpected manifest format/u);
   });
+});
+
+test("a split archive is the concatenation of its declared parts", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "producer-lock-parts-"));
+  try {
+    const partA = Buffer.from("archive-head");
+    const partB = Buffer.from("archive-tail");
+    await writeFile(path.join(dir, "sample-bundles.tar.gz.part-00"), partA);
+    await writeFile(path.join(dir, "sample-bundles.tar.gz.part-01"), partB);
+    const whole = Buffer.concat([partA, partB]);
+    const url = pathToFileURL(path.join(dir, "sample-bundles.tar.gz")).href;
+    const lock = {
+      ...SDK_PRODUCER_LOCK,
+      urls: { ...SDK_PRODUCER_LOCK.urls, bundleArchive: url },
+      assets: {
+        ...SDK_PRODUCER_LOCK.assets,
+        bundleArchive: {
+          bytes: whole.byteLength,
+          sha256: sha256(whole),
+          provenance: "test",
+          parts: [
+            { name: "sample-bundles.tar.gz.part-00", bytes: partA.byteLength, sha256: sha256(partA) },
+            { name: "sample-bundles.tar.gz.part-01", bytes: partB.byteLength, sha256: sha256(partB) },
+          ],
+        },
+      },
+    };
+    const read = await readDeclaredAssetBytes("bundleArchive", url, lock);
+    assert.equal(sha256(read), sha256(whole));
+    assert.match(await checkLocalAsset("bundleArchive", url, lock), /sha256/u);
+
+    await writeFile(path.join(dir, "sample-bundles.tar.gz.part-01"), Buffer.from("mutated-tail"));
+    await assert.rejects(() => readDeclaredAssetBytes("bundleArchive", url, lock), /part sample-bundles.tar.gz.part-01 content mismatch/u);
+    await rm(path.join(dir, "sample-bundles.tar.gz.part-00"));
+    await assert.rejects(() => checkLocalAsset("bundleArchive", url, lock), /does not resolve/u);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test("an asset with no declared digest cannot be quietly accepted", async () => {
