@@ -1,5 +1,5 @@
 {
-  "_comment": "PINNED OFFLINE SNAPSHOT of the canonical capability key list (honua-server docs/gis/data/capability-keys.v1.json). CI prefers the live list via the KEY_LIST_URL repo variable; this fixture is the offline/air-gapped fallback and must be refreshed when the vocabulary changes (compare against the published artifact).",
+  "_comment": "PINNED OFFLINE SNAPSHOT of the canonical capability key list (honua-server docs/gis/data/capability-keys.v1.json). CI fetches the published list by setting KEY_LIST_URL to the pinned server file; this fixture is the offline fallback and must be refreshed when the vocabulary changes.",
   "todo": "Refresh by copying the `key` values from the published capability-keys.v1.json when honua-server's vocabulary changes.",
   "source": "honua-io/honua-server docs/gis/data/capability-keys.v1.json (snapshot 2026-07-17)",
   "version": "capability-keys.v1 snapshot 2026-07-17",
