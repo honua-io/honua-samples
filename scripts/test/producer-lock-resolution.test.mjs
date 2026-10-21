@@ -9,6 +9,7 @@ import {
   assertContract,
   checkLocalAsset,
   checkRemote,
+  checkRemoteAsset,
   partitionAcquisitions,
   producerClock,
   sha256,
@@ -116,6 +117,44 @@ test("an asset with no declared digest cannot be quietly accepted", async () => 
       /declares no digest/u,
     );
   });
+});
+
+test("a remote bundle asset must use an exact-source immutable release and exact bounded bytes", async () => {
+  const bytes = Buffer.from(JSON.stringify(validManifest));
+  const kind = "bundleManifest";
+  const url = `https://github.com/${SDK_PRODUCER_LOCK.repository}/releases/download/sample-bundles-${SDK_PRODUCER_LOCK.revision}/sample-bundles.v2.json`;
+  const lock = {
+    ...SDK_PRODUCER_LOCK,
+    urls: { ...SDK_PRODUCER_LOCK.urls, [kind]: url },
+    assets: { ...SDK_PRODUCER_LOCK.assets, [kind]: { bytes: bytes.length, sha256: sha256(bytes), provenance: "test" } },
+  };
+  const fetchImpl = async () => new Response(bytes, { status: 200 });
+  assert.equal(partitionAcquisitions(lock).remote.find((entry) => entry.kind === kind)?.url, url);
+  assert.match(await checkRemoteAsset(kind, url, lock, { fetchImpl }), /sha256/u);
+  await assert.rejects(() => checkRemoteAsset(kind, url.replace(lock.revision, "latest"), lock, { fetchImpl }), /exact immutable release/u);
+  await assert.rejects(() => checkRemoteAsset(kind, url, lock, { fetchImpl: async () => new Response("missing", { status: 404 }) }), /HTTP 404/u);
+  await assert.rejects(() => checkRemoteAsset(kind, url, lock, { fetchImpl: async () => new Response(Buffer.concat([bytes, Buffer.from("x")])) }), /exceeds/u);
+  const wrongHash = { ...lock, assets: { ...lock.assets, [kind]: { ...lock.assets[kind], sha256: "f".repeat(64) } } };
+  await assert.rejects(() => checkRemoteAsset(kind, url, wrongHash, { fetchImpl }), /differ/u);
+  const wrongShape = Buffer.from(JSON.stringify({ ...validManifest, format: "honua.sdk.sample-bundles.v3" }));
+  const wrongShapeLock = { ...lock, assets: { ...lock.assets, [kind]: { bytes: wrongShape.length, sha256: sha256(wrongShape) } } };
+  await assert.rejects(() => checkRemoteAsset(kind, url, wrongShapeLock, { fetchImpl: async () => new Response(wrongShape) }), /unexpected manifest format/u);
+});
+
+test("a remote archive uses the same exact-source release and rejects a truncated body", async () => {
+  const bytes = Buffer.from("synthetic archive bytes");
+  const kind = "bundleArchive";
+  const url = `https://github.com/${SDK_PRODUCER_LOCK.repository}/releases/download/sample-bundles-${SDK_PRODUCER_LOCK.revision}/sample-bundles.tar.gz`;
+  const lock = {
+    ...SDK_PRODUCER_LOCK,
+    urls: { ...SDK_PRODUCER_LOCK.urls, [kind]: url },
+    assets: { ...SDK_PRODUCER_LOCK.assets, [kind]: { bytes: bytes.length, sha256: sha256(bytes), provenance: "test" } },
+  };
+  assert.match(await checkRemoteAsset(kind, url, lock, { fetchImpl: async () => new Response(bytes) }), /sha256/u);
+  await assert.rejects(
+    () => checkRemoteAsset(kind, url, lock, { fetchImpl: async () => new Response(bytes.subarray(0, -1)) }),
+    /differ/u,
+  );
 });
 
 test("a retired remote path fails loudly -- the #48 failure mode", async () => {

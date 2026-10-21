@@ -12,15 +12,11 @@
 //
 // Two lanes, because the acquisitions are not all the same kind of thing:
 //
-//   local   the vendored bundle manifest and archive under
-//           vendor/sdk-producer/<revision>/. Checked offline, always: the file
-//           exists, its bytes match the digest declared in the producer lock,
-//           and the manifest is a shape this consumer can still read.
-//   remote  the raw.githubusercontent.com URLs pinned to <revision>. Checked
-//           whenever the network is available (skip with --offline): the URL
-//           still returns 200 -- a revision that has been rewritten or a file
-//           that has moved is precisely the #48 failure mode -- and the payload
-//           still declares a format/schemaVersion the consumer admits.
+//   local   any still-vendored bundle manifest/archive, checked offline.
+//   remote  revision-pinned source projections and, when the lock adopts them,
+//           exact content-addressed release assets. CI checks resolution,
+//           declared bytes and SHA-256, and admitted manifest shape. The
+//           gallery staging path independently verifies every archive member.
 //
 // Format expectations are not restated here. Each acquisition is handed to the
 // same validator its consumer uses, so this check cannot drift away from what
@@ -40,8 +36,9 @@ const CROSSWALK_CONTRACT = Object.freeze({ format: "honua.sdk.capability-crosswa
 /** Acquisitions that are fetched over the network, pinned to the locked revision. */
 const REMOTE_KINDS = Object.freeze(["handoffV2", "fixtureV4", "handoffV1", "fixtureV3", "catalog", "crosswalk"]);
 
-/** Acquisitions vendored into this repository at the locked revision. */
-const LOCAL_KINDS = Object.freeze(["bundleManifest", "bundleArchive"]);
+/** Bundle assets may be local or exact-source immutable release downloads. */
+const ASSET_NAMES = Object.freeze({ bundleManifest: "sample-bundles.v2.json", bundleArchive: "sample-bundles.tar.gz" });
+const ASSET_KINDS = Object.freeze(Object.keys(ASSET_NAMES));
 
 export function partitionAcquisitions(lock = SDK_PRODUCER_LOCK) {
   const remote = [];
@@ -58,7 +55,7 @@ export function partitionAcquisitions(lock = SDK_PRODUCER_LOCK) {
  * resolves, which is the same silence #48 was about.
  */
 export function unclassifiedKinds(lock = SDK_PRODUCER_LOCK) {
-  const known = new Set([...REMOTE_KINDS, ...LOCAL_KINDS]);
+  const known = new Set([...REMOTE_KINDS, ...ASSET_KINDS]);
   return Object.keys(lock.urls).filter((kind) => !known.has(kind));
 }
 
@@ -127,6 +124,43 @@ export async function checkLocalAsset(kind, url, lock = SDK_PRODUCER_LOCK) {
     validateManifestShape(JSON.parse(bytes.toString("utf8")), { expectedRevision: lock.revision });
   }
   return `${declared.bytes} bytes, sha256 ${digest.slice(0, 12)}…`;
+}
+
+/** Verify an exact-source release asset without admitting a rolling tag or unbounded response. */
+export async function checkRemoteAsset(kind, url, lock = SDK_PRODUCER_LOCK, { fetchImpl = fetch } = {}) {
+  const name = ASSET_NAMES[kind];
+  const declared = lock.assets[kind];
+  if (!name || !declared) throw new Error(`${kind} has no declared release asset digest`);
+  const expectedUrl = `https://github.com/${lock.repository}/releases/download/sample-bundles-${lock.revision}/${name}`;
+  if (url !== expectedUrl) throw new Error(`${kind} must resolve from exact immutable release ${expectedUrl}`);
+  if (!Number.isSafeInteger(declared.bytes) || declared.bytes < 1 || declared.bytes > 512 * 1024 * 1024 ||
+      !/^[0-9a-f]{64}$/u.test(declared.sha256)) throw new Error(`${kind} has invalid bounded digest metadata`);
+
+  let response;
+  try {
+    response = await fetchImpl(url);
+  } catch (error) {
+    const failure = new Error(`${kind} could not be fetched: ${error.message}`);
+    failure.networkFailure = true;
+    throw failure;
+  }
+  if (!response.ok) throw new Error(`${kind} does not resolve: HTTP ${response.status}`);
+  if (!response.body) throw new Error(`${kind} has no response body`);
+  const chunks = [];
+  let length = 0;
+  for await (const chunk of response.body) {
+    length += chunk.byteLength;
+    if (length > declared.bytes) throw new Error(`${kind} exceeds the lock's ${declared.bytes}-byte bound`);
+    chunks.push(chunk);
+  }
+  const bytes = Buffer.concat(chunks, length);
+  if (length !== declared.bytes || sha256(bytes) !== declared.sha256) {
+    throw new Error(`${kind} bytes or SHA-256 differ from the producer lock`);
+  }
+  if (kind === "bundleManifest") {
+    validateManifestShape(JSON.parse(bytes.toString("utf8")), { expectedRevision: lock.revision });
+  }
+  return `${length} bytes, sha256 ${declared.sha256.slice(0, 12)}…`;
 }
 
 async function fetchJson(kind, url) {
@@ -199,7 +233,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (stray.length > 0) {
     failures.push(
       `producer lock declares acquisition(s) this check does not classify: ${stray.join(", ")}. ` +
-        `Add them to REMOTE_KINDS or LOCAL_KINDS so a retirement cannot pass unnoticed.`,
+        `Classify them as remote source projections or bundle assets so a retirement cannot pass unnoticed.`,
     );
   }
 
@@ -215,6 +249,9 @@ export async function main(argv = process.argv.slice(2)) {
     report.push(["remote", "(all)", "skipped (--offline)"]);
   } else {
     try {
+      for (const { kind, url } of partitionAcquisitions(lock).remote.filter(({ kind }) => ASSET_KINDS.includes(kind))) {
+        report.push(["remote", kind, await checkRemoteAsset(kind, url, lock)]);
+      }
       for (const [kind, note] of await checkRemote(lock)) report.push(["remote", kind, note]);
     } catch (error) {
       if (error.networkFailure) {
