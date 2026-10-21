@@ -413,13 +413,12 @@ migration footprint scanner, lands here pre-filtered to the matching samples.
 
 ### Validate it locally
 
-The build fetches honua-sdk-js's handoff, catalog and sample bundles, so it
-needs internet access. It currently refuses the pinned producer's handoff
-because that handoff's visual evidence expired on 2026-09-07, and it exits
-non-zero until the producer is re-pinned
+The build fetches honua-sdk-js's handoff and catalog, so it needs internet
+access, and it reads the vendored sample-bundle archive for producer pin
+`ac22cb56fc927a65666c7cfebbb6b778d7afc7a1`. Qualified journey evidence on that
+handoff runs through 2026-10-28
 ([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)).
 
-<!-- doc-run: blocked https://github.com/honua-io/honua-samples/issues/57 -->
 ```bash
 node scripts/build-gallery.mjs          # builds site/ (index + one page per sample/entry);
                                          # also fetches + integrity-verifies + stages sdk-js
