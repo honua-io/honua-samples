@@ -27,7 +27,8 @@ browser against a composed Honua server. The specs are the sample's pass/fail si
 - create-honua-app samples carry a `package.json` and `package-lock.json` that pin `create-honua-app` exactly. The
   harness runs `npm ci` (so the registry integrity is enforced), scaffolds `app/` with that published CLI, installs
   the generated app from the registry, runs its `typecheck`, and builds it once per endpoint (`VITE_HONUA_ENDPOINT`
-  is baked in at build time). The resolved `create-honua-app`, `@honua/sdk-js` and `maplibre-gl` versions,
+  is baked in at build time) together with `VITE_HONUA_BASEMAP_STYLE` pointing at an empty, self-hosted style, so
+  the live lane's online basemap adds no third-party tiles under the oracle. The resolved `create-honua-app`, `@honua/sdk-js` and `maplibre-gl` versions,
   tarball URLs and integrity hashes are attached to the report as `published-packages.json`.
 - The map oracle projects each fixture polygon's interior point onto the map with the template's own initial view
   (read from the scaffolded source), then reads the rendered pixels: each polygon must differ from the basemap
