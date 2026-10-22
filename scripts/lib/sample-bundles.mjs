@@ -11,7 +11,9 @@
 // tarball asset (sample-bundles.tar.gz) containing `<id>/<file.path>` for
 // every listed file. Both assets are retained under
 // vendor/sdk-producer/<commit>/ after byte and digest verification against the
-// original producer release.
+// original producer release. An archive over GitHub's 100 MiB blob limit is
+// stored as ordered parts and concatenated back to that archive before the
+// digest and member checks.
 //
 // HONESTY RULES (see honua-io/honua-samples#11):
 //   - Every file extracted from the tarball is SHA-256-verified against the
@@ -60,6 +62,7 @@ import {
   assertLockedProducerUrl,
   isSdkProducerLockError,
   lockedAssetRequestHeaders,
+  readDeclaredAssetBytes,
   sdkProducerLockEnforced,
 } from "./sdk-producer-lock.mjs";
 
@@ -506,7 +509,17 @@ async function fetchBytes(url) {
 }
 
 async function readAcquisitionBytes(url) {
-  if (url.startsWith("file:")) return Buffer.from(await readFile(fileURLToPath(url)));
+  if (url.startsWith("file:")) {
+    const kind = url === SDK_PRODUCER_LOCK.urls.bundleArchive
+      ? "bundleArchive"
+      : url === SDK_PRODUCER_LOCK.urls.bundleManifest
+        ? "bundleManifest"
+        : null;
+    if (kind && SDK_PRODUCER_LOCK.assets[kind]?.parts?.length) {
+      return readDeclaredAssetBytes(kind, url);
+    }
+    return Buffer.from(await readFile(fileURLToPath(url)));
+  }
   const response = await fetch(url, { headers: lockedAssetRequestHeaders(url) });
   if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
   return Buffer.from(await response.arrayBuffer());

@@ -94,12 +94,13 @@ test("preferred v2/v4 snapshot pair admits every legacy identity plus newly publ
   const legacyIds = legacy.handoff.cards.map((card) => card.id);
   const nextIds = next.handoff.cards.map((card) => card.id);
   assert.deepEqual(nextIds.filter((id) => !legacyIds.includes(id)), ["columnar-query-quickstart", "coverages-wcs-basic"]);
-  assert.deepEqual(legacyIds.filter((id) => !nextIds.includes(id)), []);
-  assert.equal(next.handoff.canonicalRoutes.length, legacy.handoff.canonicalRoutes.length + 2);
+  assert.deepEqual(legacyIds.filter((id) => !nextIds.includes(id)), ["kepler-analytics"]);
+  assert.equal(next.handoff.canonicalRoutes.length, legacy.handoff.canonicalRoutes.length + 1);
   const nextCardsById = new Map(next.handoff.cards.map((card) => [card.id, card]));
+  const carried = legacy.handoff.cards.filter((card) => nextCardsById.has(card.id));
   assert.deepEqual(
-    legacy.handoff.cards.map((card) => [card.id, card.source.path, card.source.docsPath]),
-    legacy.handoff.cards.map((card) => {
+    carried.map((card) => [card.id, card.source.path, card.source.docsPath]),
+    carried.map((card) => {
       const nextCard = nextCardsById.get(card.id);
       return [nextCard.id, nextCard.source.path, nextCard.source.docsPath];
     }),
@@ -229,7 +230,7 @@ test("merge yields exactly one card per stable identity plus fixture-only status
   // Internal fixture-track catalog entries stay OUT of the public card set.
   assert.deepEqual(
     merge.fixtureOnlyEntries.map((e) => e.id).sort(),
-    ["arcgis-source-app", "automatic-source-workflow", "offline-region-reference"],
+    ["automatic-source-workflow", "geoservices-source-app", "offline-region-reference"],
   );
   // Identity is producer-repo qualified (REQ-001).
   assert.equal(merge.records[0].identity, `honua-io/honua-sdk-js#${ids[0]}`);

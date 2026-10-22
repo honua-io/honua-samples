@@ -42,6 +42,12 @@ on:
       - ".github/workflows/validate.yml"
       - "package.json"
       - "package-lock.json"
+  # honua-io/honua-samples#57: producer evidence expires on the clock, not on a
+  # commit. A daily run makes trunk red before the gallery admission refuses
+  # the pinned handoff, instead of waiting for a PR to touch these paths.
+  schedule:
+    - cron: "17 15 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -96,6 +102,25 @@ jobs:
 
       - name: Validate jobs/*.json
         run: npm run test:job-pages
+
+  producer-evidence-horizon:
+    name: producer evidence horizon
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Fail before the pinned producer's visual evidence expires
+        # Reads the committed handoff snapshot for the locked revision and
+        # fails when its earliest qualified-journey expiresAt is fewer than
+        # PRODUCER_EVIDENCE_HORIZON_DAYS away. The daily schedule above makes
+        # this a lead-time signal to re-pin scripts/lib/sdk-producer-lock.mjs.
+        env:
+          PRODUCER_EVIDENCE_HORIZON_DAYS: "3"
+        run: node scripts/check-producer-evidence-horizon.mjs
 
   consumer-admission-tests:
     name: consumer admission and coverage boundary tests
