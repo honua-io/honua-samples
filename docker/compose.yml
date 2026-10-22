@@ -18,7 +18,10 @@ services:
     volumes:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U honua_user -d honua_dev"]
+      # Probe over TCP. The image's init phase runs a temporary server on the
+      # Unix socket only, then restarts it; a socket probe reports healthy
+      # during that window and honua's one-shot migration hits the restart.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U honua_user -d honua_dev"]
       interval: 5s
       timeout: 5s
       retries: 10

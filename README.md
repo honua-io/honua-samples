@@ -418,6 +418,9 @@ access, and it reads the vendored sample-bundle archive for producer pin
 `ac22cb56fc927a65666c7cfebbb6b778d7afc7a1`. Qualified journey evidence on that
 handoff runs through 2026-10-28
 ([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)).
+`validate.yml` runs daily, and its `producer evidence horizon` job
+(`node scripts/check-producer-evidence-horizon.mjs`) fails when that window is
+less than three days away, so the pin is refreshed before admission refuses it.
 
 ```bash
 node scripts/build-gallery.mjs          # builds site/ (index + one page per sample/entry);
