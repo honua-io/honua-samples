@@ -2,7 +2,7 @@
 # and .github/workflows/run-samples.yml).
 #
 # 2026.1 default is the platform-manifest candidate
-# (components.honua-server image nightly-4709145, digest sha256:041ee4aa…),
+# (components.honua-server image nightly-199bce7, digest sha256:f2e54ed3…),
 # with licensing disabled. HONUA_SERVER_IMAGE may override the image. The
 # floating :trunk tag is not this release.
 services:
@@ -27,7 +27,7 @@ services:
       retries: 10
 
   honua:
-    image: "${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-4709145@sha256:041ee4aada686b1e85cfe0f9ff388e0fd66cec6ae3f6cdeec4c6dfe6199efcbf}"
+    image: "${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-199bce7@sha256:f2e54ed3db51dc057fbf01fa261a7d3c81520f1e04441b029f280a35e1853454}"
     ports:
       - "${HONUA_HTTP_PORT:-8080}:8080"
     environment:

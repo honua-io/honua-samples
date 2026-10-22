@@ -44,7 +44,7 @@ Manifests are validated against the canonical capability key list published
 with honua-server at `docs/gis/data/capability-keys.v1.json`
 ([honua-server#2893](https://github.com/honua-io/honua-server/issues/2893),
 closed 2026-07-17). CI fetches the copy at the 2026.1 server pin
-`4709145cb5a4b235dbe74764f9fa590cea52f384`.
+`199bce77fe990eb14855831790b07cfbc103d4ba`.
 
 `scripts/validate-manifests.mjs` reads the `KEY_LIST_URL` environment
 variable first; when it is set to an `http(s)` URL, that is fetched instead
@@ -179,7 +179,7 @@ Licensing is disabled. The admin password is passed to Compose and to the
 browser fixture harness:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-4709145@sha256:041ee4aada686b1e85cfe0f9ff388e0fd66cec6ae3f6cdeec4c6dfe6199efcbf
+export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-199bce7@sha256:f2e54ed3db51dc057fbf01fa261a7d3c81520f1e04441b029f280a35e1853454
 export HONUA_ADMIN_PASSWORD="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
 export HONUA_ADMIN_API_KEY="$HONUA_ADMIN_PASSWORD"
 docker compose -f docker/compose.yml up -d --wait

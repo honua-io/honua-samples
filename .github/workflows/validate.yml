@@ -76,7 +76,7 @@ jobs:
         # An http(s) value is fetched. An empty value falls back to
         # schemas/fixtures/capability-keys.fixture.json.
         env:
-          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/4709145cb5a4b235dbe74764f9fa590cea52f384/docs/gis/data/capability-keys.v1.json
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
         run: node scripts/validate-manifests.mjs
 
       # honua-io/honua-samples#65: templates/gp-python and templates/gp-dotnet are
@@ -160,7 +160,7 @@ jobs:
         # handoff pair is tampered, stale, schema-incompatible, or locally
         # reconstructed (admission failures are fatal in every mode).
         env:
-          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/4709145cb5a4b235dbe74764f9fa590cea52f384/docs/gis/data/capability-keys.v1.json
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
         run: node scripts/build-gallery.mjs --check
 
   exact-head-browser:
@@ -191,7 +191,7 @@ jobs:
 
       - name: Build the exact-head gallery
         env:
-          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/4709145cb5a4b235dbe74764f9fa590cea52f384/docs/gis/data/capability-keys.v1.json
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
         run: GITHUB_SHA="$EXPECTED_SOURCE_COMMIT" node scripts/build-gallery.mjs --check
 
       - name: Run every admitted SDK app
