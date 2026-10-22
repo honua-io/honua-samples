@@ -14,11 +14,10 @@
 //     docs/browser-verification/) against the composed server. They get one
 //     attempt -- a failed spec is never retried to green -- and each also
 //     gets its own run-results.v1 envelope under results/browser-verification/.
-//   - `--edition <community|pro|enterprise>` (default "community") gates
-//     which samples actually execute: a sample whose manifest `edition`
-//     exceeds this is recorded with outcome "skipped", never run. Pair with
-//     `docker compose -f docker/compose.yml -f docker/compose.pro.yml` (see
-//     that file) to actually grant a higher edition to the composed server.
+//   - `--edition <community|pro|enterprise>` (default "community") only chooses
+//     which samples execute: a sample whose manifest `edition` exceeds this
+//     is recorded with outcome "skipped", never run. It does not grant a
+//     server edition. 2026.1 compose sets Licensing__Mode=Disabled.
 //   - Every non-browser sample gets up to HONUA_SAMPLE_MAX_ATTEMPTS attempts
 //     (default 2, i.e. one retry) on failure; every attempt is recorded in the result's
 //     `attempts[]`, and a pass that only happened after a retry is flagged

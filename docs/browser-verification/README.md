@@ -57,8 +57,10 @@ example after a failed `beforeAll`) or a browser sample with no `verify/` spec i
 npm ci
 npx playwright install chromium
 
-# Compose the server; pin the image to the release candidate digest you want to prove.
-HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server@sha256:<digest> docker compose -f docker/compose.yml up -d
+# Compose the 2026.1 candidate. docker/compose.yml defaults to this image
+# and sets Licensing__Mode=Disabled.
+export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-0e03bdd@sha256:dcf3296f17a456a876c23133fae50b5b32628d4ec710e8bdab58f57d2394d750
+docker compose -f docker/compose.yml up -d --wait
 
 export HONUA_BASE_URL=http://localhost:8080
 export HONUA_ADMIN_API_KEY=quickstart-admin-password

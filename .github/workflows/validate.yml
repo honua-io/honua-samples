@@ -71,14 +71,12 @@ jobs:
           node-version: "22"
 
       - name: Validate samples/*/sample.json
-        # KEY_LIST_URL is the one-line swap point for the canonical capability
-        # key list published by honua-io/honua-server#2893. Until that lands,
-        # leaving it unset falls back to the pinned fixture at
-        # schemas/fixtures/capability-keys.fixture.json (see the loud comment
-        # in that file). Once the artifact exists, set this as a repo/org
-        # variable -- no workflow or script edits needed beyond this one line.
+        # KEY_LIST_URL is the published capability list at the 2026.1 server
+        # pin (honua-server docs/gis/data/capability-keys.v1.json, #2893).
+        # An http(s) value is fetched. An empty value falls back to
+        # schemas/fixtures/capability-keys.fixture.json.
         env:
-          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/0e03bdd06b3ca3fb1b82388110bb5dfa19b9f8fa/docs/gis/data/capability-keys.v1.json
         run: node scripts/validate-manifests.mjs
 
       # honua-io/honua-samples#65: templates/gp-python and templates/gp-dotnet are
@@ -162,7 +160,7 @@ jobs:
         # handoff pair is tampered, stale, schema-incompatible, or locally
         # reconstructed (admission failures are fatal in every mode).
         env:
-          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/0e03bdd06b3ca3fb1b82388110bb5dfa19b9f8fa/docs/gis/data/capability-keys.v1.json
         run: node scripts/build-gallery.mjs --check
 
   exact-head-browser:
@@ -193,7 +191,7 @@ jobs:
 
       - name: Build the exact-head gallery
         env:
-          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/0e03bdd06b3ca3fb1b82388110bb5dfa19b9f8fa/docs/gis/data/capability-keys.v1.json
         run: GITHUB_SHA="$EXPECTED_SOURCE_COMMIT" node scripts/build-gallery.mjs --check
 
       - name: Run every admitted SDK app

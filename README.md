@@ -16,8 +16,8 @@ samples/<sample-id>/
 Rules:
 
 - **Manifests are validated in CI** against the canonical capability key list published by honua-server — unknown keys fail the build.
-- **Every sample runs headless in CI** against a composed Honua server (Community edition unless the manifest requires higher); run results are published as evidence.
-- **SDKs are consumed as published packages only** (npm/NuGet/PyPI) — no source copies, no sibling project references.
+- **Every sample runs headless in CI** against the composed 2026.1 candidate with licensing disabled. Run results are published as evidence.
+- **Published packages only** (npm/NuGet/PyPI) — no source copies, no sibling project references. Getting-started blocks do not use a shell HTTP client or a dev-edition grant. Protocol samples may still call the public HTTP API; that is wire evidence, not the install path.
 - Samples that demonstrate Esri-client compatibility point at the same endpoints ArcGIS clients use, unchanged.
 - **Capabilities are never padded with zero-sample entries** in the coverage snapshot (below) — a capability with no covering sample is simply absent, so the honua-evidence matrix renders that honestly as a gap.
 
@@ -34,26 +34,25 @@ Every `samples/<sample-id>/sample.json` is validated against
 | `capabilities` | string[] | Dot-namespaced keys (e.g. `serve.feature-service`), min 1. Every key must exist in the canonical capability key list (see below). |
 | `sdks` | string[] | `js` \| `python` \| `dotnet` \| `rest`, min 1. |
 | `protocols` | string[] | Wire protocols exercised, min 1. |
-| `edition` | string | `community` \| `pro` \| `enterprise`; defaults to `community`. Gates execution -- see [Pro-licensed compose profile](#pro-licensed-compose-profile). |
+| `edition` | string | `community` \| `pro` \| `enterprise`; defaults to `community`. The runner may skip a higher edition. 2026.1 does not grant an edition — see [Licensing](#licensing). |
 | `entrypoint` | object | `{ "type": "node" \| "python" \| "dotnet" \| "script" \| "browser", "command": "..." }` -- how the headless runner executes the sample. For `browser`, `command` is the HTML file (relative to the sample dir) to serve and open, not a shell command -- see [Browser lane](#browser-lane). |
 | `status` | string | `active` (executed by the runner) or `draft` (validated only). |
 
 ### Capability key list
 
-Manifests are validated against a canonical capability key list. The real
-list is published by [honua-server#2893](https://github.com/honua-io/honua-server/issues/2893)
-(`capability-keys.v1.json`) and is not published yet as of this writing, so
-CI validates against a pinned fixture instead:
-[`schemas/fixtures/capability-keys.fixture.json`](schemas/fixtures/capability-keys.fixture.json)
-(~15 plausible keys, loudly commented as a placeholder).
+Manifests are validated against the canonical capability key list published
+with honua-server at `docs/gis/data/capability-keys.v1.json`
+([honua-server#2893](https://github.com/honua-io/honua-server/issues/2893),
+closed 2026-07-17). CI fetches the copy at the 2026.1 server pin
+`0e03bdd06b3ca3fb1b82388110bb5dfa19b9f8fa`.
 
 `scripts/validate-manifests.mjs` reads the `KEY_LIST_URL` environment
 variable first; when it is set to an `http(s)` URL, that is fetched instead
-of the fixture. This is a one-line swap in
-[`.github/workflows/validate.yml`](.github/workflows/validate.yml) (set the
-`KEY_LIST_URL` repo/org variable) once the real artifact is published -- no
-script changes required. The same loader (`scripts/lib/capability-keys.mjs`)
-backs `scripts/generate-samples-coverage.mjs` below.
+of the offline fixture
+[`schemas/fixtures/capability-keys.fixture.json`](schemas/fixtures/capability-keys.fixture.json).
+The workflows set `KEY_LIST_URL` to the pinned server file. The same loader
+(`scripts/lib/capability-keys.mjs`) backs `scripts/generate-samples-coverage.mjs`
+below.
 
 ## Samples coverage snapshot
 
@@ -175,23 +174,28 @@ npm ci
 npx playwright install --with-deps chromium
 ```
 
-Then start the 2026.1 release server, run every sample, and stop the stack:
+Then start the 2026.1 candidate, run every sample, and stop the stack.
+Licensing is disabled. The admin password is passed to Compose and to the
+browser fixture harness:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-87966c3@sha256:069f196bfa5c7201223d4d89868934242c4ace8805a6e48c122a88d84fa6eb1a
+export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-0e03bdd@sha256:dcf3296f17a456a876c23133fae50b5b32628d4ec710e8bdab58f57d2394d750
+export HONUA_ADMIN_PASSWORD="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
+export HONUA_ADMIN_API_KEY="$HONUA_ADMIN_PASSWORD"
 docker compose -f docker/compose.yml up -d --wait
 node scripts/run-samples.mjs
 docker compose -f docker/compose.yml down -v
 ```
 
-`docker/compose.yml` pulls the published `ghcr.io/honua-io/honua-server`
-image. Without `HONUA_SERVER_IMAGE` it uses the trunk-tracking `:trunk` tag,
-which is not the release; the value above is the image digest the 2026.1
-release pins. PostGIS auto-starts via `docker/init-db.sql` (a vendored
+`docker/compose.yml` defaults to that same candidate image and sets
+`Licensing__Mode=Disabled`. `HONUA_SERVER_IMAGE` overrides the image. The
+floating `:trunk` tag is not the 2026.1 candidate. `HONUA_ADMIN_API_KEY`
+must match the composed server's admin password; browser specs use it when
+they create fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
 copy of honua-server's own init script); the server's readiness probe is
 `GET /healthz/ready`, which `--wait` and the runner both wait for.
 
-Env vars (all optional): `HONUA_BASE_URL` (default `http://localhost:8080`),
+Additional optional environment variables: `HONUA_BASE_URL` (default `http://localhost:8080`),
 `HONUA_READY_TIMEOUT_MS` (default `120000`), `HONUA_SAMPLE_MAX_ATTEMPTS`
 (default `2`, see [Retry and flaky samples](#retry-and-flaky-samples)),
 `HONUA_PUBLIC_BASE_URL` (default `https://demo.honua.io`) and `HONUA_BROWSER_STATIC_PORT` (see
@@ -231,54 +235,16 @@ harness, the fixture and the evidence files.
 Run it exactly like any other sample -- `node scripts/run-samples.mjs`
 detects the `browser` entrypoint type automatically.
 
-### Pro-licensed compose profile
+### Licensing
 
-Some samples require more than Community edition (`edition: "pro"` or
-`"enterprise"` in the manifest). `docker/compose.pro.yml` is an overlay that
-grants a higher edition to the composed server:
-
-```bash
-docker compose -f docker/compose.yml -f docker/compose.pro.yml up -d --wait
-```
-
-honua-server has no published, purchasable license mechanism for this repo
-yet, so the overlay uses its documented dev/test bypass instead --
-`Licensing__DevGrantEdition` (backed by `DevLicenseEntitlementService` in
-honua-server), which fails closed outside `Development`/`Staging`
-environments. Verify it took effect with the `honua` CLI from the published
-`@honua/sdk-js` package. The admin key is the stack's `HONUA_ADMIN_PASSWORD`,
-which `docker/compose.yml` defaults to `quickstart-admin-password`. (Console
-shows the same value under **Operate → License**.)
-
-```bash
-HONUA_ADMIN_KEY="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}" \
-  npx -y -p @honua/sdk-js@0.1.12 honua admin operate getPlatformLicenseStatus \
-  --base-url http://localhost:8080 | grep '"edition"'
-```
-
-It prints:
-
-<!-- doc-run: output -->
-```text
-    "edition": "Pro",
-```
-
-Then run the samples as Pro and stop the stack:
-
-```bash
-node scripts/run-samples.mjs --edition pro
-docker compose -f docker/compose.yml -f docker/compose.pro.yml down -v
-```
+2026.1 ships with licensing disabled. `docker/compose.yml` sets
+`Licensing__Mode=Disabled`. There is no license file, no edition step, and no
+`Licensing__DevGrantEdition` grant. Do not point this stack at `:trunk`.
 
 `scripts/run-samples.mjs --edition <community|pro|enterprise>` (default
-`community`) is the other half: a sample whose manifest `edition` exceeds the
-runner's `--edition` is recorded in the result envelope with
-`"outcome": "skipped"` and a reason -- it's never executed, and never causes
-the run to fail. In CI (`.github/workflows/run-samples.yml`), this is gated
-on an optional `HONUA_LICENSE_DEV_GRANT_EDITION` repo secret: unset, every run
-composes plain `docker/compose.yml` and runs `--edition community` (pro
-samples show up "skipped", not failed, not silently dropped); set, CI adds
-`docker/compose.pro.yml` and runs `--edition pro`.
+`community`) only chooses which samples to execute. A sample whose manifest
+`edition` is higher is recorded with `"outcome": "skipped"` and does not fail
+the run. That flag is not a server license. CI does not install a dev grant.
 
 ### Retry and flaky samples
 
@@ -447,13 +413,15 @@ migration footprint scanner, lands here pre-filtered to the matching samples.
 
 ### Validate it locally
 
-The build fetches honua-sdk-js's handoff, catalog and sample bundles, so it
-needs internet access. It currently refuses the pinned producer's handoff
-because that handoff's visual evidence expired on 2026-09-07, and it exits
-non-zero until the producer is re-pinned
+The build fetches honua-sdk-js's handoff and catalog, so it needs internet
+access, and it reads the vendored sample-bundle archive for producer pin
+`ac22cb56fc927a65666c7cfebbb6b778d7afc7a1`. Qualified journey evidence on that
+handoff runs through 2026-10-28
 ([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)).
+`validate.yml` runs daily, and its `producer evidence horizon` job
+(`node scripts/check-producer-evidence-horizon.mjs`) fails when that window is
+less than three days away, so the pin is refreshed before admission refuses it.
 
-<!-- doc-run: blocked https://github.com/honua-io/honua-samples/issues/57 -->
 ```bash
 node scripts/build-gallery.mjs          # builds site/ (index + one page per sample/entry);
                                          # also fetches + integrity-verifies + stages sdk-js
@@ -478,8 +446,9 @@ node scripts/lib/sample-bundles.mjs     # staging only, standalone (what pages.y
 Bootstrap. Coordination: [honua-server#2892](https://github.com/honua-io/honua-server/issues/2892).
 Manifest schema + validation CI: [#1](https://github.com/honua-io/honua-samples/issues/1).
 Headless runner: [#2](https://github.com/honua-io/honua-samples/issues/2) (browser lane,
-Pro-licensed compose profile, and retry/flaky handling all landed; still
-deferred: honua-evidence dispatch, see below).
+runner edition filter, and retry/flaky handling all landed; licensing stays
+disabled, see [Licensing](#licensing); still deferred: honua-evidence dispatch,
+see below).
 Samples coverage snapshot: [#5](https://github.com/honua-io/honua-samples/issues/5)
 (producer snapshot published; honua-evidence-side dispatch/pull integration
 deferred to [honua-evidence#3](https://github.com/honua-io/honua-evidence/issues/3)).

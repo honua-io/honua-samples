@@ -16,7 +16,7 @@
     "edition": {
       "type": "string",
       "enum": ["community", "pro", "enterprise"],
-      "description": "Edition the runner was invoked with (scripts/run-samples.mjs --edition, default \"community\"). Samples whose manifest 'edition' exceeds this are recorded with outcome \"skipped\", never executed -- see docker/compose.pro.yml and the run-samples workflow's optional license secret."
+      "description": "Edition the runner was invoked with (scripts/run-samples.mjs --edition, default \"community\"). Samples whose manifest 'edition' exceeds this are recorded with outcome \"skipped\", never executed. The flag does not grant a server edition. 2026.1 compose sets Licensing__Mode=Disabled."
     },
     "results": {
       "type": "array",
@@ -29,7 +29,7 @@
           "outcome": {
             "type": "string",
             "enum": ["pass", "fail", "skipped"],
-            "description": "\"skipped\" means the sample was never executed -- its manifest 'edition' exceeds the runner's --edition (see the top-level 'edition' field), e.g. a pro-gated sample run with no license secret configured."
+            "description": "\"skipped\" means the sample was never executed -- its manifest 'edition' exceeds the runner's --edition (see the top-level 'edition' field)."
           },
           "durationMs": { "type": "number" },
           "serverVersion": { "type": "string" },

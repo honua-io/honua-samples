@@ -11,8 +11,8 @@
 //
 // Capability key list resolution order:
 //   1. KEY_LIST_URL env var, if set to an http(s) URL -- fetched at run time.
-//      This is the one-line swap point for honua-io/honua-server#2893's
-//      published capability-keys.v1.json once it lands.
+//      Workflows set it to the published capability-keys.v1.json at the
+//      pinned honua-server revision (honua-io/honua-server#2893).
 //   2. schemas/fixtures/capability-keys.fixture.json -- the pinned fixture
 //      committed in this repo (see the loud comment in that file).
 

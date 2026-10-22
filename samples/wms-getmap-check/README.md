@@ -12,13 +12,13 @@ The runner is zero-dependency Node.js using the platform `fetch()` API.
 
 ## Run
 
-Start the repository compose stack on the 2026.1 release server image, then
-run the sample against it. The admin key is the stack's
-`HONUA_ADMIN_PASSWORD`, which `docker/compose.yml` defaults to
+Start the repository compose stack on the 2026.1 candidate. The stack
+defaults to that image and sets `Licensing__Mode=Disabled`. The admin key is
+the stack's `HONUA_ADMIN_PASSWORD`, which `docker/compose.yml` defaults to
 `quickstart-admin-password`:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-87966c3@sha256:069f196bfa5c7201223d4d89868934242c4ace8805a6e48c122a88d84fa6eb1a
+export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-0e03bdd@sha256:dcf3296f17a456a876c23133fae50b5b32628d4ec710e8bdab58f57d2394d750
 docker compose -f docker/compose.yml up -d --wait
 HONUA_BASE_URL=http://localhost:8080 \
 HONUA_ADMIN_API_KEY="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}" \
@@ -41,8 +41,8 @@ Environment variables (all optional):
 Exit code is `0` on success, `1` on any failure (with a message describing
 which step failed).
 
-Without `HONUA_SERVER_IMAGE`, `docker/compose.yml` uses the trunk-tracking
-`:trunk` tag, which is not the release.
+Without `HONUA_SERVER_IMAGE`, `docker/compose.yml` still uses the candidate
+image above. The floating `:trunk` tag is not the 2026.1 release.
 
 Stop the stack and remove its data when you are done:
 
