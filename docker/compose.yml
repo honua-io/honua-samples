@@ -2,7 +2,7 @@
 # and .github/workflows/run-samples.yml).
 #
 # 2026.1 default is the platform-manifest candidate
-# (components.honua-server image nightly-199bce7, digest sha256:f2e54ed3…),
+# (components.honua-server image nightly-8cb074f, digest sha256:2d7877c4…),
 # with licensing disabled. HONUA_SERVER_IMAGE may override the image. The
 # floating :trunk tag is not this release.
 services:
