@@ -179,11 +179,16 @@ Licensing is disabled. The admin password is passed to Compose and to the
 browser fixture harness:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-199bce7@sha256:f2e54ed3db51dc057fbf01fa261a7d3c81520f1e04441b029f280a35e1853454
+export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-8cb074f@sha256:2d7877c4d1cb3b30647fb225893d41b13728f0448997997cdf4bf40fe99be07d
 export HONUA_ADMIN_PASSWORD="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
 export HONUA_ADMIN_API_KEY="$HONUA_ADMIN_PASSWORD"
 docker compose -f docker/compose.yml up -d --wait
 node scripts/run-samples.mjs
+```
+
+Stop the stack and remove its local data after inspecting the results:
+
+```bash
 docker compose -f docker/compose.yml down -v
 ```
 
