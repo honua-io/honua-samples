@@ -43,8 +43,10 @@ Every `samples/<sample-id>/sample.json` is validated against
 Manifests are validated against the canonical capability key list published
 with honua-server at `docs/gis/data/capability-keys.v1.json`
 ([honua-server#2893](https://github.com/honua-io/honua-server/issues/2893),
-closed 2026-07-17). CI fetches the copy at the 2026.1 server pin
-`199bce77fe990eb14855831790b07cfbc103d4ba`.
+closed 2026-07-17). CI fetches the copy at the 2026.1 candidate server commit
+`8cb074f77d01c0a00617ebe426460aa24c7d890b` (honua-release `platform-manifest.yaml`
+`candidate.ref`, 2026.1-rc.2), the same commit as the `nightly-8cb074f` image
+`docker/compose.yml` runs.
 
 `scripts/validate-manifests.mjs` reads the `KEY_LIST_URL` environment
 variable first; when it is set to an `http(s)` URL, that is fetched instead
@@ -286,8 +288,8 @@ from **two inputs**:
 2. **honua-sdk-js's versioned site-consumer handoff** -- the AUTHORITATIVE
    SDK projection since
    [honua-io/honua-samples#16](https://github.com/honua-io/honua-samples/issues/16),
-   fetched live from
-   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/dist/honua-site-consumer-handoff.v2.json)
+   fetched at the locked producer revision from
+   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/a161ea0a12b9beb563b676547f348cb73c1ba605/samples/dist/honua-site-consumer-handoff.v2.json)
    together with its v4 consumer fixture, which content-binds the handoff by
    exact bytes + sha256. `scripts/lib/sdkjs-handoff.mjs` admits the pair
    through a fail-closed gate (schema/version compatibility, fixture digest
@@ -300,7 +302,7 @@ from **two inputs**:
    qualified-journey evidence, and explicit coverage gaps survive the merge
    as card/detail metadata, never as cloned cards. Nothing is vendored:
    every card links out to its GitHub source and docs in honua-sdk-js.
-   [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/d68f221a3ee49b86f06f0d587faf2c627263283d/samples/catalog.v2.json)
+   [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/a161ea0a12b9beb563b676547f348cb73c1ba605/samples/catalog.v2.json)
    is still consumed, but only to enrich each admitted card with its
    materialized canonical `capabilityKeys`
    ([honua-io/honua-sdk-js#635](https://github.com/honua-io/honua-sdk-js/issues/635));
@@ -345,23 +347,16 @@ evidence-freshness windows and goes stale if left unrefreshed).
 ### Embeds: the actual running sample on the detail page
 
 A detail page doesn't just describe an honua-sdk-js sample -- when a verified
-build exists, it runs it live in an iframe (honua-io/honua-samples#11),
-consuming honua-sdk-js's `sample-bundles-latest` GitHub Release
-([honua-io/honua-sdk-js#642](https://github.com/honua-io/honua-sdk-js/issues/642)/[#648](https://github.com/honua-io/honua-sdk-js/issues/648)):
-a `sample-bundles.v1.json` manifest (per-sample entrypoint, data mode,
-`builtFrom` commit/version, and per-file `{path, bytes, sha256, integrity}`)
-plus a `sample-bundles.tar.gz` of the built static files. This repo never
-builds sdk-js source itself -- only the already-built, already-CI-verified
-bundle is ever consumed.
-
-**Inputs.** `scripts/lib/sample-bundles.mjs` fetches both assets from the
-release (default: plain HTTPS `github.com/.../releases/download/...`, no
-`gh` CLI or auth needed for a public release; override with
-`SAMPLE_BUNDLES_MANIFEST_URL` / `SAMPLE_BUNDLES_TARBALL_URL`), extracts the
-tarball, and stages verified files under a gitignored scratch root
-(`.sample-bundles-staging/`) -- never inside `site/` directly, so
-`scripts/build-gallery.mjs`'s own `site/sdk/` cleanup can never race the
-staged files (they're copied in *after* that cleanup, per sample).
+build exists, it runs it live in an iframe (honua-io/honua-samples#11).
+The bundles come from `vendor/sdk-producer/<revision>/`: a
+`sample-bundles.v2.json` manifest and a content-addressed `sample-bundles.tar.gz`
+(stored as ordered parts under 50 MiB) packed from the exact honua-sdk-js
+revision that `scripts/lib/sdk-producer-lock.mjs` pins, with both digests
+recorded in the lock. `scripts/lib/sample-bundles.mjs` reassembles and
+digest-checks the archive, extracts it, and stages verified files under a
+gitignored scratch root (`.sample-bundles-staging/`), never inside `site/`
+directly, so `scripts/build-gallery.mjs`'s own `site/sdk/` cleanup can never
+race the staged files.
 
 **Integrity.** Every file the manifest declares is re-hashed (SHA-256) against
 the bytes actually extracted from the tarball before anything is staged. Any
@@ -381,17 +376,20 @@ panel with the run command and a link to CI run receipts, never a fake embed
 either. A future browser-buildable sample in this repo without a staged
 bundle of its own falls back to the same honest no-bundle panel.
 
-**Fallback.** Bundle *bytes* are never committed (each release build is many
-MB of JS/CSS/wasm, and honua-sdk-js's own CI already re-verifies them on every
-publish). If the live fetch fails for any reason -- network blip, rate limit,
-or the release not existing yet -- `scripts/lib/sample-bundles.mjs` falls back
-to the committed manifest-only snapshot,
-[`config/sample-bundles.snapshot.json`](config/sample-bundles.snapshot.json),
-and the deploy degrades honestly: every sdk-js card shows the no-bundle panel,
-and a visible warning appears in the page footer explaining why. Nothing ever
-serves a stale or unverified embed. `pages.yml` runs staging as its own step
-before the gallery build so an integrity failure is attributed clearly and
-fails the deploy, while a fetch failure alone never does.
+**Fallback.** With `SDK_PRODUCER_ENFORCE_LOCK=1` (pages.yml and the
+exact-head browser job in validate.yml), a missing or mismatched vendored asset
+fails the step. Without the lock, local builds that cannot read the bundles
+degrade to the committed manifest-only snapshot
+[`config/sample-bundles.snapshot.json`](config/sample-bundles.snapshot.json):
+every sdk-js card shows the no-bundle panel and the page footer says why.
+Nothing ever serves a stale or unverified embed.
+
+**Deploy-time overrides.** `pages.yml` also builds a few sdk-js examples from
+the same pinned checkout. `SAMPLE_BUNDLES_LOCAL_OVERRIDE_IDS` names the ones
+that replace a vendored bundle; today that is `maplibre-quickstart`, rebuilt
+against the public demo (`maui-parcels/FeatureServer/1`) when that endpoint
+answers at deploy time, and left as the vendored fixture build when it does
+not.
 
 ### The gallery index: categories, filters, and the `?caps=` contract
 
@@ -420,8 +418,8 @@ migration footprint scanner, lands here pre-filtered to the matching samples.
 
 The build fetches honua-sdk-js's handoff and catalog, so it needs internet
 access, and it reads the vendored sample-bundle archive for producer pin
-`ac22cb56fc927a65666c7cfebbb6b778d7afc7a1`. Qualified journey evidence on that
-handoff runs through 2026-10-28
+`a161ea0a12b9beb563b676547f348cb73c1ba605`. Qualified journey evidence on that
+handoff runs through 2026-10-29T21:58Z
 ([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)).
 `validate.yml` runs daily, and its `producer evidence horizon` job
 (`node scripts/check-producer-evidence-horizon.mjs`) fails when that window is
@@ -461,15 +459,7 @@ Gallery: [#3](https://github.com/honua-io/honua-samples/issues/3) (this PR; left
 open until samples.honua.io is deployed and verified live with both inputs
 rendering).
 Gallery embeds: [#11](https://github.com/honua-io/honua-samples/issues/11)
-(staging/integrity/embed pipeline implemented and verified end-to-end against
-a synthetic fixture release matching honua-sdk-js's manifest schema exactly --
-see that PR's description. Honest current state: honua-sdk-js's real
-`sample-bundles-latest` release does not exist yet, because its
-"Publish sample bundles release" job needs the "JS SDK" job, which has been
-failing on every honua-sdk-js trunk push since #648 merged (an unrelated
-evidence-neutral-checkout gate failure). Every gallery deploy therefore
-degrades honestly to "no runnable build published yet" for every sdk-js entry
-until that upstream job is fixed; nothing here is blocked on this repo).
+(vendored, content-addressed producer bundles; see [Embeds](#embeds-the-actual-running-sample-on-the-detail-page)).
 
 ## License
 

@@ -6,14 +6,13 @@ Status: **HOLD - validation and review only. Do not deploy.**
 > **The producer pin has moved on; this document is the record of the refresh performed against
 > d68f221a3e, not a description of what is vendored today.**
 >
-> The visual-evidence windows on the previous pin `8f9d6a4fcde9aa78582fb12395ea5b9ef6d9f964` lapsed
-> on 2026-09-07, which turned gallery builds red (honua-io/honua-samples#57). The live pin in
-> `scripts/lib/sdk-producer-lock.mjs` is now `ac22cb56fc927a65666c7cfebbb6b778d7afc7a1`, and the
-> vendored bundle manifest (67,115 bytes, SHA-256
-> `58af9d4d099349f07f96df3b37d2426967beab2946e33eed861dabd1cfea5b88`) and archive (137,727,264 bytes,
-> SHA-256 `5bf61dc6bc93bb95ce4e5d17e9760782fc887d3dc485e3724930d4c596e87e42`) are packed from that
-> checkout with `sourceDateEpoch` 1792575330. The archive is stored as parts under 50 MiB because
-> GitHub rejects a single blob over 100 MiB; readers concatenate those parts before the digest check.
+> The visual-evidence windows on earlier pins lapse on the clock (honua-io/honua-samples#57). The live pin in
+> `scripts/lib/sdk-producer-lock.mjs` is now `a161ea0a12b9beb563b676547f348cb73c1ba605` (qualified-journey evidence
+> through 2026-10-29T21:58Z), and the vendored bundle manifest (67,115 bytes, SHA-256
+> `6887164e9435f5756f5000eba60ec6e67e34c54a05081c82c1098d39aa61bdd2`) and archive (137,727,264 bytes, SHA-256
+> `23d048992262fdb89f35e6945fc140a4e3dc5ff271f78fbd799e6a0d8d1ec8bc`) are packed from that checkout with
+> `sourceDateEpoch` 1792803591 (the commit time). The archive is stored as parts under 50 MiB because GitHub rejects a
+> single blob over 100 MiB; readers concatenate those parts before the digest check.
 >
 > The exact inputs, digests, and capability scope recorded below are **left unmodified on purpose**.
 > They are the evidence of an audit that was carried out against a specific commit; restating them

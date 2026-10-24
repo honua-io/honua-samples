@@ -136,8 +136,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "service-explorer",
-      "disposition": "internal-qualification",
-      "reason": "Capability exploration remains internal until a selected service renders a compelling map result first."
+      "disposition": "public",
+      "reason": "Public as the qualified Universal Service Explorer project: source, docs and journey evidence. Its bundle needs a live endpoint, so the gallery links the project instead of embedding it."
     },
     {
       "sourceRepo": "honua-sdk-js",
