@@ -162,7 +162,7 @@
         map.on("click", id, (event) => {
           const properties = event.features[0].properties;
           const rows = Object.entries(properties)
-            .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`)
+            .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
             .join("");
           new maplibregl.Popup({ maxWidth: "320px" })
             .setLngLat(event.lngLat)

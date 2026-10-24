@@ -49,7 +49,7 @@
     const collection = params.get("collection") ?? "maui-zoning";
     const field = params.get("field") ?? "zone_dist";
     // minLon,minLat,maxLon,maxLat (Kahului by default), or "none" for no bbox filter.
-    const bbox = params.get("bbox") ?? "-156.52,20.86,-156.44,20.91";
+    const bbox = params.get("bbox") ?? "-156.50,20.87,-156.45,20.90";
     const limit = params.get("limit") ?? "1000";
     const maxClasses = 8;
     const palette = ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02", "#a6761d", "#1f78b4"];
@@ -179,7 +179,7 @@
         const properties = event.features[0].properties;
         const rows = Object.entries(properties)
           .filter(([key]) => key !== "category_class")
-          .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`)
+          .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
           .join("");
         new maplibregl.Popup({ maxWidth: "320px" })
           .setLngLat(event.lngLat)

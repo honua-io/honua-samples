@@ -47,7 +47,7 @@ basemap tiles; the server's own Protomaps archive is used only if it answers.
 | `baseUrl` | `https://demo.honua.io` | Honua server. |
 | `collection` | `maui-zoning` | Collection id. |
 | `field` | `zone_dist` | Category field; a dotted path reads a nested value. |
-| `bbox` | `-156.52,20.86,-156.44,20.91` | `minLon,minLat,maxLon,maxLat`, or `none`. |
+| `bbox` | `-156.50,20.87,-156.45,20.90` | `minLon,minLat,maxLon,maxLat`, or `none`. |
 | `limit` | `1000` | Items per request. |
 | `basemap` | (probe) | `none` skips the PMTiles basemap probe. |
 

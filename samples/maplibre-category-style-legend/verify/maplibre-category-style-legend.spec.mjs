@@ -93,6 +93,8 @@ test("styles its default public-live collection", async ({ page }, testInfo) => 
   await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass", { timeout: 30_000 });
   expect(Number(await page.locator("body").getAttribute("data-rendered-features"))).toBeGreaterThan(0);
   expect(await page.locator("#legend li").count()).toBeGreaterThan(1);
-  expect(Number(await page.locator("body").getAttribute("data-sample-elapsed-ms"))).toBeLessThan(LIVE_BUDGET_MS);
+  const elapsed = Number(await page.locator("body").getAttribute("data-sample-elapsed-ms"));
+  testInfo.annotations.push({ type: "live-elapsed-ms", description: String(elapsed) });
+  expect(elapsed).toBeLessThan(LIVE_BUDGET_MS);
   await page.screenshot({ path: testInfo.outputPath("maplibre-category-style-legend-live.png") });
 });
