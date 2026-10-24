@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>esri-leaflet FeatureLayer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/esri-leaflet@3.0.19/dist/esri-leaflet.js"
+    integrity="sha384-2EpnechKmjshAhcJgZr0/dexkJdbcRJm+qsQtCjFsfBP/u5HZmrSa9lpmD7u2t5T" crossorigin="anonymous"></script>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: grid; grid-template-rows: auto minmax(320px, 1fr) auto; font: 15px/1.45 system-ui, sans-serif; color: #17221c; background: #f4f1e8; }
+    header { padding: 0.75rem 1rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.15rem; }
+    #status { margin: 0; }
+    #map { min-height: 320px; background: #eef2ee; }
+    pre { margin: 0; padding: 0.5rem 1rem; max-height: 7rem; overflow: auto; font-size: 12px; background: #fffdf6; border-top: 1px solid #b9b5a8; }
+    [data-state="pass"] { color: #17633a; }
+    [data-state="fail"] { color: #a12b1f; }
+    .leaflet-popup-content table { border-collapse: collapse; font-size: 12px; }
+    .leaflet-popup-content td { padding: 1px 6px 1px 0; vertical-align: top; }
+  </style>
+</head>
+<body data-sample-status="loading">
+  <header>
+    <h1>Stock esri-leaflet FeatureLayer on a Honua FeatureServer</h1>
+    <p id="status">Loading the layer...</p>
+  </header>
+  <div id="map" role="region" aria-label="Map"></div>
+  <pre id="requests" aria-label="Requests this page made"></pre>
+  <script>
+    // Plain Leaflet 1.9.4 + esri-leaflet 3.0.19, unchanged: the same code works
+    // against an ArcGIS Server FeatureServer layer.
+    const params = new URLSearchParams(location.search);
+    const url = params.get("url") ?? "https://demo.honua.io/rest/services/maui-inspections/FeatureServer/12";
+    const where = params.get("where") ?? "status <> 'ok'";
+    const status = document.querySelector("#status");
+    const requests = document.querySelector("#requests");
+
+    function logRequest(requestUrl, requestParams) {
+      const query = Object.entries(requestParams ?? {})
+        .map(([key, value]) => `${key}=${encodeURIComponent(typeof value === "object" ? JSON.stringify(value) : value)}`)
+        .join("&");
+      requests.textContent += `GET ${requestUrl}${query ? `?${query}` : ""}\n`;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    }
+
+    function fail(message) {
+      status.textContent = `FAIL: ${message}`;
+      status.dataset.state = "fail";
+      document.body.dataset.sampleStatus = "fail";
+      document.body.dataset.sampleError = message;
+    }
+
+    // No basemap tiles: the layer draws over a plain background.
+    const map = L.map("map", { attributionControl: true }).setView([20.8, -156.33], 9);
+    map.attributionControl.addAttribution("Data: Honua demo (Maui)");
+    window.sampleMap = map;
+
+    const colours = { urgent: "#c0392b", needs_attention: "#e67e22", ok: "#2f7d5b" };
+    const layer = L.esri.featureLayer({
+      url,
+      where,
+      // Circle markers (SVG paths) instead of the default image markers.
+      pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 7 }),
+      style: (feature) =>
+        feature.geometry.type === "Point"
+          ? { color: "#ffffff", weight: 1.5, fillColor: colours[feature.properties.status] ?? "#2f7d5b", fillOpacity: 0.9 }
+          : { color: "#1d4f3a", weight: 1.5, fillColor: "#2f7d5b", fillOpacity: 0.35 },
+    });
+    layer.bindPopup((featureLayer) => {
+      const { properties, id } = featureLayer.feature;
+      const rows = Object.entries(properties)
+        .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`)
+        .join("");
+      return `<strong class="popup-title">${escapeHtml(properties.name ?? `Feature ${id}`)}</strong><table>${rows}</table>`;
+    });
+    layer.on("requeststart", (event) => logRequest(event.url, event.params));
+    layer.on("requesterror", (event) => fail(event.message));
+
+    // Zoom to the filtered features first (a returnExtentOnly query), then add the layer.
+    const extentQuery = L.esri.query({ url }).where(where);
+    extentQuery.bounds((error, bounds) => {
+      if (error) return fail(error.message);
+      if (!bounds?.isValid()) return fail("The filter matched no features.");
+      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+      layer.once("load", () => {
+        if (document.body.dataset.sampleStatus === "fail") return;
+        let count = 0;
+        layer.eachFeature(() => count++);
+        const drawn = document.querySelectorAll(".leaflet-overlay-pane path.leaflet-interactive").length;
+        if (count === 0 || drawn === 0) return fail("The layer loaded but drew no features.");
+        const elapsed = Math.round(performance.now()); // since navigation start
+        document.body.dataset.featureCount = String(count);
+        document.body.dataset.renderedFeatures = String(drawn);
+        document.body.dataset.sampleElapsedMs = String(elapsed);
+        status.textContent = `PASS: ${count} features where ${where}, ${drawn} drawn, ${elapsed} ms. Click one for its attributes.`;
+        status.dataset.state = "pass";
+        document.body.dataset.sampleStatus = "pass";
+      });
+      layer.addTo(map);
+    });
+    logRequest(`${url}/query`, extentQuery.params);
+  </script>
+</body>
+</html>

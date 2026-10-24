@@ -152,9 +152,13 @@ async function ensureConnection(env, name) {
  * service. Unique names keep every spec independent of run order and of
  * whatever an earlier run left on the server.
  *
- * @param {{ prefix: string, allowAnonymous: boolean }} opts
+ * FeatureServer is always enabled (the harness proves convergence through its
+ * query endpoint); `protocols` adds more service protocols by their server
+ * identifiers, e.g. "OgcFeatures" or "OGC-API-Tiles".
+ *
+ * @param {{ prefix: string, allowAnonymous: boolean, protocols?: string[] }} opts
  */
-export async function seedFeatureService({ prefix, allowAnonymous }) {
+export async function seedFeatureService({ prefix, allowAnonymous, protocols = [] }) {
   const env = serverEnv();
   const fixture = await loadFixture();
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -185,7 +189,9 @@ export async function seedFeatureService({ prefix, allowAnonymous }) {
   }
   const layerId = published.data.layerId;
 
-  await adminFetch(env, "PUT", `/api/v1/admin/services/${serviceName}/protocols`, { enabledProtocols: ["FeatureServer"] });
+  await adminFetch(env, "PUT", `/api/v1/admin/services/${serviceName}/protocols`, {
+    enabledProtocols: ["FeatureServer", ...protocols.filter((protocol) => protocol !== "FeatureServer")],
+  });
   if (allowAnonymous) {
     await adminFetch(env, "PUT", `/api/v1/admin/services/${serviceName}/access-policy`, { allowAnonymous: true });
   }

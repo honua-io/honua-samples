@@ -1,0 +1,33 @@
+{
+  "id": "maplibre-ogc-tiles-mvt",
+  "title": "OGC API Tiles vector tiles in MapLibre GL JS",
+  "description": "One HTML file reads a collection's OGC API Tiles tileset metadata and draws its Mapbox Vector Tiles in MapLibre GL JS, extruded by building height.",
+  "contentKind": "example",
+  "learning": {
+    "goal": "build-map",
+    "level": "intermediate",
+    "estimatedMinutes": 10,
+    "prerequisites": [
+      "Modern web browser",
+      "Internet access",
+      "Any static file server (for example `npx serve src`)"
+    ]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
+  "capabilities": [
+    "serve.ogc-api-tiles"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "ogc-api-tiles"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "browser",
+    "command": "src/index.html"
+  },
+  "status": "active"
+}

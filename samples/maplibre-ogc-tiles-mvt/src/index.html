@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OGC API Tiles in MapLibre</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css"
+    integrity="sha384-Q5Blg3vUVAlUKqIPJYz7wGnz40Vwrx4pVuFVicI73+8c/26Zr5hhckfuIiIUflLE" crossorigin="anonymous" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs" crossorigin="anonymous" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl-shared.mjs" crossorigin="anonymous" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: grid; grid-template-rows: auto minmax(320px, 1fr) auto; font: 15px/1.45 system-ui, sans-serif; color: #17221c; background: #f4f1e8; }
+    header { padding: 0.75rem 1rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.15rem; }
+    #status { margin: 0; }
+    #map { min-height: 320px; }
+    pre { margin: 0; padding: 0.5rem 1rem; max-height: 7rem; overflow: auto; font-size: 12px; background: #fffdf6; border-top: 1px solid #b9b5a8; }
+    [data-state="pass"] { color: #17633a; }
+    [data-state="fail"] { color: #a12b1f; }
+    .maplibregl-popup-content table { border-collapse: collapse; font-size: 12px; }
+    .maplibregl-popup-content td { padding: 1px 6px 1px 0; vertical-align: top; }
+  </style>
+</head>
+<body data-sample-status="loading">
+  <header>
+    <h1>OGC API Tiles vector tiles as a MapLibre source</h1>
+    <p id="status">Reading the tileset metadata...</p>
+  </header>
+  <div id="map" role="region" aria-label="Map"></div>
+  <pre id="requests" aria-label="Requests this page made"></pre>
+  <script type="module">
+    // MapLibre GL JS 6 is published as ES modules; importing it dynamically lets
+    // the metadata request below start while the library downloads.
+    const maplibreReady = import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs");
+
+    const params = new URLSearchParams(location.search);
+    const baseUrl = (params.get("baseUrl") ?? "https://demo.honua.io").replace(/\/+$/, "");
+    const collection = params.get("collection") ?? "maui-buildings";
+    const sourceLayer = params.get("sourceLayer") ?? "layer";
+    // "lng,lat,zoom" or "extent" to fit the collection's spatial extent.
+    const view = params.get("view") ?? "-156.4729,20.8893,15.5";
+    const extrude = params.get("extrude") !== "false";
+    const heightField = params.get("heightField") ?? "render_height";
+    const status = document.querySelector("#status");
+    const requests = document.querySelector("#requests");
+
+    function logRequest(url) {
+      requests.textContent += `GET ${url}\n`;
+    }
+
+    async function getJson(url) {
+      logRequest(url);
+      const response = await fetch(url);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body.error) throw new Error(body.error?.message ?? body.detail ?? body.title ?? `HTTP ${response.status}`);
+      return body;
+    }
+
+    // Optional basemap: the server's own Protomaps PMTiles archive, used only
+    // when it answers with a PMTiles header. Otherwise the plain background stays.
+    async function addBasemapIfAvailable(map, beforeId) {
+      if (params.get("basemap") === "none") return "off";
+      const url = `${baseUrl}/api/v1/tiles/pmtiles/maui-basemap`;
+      try {
+        logRequest(`${url} (Range: bytes=0-6, basemap probe)`);
+        const response = await fetch(url, { headers: { Range: "bytes=0-6" } });
+        const magic = new TextDecoder().decode(await response.arrayBuffer()).slice(0, 7);
+        if (!response.ok || magic !== "PMTiles") return `not available (HTTP ${response.status}), plain background`;
+        await new Promise((resolve, reject) => {
+          const script = Object.assign(document.createElement("script"), {
+            src: "https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js",
+            integrity: "sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn",
+            crossOrigin: "anonymous",
+            onload: resolve,
+            onerror: () => reject(new Error("pmtiles.js did not load")),
+          });
+          document.head.append(script);
+        });
+        maplibregl.addProtocol("pmtiles", new window.pmtiles.Protocol().tile);
+        map.addSource("basemap", { type: "vector", url: `pmtiles://${url}` });
+        map.addLayer({ id: "basemap-earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e7e3d6" } }, beforeId);
+        map.addLayer({ id: "basemap-water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#c9dbe3" } }, beforeId);
+        map.addLayer({ id: "basemap-roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#ffffff", "line-width": 1 } }, beforeId);
+        return "Protomaps PMTiles from the same server";
+      } catch (error) {
+        return `not available (${error.message}), plain background`;
+      }
+    }
+
+    const collectionPath = `${baseUrl}/ogc/tiles/collections/${encodeURIComponent(collection)}`;
+    const tilesetRequest = getJson(`${collectionPath}/tiles/WebMercatorQuad?f=json`);
+    const extentRequest = view === "extent"
+      ? getJson(`${baseUrl}/ogc/features/collections/${encodeURIComponent(collection)}?f=json`)
+      : Promise.resolve(null);
+    tilesetRequest.catch(() => {});
+    extentRequest.catch(() => {});
+
+    const maplibregl = await maplibreReady;
+    const tileUrls = new Set();
+    const [lng, lat, zoom] = view === "extent" ? [-156.33, 20.8, 8] : view.split(",").map(Number);
+    const map = new maplibregl.Map({
+      container: "map",
+      style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2ee" } }] },
+      center: [lng, lat],
+      zoom,
+      pitch: extrude ? 50 : 0,
+      attributionControl: { compact: true, customAttribution: "Data: Honua demo (Maui)" },
+      transformRequest: (url, resourceType) => {
+        if (resourceType === "Tile" && !url.startsWith("pmtiles://")) tileUrls.add(url);
+        return { url };
+      },
+    });
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    const mapLoaded = new Promise((resolve) => map.once("load", resolve));
+    window.sampleMap = map;
+
+    try {
+      const tileset = await tilesetRequest;
+      if (tileset.dataType && tileset.dataType !== "vector") throw new Error(`Tileset dataType is ${tileset.dataType}, not vector.`);
+      const item = tileset.links?.find((link) => link.rel === "item" && link.type === "application/vnd.mapbox-vector-tile");
+      if (!item) throw new Error("The tileset advertises no Mapbox Vector Tile link.");
+      // The advertised template uses OGC variable names; MapLibre wants {z}/{y}/{x}.
+      // Requests go to baseUrl even if the server advertised another host name.
+      const template = item.href
+        .replace(/^https?:\/\/[^/]+/, new URL(baseUrl).origin)
+        .replace("{tileMatrix}", "{z}").replace("{tileRow}", "{y}").replace("{tileCol}", "{x}");
+      const levels = (tileset.tileMatrixSetLimits ?? []).map((limit) => Number(limit.tileMatrix));
+      const minzoom = levels.length ? Math.min(...levels) : 0;
+      const maxzoom = levels.length ? Math.max(...levels) : 22;
+      requests.textContent += `TILES ${template} (zoom ${minzoom}-${maxzoom}, source-layer "${sourceLayer}")\n`;
+
+      await mapLoaded;
+      map.addSource("tiles", { type: "vector", tiles: [template], minzoom, maxzoom });
+      map.addLayer(
+        extrude
+          ? {
+              id: "tiles-layer", type: "fill-extrusion", source: "tiles", "source-layer": sourceLayer,
+              paint: {
+                "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["to-number", ["get", heightField]], 4], 0, "#8cc4a5", 30, "#1d4f3a"],
+                "fill-extrusion-height": ["coalesce", ["to-number", ["get", heightField]], 4],
+                "fill-extrusion-opacity": 0.85,
+              },
+            }
+          : { id: "tiles-layer", type: "fill", source: "tiles", "source-layer": sourceLayer, paint: { "fill-color": "#2f7d5b", "fill-outline-color": "#1d4f3a" } },
+      );
+      const basemap = addBasemapIfAvailable(map, "tiles-layer");
+
+      const extent = (await extentRequest)?.extent?.spatial?.bbox?.[0];
+      if (view === "extent") {
+        if (!extent) throw new Error("The collection advertises no spatial extent to fit.");
+        map.fitBounds([[extent[0], extent[1]], [extent[2], extent[3]]], { padding: 40, duration: 0, maxZoom: 16 });
+      }
+      const basemapNote = await basemap;
+      map.triggerRepaint();
+      await map.once("idle");
+
+      const rendered = map.queryRenderedFeatures({ layers: ["tiles-layer"] }).length;
+      if (rendered === 0) throw new Error("The tiles loaded but no feature rendered in the view.");
+      const elapsed = Math.round(performance.now()); // since navigation start
+      requests.textContent += [...tileUrls].map((url) => `GET ${url}\n`).join("");
+      document.body.dataset.renderedFeatures = String(rendered);
+      document.body.dataset.tileRequests = String(tileUrls.size);
+      document.body.dataset.sampleElapsedMs = String(elapsed);
+      status.textContent = `PASS: ${tileset.title ?? collection}: ${rendered} features rendered from ${tileUrls.size} vector tiles at zoom ${map.getZoom().toFixed(1)}, ${elapsed} ms. Basemap: ${basemapNote}.`;
+      status.dataset.state = "pass";
+      document.body.dataset.sampleStatus = "pass";
+    } catch (error) {
+      status.textContent = `FAIL: ${error.message}`;
+      status.dataset.state = "fail";
+      document.body.dataset.sampleStatus = "fail";
+      document.body.dataset.sampleError = error.message;
+    }
+  </script>
+</body>
+</html>
