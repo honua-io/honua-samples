@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sdkjs-catalog.mjs (via scripts/build-gallery.mjs) when the live fetch of samples/catalog.v2.json fails, so samples.honua.io deploys never break on an sdk-js-side hiccup. Rewritten automatically whenever the live fetch succeeds -- commit the change to keep the offline fallback current. See honua-io/honua-samples#3.",
-  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/a161ea0a12b9beb563b676547f348cb73c1ba605/samples/catalog.v2.json",
-  "fetchedAt": "2026-10-24T06:48:40.338Z",
+  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/6372de9874d5cdccdb2aa38f20913f5cf516ecf4/samples/catalog.v2.json",
+  "fetchedAt": "2026-10-24T17:14:24.812Z",
   "catalog": {
     "$schema": "./contract/v2/schemas/sample-catalog.schema.json",
     "format": "honua.sdk.sample-catalog.v2",
@@ -954,7 +954,7 @@
               "npm run evidence:cog:live"
             ],
             "evidencePath": "samples/evidence/imagery-cog-quickstart/live.v1.json",
-            "expiresAt": "2026-11-22T21:57:11.611Z"
+            "expiresAt": "2026-11-24T14:06:54.667Z"
           }
         },
         "expectedDegradation": "Credential-bearing URLs, CORS, missing or oversized range responses, unsupported CRS/format, and nodata return structured outcomes while published imagery remains usable. Public live proof covers classified COG inspection and a bounded decoded window in EPSG:32621; browser-side UTM reprojection and a georeferenced live MapLibre mount remain explicitly unclaimed.",
@@ -972,8 +972,8 @@
       },
       {
         "id": "maplibre-quickstart",
-        "title": "First Map: Maui census tracts in MapLibre",
-        "summary": "Starts with all 48 governed Maui County census tracts on an interactive map, then reveals the endpoint, accepted query plan, provenance, and protocol diagnostics behind it.",
+        "title": "First Map: a Maui County layer in MapLibre",
+        "summary": "Starts with a Maui County feature layer on an interactive map (the governed 2025 Census tract fixture, or the anonymous live Maui parcels layer when built against a live endpoint), then reveals the endpoint, accepted query plan, provenance, and protocol diagnostics behind it.",
         "sourceKind": "root-example",
         "track": "golden",
         "journeyId": "first-map",
@@ -1060,7 +1060,7 @@
               "npm run evidence:first-map:live"
             ],
             "evidencePath": "samples/evidence/maplibre-quickstart/live.v1.json",
-            "expiresAt": "2026-11-22T21:56:11.968Z"
+            "expiresAt": "2026-11-24T14:04:44.203Z"
           }
         },
         "expectedDegradation": "Capability misses, plan warnings, and bounded fallback are shown rather than silently returning an empty map.",
@@ -1182,7 +1182,7 @@
               "npm run evidence:migration-workbench:live"
             ],
             "evidencePath": "samples/evidence/migration-workbench/live.v1.json",
-            "expiresAt": "2026-11-22T21:57:27.036Z"
+            "expiresAt": "2026-11-24T14:07:20.788Z"
           }
         },
         "expectedDegradation": "Unsupported ArcGIS modules are reported as manual work, never silently removed.",
@@ -2119,7 +2119,10 @@
           "authMode": "anonymous",
           "config": [
             "HONUA_SERVICE_EXPLORER_LIVE_ENABLED",
-            "VITE_HONUA_BASEMAP_STYLE"
+            "VITE_HONUA_BASEMAP_STYLE",
+            "VITE_HONUA_SERVICE_EXPLORER_ENDPOINT",
+            "VITE_HONUA_SERVICE_EXPLORER_PROTOCOL",
+            "VITE_HONUA_SERVICE_EXPLORER_SOURCE"
           ],
           "provenance": "Same-origin deterministic GeoServices and OGC fixtures, or a reviewed credential-free dual-protocol public producer when explicitly enabled.",
           "attribution": "Inspected source attribution remains visible; fixtures are Honua synthetic data and the scheduled defaults credit Esri and pygeoapi.",
@@ -2133,6 +2136,21 @@
             },
             {
               "name": "VITE_HONUA_BASEMAP_STYLE",
+              "exposure": "browser-public",
+              "valueKind": "non-secret"
+            },
+            {
+              "name": "VITE_HONUA_SERVICE_EXPLORER_ENDPOINT",
+              "exposure": "browser-public",
+              "valueKind": "non-secret"
+            },
+            {
+              "name": "VITE_HONUA_SERVICE_EXPLORER_PROTOCOL",
+              "exposure": "browser-public",
+              "valueKind": "non-secret"
+            },
+            {
+              "name": "VITE_HONUA_SERVICE_EXPLORER_SOURCE",
               "exposure": "browser-public",
               "valueKind": "non-secret"
             }
@@ -2153,7 +2171,7 @@
               "npm run demo:service-explorer:live-evidence"
             ],
             "evidencePath": "samples/evidence/service-explorer/live.v1.json",
-            "expiresAt": "2026-11-22T21:58:08.705Z"
+            "expiresAt": "2026-11-24T14:08:36.738Z"
           }
         },
         "expectedDegradation": "Partial discovery and unsupported source actions remain visible with structured state, code, and reason; the sample does not synthesize success.",

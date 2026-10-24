@@ -289,7 +289,7 @@ from **two inputs**:
    SDK projection since
    [honua-io/honua-samples#16](https://github.com/honua-io/honua-samples/issues/16),
    fetched at the locked producer revision from
-   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/a161ea0a12b9beb563b676547f348cb73c1ba605/samples/dist/honua-site-consumer-handoff.v2.json)
+   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/6372de9874d5cdccdb2aa38f20913f5cf516ecf4/samples/dist/honua-site-consumer-handoff.v2.json)
    together with its v4 consumer fixture, which content-binds the handoff by
    exact bytes + sha256. `scripts/lib/sdkjs-handoff.mjs` admits the pair
    through a fail-closed gate (schema/version compatibility, fixture digest
@@ -302,7 +302,7 @@ from **two inputs**:
    qualified-journey evidence, and explicit coverage gaps survive the merge
    as card/detail metadata, never as cloned cards. Nothing is vendored:
    every card links out to its GitHub source and docs in honua-sdk-js.
-   [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/a161ea0a12b9beb563b676547f348cb73c1ba605/samples/catalog.v2.json)
+   [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/6372de9874d5cdccdb2aa38f20913f5cf516ecf4/samples/catalog.v2.json)
    is still consumed, but only to enrich each admitted card with its
    materialized canonical `capabilityKeys`
    ([honua-io/honua-sdk-js#635](https://github.com/honua-io/honua-sdk-js/issues/635));
@@ -418,8 +418,8 @@ migration footprint scanner, lands here pre-filtered to the matching samples.
 
 The build fetches honua-sdk-js's handoff and catalog, so it needs internet
 access, and it reads the vendored sample-bundle archive for producer pin
-`a161ea0a12b9beb563b676547f348cb73c1ba605`. Qualified journey evidence on that
-handoff runs through 2026-10-29T21:58Z
+`6372de9874d5cdccdb2aa38f20913f5cf516ecf4`. Qualified journey evidence on that
+handoff runs through 2026-10-31T14:09Z
 ([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)).
 `validate.yml` runs daily, and its `producer evidence horizon` job
 (`node scripts/check-producer-evidence-horizon.mjs`) fails when that window is
