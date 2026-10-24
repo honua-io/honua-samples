@@ -16,11 +16,11 @@ name: run-samples
 #     composed server: Chromium only, one attempt, retries 0 -- a failed spec
 #     fails the job. Per-sample run-results.v1 envelopes are uploaded always;
 #     traces and screenshots exist (and are uploaded) only when a spec failed.
-#   - a Pro-licensed compose profile (docker/compose.pro.yml) + the
-#     "Determine edition" step below, which only enables it when the
-#     optional HONUA_LICENSE_DEV_GRANT_EDITION secret is configured --
-#     absent, edition-gated samples are recorded "skipped" (never failed,
-#     never silently omitted; see scripts/run-samples.mjs --edition).
+#   - a runner edition filter. The optional HONUA_LICENSE_DEV_GRANT_EDITION
+#     secret only selects --edition pro and stacks docker/compose.pro.yml.
+#     That overlay repeats Licensing__Mode=Disabled; it does not grant an
+#     edition. Absent the secret, higher-edition samples are recorded
+#     "skipped" (never failed, never silently omitted).
 #   - per-sample retry with both attempts recorded in the result envelope
 #     (attempts[], flaky) -- see schemas/run-results.v1.schema.json.
 #
@@ -83,34 +83,28 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Determine edition
-        # Pro-edition samples are opt-in, gated on an optional repo secret --
-        # never on by default, and never a hard failure when absent (see
-        # scripts/run-samples.mjs's --edition gating, which records skipped
-        # samples in the envelope instead of omitting or failing them).
-        # HONUA_LICENSE_DEV_GRANT_EDITION is honua-server's dev/test license
-        # bypass value (see docker/compose.pro.yml) -- not real license
-        # material, just a feature flag until honua-server publishes a real
-        # signed-license mechanism for this repo's CI account.
+        # --edition only chooses which manifest editions the runner executes.
+        # The optional secret is that selector. It is not passed to Compose
+        # and it is not a server license. 2026.1 compose sets
+        # Licensing__Mode=Disabled; docker/compose.pro.yml repeats that.
         id: edition
         env:
-          HAS_LICENSE_SECRET: ${{ secrets.HONUA_LICENSE_DEV_GRANT_EDITION != '' }}
+          HAS_EDITION_SELECTOR: ${{ secrets.HONUA_LICENSE_DEV_GRANT_EDITION != '' }}
         run: |
-          if [ "$HAS_LICENSE_SECRET" = "true" ]; then
+          if [ "$HAS_EDITION_SELECTOR" = "true" ]; then
             echo "edition=pro" >> "$GITHUB_OUTPUT"
             echo "compose_files=-f docker/compose.yml -f docker/compose.pro.yml" >> "$GITHUB_OUTPUT"
-            echo "run-samples: HONUA_LICENSE_DEV_GRANT_EDITION secret is set -- composing with docker/compose.pro.yml, running as --edition pro"
+            echo "run-samples: edition selector is set -- stacking docker/compose.pro.yml (Licensing__Mode=Disabled) and running as --edition pro"
           else
             echo "edition=community" >> "$GITHUB_OUTPUT"
             echo "compose_files=-f docker/compose.yml" >> "$GITHUB_OUTPUT"
-            echo "run-samples: no HONUA_LICENSE_DEV_GRANT_EDITION secret configured -- running as --edition community; pro-gated samples will be recorded \"skipped\", not failed"
+            echo "run-samples: no edition selector configured -- running as --edition community; higher-edition samples will be recorded \"skipped\", not failed"
           fi
 
       - name: Compose up (postgres + honua-server)
-        # HONUA_SERVER_IMAGE lets this pin a different tag/digest without
-        # editing docker/compose.yml; defaults to the trunk-tracking GHCR
-        # image (no versioned release exists yet -- see docker/compose.yml).
-        env:
-          HONUA_LICENSE_DEV_GRANT_EDITION: ${{ secrets.HONUA_LICENSE_DEV_GRANT_EDITION }}
+        # Image and licensing come from docker/compose.yml: the 2026.1
+        # candidate digest and Licensing__Mode=Disabled. HONUA_SERVER_IMAGE
+        # may override the image. The floating :trunk tag is not this release.
         run: docker compose ${{ steps.edition.outputs.compose_files }} up -d
 
       - name: Run active samples
@@ -163,12 +157,12 @@ jobs:
         # snapshot should still reflect what did/didn't pass) and even if the
         # server never composed at all (results file absent -- the generator
         # tolerates that and emits coverage without lastRun info). Validates
-        # capability keys the same way scripts/validate-manifests.mjs does:
-        # KEY_LIST_URL when the honua-server#2893 artifact is set as a
-        # repo/org variable, falling back to the pinned fixture otherwise.
+        # capability keys the same way scripts/validate-manifests.mjs does.
+        # KEY_LIST_URL is the published list at the 2026.1 server pin.
+        # An empty value would fall back to the offline fixture.
         if: always()
         env:
-          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
         run: node scripts/generate-samples-coverage.mjs
 
       - name: Upload samples-coverage snapshot

@@ -138,17 +138,17 @@ jobs:
         run: node scripts/lib/sample-bundles.mjs
 
       - name: Build gallery
-        # KEY_LIST_URL is the same swap point validate.yml and run-samples.yml
-        # use (see scripts/lib/capability-keys.mjs); the sdk-js catalog fetch
-        # has its own committed fallback (config/sdkjs-catalog.snapshot.json,
-        # see scripts/lib/sdkjs-catalog.mjs) so this step never breaks a
-        # deploy on an upstream hiccup in either direction. Sample bundle
-        # staging already ran above -- this step's own call to
+        # KEY_LIST_URL is the published capability list at the 2026.1 server
+        # pin, the same URL validate.yml and run-samples.yml fetch (see
+        # scripts/lib/capability-keys.mjs). The sdk-js catalog fetch has its
+        # own committed fallback (config/sdkjs-catalog.snapshot.json, see
+        # scripts/lib/sdkjs-catalog.mjs). Sample bundle staging already ran
+        # above -- this step's own call to
         # ensureSampleBundlesStaged() finds that cached result and reuses it
         # (no second network fetch), then copies the verified files into
         # site/sdk/<id>/app/ and renders the embed/no-bundle/headless panels.
         env:
-          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
           MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/build-gallery.mjs
 

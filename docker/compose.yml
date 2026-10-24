@@ -1,14 +1,10 @@
 # Composed stack for the headless sample runner (see scripts/run-samples.mjs
 # and .github/workflows/run-samples.yml).
 #
-# Uses the published honua-server image from GHCR rather than building from
-# source -- honua-io/honua-server publishes multi-arch images at
-# ghcr.io/honua-io/honua-server (confirmed via `docker manifest inspect` /
-# `docker buildx imagetools inspect ghcr.io/honua-io/honua-server:trunk`,
-# 2026-07-16). There is no versioned release tag yet, only trunk/nightly
-# tracking tags -- HONUA_SERVER_IMAGE lets CI or a local dev pin a different
-# tag/digest without editing this file.
-# TODO(#2): swap to a versioned release tag once honua-server cuts one.
+# 2026.1 default is the platform-manifest candidate
+# (components.honua-server image nightly-8cb074f, digest sha256:2d7877c4…),
+# with licensing disabled. HONUA_SERVER_IMAGE may override the image. The
+# floating :trunk tag is not this release.
 services:
   postgres:
     image: pgrouting/pgrouting:17-3.5-3.7.3
@@ -22,17 +18,21 @@ services:
     volumes:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U honua_user -d honua_dev"]
+      # Probe over TCP. The image's init phase runs a temporary server on the
+      # Unix socket only, then restarts it; a socket probe reports healthy
+      # during that window and honua's one-shot migration hits the restart.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U honua_user -d honua_dev"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   honua:
-    image: "${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:trunk}"
+    image: "${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-8cb074f@sha256:2d7877c4d1cb3b30647fb225893d41b13728f0448997997cdf4bf40fe99be07d}"
     ports:
       - "${HONUA_HTTP_PORT:-8080}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Licensing__Mode: Disabled
       ConnectionStrings__DefaultConnection: "Host=postgres;Database=honua_dev;Username=honua_user;Password=honua_password"
       HONUA_ADMIN_PASSWORD: "${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
       Security__ConnectionEncryption__MasterKey: "${HONUA_CONNECTION_ENCRYPTION_MASTER_KEY:-honua-samples-ci-master-key-0123456789}"

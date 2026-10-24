@@ -42,6 +42,12 @@ on:
       - ".github/workflows/validate.yml"
       - "package.json"
       - "package-lock.json"
+  # honua-io/honua-samples#57: producer evidence expires on the clock, not on a
+  # commit. A daily run makes trunk red before the gallery admission refuses
+  # the pinned handoff, instead of waiting for a PR to touch these paths.
+  schedule:
+    - cron: "17 15 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -65,14 +71,12 @@ jobs:
           node-version: "22"
 
       - name: Validate samples/*/sample.json
-        # KEY_LIST_URL is the one-line swap point for the canonical capability
-        # key list published by honua-io/honua-server#2893. Until that lands,
-        # leaving it unset falls back to the pinned fixture at
-        # schemas/fixtures/capability-keys.fixture.json (see the loud comment
-        # in that file). Once the artifact exists, set this as a repo/org
-        # variable -- no workflow or script edits needed beyond this one line.
+        # KEY_LIST_URL is the published capability list at the 2026.1 server
+        # pin (honua-server docs/gis/data/capability-keys.v1.json, #2893).
+        # An http(s) value is fetched. An empty value falls back to
+        # schemas/fixtures/capability-keys.fixture.json.
         env:
-          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
         run: node scripts/validate-manifests.mjs
 
       # honua-io/honua-samples#65: templates/gp-python and templates/gp-dotnet are
@@ -96,6 +100,25 @@ jobs:
 
       - name: Validate jobs/*.json
         run: npm run test:job-pages
+
+  producer-evidence-horizon:
+    name: producer evidence horizon
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Fail before the pinned producer's visual evidence expires
+        # Reads the committed handoff snapshot for the locked revision and
+        # fails when its earliest qualified-journey expiresAt is fewer than
+        # PRODUCER_EVIDENCE_HORIZON_DAYS away. The daily schedule above makes
+        # this a lead-time signal to re-pin scripts/lib/sdk-producer-lock.mjs.
+        env:
+          PRODUCER_EVIDENCE_HORIZON_DAYS: "3"
+        run: node scripts/check-producer-evidence-horizon.mjs
 
   consumer-admission-tests:
     name: consumer admission and coverage boundary tests
@@ -137,7 +160,7 @@ jobs:
         # handoff pair is tampered, stale, schema-incompatible, or locally
         # reconstructed (admission failures are fatal in every mode).
         env:
-          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
         run: node scripts/build-gallery.mjs --check
 
   exact-head-browser:
@@ -168,7 +191,7 @@ jobs:
 
       - name: Build the exact-head gallery
         env:
-          KEY_LIST_URL: ${{ vars.KEY_LIST_URL }}
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
         run: GITHUB_SHA="$EXPECTED_SOURCE_COMMIT" node scripts/build-gallery.mjs --check
 
       - name: Run every admitted SDK app

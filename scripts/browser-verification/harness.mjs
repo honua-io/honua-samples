@@ -17,7 +17,7 @@
 // pixel), never a fixed sleep.
 
 import { spawn } from "node:child_process";
-import { readFile, rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -289,6 +289,8 @@ export async function startVitePreview({ appDir, outDir }) {
  * @param {{ sampleDir: string, templateId: string, builds: Record<string, string> }} opts
  *   builds: outDir suffix -> VITE_HONUA_ENDPOINT baked into that build.
  */
+const VERIFICATION_BASEMAP_FILE = "honua-verification-basemap.json";
+
 export async function prepareTemplateApp({ sampleDir, templateId, builds }) {
   const samplePackage = JSON.parse(await readFile(path.join(sampleDir, "package.json"), "utf8"));
   const pinned = samplePackage.devDependencies?.["create-honua-app"];
@@ -327,10 +329,21 @@ export async function prepareTemplateApp({ sampleDir, templateId, builds }) {
   const maplibre = registryReceipt(appLock, "maplibre-gl");
 
   await runCommand("npm", ["run", "typecheck"], { cwd: appDir, label: "npm run typecheck" });
+  // From create-honua-app 0.2, a live VITE_HONUA_ENDPOINT also mounts the online
+  // (third-party) basemap beneath the layer, so the pixel oracle's control pixel
+  // would read whatever tiles that service serves today (honua-samples#69). The
+  // template's documented VITE_HONUA_BASEMAP_STYLE override points the live lane at
+  // an empty, self-hosted MapLibre style instead: the basemap adds no layers and the
+  // template's own offline background stays the deterministic control colour.
+  await mkdir(path.join(appDir, "public"), { recursive: true });
+  await writeFile(
+    path.join(appDir, "public", VERIFICATION_BASEMAP_FILE),
+    `${JSON.stringify({ version: 8, name: "honua-samples verification basemap (empty)", sources: {}, layers: [] })}\n`,
+  );
   const outDirs = {};
   for (const [name, endpoint] of Object.entries(builds)) {
     const outDir = `dist-${name}`;
-    const env = { ...process.env, VITE_HONUA_ENDPOINT: endpoint };
+    const env = { ...process.env, VITE_HONUA_ENDPOINT: endpoint, VITE_HONUA_BASEMAP_STYLE: `./${VERIFICATION_BASEMAP_FILE}` };
     delete env.VITE_HONUA_PROTOCOL;
     await runCommand("npm", ["run", "build", "--", "--outDir", outDir, "--emptyOutDir"], {
       cwd: appDir,

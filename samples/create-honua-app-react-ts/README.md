@@ -7,7 +7,7 @@ FeatureServer layer on your Honua server.
 ## Run
 
 ```bash
-npm create honua-app@0.1.5 my-map -- --template react-ts
+npm create honua-app@0.2.3 my-map -- --template react-ts
 cd my-map
 npm install
 VITE_HONUA_ENDPOINT=http://localhost:8080/rest/services/<service>/FeatureServer/<layerId> npm run dev

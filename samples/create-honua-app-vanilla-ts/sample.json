@@ -8,7 +8,7 @@
     "level": "beginner",
     "estimatedMinutes": 10,
     "prerequisites": [
-      "Node.js 20.19 or later",
+      "Node.js 22.12 or later",
       "Modern web browser",
       "Local Honua Server"
     ]
