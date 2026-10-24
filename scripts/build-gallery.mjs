@@ -43,7 +43,9 @@
 // explicit "no runnable build published yet" panel, and this repo's own
 // headless/CLI samples get a labeled "headless sample" panel instead of an
 // embed. See scripts/lib/sample-bundles.mjs's header for the integrity and
-// degraded-fallback rules.
+// degraded-fallback rules. This repo's own browser samples (entrypoint.type
+// "browser") are embedded the same way from site/<id>/app/, staged from git
+// at the source commit with per-file sha256 by scripts/lib/own-sample-apps.mjs.
 //
 // Zero npm dependencies, matching the rest of this repo's scripts.
 //
@@ -78,11 +80,21 @@ import { bindSdkSourceToBundle, isFullGitSha, validateBoundSdkUrl } from "./lib/
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
+import {
+  dataOriginHost,
+  isOwnBrowserSample,
+  OWN_APP_MANIFEST_NAME,
+  stageOwnBrowserApp,
+} from "./lib/own-sample-apps.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const SAMPLES_DIR = path.join(REPO_ROOT, "samples");
 const SITE_DIR = path.join(REPO_ROOT, "site");
+// Scratch area for this repo's own browser sample apps (see
+// scripts/lib/own-sample-apps.mjs); copied into site/<id>/app/ after the
+// site/ cleanup below, like .sample-bundles-staging/ for sdk-js bundles.
+const OWN_APPS_STAGING_DIR = path.join(REPO_ROOT, ".own-sample-apps-staging");
 const ASSETS_SRC_DIR = path.join(__dirname, "gallery-assets");
 const RUN_RESULTS_PATH = path.resolve(REPO_ROOT, process.env.RUN_RESULTS_PATH ?? "results/run-results.v1.json");
 
@@ -218,6 +230,29 @@ async function main() {
   const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems, sourceCommit));
   const ownPortfolioResult = applyGalleryPublicPortfolio(ownCandidates, portfolio);
   const ownCards = ownPortfolioResult.publicCards;
+  // Every published own browser sample must stage as a runnable app. A
+  // failure keeps the honest no-bundle panel, and is a --check problem (and
+  // a smoke-published-gallery failure) rather than a silent downgrade.
+  await rm(OWN_APPS_STAGING_DIR, { recursive: true, force: true });
+  const ownSampleByDir = new Map(ownSamples.map((s) => [s.manifest.id ?? s.dirName, s]));
+  for (const card of ownCards) {
+    if (!isOwnBrowserSample(card)) continue;
+    const sample = ownSampleByDir.get(card.id);
+    const staged = await stageOwnBrowserApp({
+      repoRoot: REPO_ROOT,
+      dirName: sample.dirName,
+      manifest: sample.manifest,
+      sourceCommit,
+      destDir: path.join(OWN_APPS_STAGING_DIR, card.id),
+    });
+    if (staged.ok) {
+      card.ownApp = staged.app;
+      card.bundleRunnable = true;
+    } else {
+      card.ownAppFailure = staged.reason;
+      problems.push(`samples/${sample.dirName}: browser sample is published but could not be staged as a runnable app: ${staged.reason}`);
+    }
+  }
   const jobCards = jobPages.map((job) => toJobCard(job, keyByKey, problems, sourceCommit));
   const sdkCandidates = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
   // A staged, verified bundle that needs a live service endpoint (the
@@ -249,7 +284,8 @@ async function main() {
   // a visitor can actually run instead of "no runnable build" panels.
   const cards = [
     ...sdkCards.filter((c) => c.bundleRunnable),
-    ...ownCards,
+    ...ownCards.filter((c) => c.ownApp),
+    ...ownCards.filter((c) => !c.ownApp),
     ...jobCards,
     ...sdkCards.filter((c) => !c.bundleRunnable),
   ];
@@ -280,9 +316,15 @@ async function main() {
   assertNoDuplicateArticles(indexHtml);
   await writeFile(path.join(SITE_DIR, "index.html"), indexHtml, "utf8");
 
+  let ownEmbeddedCount = 0;
   for (const card of ownCards) {
     const dir = path.join(SITE_DIR, card.id);
     await mkdir(dir, { recursive: true });
+    if (card.ownApp) {
+      await cp(path.join(OWN_APPS_STAGING_DIR, card.id), path.join(dir, "app"), { recursive: true });
+      await writeFile(path.join(dir, OWN_APP_MANIFEST_NAME), `${JSON.stringify(card.ownApp, null, 2)}\n`, "utf8");
+      ownEmbeddedCount += 1;
+    }
     await writeFile(
       path.join(dir, "index.html"),
       renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice),
@@ -339,7 +381,7 @@ async function main() {
   const pageCount = 1 + ownCards.length + jobCards.length + sdkCards.length + merge.fixtureOnlyEntries.length;
   console.log(
     `build-gallery: wrote ${pageCount} page(s) to site/ -- ${ownCards.length} runnable/source samples and ${jobCards.length} canonical job page(s) from ${OWN_REPO}, ${sdkCards.length} from ${SDKJS_REPO}` +
-      ` (${embeddedCount} sdk-js sample(s) embedded with a verified running bundle` +
+      ` (${ownEmbeddedCount} own browser sample(s) and ${embeddedCount} sdk-js sample(s) embedded with a verified running build` +
       `${merge.fixtureOnlyEntries.length ? `, ${merge.fixtureOnlyEntries.length} internal-fixture status stub(s)` : ""})` +
       (problems.length ? ` (${problems.length} problem(s) warned, see above)` : ""),
   );
@@ -766,6 +808,24 @@ function renderEmbedPanel(card) {
 </div>`;
 }
 
+function renderOwnEmbedPanel(card) {
+  const app = card.ownApp;
+  const commit = app.builtFrom.commit;
+  const commitHtml = `<a href="https://github.com/${OWN_REPO}/commit/${commit}" target="_blank" rel="noopener noreferrer">${commit.slice(0, 12)}</a>`;
+  const modeLabel = DATA_MODE_LABELS[app.dataMode] ?? escapeHtml(app.dataMode ?? "unknown data mode");
+  const host = dataOriginHost(app);
+  const against = host && (app.dataMode === "public-live" || app.dataMode === "live") ? ` against ${escapeHtml(host)}` : "";
+  const appHref = app.entrypoint === "index.html" ? "app/" : `app/${app.entrypoint}`;
+  return `
+<div class="embed-panel" data-own-app="${escapeAttr(card.id)}">
+  <iframe src="${escapeAttr(appHref)}" title="${escapeAttr(card.title)} -- running sample" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+  <p class="embed-toolbar">
+    <a href="${escapeAttr(appHref)}" target="_blank" rel="noopener noreferrer">Open full screen ↗</a>
+    <span class="provenance">Built from honua-samples @${commitHtml}, ${modeLabel}${against} · <a href="${OWN_APP_MANIFEST_NAME}">staged file digests</a></span>
+  </p>
+</div>`;
+}
+
 function renderNoBundlePanel(reason, lead = "No runnable build published yet.") {
   return `<div class="no-bundle-panel"><p class="empty-state">${escapeHtml(lead)}${reason ? ` ${escapeHtml(reason)}` : ""}</p></div>`;
 }
@@ -927,7 +987,9 @@ function renderCategorySection(category) {
 function renderCard(card) {
   const dataCaps = escapeAttr(card.capabilities.join(","));
   const dataSdks = escapeAttr(card.sdks.join(","));
-  const runnable = card.kind === "sdk" && card.bundleRunnable && card.evidence?.fixture?.status === "executed";
+  const runnable =
+    (card.kind === "sdk" && card.bundleRunnable && card.evidence?.fixture?.status === "executed") ||
+    (card.kind === "own" && Boolean(card.ownApp));
   const extra =
     card.kind === "own"
       ? runBadgeHtml(card.runBadge)
@@ -985,22 +1047,31 @@ function renderContentKindSection(section) {
 // ---- rendering: own sample detail page ----------------------------------
 
 function renderOwnDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNotice) {
-  // No own-repo sample publishes a browser bundle today (this repo never
-  // builds from upstream source, and hello-featureserver-rest is headless);
-  // entrypoint.type "node" (or anything but "browser") always gets the
-  // headless panel. A future own-repo browser sample with no staged bundle
-  // gets the same honest no-bundle panel an unbundled sdk-js entry gets.
-  const runnablePanel =
-    card.entrypoint?.type === "browser"
-      ? renderNoBundlePanel("This repo does not yet publish a staged browser bundle for it.")
+  // A browser sample staged by scripts/lib/own-sample-apps.mjs runs in an
+  // iframe from site/<id>/app/, exactly like an sdk-js bundle embed. One that
+  // did not stage keeps the honest no-bundle panel with the reason; anything
+  // that is not a browser sample gets the headless panel.
+  const runnablePanel = card.ownApp
+    ? renderOwnEmbedPanel(card)
+    : card.entrypoint?.type === "browser"
+      ? renderNoBundlePanel(
+          card.ownAppFailure
+            ? `Its committed files could not be staged for this deploy: ${card.ownAppFailure}`
+            : "This repo does not yet publish a staged browser bundle for it.",
+        )
       : renderHeadlessPanel(card);
   const prerequisites = card.learning?.prerequisites?.length ? card.learning.prerequisites.join(", ") : "None";
   const sourceFirst = card.contentKind === "project";
+  // Runnable examples follow the sdk-js layout: a collapsed code-first
+  // preview of the exact staged file, then the running app in the first
+  // viewport.
   const learningContent = sourceFirst
     ? `${runnablePanel}${renderOwnNotes(card, true)}`
     : card.contentKind === "walkthrough"
       ? `${runnablePanel}${renderWalkthroughGuide(card)}${renderInlineCodePanel(card)}${renderOwnNotes(card, true)}`
-      : `${runnablePanel}${renderInlineCodePanel(card)}${renderOwnNotes(card, false)}`;
+      : card.ownApp
+        ? `${renderInlineCodePanel(card, { collapsed: true })}${runnablePanel}${renderOwnNotes(card, false)}`
+        : `${runnablePanel}${renderInlineCodePanel(card)}${renderOwnNotes(card, false)}`;
   const bodyHtml = `
 <a class="back-link" href="../">← All samples</a>
 ${renderContentKindLabel(card)}
@@ -1052,8 +1123,18 @@ function renderWalkthroughGuide(card) {
   return `<section class="walkthrough-guide" aria-labelledby="walkthrough-guide-${escapeAttr(card.id)}"><p class="eyebrow">Task walkthrough</p><h2 id="walkthrough-guide-${escapeAttr(card.id)}">Complete the workflow.</h2><ol>${guide.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol><p class="expected-outcome"><strong>Expected outcome</strong><span>${escapeHtml(guide.outcome)}</span></p></section>`;
 }
 
-function renderInlineCodePanel(card) {
+function renderInlineCodePanel(card, { collapsed = false } = {}) {
   if (!card.sourceText || !card.sourcePath) return `<div class="no-bundle-panel"><p>Primary source file is not available in this catalog build.</p></div>`;
+  if (collapsed) {
+    const commit = card.ownApp.builtFrom.commit;
+    return `<section class="code-view code-first-preview" aria-labelledby="code-heading-${escapeAttr(card.id)}">
+  <details class="remote-code-details"><summary><span>CODE FIRST</span><strong id="code-heading-${escapeAttr(card.id)}">${escapeHtml(card.sourcePath)}</strong><em>Expand source</em></summary>
+    <div class="code-toolbar"><div><span>EXACT STAGED SOURCE</span><strong>honua-samples @ ${escapeHtml(commit.slice(0, 12))}</strong></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Full tree ↗</a></div>
+    <pre tabindex="0"><code>${escapeHtml(card.sourceText)}</code></pre>
+    <p class="source-note">This file is the one the running sample below serves, byte for byte (see the staged file digests).</p>
+  </details>
+</section>`;
+  }
   return `<section class="code-view" aria-labelledby="code-heading-${escapeAttr(card.id)}">
   <div class="code-toolbar"><div><span>PRIMARY FILE</span><strong id="code-heading-${escapeAttr(card.id)}">${escapeHtml(card.sourcePath)}</strong></div><code>${escapeHtml(card.entrypoint?.command ?? "")}</code></div>
   <pre tabindex="0"><code>${escapeHtml(card.sourceText)}</code></pre>

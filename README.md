@@ -373,8 +373,24 @@ verify this run) renders an explicit "No runnable build published yet" panel
 -- never a broken or empty iframe. This repo's own headless/CLI samples (like
 `hello-featureserver-rest`) get a distinct "Headless sample -- run it locally"
 panel with the run command and a link to CI run receipts, never a fake embed
-either. A future browser-buildable sample in this repo without a staged
-bundle of its own falls back to the same honest no-bundle panel.
+either.
+
+**This repo's own browser samples.** A published sample whose
+`entrypoint.type` is `browser` (for example `maplibre-featureserver-layer`)
+runs in the same kind of iframe from `site/<id>/app/`.
+`scripts/lib/own-sample-apps.mjs` reads the entrypoint's directory (`src/`)
+from git at the gallery's source commit, not from the working tree, and
+refuses uncommitted edits, symlinks and paths outside the sample. It writes
+a SHA-256 for every staged file to `site/<id>/app.manifest.v1.json`. The
+provenance line ("Built from honua-samples @`<commit>`, public-live mode
+against demo.honua.io") comes from that manifest: the commit it was read at,
+the manifest's `dataMode`, and the one non-library origin the staged source
+references. If a published browser sample cannot be staged, its page shows
+the no-bundle panel with the reason. In that case `build-gallery.mjs --check`
+fails, and so does `npm run test:gallery:browser`. The browser smoke also
+re-hashes every published file and waits for the sample to report
+`data-sample-status="pass"` with rendered features. The only degraded
+response it accepts is the documented PMTiles basemap probe.
 
 **Fallback.** With `SDK_PRODUCER_ENFORCE_LOCK=1` (pages.yml and the
 exact-head browser job in validate.yml), a missing or mismatched vendored asset

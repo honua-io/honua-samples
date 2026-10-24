@@ -279,6 +279,21 @@ const semanticAssertions = new Map([
   }],
 ]);
 
+// This repo's own browser samples (scripts/lib/own-sample-apps.mjs) share
+// one page contract: body[data-sample-status] ends "pass" or "fail", and a
+// pass records data-rendered-features > 0 on a mounted map.
+async function ownSampleAssertion(frame) {
+  await frame.waitForFunction(() => document.body?.dataset.sampleStatus && document.body.dataset.sampleStatus !== "loading", null, markerOptions());
+  const proof = await frame.evaluate(() => ({
+    status: document.body.dataset.sampleStatus,
+    error: document.body.dataset.sampleError ?? null,
+    renderedFeatures: Number(document.body.dataset.renderedFeatures ?? 0),
+    drawn: document.querySelectorAll("#map canvas, #map svg path").length,
+  }));
+  if (proof.status !== "pass") throw new Error(`own sample status ${JSON.stringify(proof.status)}${proof.error ? `: ${proof.error}` : ""}`);
+  if (!(proof.renderedFeatures > 0) || proof.drawn === 0) throw new Error(`own sample drew nothing: ${JSON.stringify(proof)}`);
+}
+
 async function main() {
   await mkdir(evidenceDir, { recursive: true });
   const localServer = configuredBaseUrl ? null : createStaticServer();
@@ -359,9 +374,10 @@ async function verifyCard(browser, baseUrl, card) {
   let screenshot = null;
   let semanticConvergence = null;
   const appFailures = [];
+  const appPrefix = card.source === "honua-samples" ? `/${card.id}/app/` : `/sdk/${card.id}/app/`;
   const isAppUrl = (value) => {
     try {
-      return new URL(value, `${baseUrl}/`).pathname.startsWith(`/sdk/${card.id}/app/`);
+      return new URL(value, `${baseUrl}/`).pathname.startsWith(appPrefix);
     } catch {
       return false;
     }
@@ -400,7 +416,7 @@ async function verifyCard(browser, baseUrl, card) {
     await validateDetailContract(page, card, failures);
 
     if (card.runnable) {
-      const assertion = semanticAssertions.get(card.id);
+      const assertion = semanticAssertions.get(card.id) ?? (card.source === "honua-samples" ? ownSampleAssertion : undefined);
       if (!assertion) {
         failures.push("runnable card has no registered semantic success assertion");
       } else {
