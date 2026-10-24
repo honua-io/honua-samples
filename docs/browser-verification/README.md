@@ -9,6 +9,10 @@ browser against a composed Honua server. The specs are the sample's pass/fail si
 | [`browser-featureserver-query`](../../samples/browser-featureserver-query) | The page queries a FeatureServer seeded from the fixture and renders the fixture's ids, names and rings; a missing service, an invalid `where` and a service that refuses anonymous reads each show the server's error (`FAIL: Not Found`, `FAIL: Bad Request`, `FAIL: Unauthorized`). Because the manifest is `public-live`, the page's defaults are also proven against the public deployment (`HONUA_SAMPLE_TARGET_BASE_URL`, from `HONUA_PUBLIC_BASE_URL`). |
 | [`create-honua-app-vanilla-ts`](../../samples/create-honua-app-vanilla-ts) | The `vanilla-ts` starter, scaffolded from the published `create-honua-app` at the version the sample pins, installs from the npm registry, typechecks, builds, connects to the seeded layer, reports the fixture's feature count, and draws every fixture polygon where the fixture puts it. Pointed at a layer that refuses anonymous callers, it stops with `The workflow stopped: HTTP 499: Unauthorized` and draws nothing. |
 | [`create-honua-app-react-ts`](../../samples/create-honua-app-react-ts) | The same for the `react-ts` starter (which shows no feature count, so the query answer and map pixels carry the oracle). |
+| [`maplibre-featureserver-layer`](../../samples/maplibre-featureserver-layer) | MapLibre GL JS draws the seeded FeatureServer layer from its GeoJSON query: the fixture's feature count, every fixture polygon rendered after `fitBounds`, and a click opens a popup titled with the fixture name; a missing service shows `FAIL: Not Found`. Public-live: `maui-place-names` layer 6 renders. |
+| [`maplibre-ogc-tiles-mvt`](../../samples/maplibre-ogc-tiles-mvt) | The page reads the seeded collection's OGC API Tiles tileset metadata, maps its tile template to `{z}/{y}/{x}`, and every fixture polygon renders from the vector tiles; an unknown collection fails. Public-live: `maui-buildings` extrusions render. The demo's tile routes allow CORS only from three origins, so this spec serves the live page from `http://localhost:8123` (`HONUA_SAMPLE_LIVE_TILE_ORIGIN_PORT`). |
+| [`maplibre-category-style-legend`](../../samples/maplibre-category-style-legend) | OGC API Features items from the seeded collection are styled by category: the legend lists exactly the fixture's categories with their counts and one colour each, each polygon renders under its own category, and the popup is titled with it; an unknown collection fails. Public-live: `maui-zoning` by `zone_dist` renders with a legend. |
+| [`esri-leaflet-featurelayer`](../../samples/esri-leaflet-featurelayer) | Stock Leaflet + esri-leaflet draw one SVG path per fixture feature from the seeded FeatureServer layer and the popup shows the fixture name; an invalid `where` fails and draws nothing. Public-live: the filtered `maui-inspections` layer 12 draws its markers. |
 
 ## How it works
 
@@ -17,7 +21,8 @@ browser against a composed Honua server. The specs are the sample's pass/fail si
 - [`scripts/browser-verification/harness.mjs`](../../scripts/browser-verification/harness.mjs) seeds
   [`fixtures/honolulu-operations-areas.geojson`](../../scripts/browser-verification/fixtures/honolulu-operations-areas.geojson)
   into the composed server through the admin API (import, publish, enable FeatureServer, open anonymous reads where
-  the spec needs them) under unique names, and waits until the layer serves the fixture. Every assertion is computed
+  the spec needs them) under unique names, and waits until the layer serves the fixture. `protocols` enables more
+  service protocols than FeatureServer (for example `OgcFeatures`, `OGC-API-Tiles`). Every assertion is computed
   from that fixture, not from the server's answer. The base URL and admin API key come from the runner's environment
   (`HONUA_BASE_URL`, `HONUA_ADMIN_API_KEY`); the pages themselves never see the admin key. The runner also passes
   `HONUA_SAMPLE_TARGET_BASE_URL` and `HONUA_SAMPLE_DATA_MODE`: for a `public-live` manifest the target is the public
@@ -34,6 +39,11 @@ browser against a composed Honua server. The specs are the sample's pass/fail si
   (read from the scaffolded source), then reads the rendered pixels: each polygon must differ from the basemap
   background and share one fill colour, and a control point outside every polygon must show the background. Waits
   are on DOM states, network answers and rendered pixels, never fixed sleeps.
+- The single-file map samples (`maplibre-*`, `esri-leaflet-featurelayer`) load their libraries from pinned jsDelivr
+  URLs of the published npm packages and record, on `<body>`, the feature counts and the navigation-to-rendered time
+  (`data-sample-elapsed-ms`). Their public-live specs hold that time under 5 s; `HONUA_SAMPLE_LIVE_BUDGET_MS`
+  widens the budget on an overloaded host. Rendered features are counted with MapLibre's `queryRenderedFeatures`
+  or, for Leaflet, the drawn SVG paths.
 
 ## Evidence
 

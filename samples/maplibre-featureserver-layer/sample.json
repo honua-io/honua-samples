@@ -1,0 +1,33 @@
+{
+  "id": "maplibre-featureserver-layer",
+  "title": "FeatureServer layer in MapLibre GL JS",
+  "description": "One HTML file loads a GeoServices FeatureServer layer as GeoJSON, adds it to MapLibre GL JS as a GeoJSON source, fits the map to it and opens a popup on click.",
+  "contentKind": "example",
+  "learning": {
+    "goal": "build-map",
+    "level": "beginner",
+    "estimatedMinutes": 10,
+    "prerequisites": [
+      "Modern web browser",
+      "Internet access",
+      "Any static file server (for example `npx serve src`)"
+    ]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
+  "capabilities": [
+    "serve.geoservices-featureserver"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "geoservices-rest"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "browser",
+    "command": "src/index.html"
+  },
+  "status": "active"
+}

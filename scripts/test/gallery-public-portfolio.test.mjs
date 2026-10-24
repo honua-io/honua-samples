@@ -2,14 +2,24 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "../lib/gallery-public-portfolio.mjs";
 
-test("the gallery portfolio classifies the 32 SDK and ten owned cards", async () => {
+test("the gallery portfolio classifies the 32 SDK and 14 owned cards", async () => {
   const portfolio = await loadGalleryPublicPortfolio();
   const counts = portfolio.entries.reduce((result, entry) => {
     result[entry.disposition] = (result[entry.disposition] ?? 0) + 1;
     return result;
   }, {});
-  assert.equal(portfolio.entries.length, 42);
-  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, public: 12 });
+  assert.equal(portfolio.entries.length, 46);
+  assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-sdk-js").length, 32);
+  assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 14);
+  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, public: 16 });
+  // The four map-first browser samples are the owned public cards.
+  assert.deepEqual(
+    portfolio.entries
+      .filter((entry) => entry.sourceRepo === "honua-samples" && entry.disposition === "public")
+      .map((entry) => entry.id)
+      .sort(),
+    ["esri-leaflet-featurelayer", "maplibre-category-style-legend", "maplibre-featureserver-layer", "maplibre-ogc-tiles-mvt"],
+  );
 });
 
 test("only explicitly public technically qualified cards are admitted", async () => {

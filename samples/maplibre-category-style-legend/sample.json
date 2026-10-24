@@ -1,0 +1,33 @@
+{
+  "id": "maplibre-category-style-legend",
+  "title": "Category style and legend from OGC API Features",
+  "description": "One HTML file reads OGC API Features items, colours them in MapLibre GL JS with a data-driven match expression on a category field, and builds the legend and popup from the same values.",
+  "contentKind": "example",
+  "learning": {
+    "goal": "build-map",
+    "level": "intermediate",
+    "estimatedMinutes": 15,
+    "prerequisites": [
+      "Modern web browser",
+      "Internet access",
+      "Any static file server (for example `npx serve src`)"
+    ]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
+  "capabilities": [
+    "serve.ogc-api-features"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "ogc-api-features"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "browser",
+    "command": "src/index.html"
+  },
+  "status": "active"
+}

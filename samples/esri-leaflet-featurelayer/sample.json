@@ -1,0 +1,33 @@
+{
+  "id": "esri-leaflet-featurelayer",
+  "title": "Stock esri-leaflet FeatureLayer on Honua",
+  "description": "One HTML file uses unmodified Leaflet and esri-leaflet to draw a filtered Honua FeatureServer layer with popups -- the same code an ArcGIS FeatureServer needs, with no Honua-specific code.",
+  "contentKind": "example",
+  "learning": {
+    "goal": "build-map",
+    "level": "beginner",
+    "estimatedMinutes": 8,
+    "prerequisites": [
+      "Modern web browser",
+      "Internet access",
+      "Any static file server (for example `npx serve src`)"
+    ]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
+  "capabilities": [
+    "serve.geoservices-featureserver"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "geoservices-rest"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "browser",
+    "command": "src/index.html"
+  },
+  "status": "active"
+}

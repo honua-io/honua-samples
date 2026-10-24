@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Category style and legend</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css"
+    integrity="sha384-Q5Blg3vUVAlUKqIPJYz7wGnz40Vwrx4pVuFVicI73+8c/26Zr5hhckfuIiIUflLE" crossorigin="anonymous" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs" crossorigin="anonymous" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl-shared.mjs" crossorigin="anonymous" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: grid; grid-template-rows: auto minmax(320px, 1fr) auto; font: 15px/1.45 system-ui, sans-serif; color: #17221c; background: #f4f1e8; }
+    header { padding: 0.75rem 1rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.15rem; }
+    #status { margin: 0; }
+    #map { min-height: 320px; }
+    pre { margin: 0; padding: 0.5rem 1rem; max-height: 7rem; overflow: auto; font-size: 12px; background: #fffdf6; border-top: 1px solid #b9b5a8; }
+    [data-state="pass"] { color: #17633a; }
+    [data-state="fail"] { color: #a12b1f; }
+    #map-wrap { position: relative; min-height: 320px; }
+    #map { position: absolute; inset: 0; }
+    #legend { position: absolute; left: 0.75rem; bottom: 0.75rem; max-width: min(18rem, 60%); max-height: 70%; overflow: auto; margin: 0; padding: 0.5rem 0.75rem; list-style: none; font-size: 12px; background: rgba(255, 253, 246, 0.94); border: 1px solid #b9b5a8; border-radius: 4px; }
+    #legend:empty { display: none; }
+    #legend li { display: flex; gap: 0.4rem; align-items: center; }
+    #legend .swatch { flex: none; width: 0.9rem; height: 0.9rem; border: 1px solid #555; }
+    #legend .count { margin-left: auto; color: #555; }
+    .maplibregl-popup-content table { border-collapse: collapse; font-size: 12px; }
+    .maplibregl-popup-content td { padding: 1px 6px 1px 0; vertical-align: top; }
+  </style>
+</head>
+<body data-sample-status="loading">
+  <header>
+    <h1>Style OGC API Features by category, with a legend</h1>
+    <p id="status">Loading features...</p>
+  </header>
+  <div id="map-wrap">
+    <div id="map" role="region" aria-label="Map"></div>
+    <ul id="legend" aria-label="Legend"></ul>
+  </div>
+  <pre id="requests" aria-label="Requests this page made"></pre>
+  <script type="module">
+    // MapLibre GL JS 6 is published as ES modules; importing it dynamically lets
+    // the feature requests below start while the library downloads.
+    const maplibreReady = import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs");
+
+    const params = new URLSearchParams(location.search);
+    const baseUrl = (params.get("baseUrl") ?? "https://demo.honua.io").replace(/\/+$/, "");
+    const collection = params.get("collection") ?? "maui-zoning";
+    const field = params.get("field") ?? "zone_dist";
+    // minLon,minLat,maxLon,maxLat (Kahului by default), or "none" for no bbox filter.
+    const bbox = params.get("bbox") ?? "-156.50,20.87,-156.45,20.90";
+    const limit = params.get("limit") ?? "1000";
+    const maxClasses = 8;
+    const palette = ["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02", "#a6761d", "#1f78b4"];
+    const otherColor = "#b8b8b8";
+    const status = document.querySelector("#status");
+    const requests = document.querySelector("#requests");
+    const legend = document.querySelector("#legend");
+
+    function logRequest(url) {
+      requests.textContent += `GET ${url}\n`;
+    }
+
+    async function getJson(url) {
+      logRequest(url);
+      const response = await fetch(url);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body.error) throw new Error(body.error?.message ?? body.detail ?? body.title ?? `HTTP ${response.status}`);
+      return body;
+    }
+
+    // Reads `field` from feature properties; a dotted path ("properties.category")
+    // walks nested objects, including nested values a server returns as JSON text.
+    function readField(properties, path) {
+      return path.split(".").reduce((value, key) => {
+        if (typeof value === "string" && value.startsWith("{")) value = JSON.parse(value);
+        return value?.[key];
+      }, properties);
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    }
+
+    // Optional basemap: the server's own Protomaps PMTiles archive, used only
+    // when it answers with a PMTiles header. Otherwise the plain background stays.
+    async function addBasemapIfAvailable(map, beforeId) {
+      if (params.get("basemap") === "none") return "off";
+      const url = `${baseUrl}/api/v1/tiles/pmtiles/maui-basemap`;
+      try {
+        logRequest(`${url} (Range: bytes=0-6, basemap probe)`);
+        const response = await fetch(url, { headers: { Range: "bytes=0-6" } });
+        const magic = new TextDecoder().decode(await response.arrayBuffer()).slice(0, 7);
+        if (!response.ok || magic !== "PMTiles") return `not available (HTTP ${response.status}), plain background`;
+        await new Promise((resolve, reject) => {
+          const script = Object.assign(document.createElement("script"), {
+            src: "https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js",
+            integrity: "sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn",
+            crossOrigin: "anonymous",
+            onload: resolve,
+            onerror: () => reject(new Error("pmtiles.js did not load")),
+          });
+          document.head.append(script);
+        });
+        maplibregl.addProtocol("pmtiles", new window.pmtiles.Protocol().tile);
+        map.addSource("basemap", { type: "vector", url: `pmtiles://${url}` });
+        map.addLayer({ id: "basemap-earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e7e3d6" } }, beforeId);
+        map.addLayer({ id: "basemap-water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#c9dbe3" } }, beforeId);
+        map.addLayer({ id: "basemap-roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#ffffff", "line-width": 1 } }, beforeId);
+        return "Protomaps PMTiles from the same server";
+      } catch (error) {
+        return `not available (${error.message}), plain background`;
+      }
+    }
+
+    function bboxOf(features) {
+      const box = [Infinity, Infinity, -Infinity, -Infinity];
+      const visit = (coords) => {
+        if (typeof coords[0] === "number") {
+          box[0] = Math.min(box[0], coords[0]); box[1] = Math.min(box[1], coords[1]);
+          box[2] = Math.max(box[2], coords[0]); box[3] = Math.max(box[3], coords[1]);
+        } else coords.forEach(visit);
+      };
+      for (const feature of features) if (feature.geometry) visit(feature.geometry.coordinates);
+      return box;
+    }
+
+    const collectionUrl = `${baseUrl}/ogc/features/collections/${encodeURIComponent(collection)}`;
+    const itemsQuery = new URLSearchParams({ limit, f: "json" });
+    if (bbox !== "none") itemsQuery.set("bbox", bbox);
+    const queryablesRequest = getJson(`${collectionUrl}/queryables?f=json`);
+    const itemsRequest = getJson(`${collectionUrl}/items?${itemsQuery}`);
+    queryablesRequest.catch(() => {});
+    itemsRequest.catch(() => {});
+
+    const maplibregl = await maplibreReady;
+    const map = new maplibregl.Map({
+      container: "map",
+      style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2ee" } }] },
+      center: [-156.48, 20.885],
+      zoom: 12,
+      attributionControl: { compact: true, customAttribution: "Data: Honua demo (Maui)" },
+    });
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    const mapLoaded = new Promise((resolve) => map.once("load", resolve));
+    window.sampleMap = map;
+
+    try {
+      const [queryables, items] = await Promise.all([queryablesRequest, itemsRequest, mapLoaded]);
+      if (!items.features?.length) throw new Error("The items request returned no features.");
+      const topField = field.split(".")[0];
+      const queryable = Object.hasOwn(queryables.properties ?? {}, topField);
+
+      // Count the distinct values of the field; the most common get a colour, the rest share "Other".
+      const counts = new Map();
+      for (const feature of items.features) {
+        const value = readField(feature.properties, field);
+        const category = value === undefined || value === null || value === "" ? "(none)" : String(value);
+        feature.properties.category_class = category;
+        counts.set(category, (counts.get(category) ?? 0) + 1);
+      }
+      const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      const classes = ranked.slice(0, maxClasses).map(([value, count], i) => ({ value, count, color: palette[i] }));
+      const otherCount = ranked.slice(maxClasses).reduce((sum, [, count]) => sum + count, 0);
+
+      // A data-driven "match" expression: one colour per class, grey for everything else.
+      const fillColor = ["match", ["get", "category_class"], ...classes.flatMap((c) => [c.value, c.color]), otherColor];
+      map.addSource("features", { type: "geojson", data: items });
+      map.addLayer({ id: "features-fill", type: "fill", source: "features", paint: { "fill-color": fillColor, "fill-opacity": 0.7 } });
+      map.addLayer({ id: "features-line", type: "line", source: "features", paint: { "line-color": "#ffffff", "line-width": 0.6 } });
+      const basemap = addBasemapIfAvailable(map, "features-fill");
+
+      legend.innerHTML = [...classes, ...(otherCount ? [{ value: "Other", count: otherCount, color: otherColor }] : [])]
+        .map((c) => `<li data-category="${escapeHtml(c.value)}"><span class="swatch" style="background:${c.color}"></span><span class="label">${escapeHtml(c.value)}</span><span class="count">${c.count}</span></li>`)
+        .join("");
+
+      map.on("click", "features-fill", (event) => {
+        const properties = event.features[0].properties;
+        const rows = Object.entries(properties)
+          .filter(([key]) => key !== "category_class")
+          .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
+          .join("");
+        new maplibregl.Popup({ maxWidth: "320px" })
+          .setLngLat(event.lngLat)
+          .setHTML(`<strong class="popup-title">${escapeHtml(properties.category_class)}</strong><table>${rows}</table>`)
+          .addTo(map);
+      });
+      map.on("mouseenter", "features-fill", () => (map.getCanvas().style.cursor = "pointer"));
+      map.on("mouseleave", "features-fill", () => (map.getCanvas().style.cursor = ""));
+
+      const [minX, minY, maxX, maxY] = bboxOf(items.features);
+      map.fitBounds([[minX, minY], [maxX, maxY]], { padding: 30, duration: 0, maxZoom: 16 });
+      const basemapNote = await basemap;
+      map.triggerRepaint();
+      await map.once("idle");
+
+      const rendered = map.queryRenderedFeatures({ layers: ["features-fill"] }).length;
+      if (rendered === 0) throw new Error("The features loaded but none rendered in the view.");
+      const elapsed = Math.round(performance.now()); // since navigation start
+      const matched = items.numberMatched ?? items.features.length;
+      document.body.dataset.featureCount = String(items.features.length);
+      document.body.dataset.renderedFeatures = String(rendered);
+      document.body.dataset.categoryCount = String(counts.size);
+      document.body.dataset.sampleElapsedMs = String(elapsed);
+      status.textContent =
+        `PASS: ${items.features.length} of ${matched} features, ${counts.size} distinct "${field}" values` +
+        `${queryable ? " (a queryable)" : " (not listed in queryables)"}, ${rendered} rendered, ${elapsed} ms. Basemap: ${basemapNote}. Click a polygon for details.`;
+      status.dataset.state = "pass";
+      document.body.dataset.sampleStatus = "pass";
+    } catch (error) {
+      status.textContent = `FAIL: ${error.message}`;
+      status.dataset.state = "fail";
+      document.body.dataset.sampleStatus = "fail";
+      document.body.dataset.sampleError = error.message;
+    }
+  </script>
+</body>
+</html>

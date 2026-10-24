@@ -213,6 +213,12 @@
     },
     {
       "sourceRepo": "honua-samples",
+      "id": "esri-leaflet-featurelayer",
+      "disposition": "public",
+      "reason": "Map-first Esri-client proof: stock Leaflet and esri-leaflet draw a filtered live Maui FeatureServer layer with popups and no Honua-specific code."
+    },
+    {
+      "sourceRepo": "honua-samples",
       "id": "geocode-single-line",
       "disposition": "rework-map-first",
       "reason": "Render the matched location and score on a map before showing the raw geocoding request."
@@ -234,6 +240,24 @@
       "id": "odata-query-rest",
       "disposition": "internal-qualification",
       "reason": "Fold this protocol variant into the canonical result-first query job while retaining its contract fixture."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "maplibre-category-style-legend",
+      "disposition": "public",
+      "reason": "Map-first styling job: live Maui zoning from OGC API Features coloured by category with a legend and popup."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "maplibre-featureserver-layer",
+      "disposition": "public",
+      "reason": "Map-first JavaScript job: a live Maui FeatureServer layer drawn in MapLibre GL JS with fitBounds and a popup."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "maplibre-ogc-tiles-mvt",
+      "disposition": "public",
+      "reason": "Map-first JavaScript job: live Maui building footprints drawn in MapLibre GL JS from OGC API Tiles vector tiles."
     },
     {
       "sourceRepo": "honua-samples",
