@@ -25,6 +25,21 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/pages.yml"
+  # A pull request runs the same build, staging and browser smoke as a deploy,
+  # so a broken bundle build is red on the PR instead of on trunk. It never
+  # uploads or deploys a Pages artifact.
+  pull_request:
+    paths:
+      - "site/**"
+      - "samples/**"
+      - "jobs/**"
+      - "schemas/**"
+      - "scripts/**"
+      - "config/**"
+      - "vendor/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/pages.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -34,7 +49,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  # Pull requests get their own group so they never cancel a trunk deploy.
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.pull_request.number) || 'pages' }}
   cancel-in-progress: true
 
 jobs:
@@ -66,39 +82,78 @@ jobs:
         run: test "$(git -C "$SDKJS_ROOT" rev-parse HEAD)" = "${{ steps.sdk-lock.outputs.revision }}"
 
       - name: Build local sdk-js sample bundles for gallery embedding
+        id: local-bundles
         # Pages runs from a fresh checkout; local dist directories are not
         # present by default. Build only the known production-facing IDs that
         # require explicit local fallback to avoid runnable embed regressions.
+        # Every build is its own log group, and a failure names the script and
+        # its exit code instead of ending the step with a bare status.
+        #
+        # maplibre-quickstart ships in the vendored release as a fixture
+        # replay. When the public demo answers, it is rebuilt against the
+        # SDK's public-live First Map endpoint and replaces the vendored build
+        # (SAMPLE_BUNDLES_LOCAL_OVERRIDE_IDS). When the demo does not answer,
+        # the vendored fixture build is published unchanged.
+        env:
+          QUICKSTART_LIVE_ENDPOINT: https://demo.honua.io/rest/services/maui-parcels/FeatureServer/1
         run: |
           set -euo pipefail
+          run_build() {
+            local script="$1"
+            echo "::group::npm run ${script}"
+            local status=0
+            npm --prefix "$SDKJS_ROOT" run "$script" --silent || status=$?
+            echo "::endgroup::"
+            if [ "$status" -ne 0 ]; then
+              echo "::error title=sdk-js bundle build failed::npm run ${script} exited ${status}"
+              exit "$status"
+            fi
+          }
           if [ ! -d "$SDKJS_ROOT/node_modules" ]; then
+            echo "::group::npm ci (honua-sdk-js)"
             npm --prefix "$SDKJS_ROOT" ci --silent
+            echo "::endgroup::"
           fi
-          VITE_HONUA_QUICKSTART_ENDPOINT="https://demo.honua.io/rest/services/maui-buildings/FeatureServer/13" \
-          VITE_HONUA_QUICKSTART_BASEMAP_STYLE="./__honua-quickstart__/basemap-style.json" \
-          VITE_HONUA_QUICKSTART_WHERE="id <= 25" \
-            npm --prefix "$SDKJS_ROOT" run demo:quickstart:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:mcp-gis-assistant:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:spatial-analytics:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:edit-workflow:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:geocoding:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:oauth-signin:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:service-explorer:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:incident:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:pmtiles-static:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:nl-map-control:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:app-bootstrap:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:gp-runner:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:web-components:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:runtime-parity:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:25d:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:terrain-elevation:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:unified-ops:build --silent
-          npm --prefix "$SDKJS_ROOT" run demo:planning-workbench:build --silent
-          if [ ! -d "$SDKJS_ROOT/examples/kepler-analytics/node_modules" ]; then
-            npm install --prefix "$SDKJS_ROOT/examples/kepler-analytics" --legacy-peer-deps --include=dev --silent
+          override_ids=""
+          if node -e '
+            const endpoint = process.env.QUICKSTART_LIVE_ENDPOINT;
+            fetch(`${endpoint}?f=json`, { signal: AbortSignal.timeout(15000) })
+              .then(async (response) => {
+                const body = await response.json();
+                if (!response.ok || body.error || !body.geometryType) throw new Error(`HTTP ${response.status}`);
+              })
+              .catch((error) => { console.log(`public demo unavailable: ${error.message}`); process.exit(1); });
+          '; then
+            echo "Public demo answered; building maplibre-quickstart in public-live mode against $QUICKSTART_LIVE_ENDPOINT."
+            VITE_HONUA_QUICKSTART_ENDPOINT="$QUICKSTART_LIVE_ENDPOINT" \
+            VITE_HONUA_QUICKSTART_PROTOCOL="geoservices-feature-service" \
+            VITE_HONUA_QUICKSTART_BASEMAP_STYLE="./__honua-quickstart__/basemap-style.json" \
+              run_build demo:quickstart:build
+            override_ids="maplibre-quickstart"
+          else
+            echo "::warning title=public demo unavailable::Publishing the vendored fixture build of maplibre-quickstart."
           fi
-          npm --prefix "$SDKJS_ROOT/examples/kepler-analytics" run build --silent
+          echo "override_ids=${override_ids}" >> "$GITHUB_OUTPUT"
+          for script in \
+            demo:mcp-gis-assistant:build \
+            demo:spatial-analytics:build \
+            demo:edit-workflow:build \
+            demo:geocoding:build \
+            demo:oauth-signin:build \
+            demo:service-explorer:build \
+            demo:incident:build \
+            demo:pmtiles-static:build \
+            demo:nl-map-control:build \
+            demo:app-bootstrap:build \
+            demo:gp-runner:build \
+            demo:web-components:build \
+            demo:runtime-parity:build \
+            demo:25d:build \
+            demo:terrain-elevation:build \
+            demo:unified-ops:build \
+            demo:planning-workbench:build; do
+            run_build "$script"
+          done
 
       - name: Download latest run-results artifact (best effort)
         # Feeds scripts/build-gallery.mjs's honest per-sample run badges. Not
@@ -132,7 +187,8 @@ jobs:
           SAMPLE_BUNDLES_MANIFEST_URL: ${{ steps.sdk-lock.outputs.bundle_manifest_url }}
           SAMPLE_BUNDLES_TARBALL_URL: ${{ steps.sdk-lock.outputs.bundle_archive_url }}
           SAMPLE_BUNDLES_LOCAL_SDKJS_ROOT: ${{ env.SDKJS_ROOT }}
-          SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,maplibre-quickstart,oauth-signin,kepler-analytics,app-bootstrap-basic,geoprocessing-job-runner,runtime-parity-showcase,storytelling-25d-map,terrain-rgb-elevation,unified-ops-workspace,web-components-basic,planning-permitting-workbench,service-explorer,nl-map-control,realtime-incident-dashboard,pmtiles-static"
+          SAMPLE_BUNDLES_LOCAL_OVERRIDE_IDS: ${{ steps.local-bundles.outputs.override_ids }}
+          SAMPLE_BUNDLES_LOCAL_SAMPLE_IDS: "mcp-gis-assistant,spatial-analytics-workbench,edit-workflow-demo,geocoding-quickstart,maplibre-quickstart,oauth-signin,app-bootstrap-basic,geoprocessing-job-runner,runtime-parity-showcase,storytelling-25d-map,terrain-rgb-elevation,unified-ops-workspace,web-components-basic,planning-permitting-workbench,service-explorer,nl-map-control,realtime-incident-dashboard,pmtiles-static"
           # Production must never publish a gallery with zero runnable apps.
           MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/lib/sample-bundles.mjs
@@ -148,7 +204,7 @@ jobs:
         # (no second network fetch), then copies the verified files into
         # site/sdk/<id>/app/ and renders the embed/no-bundle/headless panels.
         env:
-          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/8cb074f77d01c0a00617ebe426460aa24c7d890b/docs/gis/data/capability-keys.v1.json
           MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/build-gallery.mjs
 
@@ -178,15 +234,18 @@ jobs:
           path: .artifacts/gallery-browser-smoke
           if-no-files-found: error
 
-      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
         with:
           path: site
       - id: deployment
+        if: github.event_name != 'pull_request'
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
 
   verify-live:
     name: verify deployed gallery
     needs: deploy
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0

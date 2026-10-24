@@ -1,7 +1,7 @@
 {
     "id":  "browser-featureserver-query",
-    "title":  "Hello FeatureServer (headless browser, plain fetch+DOM)",
-    "description":  "The same import -\u003e publish -\u003e query loop as hello-featureserver-rest, but driven entirely from a static HTML page\u0027s browser-side fetch()/DOM -- no SDK, no Node -- proving the headless-browser runner lane (honua-io/honua-samples#2).",
+    "title":  "Query three FeatureServer features from a browser page",
+    "description":  "A static HTML page reads a FeatureServer service description, queries its first layer for three features with plain fetch() (no SDK), and prints them as JSON. It defaults to the public demo maui-buildings service; the baseUrl, service and where query parameters point it elsewhere.",
     "contentKind":  "example",
     "learning":  {
                      "goal":  "query-data",

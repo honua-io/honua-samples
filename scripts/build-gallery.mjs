@@ -220,9 +220,13 @@ async function main() {
   const ownCards = ownPortfolioResult.publicCards;
   const jobCards = jobPages.map((job) => toJobCard(job, keyByKey, problems, sourceCommit));
   const sdkCandidates = merge.records.map((r) => toSdkCard(r, keyByKey, problems, bundleById, stagedBundleIds));
+  // A staged, verified bundle that needs a live service endpoint (the
+  // Universal Service Explorer) is admitted as a project page without an
+  // embed: renderSdkDetailPage labels it and links its source instead.
   const technicallyQualifiedSdkCards = sdkCandidates.filter(
     (card) =>
-      card.bundleRunnable &&
+      (card.bundleRunnable ||
+        (card.bundleStaged && card.bundleSample?.runnability === "requires-live-endpoint")) &&
       card.bundleSample?.lifecycle?.state === "active" &&
       !card.bundleSample?.lifecycle?.reason?.startsWith("Locally staged override") &&
       card.evidence?.fixture?.status === "executed",
@@ -762,8 +766,8 @@ function renderEmbedPanel(card) {
 </div>`;
 }
 
-function renderNoBundlePanel(reason) {
-  return `<div class="no-bundle-panel"><p class="empty-state">No runnable build published yet.${reason ? ` ${escapeHtml(reason)}` : ""}</p></div>`;
+function renderNoBundlePanel(reason, lead = "No runnable build published yet.") {
+  return `<div class="no-bundle-panel"><p class="empty-state">${escapeHtml(lead)}${reason ? ` ${escapeHtml(reason)}` : ""}</p></div>`;
 }
 
 function renderHeadlessPanel(card) {
@@ -1233,8 +1237,15 @@ function renderSdkDetailPage(card, keyByKey, generatedAt, sourceCommit, bundleNo
     ? `<span>Qualification: ${escapeHtml(card.qualification.state)}</span>`
     : "";
   const previewVerified = card.bundleRunnable && card.evidence?.fixture?.status === "executed";
+  const liveEndpointOnly = !previewVerified &&
+    card.bundleStaged && card.bundleSample?.runnability === "requires-live-endpoint";
   const runnablePanel = previewVerified
     ? renderEmbedPanel(card)
+    : liveEndpointOnly
+      ? renderNoBundlePanel(
+          "It inspects a live service endpoint, so the gallery does not embed it as a standalone app. Run it from the project source below.",
+          "Live-endpoint app.",
+        )
     : renderNoBundlePanel(
         card.bundleRunnable
           ? "A standalone build exists, but the handoff does not include a current executed fixture receipt. Open the code preview instead."

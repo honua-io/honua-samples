@@ -162,7 +162,7 @@ jobs:
         # An empty value would fall back to the offline fixture.
         if: always()
         env:
-          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/199bce77fe990eb14855831790b07cfbc103d4ba/docs/gis/data/capability-keys.v1.json
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/8cb074f77d01c0a00617ebe426460aa24c7d890b/docs/gis/data/capability-keys.v1.json
         run: node scripts/generate-samples-coverage.mjs
 
       - name: Upload samples-coverage snapshot

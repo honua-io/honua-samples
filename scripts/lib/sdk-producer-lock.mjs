@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const revision = "ac22cb56fc927a65666c7cfebbb6b778d7afc7a1";
+const revision = "a161ea0a12b9beb563b676547f348cb73c1ba605";
 const repository = "honua-io/honua-sdk-js";
 const rawRoot = `https://raw.githubusercontent.com/${repository}/${revision}`;
 const vendoredReleaseRoot = new URL(`../../vendor/sdk-producer/${revision}/`, import.meta.url);
@@ -26,7 +26,7 @@ export const SDK_PRODUCER_LOCK = Object.freeze({
   assets: Object.freeze({
     bundleManifest: Object.freeze({
       bytes: 67_115,
-      sha256: "58af9d4d099349f07f96df3b37d2426967beab2946e33eed861dabd1cfea5b88",
+      sha256: "6887164e9435f5756f5000eba60ec6e67e34c54a05081c82c1098d39aa61bdd2",
       provenance: "governed-local-build",
     }),
     // The packed archive is 137,727,264 bytes. GitHub rejects one blob over
@@ -36,23 +36,23 @@ export const SDK_PRODUCER_LOCK = Object.freeze({
     // producer archive or its evidence window.
     bundleArchive: Object.freeze({
       bytes: 137_727_264,
-      sha256: "5bf61dc6bc93bb95ce4e5d17e9760782fc887d3dc485e3724930d4c596e87e42",
+      sha256: "23d048992262fdb89f35e6945fc140a4e3dc5ff271f78fbd799e6a0d8d1ec8bc",
       provenance: "governed-local-build",
       parts: Object.freeze([
         Object.freeze({
           name: "sample-bundles.tar.gz.part-00",
           bytes: 47_185_920,
-          sha256: "046029db11e2ff17379d37f3c24f72d4cdc3755f6a8bf37dbe2d7d905f88f8c0",
+          sha256: "f10e2f8480b69a771a0e41f0474e6bf4f31a96d62af198eb13879d9fbcc70722",
         }),
         Object.freeze({
           name: "sample-bundles.tar.gz.part-01",
           bytes: 47_185_920,
-          sha256: "2266c1c97adc2f0dbbc69e1664a03766f2db39a7c7b261fd7daf00e48e7bb193",
+          sha256: "a99bb35ddde6c30f9795341ad51ba00a9bce1abc600ea263c78ec7d0a3a075ac",
         }),
         Object.freeze({
           name: "sample-bundles.tar.gz.part-02",
           bytes: 43_355_424,
-          sha256: "59fc8a147b4c7a61e30b38a83b2816a016472ea2c5c5af34117eae7565ce0413",
+          sha256: "ea05f9140cce99eb4d3684f83fecfa0b7bcd317a0316d4cc26b1b6ea7c4e9f85",
         }),
       ]),
     }),
