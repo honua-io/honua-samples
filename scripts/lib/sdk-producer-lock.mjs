@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const revision = "a161ea0a12b9beb563b676547f348cb73c1ba605";
+const revision = "6372de9874d5cdccdb2aa38f20913f5cf516ecf4";
 const repository = "honua-io/honua-sdk-js";
 const rawRoot = `https://raw.githubusercontent.com/${repository}/${revision}`;
 const vendoredReleaseRoot = new URL(`../../vendor/sdk-producer/${revision}/`, import.meta.url);
@@ -25,34 +25,34 @@ export const SDK_PRODUCER_LOCK = Object.freeze({
   }),
   assets: Object.freeze({
     bundleManifest: Object.freeze({
-      bytes: 67_115,
-      sha256: "6887164e9435f5756f5000eba60ec6e67e34c54a05081c82c1098d39aa61bdd2",
+      bytes: 67_275,
+      sha256: "03e01493d9401c50712daa188309084403d81bfad9c72c8e475aeb7079789db0",
       provenance: "governed-local-build",
     }),
-    // The packed archive is 137,727,264 bytes. GitHub rejects one blob over
+    // The packed archive is 137,727,776 bytes. GitHub rejects one blob over
     // 100 MiB, so the bytes are stored as ordered parts in the vendor directory
     // named by urls.bundleArchive. Readers concatenate those parts and then
     // check this digest. Parts stay under 50 MiB. This does not change the
     // producer archive or its evidence window.
     bundleArchive: Object.freeze({
-      bytes: 137_727_264,
-      sha256: "23d048992262fdb89f35e6945fc140a4e3dc5ff271f78fbd799e6a0d8d1ec8bc",
+      bytes: 137_727_776,
+      sha256: "2f297ca3265d146a5f04b933789f53b102c9edce4fdfd70353c8a26c0ee84305",
       provenance: "governed-local-build",
       parts: Object.freeze([
         Object.freeze({
           name: "sample-bundles.tar.gz.part-00",
           bytes: 47_185_920,
-          sha256: "f10e2f8480b69a771a0e41f0474e6bf4f31a96d62af198eb13879d9fbcc70722",
+          sha256: "f93857b0b601a9ad219470c4ca02b53688b0217aba3e02b7635c7e3e739d671e",
         }),
         Object.freeze({
           name: "sample-bundles.tar.gz.part-01",
           bytes: 47_185_920,
-          sha256: "a99bb35ddde6c30f9795341ad51ba00a9bce1abc600ea263c78ec7d0a3a075ac",
+          sha256: "7f94901305ec00273ff1862d94ac2e3dd08830a1d1745fe8b435456c81c7cd9e",
         }),
         Object.freeze({
           name: "sample-bundles.tar.gz.part-02",
-          bytes: 43_355_424,
-          sha256: "ea05f9140cce99eb4d3684f83fecfa0b7bcd317a0316d4cc26b1b6ea7c4e9f85",
+          bytes: 43_355_936,
+          sha256: "005c575dfe8028d1bfea80df004e808d78e0da4a4c2dd6d4ebeca9e939329200",
         }),
       ]),
     }),
