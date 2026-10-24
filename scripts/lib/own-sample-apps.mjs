@@ -164,6 +164,31 @@ export async function verifyPublishedOwnApp(appDir, app, { readdirRecursive } = 
   return failures;
 }
 
+// The one documented degraded state an own browser sample handles on the page
+// itself: its optional PMTiles basemap probe fails, it says "plain background"
+// and still renders its data layer. Both gallery smokes accept exactly this
+// response -- an HTTP error on the basemap archive path of the sample's own
+// data origin -- and nothing else.
+export const OWN_APP_DEGRADED_RESPONSES = Object.freeze([
+  Object.freeze({
+    pattern: /^\/api\/v1\/tiles\/pmtiles\/[^/]+$/u,
+    state: "basemap-unavailable",
+    note: "PMTiles basemap probe failed; the sample draws its layer on a plain background",
+  }),
+]);
+
+export function documentedDegradedResponse({ url, status, dataOrigin }) {
+  if (!dataOrigin || !(status >= 400)) return null;
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.origin !== dataOrigin) return null;
+  return OWN_APP_DEGRADED_RESPONSES.find((entry) => entry.pattern.test(parsed.pathname)) ?? null;
+}
+
 export function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }

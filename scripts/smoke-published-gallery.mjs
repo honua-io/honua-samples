@@ -11,6 +11,7 @@ import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT, resultTimeoutMs, viewportFailure, vi
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 import { loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
 import {
+  documentedDegradedResponse,
   isOwnBrowserSample,
   OWN_APP_MANIFEST_FORMAT,
   OWN_APP_MANIFEST_NAME,
@@ -26,12 +27,6 @@ const evidenceDir = path.join(repoRoot, ".artifacts", "gallery-browser-smoke");
 const evidencePath = path.join(evidenceDir, "browser-smoke.v1.json");
 const minimumApps = parseMinimum(process.env.MIN_PUBLISHED_RUNNABLE_APPS ?? "1");
 const expectedSourceCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim() || null;
-// Documented degraded states an own browser sample handles on the page itself
-// (it labels them and still renders its data layer). They are recorded in the
-// receipt instead of failing the run.
-const OWN_APP_DEGRADED_RESPONSES = [
-  { pattern: /\/api\/v1\/tiles\/pmtiles\//u, state: "basemap-unavailable", note: "PMTiles basemap probe failed; the sample draws its layer on a plain background" },
-];
 
 const mediaTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -213,7 +208,7 @@ async function smokeOwnApp(browser, origin, app) {
     const url = new URL(response.url());
     observedRequests.add(`${url.origin}${url.pathname}`);
     if (response.status() < 400 || url.pathname === "/favicon.ico") return;
-    const known = dataOrigin && url.origin === dataOrigin && OWN_APP_DEGRADED_RESPONSES.find((d) => d.pattern.test(url.pathname));
+    const known = documentedDegradedResponse({ url: response.url(), status: response.status(), dataOrigin });
     if (known) degraded.push({ state: known.state, note: known.note, response: `${response.status()} ${url.pathname}` });
     else failures.push(`response: ${response.status()} ${response.request().method()} ${response.url()}`);
   });

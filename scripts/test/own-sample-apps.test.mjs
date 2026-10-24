@@ -157,3 +157,24 @@ test("a non-sha source commit is refused before reading git", async () => {
   assert.equal(result.ok, false);
   assert.match(result.reason, /not a full git sha/);
 });
+
+test("only the optional basemap probe on the sample's own data origin is a documented degraded response", async () => {
+  const { documentedDegradedResponse } = await import("../lib/own-sample-apps.mjs");
+  const dataOrigin = "https://demo.honua.io";
+  const probe = "https://demo.honua.io/api/v1/tiles/pmtiles/maui-basemap";
+  assert.equal(documentedDegradedResponse({ url: probe, status: 404, dataOrigin })?.state, "basemap-unavailable");
+  assert.equal(documentedDegradedResponse({ url: probe, status: 503, dataOrigin })?.state, "basemap-unavailable");
+  // Not an error, no known data origin, another origin, or any other path: no exception.
+  assert.equal(documentedDegradedResponse({ url: probe, status: 206, dataOrigin }), null);
+  assert.equal(documentedDegradedResponse({ url: probe, status: 404, dataOrigin: null }), null);
+  assert.equal(documentedDegradedResponse({ url: "https://evil.example/api/v1/tiles/pmtiles/maui-basemap", status: 404, dataOrigin }), null);
+  for (const path of [
+    "/rest/services/maui-place-names/FeatureServer/6/query",
+    "/ogc/features/collections/maui-zoning/items",
+    "/ogc/tiles/collections/maui-buildings/tiles/WebMercatorQuad/15/14000/4000",
+    "/api/v1/tiles/pmtiles/maui-basemap/extra",
+  ]) {
+    assert.equal(documentedDegradedResponse({ url: `${dataOrigin}${path}`, status: 404, dataOrigin }), null, path);
+  }
+  assert.equal(documentedDegradedResponse({ url: "not a url", status: 404, dataOrigin }), null);
+});
