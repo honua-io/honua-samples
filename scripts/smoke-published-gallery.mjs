@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createReadStream } from "node:fs";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +9,15 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT, resultTimeoutMs, viewportFailure, visibleViewportRatio } from "./lib/gallery-visual-contract.mjs";
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
+import { loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
+import {
+  documentedDegradedResponse,
+  isOwnBrowserSample,
+  OWN_APP_MANIFEST_FORMAT,
+  OWN_APP_MANIFEST_NAME,
+  OWN_SAMPLE_SOURCE_REPO,
+  verifyPublishedOwnApp,
+} from "./lib/own-sample-apps.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(repoRoot, "site");
@@ -17,6 +26,7 @@ const stagedStatusPath = path.join(repoRoot, ".sample-bundles-staging", "status.
 const evidenceDir = path.join(repoRoot, ".artifacts", "gallery-browser-smoke");
 const evidencePath = path.join(evidenceDir, "browser-smoke.v1.json");
 const minimumApps = parseMinimum(process.env.MIN_PUBLISHED_RUNNABLE_APPS ?? "1");
+const expectedSourceCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim() || null;
 
 const mediaTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -61,6 +71,12 @@ async function main() {
     }
   }
 
+  // This repo's own browser samples: every one the public portfolio
+  // publishes must have a staged app whose published bytes match its
+  // manifest. A missing app fails here instead of silently shipping the
+  // no-bundle panel.
+  const ownApps = await loadPublishedOwnApps();
+
   await mkdir(evidenceDir, { recursive: true });
   const server = createStaticServer();
   let browser;
@@ -76,6 +92,7 @@ async function main() {
 
     browser = await chromium.launch({ headless: true });
     for (const sample of published) results.push(await smokeSample(browser, origin, sample));
+    for (const app of ownApps) results.push(await smokeOwnApp(browser, origin, app));
   } finally {
     try {
       if (browser) await browser.close();
@@ -93,8 +110,10 @@ async function main() {
     sourceBundleCommit: published[0]?.builtFrom?.commit ?? null,
     summary: {
       required: minimumApps,
+      ownAppsRequired: ownApps.length,
       total: results.length,
-      passed: results.filter((result) => result.passed).length,
+      passed: results.filter((result) => result.passed && !result.unverified).length,
+      unverified: results.filter((result) => result.unverified).length,
       failed: results.filter((result) => !result.passed).length,
     },
     results,
@@ -106,6 +125,162 @@ async function main() {
     for (const failure of result.failures) process.stdout.write(`  ${failure}\n`);
   }
   if (receipt.summary.failed > 0) process.exitCode = 1;
+}
+
+async function loadPublishedOwnApps() {
+  const portfolio = await loadGalleryPublicPortfolio();
+  const samplesDir = path.join(repoRoot, "samples");
+  const apps = [];
+  const missing = [];
+  for (const entry of (await readdir(samplesDir, { withFileTypes: true })).filter((e) => e.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))) {
+    let manifest;
+    try {
+      manifest = JSON.parse(await readFile(path.join(samplesDir, entry.name, "sample.json"), "utf8"));
+    } catch {
+      continue;
+    }
+    const id = manifest.id ?? entry.name;
+    if (!isOwnBrowserSample(manifest)) continue;
+    if (portfolio.byIdentity.get(`${OWN_SAMPLE_SOURCE_REPO}:${id}`)?.disposition !== "public") continue;
+    let app;
+    try {
+      app = JSON.parse(await readFile(path.join(siteRoot, id, OWN_APP_MANIFEST_NAME), "utf8"));
+    } catch {
+      missing.push(`${id}: no ${OWN_APP_MANIFEST_NAME} (the detail page would show the no-bundle panel)`);
+      continue;
+    }
+    const failures = [];
+    if (app.format !== OWN_APP_MANIFEST_FORMAT || app.id !== id) failures.push("app manifest format or id mismatch");
+    if (expectedSourceCommit && app.builtFrom?.commit !== expectedSourceCommit) {
+      failures.push(`app built from ${app.builtFrom?.commit}, expected source commit ${expectedSourceCommit}`);
+    }
+    failures.push(...(await verifyPublishedOwnApp(path.join(siteRoot, id, "app"), app, { readdirRecursive: listFiles })));
+    if (failures.length) missing.push(`${id}: ${failures.join("; ")}`);
+    else apps.push({ ...app, title: manifest.title ?? id });
+  }
+  if (missing.length) throw new Error(`published own browser sample(s) are not runnable:\n  - ${missing.join("\n  - ")}`);
+  return apps;
+}
+
+async function listFiles(root, prefix = "") {
+  const out = [];
+  for (const entry of await readdir(path.join(root, prefix), { withFileTypes: true })) {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) out.push(...(await listFiles(root, relative)));
+    else out.push(relative);
+  }
+  return out;
+}
+
+// A public-live sample depends on its data origin. When that origin does not
+// answer at all, the deploy still publishes (the page itself labels the
+// failure), but the receipt records the app as unverified instead of passed.
+async function dataOriginAnswers(dataOrigin) {
+  if (!dataOrigin) return true;
+  try {
+    const response = await fetch(`${dataOrigin}/rest/services?f=json`, { signal: AbortSignal.timeout(15_000) });
+    return response.status < 500;
+  } catch {
+    return false;
+  }
+}
+
+async function smokeOwnApp(browser, origin, app) {
+  if (!(await dataOriginAnswers(app.dataOrigins?.[0]))) {
+    process.stdout.write(`::warning title=own sample unverified::${app.id}: data origin ${app.dataOrigins[0]} did not answer; the embed was published but not verified\n`);
+    return { id: app.id, title: app.title, source: OWN_SAMPLE_SOURCE_REPO, builtFrom: app.builtFrom, dataOrigin: app.dataOrigins[0], passed: true, unverified: "data origin unavailable", failures: [], screenshot: null };
+  }
+  const page = await browser.newPage({ viewport: DESKTOP_VIEWPORT });
+  const failures = [];
+  const degraded = [];
+  const observedRequests = new Set();
+  const dataOrigin = app.dataOrigins?.[0] ?? null;
+  page.on("pageerror", (error) => failures.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() !== "error") return;
+    // A 4xx is reported once by the response handler below (with its
+    // degraded-state classification), not again as a console line.
+    if (/Failed to load resource: the server responded with a status of 4\d\d/u.test(message.text())) return;
+    failures.push(`console: ${message.text()}`);
+  });
+  page.on("requestfailed", (request) => failures.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ""}`));
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    observedRequests.add(`${url.origin}${url.pathname}`);
+    if (response.status() < 400 || url.pathname === "/favicon.ico") return;
+    const known = documentedDegradedResponse({ url: response.url(), status: response.status(), dataOrigin });
+    if (known) degraded.push({ state: known.state, note: known.note, response: `${response.status()} ${url.pathname}` });
+    else failures.push(`response: ${response.status()} ${response.request().method()} ${response.url()}`);
+  });
+
+  let title = "";
+  let screenshot = null;
+  let proof = null;
+  try {
+    const response = await page.goto(`${origin}/${app.id}/`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    if (!response || response.status() !== 200) failures.push(`navigation status: ${response?.status() ?? "none"}`);
+    title = await page.title();
+    const iframe = page.locator("iframe[title$='-- running sample']");
+    if ((await iframe.count()) !== 1) {
+      failures.push("detail page does not contain exactly one running-sample iframe");
+    } else {
+      const expectedSrc = app.entrypoint === "index.html" ? "app/" : `app/${app.entrypoint}`;
+      if ((await iframe.getAttribute("src")) !== expectedSrc) failures.push(`iframe src is not the staged app ${expectedSrc}`);
+      const provenance = await page.locator(".embed-panel .provenance").innerText();
+      if (!provenance.includes(`honua-samples @${app.builtFrom.commit.slice(0, 12)}`)) failures.push(`provenance does not name the staged commit: ${JSON.stringify(provenance)}`);
+      if (dataOrigin && !provenance.includes(new URL(dataOrigin).host)) failures.push(`provenance does not name the data origin ${dataOrigin}`);
+      await iframe.waitFor({ state: "visible", timeout: 30_000 });
+      const desktopFailure = viewportFailure("desktop", visibleViewportRatio(await iframe.boundingBox(), DESKTOP_VIEWPORT), 0.55);
+      if (desktopFailure) failures.push(desktopFailure);
+      await page.setViewportSize(MOBILE_VIEWPORT);
+      const mobileFailure = viewportFailure("mobile", visibleViewportRatio(await iframe.boundingBox(), MOBILE_VIEWPORT), 0.4);
+      if (mobileFailure) failures.push(mobileFailure);
+      await page.setViewportSize(DESKTOP_VIEWPORT);
+
+      const frame = await (await iframe.elementHandle())?.contentFrame();
+      if (!frame) {
+        failures.push("running-sample iframe did not mount a frame");
+      } else {
+        // Every own browser sample reports body[data-sample-status] =
+        // pass|fail and data-rendered-features (see samples/*/src/index.html).
+        await frame.waitForFunction(() => document.body?.dataset.sampleStatus && document.body.dataset.sampleStatus !== "loading", null, { timeout: 45_000 }).catch(() => {});
+        proof = await frame.evaluate(() => ({
+          status: document.body.dataset.sampleStatus ?? null,
+          error: document.body.dataset.sampleError ?? null,
+          renderedFeatures: Number(document.body.dataset.renderedFeatures ?? 0),
+          featureCount: document.body.dataset.featureCount ? Number(document.body.dataset.featureCount) : null,
+          elapsedMs: document.body.dataset.sampleElapsedMs ? Number(document.body.dataset.sampleElapsedMs) : null,
+          canvases: document.querySelectorAll("#map canvas").length,
+          vectorPaths: document.querySelectorAll("#map svg path").length,
+          statusText: document.querySelector("#status")?.textContent?.trim() ?? "",
+        }));
+        if (proof.status !== "pass") failures.push(`sample status ${JSON.stringify(proof.status)}${proof.error ? `: ${proof.error}` : ""}`);
+        if (!(proof.renderedFeatures > 0)) failures.push("sample rendered no features in view");
+        if (proof.canvases + proof.vectorPaths === 0) failures.push("sample map has no canvas or drawn vector paths");
+      }
+    }
+    await page.waitForTimeout(500);
+  } catch (error) {
+    failures.push(`navigation: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const uniqueFailures = [...new Set(failures)];
+  screenshot = `own-${app.id}.png`;
+  await page.screenshot({ path: path.join(evidenceDir, screenshot), fullPage: false });
+  await page.close();
+  return {
+    id: app.id,
+    title,
+    source: OWN_SAMPLE_SOURCE_REPO,
+    builtFrom: app.builtFrom,
+    dataOrigin,
+    passed: uniqueFailures.length === 0,
+    requestCount: observedRequests.size,
+    proof,
+    degraded,
+    failures: uniqueFailures,
+    screenshot,
+  };
 }
 
 async function smokeSample(browser, origin, sample) {

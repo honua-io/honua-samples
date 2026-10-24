@@ -15,6 +15,7 @@ import {
   imageryCogProofFailures,
   stacFixtureProjectionProofFailures,
 } from "./lib/gallery-live-contract.mjs";
+import { documentedDegradedResponse, OWN_APP_MANIFEST_NAME } from "./lib/own-sample-apps.mjs";
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 import { convergeSemanticAssertion } from "./lib/semantic-convergence.mjs";
 
@@ -279,6 +280,21 @@ const semanticAssertions = new Map([
   }],
 ]);
 
+// This repo's own browser samples (scripts/lib/own-sample-apps.mjs) share
+// one page contract: body[data-sample-status] ends "pass" or "fail", and a
+// pass records data-rendered-features > 0 on a mounted map.
+async function ownSampleAssertion(frame) {
+  await frame.waitForFunction(() => document.body?.dataset.sampleStatus && document.body.dataset.sampleStatus !== "loading", null, markerOptions());
+  const proof = await frame.evaluate(() => ({
+    status: document.body.dataset.sampleStatus,
+    error: document.body.dataset.sampleError ?? null,
+    renderedFeatures: Number(document.body.dataset.renderedFeatures ?? 0),
+    drawn: document.querySelectorAll("#map canvas, #map svg path").length,
+  }));
+  if (proof.status !== "pass") throw new Error(`own sample status ${JSON.stringify(proof.status)}${proof.error ? `: ${proof.error}` : ""}`);
+  if (!(proof.renderedFeatures > 0) || proof.drawn === 0) throw new Error(`own sample drew nothing: ${JSON.stringify(proof)}`);
+}
+
 async function main() {
   await mkdir(evidenceDir, { recursive: true });
   const localServer = configuredBaseUrl ? null : createStaticServer();
@@ -359,9 +375,19 @@ async function verifyCard(browser, baseUrl, card) {
   let screenshot = null;
   let semanticConvergence = null;
   const appFailures = [];
+  const degraded = [];
+  // An own sample's data origin comes from its published app manifest; without
+  // it no degraded-state exception applies.
+  const dataOrigin = card.source === "honua-samples" && card.runnable ? await ownAppDataOrigin(page, baseUrl, card.id) : null;
+  const isDocumentedDegraded = (url, status) => {
+    const known = documentedDegradedResponse({ url, status, dataOrigin });
+    if (known) degraded.push({ state: known.state, note: known.note, response: `${status} ${new URL(url).pathname}` });
+    return Boolean(known);
+  };
+  const appPrefix = card.source === "honua-samples" ? `/${card.id}/app/` : `/sdk/${card.id}/app/`;
   const isAppUrl = (value) => {
     try {
-      return new URL(value, `${baseUrl}/`).pathname.startsWith(`/sdk/${card.id}/app/`);
+      return new URL(value, `${baseUrl}/`).pathname.startsWith(appPrefix);
     } catch {
       return false;
     }
@@ -375,6 +401,10 @@ async function verifyCard(browser, baseUrl, card) {
   };
   page.on("console", (message) => {
     if (message.type() !== "error") return;
+    // Chromium reports a failed subresource as a console error located at the
+    // resource URL; the documented basemap probe is classified by the
+    // response handler below instead.
+    if (dataOrigin && /^Failed to load resource:/u.test(message.text()) && documentedDegradedResponse({ url: message.location().url, status: 400, dataOrigin })) return;
     if (isAppUrl(message.location().url)) appFailures.push(`console: ${message.text()}`);
     else if (card.jobPage) failures.push(`console: ${message.text()}`);
   });
@@ -383,7 +413,9 @@ async function verifyCard(browser, baseUrl, card) {
     if (isAppRequest(request) && !isAllowedAbort(card.id, request)) appFailures.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ""}`);
   });
   page.on("response", (response) => {
-    if (isAppRequest(response.request()) && response.status() >= 400 && new URL(response.url()).pathname !== "/favicon.ico") appFailures.push(`response: ${response.status()} ${response.request().method()} ${response.url()}`);
+    if (!isAppRequest(response.request()) || response.status() < 400 || new URL(response.url()).pathname === "/favicon.ico") return;
+    if (isDocumentedDegraded(response.url(), response.status())) return;
+    appFailures.push(`response: ${response.status()} ${response.request().method()} ${response.url()}`);
   });
 
   try {
@@ -400,7 +432,7 @@ async function verifyCard(browser, baseUrl, card) {
     await validateDetailContract(page, card, failures);
 
     if (card.runnable) {
-      const assertion = semanticAssertions.get(card.id);
+      const assertion = semanticAssertions.get(card.id) ?? (card.source === "honua-samples" ? ownSampleAssertion : undefined);
       if (!assertion) {
         failures.push("runnable card has no registered semantic success assertion");
       } else {
@@ -453,6 +485,7 @@ async function verifyCard(browser, baseUrl, card) {
     passed: uniqueFailures.length === 0,
     failures: uniqueFailures,
     screenshot,
+    ...(degraded.length ? { degraded } : {}),
     ...(semanticConvergence ? { semanticConvergence } : {}),
   };
 }
@@ -538,6 +571,17 @@ async function validateJobDetailContract(page, card, failures) {
     if ((await page.locator(".code-view").count()) !== 0) failures.push("job project incorrectly presents a primary code file");
     const href = await page.locator(".project-source-panel a.button.primary").getAttribute("href");
     if (!isJobContract(href, card.id)) failures.push("job project primary detail action is not its governed contract");
+  }
+}
+
+async function ownAppDataOrigin(page, baseUrl, id) {
+  try {
+    const response = await page.request.get(`${baseUrl}/${id}/${OWN_APP_MANIFEST_NAME}`, { timeout: navigationTimeoutMs });
+    if (!response.ok()) return null;
+    const origins = (await response.json())?.dataOrigins;
+    return Array.isArray(origins) && origins.length === 1 ? origins[0] : null;
+  } catch {
+    return null;
   }
 }
 
