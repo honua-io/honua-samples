@@ -75,6 +75,12 @@ export interface ParcelMap {
   showFlood(geometries: readonly GeoJsonGeometry[]): void;
   /** True when the selected parcel's outline is in the loaded tiles. */
   selectedOutlineRendered(): boolean;
+  /**
+   * Resolves once the map has finished drawing (the next idle, or now if it is
+   * already idle), after body[data-rendered-features] is updated; at most
+   * timeoutMs.
+   */
+  whenDrawn(timeoutMs: number): Promise<void>;
 }
 
 export interface MapEvents {
@@ -186,10 +192,11 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
   (window as unknown as { sampleMap: maplibregl.Map }).sampleMap = map;
   // body[data-rendered-features]: parcel outlines the map has drawn in view,
   // the rendered-result proof the gallery smoke reads for every own sample.
-  map.on("idle", () => {
+  const recordRendered = () => {
     const count = map.getLayer("parcel-outlines") ? map.queryRenderedFeatures({ layers: ["parcel-outlines"] }).length : 0;
     document.body.dataset.renderedFeatures = String(count);
-  });
+  };
+  map.on("idle", recordRendered);
 
   let selectedTmk: string | null = null;
 
@@ -267,6 +274,22 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
         } as unknown as Parameters<maplibregl.GeoJSONSource["setData"]>[0];
         (map.getSource("flood") as maplibregl.GeoJSONSource | undefined)?.setData(data);
       });
+    },
+    whenDrawn(timeoutMs) {
+      return ready.then(
+        () =>
+          new Promise<void>((resolve) => {
+            const done = () => {
+              clearTimeout(timer);
+              map.off("idle", done);
+              recordRendered();
+              resolve();
+            };
+            const timer = setTimeout(done, timeoutMs);
+            if (map.loaded() && map.areTilesLoaded() && !map.isMoving()) done();
+            else map.on("idle", done);
+          }),
+      );
     },
     selectedOutlineRendered() {
       if (!selectedTmk || !map.getLayer("parcel-selected-line")) return false;

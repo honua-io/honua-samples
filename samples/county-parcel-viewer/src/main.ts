@@ -173,10 +173,19 @@ const current = (id: number) => id === generation;
 function finishLookup(id: number, outcome: "pass" | "fail", detail: string): void {
   if (!current(id)) return;
   findButton.disabled = false;
-  signal({ sampleStatus: outcome, sampleElapsedMs: String(Math.round(performance.now() - startedAt)) });
+  const elapsedMs = String(Math.round(performance.now() - startedAt));
   // Navigation start to the first finished lookup (the live budget, design R7).
   document.body.dataset.firstResultMs ??= String(Math.round(performance.now()));
   setDiag(`${outcome === "pass" ? "PASS" : "FAIL"}: ${detail}`);
+  if (outcome === "fail" || !parcelMap) {
+    signal({ sampleStatus: outcome, sampleElapsedMs: elapsedMs });
+    return;
+  }
+  // "pass" means the result is shown and the map has drawn it, so
+  // data-rendered-features is current when a verifier reads the status.
+  void parcelMap.whenDrawn(15_000).then(() => {
+    if (current(id)) signal({ sampleStatus: "pass", sampleElapsedMs: elapsedMs });
+  });
 }
 
 function showInvalid(): void {
