@@ -339,12 +339,18 @@ export async function prepareTemplateApp({ sampleDir, templateId, builds }) {
   // (third-party) basemap beneath the layer, so the pixel oracle's control pixel
   // would read whatever tiles that service serves today (honua-samples#69). The
   // template's documented VITE_HONUA_BASEMAP_STYLE override points the live lane at
-  // an empty, self-hosted MapLibre style instead: the basemap adds no layers and the
-  // template's own offline background stays the deterministic control colour.
+  // a self-hosted style whose only layer is the template's own solid background.
+  // The binding paints that colour under the operational layers and fetches no tiles.
+  const background = await readScaffoldBackground(appDir);
   await mkdir(path.join(appDir, "public"), { recursive: true });
   await writeFile(
     path.join(appDir, "public", VERIFICATION_BASEMAP_FILE),
-    `${JSON.stringify({ version: 8, name: "honua-samples verification basemap (empty)", sources: {}, layers: [] })}\n`,
+    `${JSON.stringify({
+      version: 8,
+      name: "honua-samples verification basemap",
+      sources: {},
+      layers: [{ id: "background", type: "background", paint: { "background-color": background } }],
+    })}\n`,
   );
   const outDirs = {};
   for (const [name, endpoint] of Object.entries(builds)) {
@@ -375,6 +381,27 @@ function registryReceipt(lock, name) {
   return { name, version: entry.version, resolved: entry.resolved, integrity: entry.integrity };
 }
 
+const BACKGROUND_COLOUR = /"background-color":\s*"(#[0-9a-fA-F]{6})"/;
+
+/**
+ * The scaffolded template's offline background colour. The verification basemap
+ * repeats it so a live-lane style override and the pixel oracle name one colour.
+ */
+async function readScaffoldBackground(appDir) {
+  for (const relative of ["src/main.ts", "src/App.tsx"]) {
+    let source;
+    try {
+      source = await readFile(path.join(appDir, relative), "utf8");
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
+    const background = BACKGROUND_COLOUR.exec(source);
+    if (background) return background[1];
+  }
+  throw new Error(`could not read the template background colour from ${appDir}`);
+}
+
 /**
  * Reads the initial map view and the basemap background colour out of the
  * scaffolded source, so the pixel oracle follows the template bytes instead
@@ -383,7 +410,7 @@ function registryReceipt(lock, name) {
 export async function readTemplateView(sourceFile) {
   const source = await readFile(sourceFile, "utf8");
   const view = /center:\s*\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\][^}]*?zoom:\s*([\d.]+)/.exec(source);
-  const background = /"background-color":\s*"(#[0-9a-fA-F]{6})"/.exec(source);
+  const background = BACKGROUND_COLOUR.exec(source);
   if (!view || !background) throw new Error(`could not read the initial view and background colour from ${sourceFile}`);
   return {
     center: [Number(view[1]), Number(view[2])],
