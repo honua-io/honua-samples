@@ -1,0 +1,42 @@
+{
+  "name": "honua-sample-county-parcel-viewer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "County parcel viewer on Maui demo data, built on the published @honua/sdk-js. The gallery builds it from a clean export with npm ci && npm run build and publishes dist/.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/public-sans": "5.3.0",
+    "@fontsource/source-serif-4": "5.3.1",
+    "@honua/sdk-js": "0.2.10",
+    "@turf/area": "7.4.0",
+    "@turf/bbox": "7.4.0",
+    "@turf/boolean-contains": "7.4.0",
+    "@turf/boolean-intersects": "7.4.0",
+    "@turf/boolean-within": "7.4.0",
+    "@turf/buffer": "7.4.0",
+    "@turf/centroid": "7.4.0",
+    "@turf/convex": "7.4.0",
+    "@turf/difference": "7.4.0",
+    "@turf/intersect": "7.4.0",
+    "@turf/length": "7.4.0",
+    "@turf/nearest-point": "7.4.0",
+    "@turf/simplify": "7.4.0",
+    "@turf/union": "7.4.0",
+    "maplibre-gl": "6.4.1",
+    "pmtiles": "4.5.0",
+    "proj4": "2.22.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "8.2.0"
+  }
+}
