@@ -1,0 +1,10 @@
+{
+  "schema": "honua.sdk.sample-bundle-pack.v1",
+  "sourceCommit": "a9ed6e2d588f0412b09426620532228d2317b6e1",
+  "sourceDateEpoch": 1793086527,
+  "manifestSha256": "881f3cdce249ffe5d4ba95cec555c1026ad5ac785cc619f085c6894d6453cc74",
+  "archiveSha256": "e751f61d15698921c376316cf76277b13f31ff9646967ff7825560366de1a0ce",
+  "archiveBytes": 137740064,
+  "fileCount": 157,
+  "memberCount": 210
+}
