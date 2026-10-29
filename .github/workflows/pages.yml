@@ -214,11 +214,9 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Smoke the exact gallery artifact
-        env:
-          # Bundle supply is already gated at 11 above. The curated public
-          # portfolio intentionally withholds technically runnable labs until
-          # they demonstrate a product-grade result, so gate its own floor.
-          MIN_PUBLISHED_RUNNABLE_APPS: "11"
+        # Bundle supply is gated above. The publish floor is the named list in
+        # config/required-published-apps.v1.json: every app it lists must be
+        # runnable in this artifact (scripts/smoke-published-gallery.mjs).
         run: npm run test:gallery:browser
 
       - name: Verify server-first job pages

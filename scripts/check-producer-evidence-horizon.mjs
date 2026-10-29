@@ -8,18 +8,22 @@
 // hidden for weeks until an unrelated PR went red.
 //
 // This check reads the committed v2 handoff snapshot for the locked producer
-// revision and reports the earliest `visualEvidence.expiresAt` across its
-// qualified journeys. It fails when that instant is less than the horizon away
+// revision and reports the earliest `visualEvidence.expiresAt` across the
+// qualified journeys of the SDK samples the public portfolio publishes, the
+// same scope admission enforces. When the portfolio publishes no SDK sample,
+// no window can lapse onto a page and the check passes. It fails when that instant is less than the horizon away
 // (PRODUCER_EVIDENCE_HORIZON_DAYS, default 3). validate.yml runs it daily on a
 // schedule, so trunk goes red days before the gallery admission would, while
 // there is still time to re-pin scripts/lib/sdk-producer-lock.mjs.
 //
-// It does not change admission. It never extends a window or skips a journey.
+// It does not change admission. It never extends a window or skips a journey
+// of a published sample.
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadGalleryPublicPortfolio, publicSampleIds } from "./lib/gallery-public-portfolio.mjs";
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -28,10 +32,17 @@ const SNAPSHOT_META_PATH = path.join(REPO_ROOT, "config", "sdkjs-handoff.v2.snap
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const DEFAULT_HORIZON_DAYS = 3;
 
-/** Earliest evidence expiry across qualified journeys, or an error string. */
-export function earliestEvidenceExpiry(handoff) {
-  const journeys = Array.isArray(handoff?.qualifiedJourneys) ? handoff.qualifiedJourneys : [];
-  if (journeys.length === 0) return { error: "handoff declares no qualified journeys" };
+/**
+ * Earliest evidence expiry across qualified journeys, or an error string.
+ * `publishedSampleIds` (null = every journey) limits it to published samples;
+ * `{ none: true }` means no published sample has a qualified journey.
+ */
+export function earliestEvidenceExpiry(handoff, { publishedSampleIds = null } = {}) {
+  const all = Array.isArray(handoff?.qualifiedJourneys) ? handoff.qualifiedJourneys : [];
+  if (all.length === 0) return { error: "handoff declares no qualified journeys" };
+  const scope = publishedSampleIds === null ? null : new Set(publishedSampleIds);
+  const journeys = scope === null ? all : all.filter((journey) => scope.has(journey?.sampleId));
+  if (journeys.length === 0) return { none: true };
   let earliest = null;
   for (const journey of journeys) {
     const expiresAt = Date.parse(journey?.visualEvidence?.expiresAt ?? "");
@@ -44,12 +55,18 @@ export function earliestEvidenceExpiry(handoff) {
 }
 
 /** Judge one handoff against a clock and a horizon. */
-export function judgeEvidenceHorizon(handoff, { now = new Date(), horizonDays = DEFAULT_HORIZON_DAYS } = {}) {
+export function judgeEvidenceHorizon(
+  handoff,
+  { now = new Date(), horizonDays = DEFAULT_HORIZON_DAYS, publishedSampleIds = null } = {},
+) {
   if (!Number.isFinite(horizonDays) || horizonDays < 0) {
     return { ok: false, message: `horizon must be a non-negative number of days; received ${horizonDays}` };
   }
-  const earliest = earliestEvidenceExpiry(handoff);
+  const earliest = earliestEvidenceExpiry(handoff, { publishedSampleIds });
   if (earliest.error) return { ok: false, message: earliest.error };
+  if (earliest.none) {
+    return { ok: true, remainingDays: null, message: "the public portfolio publishes no SDK sample with a qualified journey; no evidence window can reach a page" };
+  }
   const remainingMs = earliest.expiresAt - now.getTime();
   const remainingDays = remainingMs / DAY_MS;
   const expiresIso = new Date(earliest.expiresAt).toISOString();
@@ -74,7 +91,12 @@ export async function main({ env = process.env, now = new Date() } = {}) {
   const horizonDays = env.PRODUCER_EVIDENCE_HORIZON_DAYS === undefined || env.PRODUCER_EVIDENCE_HORIZON_DAYS === ""
     ? DEFAULT_HORIZON_DAYS
     : Number(env.PRODUCER_EVIDENCE_HORIZON_DAYS);
-  const verdict = judgeEvidenceHorizon(handoff, { now, horizonDays });
+  const portfolio = await loadGalleryPublicPortfolio();
+  const verdict = judgeEvidenceHorizon(handoff, {
+    now,
+    horizonDays,
+    publishedSampleIds: publicSampleIds(portfolio, "honua-sdk-js"),
+  });
   console.log(`producer ${SDK_PRODUCER_LOCK.repository}@${SDK_PRODUCER_LOCK.revision}: ${verdict.message}`);
   if (verdict.ok) return 0;
   console.error(

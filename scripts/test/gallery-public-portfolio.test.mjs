@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "../lib/gallery-public-portfolio.mjs";
+import {
+  applyGalleryPublicPortfolio,
+  loadGalleryPublicPortfolio,
+  movedEntries,
+  publicSampleIds,
+} from "../lib/gallery-public-portfolio.mjs";
 
 test("the gallery portfolio classifies the 32 SDK and 14 owned cards", async () => {
   const portfolio = await loadGalleryPublicPortfolio();
@@ -11,7 +16,10 @@ test("the gallery portfolio classifies the 32 SDK and 14 owned cards", async () 
   assert.equal(portfolio.entries.length, 46);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-sdk-js").length, 32);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 14);
-  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, public: 16 });
+  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, moved: 12, public: 4 });
+  // SDK sample cards are out of the gallery; their old URLs render moved pages.
+  assert.deepEqual(publicSampleIds(portfolio, "honua-sdk-js"), []);
+  assert.equal(movedEntries(portfolio, "honua-sdk-js").length, 12);
   // The four map-first browser samples are the owned public cards.
   assert.deepEqual(
     portfolio.entries
@@ -25,12 +33,13 @@ test("the gallery portfolio classifies the 32 SDK and 14 owned cards", async () 
 test("only explicitly public technically qualified cards are admitted", async () => {
   const portfolio = await loadGalleryPublicPortfolio();
   const result = applyGalleryPublicPortfolio([
+    { sourceRepo: "honua-samples", id: "maplibre-featureserver-layer" },
     { sourceRepo: "honua-sdk-js", id: "pmtiles-static" },
-    { sourceRepo: "honua-sdk-js", id: "maplibre-quickstart" },
     { sourceRepo: "honua-samples", id: "odata-query-rest" }
   ], portfolio);
-  assert.deepEqual(result.publicCards.map((card) => card.id), ["pmtiles-static", "maplibre-quickstart"]);
+  assert.deepEqual(result.publicCards.map((card) => card.id), ["maplibre-featureserver-layer"]);
   assert.deepEqual(result.excluded.map((entry) => [entry.id, entry.disposition]), [
+    ["pmtiles-static", "moved"],
     ["odata-query-rest", "internal-qualification"]
   ]);
 });

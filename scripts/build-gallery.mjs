@@ -78,7 +78,12 @@ import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
 import { bindSdkSourceToBundle, isFullGitSha, validateBoundSdkUrl } from "./lib/sdk-source-binding.mjs";
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
-import { applyGalleryPublicPortfolio, loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
+import {
+  applyGalleryPublicPortfolio,
+  loadGalleryPublicPortfolio,
+  movedEntries,
+  publicSampleIds,
+} from "./lib/gallery-public-portfolio.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
 import {
   dataOriginHost,
@@ -197,8 +202,14 @@ async function main() {
   // loadSdkJsHandoff throws when neither the live pair nor the committed
   // snapshot pair passes admission (tampered/stale/schema-incompatible/
   // locally reconstructed) -- that failure is deliberately fatal in BOTH
-  // --check and deploy builds.
-  const { handoff, source: handoffSource } = await loadSdkJsHandoff({ refreshSnapshot: !CHECK_MODE });
+  // --check and deploy builds. Evidence freshness is required for the SDK
+  // samples the public portfolio publishes; a withheld sample's lapsed
+  // window cannot reach a page.
+  const portfolio = await loadGalleryPublicPortfolio();
+  const { handoff, source: handoffSource } = await loadSdkJsHandoff({
+    refreshSnapshot: !CHECK_MODE,
+    freshEvidenceSampleIds: publicSampleIds(portfolio, "honua-sdk-js"),
+  });
   const { catalog } = await loadSdkJsCatalog({ refreshSnapshot: !CHECK_MODE });
   const { crosswalk } = await loadCapabilityCrosswalk();
   const merge = mergeSdkProjection({
@@ -226,7 +237,6 @@ async function main() {
   const bundleById = new Map((bundleState.manifest?.samples ?? []).map((s) => [s.id, s]));
   const stagedBundleIds = new Set(bundleState.stagedIds);
 
-  const portfolio = await loadGalleryPublicPortfolio();
   const ownCandidates = ownSamples.map((s) => toOwnCard(s, runResults, keyByKey, problems, sourceCommit));
   const ownPortfolioResult = applyGalleryPublicPortfolio(ownCandidates, portfolio);
   const ownCards = ownPortfolioResult.publicCards;
@@ -376,13 +386,33 @@ async function main() {
     );
   }
 
+  // Historical /sdk/<id>/ URLs for SDK samples the portfolio has moved out
+  // of the gallery keep resolving as a moved page, so shared links land on
+  // the current gallery instead of a 404.
+  const recordById = new Map(merge.records.map((record) => [record.card.id, record.card]));
+  const moved = movedEntries(portfolio, "honua-sdk-js");
+  for (const entry of moved) {
+    if (sdkCards.some((card) => card.id === entry.id) || merge.fixtureOnlyEntries.some((e) => e.id === entry.id)) {
+      throw new Error(`sdk sample "${entry.id}" is marked moved but also renders as a card or status stub`);
+    }
+    const dir = path.join(SITE_DIR, "sdk", entry.id);
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "index.html"),
+      renderSdkMovedPage(entry, recordById.get(entry.id), generatedAt, sourceCommit, bundleNotice),
+      "utf8",
+    );
+  }
+
   await assertNoMutableTrunkLinks(SITE_DIR);
 
-  const pageCount = 1 + ownCards.length + jobCards.length + sdkCards.length + merge.fixtureOnlyEntries.length;
+  const pageCount =
+    1 + ownCards.length + jobCards.length + sdkCards.length + merge.fixtureOnlyEntries.length + moved.length;
   console.log(
     `build-gallery: wrote ${pageCount} page(s) to site/ -- ${ownCards.length} runnable/source samples and ${jobCards.length} canonical job page(s) from ${OWN_REPO}, ${sdkCards.length} from ${SDKJS_REPO}` +
       ` (${ownEmbeddedCount} own browser sample(s) and ${embeddedCount} sdk-js sample(s) embedded with a verified running build` +
-      `${merge.fixtureOnlyEntries.length ? `, ${merge.fixtureOnlyEntries.length} internal-fixture status stub(s)` : ""})` +
+      `${merge.fixtureOnlyEntries.length ? `, ${merge.fixtureOnlyEntries.length} internal-fixture status stub(s)` : ""}` +
+      `${moved.length ? `, ${moved.length} moved page(s)` : ""})` +
       (problems.length ? ` (${problems.length} problem(s) warned, see above)` : ""),
   );
 }
@@ -1480,6 +1510,30 @@ ${entry.sourcePath ? `<p><a href="https://github.com/${SDKJS_REPO}/tree/${SDK_PR
   return pageShell({
     title: `${entry.title ?? entry.id} — Honua Samples`,
     description: "Internal SDK fixture -- not a public sample.",
+    bodyHtml,
+    depth: 2,
+    generatedAt,
+    sourceCommit,
+    bundleNotice,
+  });
+}
+
+// Moved page for an SDK sample the public portfolio has taken out of the
+// gallery: the old /sdk/<id>/ URL says so plainly and links onward. It never
+// renders the sample, its qualification, or an embed.
+function renderSdkMovedPage(entry, record, generatedAt, sourceCommit, bundleNotice) {
+  const title = record?.title ?? entry.id;
+  const sourcePath = record?.source?.path;
+  const bodyHtml = `
+<a class="back-link" href="../../">← All samples</a>
+<h1>${escapeHtml(title)}</h1>
+<div class="no-bundle-panel"><p><strong>This sample has moved.</strong>
+It is no longer listed in the gallery. <a href="../../">Browse the current samples</a>.</p></div>
+${sourcePath ? `<p><a href="https://github.com/${SDKJS_REPO}/tree/${SDK_PRODUCER_LOCK.revision}/${escapeAttr(sourcePath)}" target="_blank" rel="noopener noreferrer">View its source on GitHub ↗</a></p>` : ""}
+`;
+  return pageShell({
+    title: `${title} — moved — Honua Samples`,
+    description: "This sample has moved out of the gallery.",
     bodyHtml,
     depth: 2,
     generatedAt,

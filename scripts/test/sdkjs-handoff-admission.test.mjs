@@ -160,6 +160,34 @@ test("stale handoff (expired qualified visual evidence) is rejected", () => {
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /stale handoff: qualified journey/);
 });
+test("expired evidence on an unpublished SDK sample does not reject the handoff", () => {
+  const result = admitSdkJsHandoff({
+    handoffText,
+    fixtureText,
+    now: new Date("2026-09-01T00:00:00.000Z"),
+    freshEvidenceSampleIds: [],
+  });
+  assert.equal(result.ok, true, result.errors.join("\n"));
+});
+
+test("expired evidence on a published SDK sample still rejects the handoff", () => {
+  const publishedId = JSON.parse(handoffText).qualifiedJourneys[0].sampleId;
+  const result = admitSdkJsHandoff({
+    handoffText,
+    fixtureText,
+    now: new Date("2026-09-01T00:00:00.000Z"),
+    freshEvidenceSampleIds: [publishedId],
+  });
+  assert.equal(result.ok, false);
+  const publishedJourneys = new Set(
+    JSON.parse(handoffText).qualifiedJourneys.filter((j) => j.sampleId === publishedId).map((j) => j.journeyId),
+  );
+  const stale = result.errors.filter((line) => line.startsWith("stale handoff"));
+  assert.ok(stale.length > 0);
+  // Only the published sample's journeys are judged stale.
+  for (const line of stale) assert.ok([...publishedJourneys].some((id) => line.includes(`"${id}"`)), line);
+});
+
 
 test("content-bound identity consumers may validate an expired handoff without admitting stale evidence", () => {
   const result = admitSdkJsHandoff({
