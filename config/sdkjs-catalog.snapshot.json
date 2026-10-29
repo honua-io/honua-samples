@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sdkjs-catalog.mjs (via scripts/build-gallery.mjs) when the live fetch of samples/catalog.v2.json fails, so samples.honua.io deploys never break on an sdk-js-side hiccup. Rewritten automatically whenever the live fetch succeeds -- commit the change to keep the offline fallback current. See honua-io/honua-samples#3.",
-  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/6372de9874d5cdccdb2aa38f20913f5cf516ecf4/samples/catalog.v2.json",
-  "fetchedAt": "2026-10-24T17:14:24.812Z",
+  "sourceUrl": "https://raw.githubusercontent.com/honua-io/honua-sdk-js/a9ed6e2d588f0412b09426620532228d2317b6e1/samples/catalog.v2.json",
+  "fetchedAt": "2026-10-29T06:48:41.757Z",
   "catalog": {
     "$schema": "./contract/v2/schemas/sample-catalog.schema.json",
     "format": "honua.sdk.sample-catalog.v2",
@@ -954,7 +954,7 @@
               "npm run evidence:cog:live"
             ],
             "evidencePath": "samples/evidence/imagery-cog-quickstart/live.v1.json",
-            "expiresAt": "2026-11-24T14:06:54.667Z"
+            "expiresAt": "2026-11-27T06:34:19.565Z"
           }
         },
         "expectedDegradation": "Credential-bearing URLs, CORS, missing or oversized range responses, unsupported CRS/format, and nodata return structured outcomes while published imagery remains usable. Public live proof covers classified COG inspection and a bounded decoded window in EPSG:32621; browser-side UTM reprojection and a georeferenced live MapLibre mount remain explicitly unclaimed.",
@@ -1060,7 +1060,7 @@
               "npm run evidence:first-map:live"
             ],
             "evidencePath": "samples/evidence/maplibre-quickstart/live.v1.json",
-            "expiresAt": "2026-11-24T14:04:44.203Z"
+            "expiresAt": "2026-11-27T06:32:07.356Z"
           }
         },
         "expectedDegradation": "Capability misses, plan warnings, and bounded fallback are shown rather than silently returning an empty map.",
@@ -1182,7 +1182,7 @@
               "npm run evidence:migration-workbench:live"
             ],
             "evidencePath": "samples/evidence/migration-workbench/live.v1.json",
-            "expiresAt": "2026-11-24T14:07:20.788Z"
+            "expiresAt": "2026-11-27T06:34:45.088Z"
           }
         },
         "expectedDegradation": "Unsupported ArcGIS modules are reported as manual work, never silently removed.",
@@ -1635,7 +1635,7 @@
           "mode": "hybrid",
           "authMode": "anonymous",
           "config": [],
-          "provenance": "Committed deterministic GeoParquet fixture or pinned Overture STAC item 2026-06-17.0/places/place/00000 on public AWS Open Data.",
+          "provenance": "Committed deterministic GeoParquet fixture or pinned Overture STAC item 2026-10-21.0/places/place/00000 on public AWS Open Data.",
           "attribution": "Overture Maps Foundation Open Map Data with per-feature upstream sources preserved by the live schema.",
           "freshness": "Pinned release, schema, object ETag, last modification, and execution observation time are shown separately.",
           "configurationStatus": "not-required",
@@ -2171,7 +2171,7 @@
               "npm run demo:service-explorer:live-evidence"
             ],
             "evidencePath": "samples/evidence/service-explorer/live.v1.json",
-            "expiresAt": "2026-11-24T14:08:36.738Z"
+            "expiresAt": "2026-11-27T06:35:57.501Z"
           }
         },
         "expectedDegradation": "Partial discovery and unsupported source actions remain visible with structured state, code, and reason; the sample does not synthesize success.",
