@@ -21,6 +21,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCapabilityKeyList } from "./lib/capability-keys.mjs";
 import { validateAgainstSchema } from "./lib/mini-schema.mjs";
+import { appBuildErrors } from "./lib/own-sample-apps.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -77,6 +78,10 @@ async function main(samplesDirArg) {
         `id "${data.id}" does not match directory name "${dirName}"`,
       );
     }
+
+    // entrypoint.build: browser samples only, and its paths stay inside the
+    // sample (rules shared with the stager, scripts/lib/own-sample-apps.mjs).
+    fileErrors.push(...appBuildErrors(data?.entrypoint));
 
     // Capability keys must be members of the canonical key list.
     if (Array.isArray(data?.capabilities)) {
