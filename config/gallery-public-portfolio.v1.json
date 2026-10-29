@@ -201,6 +201,12 @@
     },
     {
       "sourceRepo": "honua-samples",
+      "id": "county-parcel-viewer",
+      "disposition": "public",
+      "reason": "County app: the parcel viewer a small county's public Tax Parcel Viewer does today, on Honua. Parcel search by TMK, zoning and FEMA flood overlap, and the assessor link, built on @honua/sdk-js with parcel outlines from PMTiles."
+    },
+    {
+      "sourceRepo": "honua-samples",
       "id": "create-honua-app-react-ts",
       "disposition": "internal-qualification",
       "reason": "Release verification that the published react-ts starter scaffolds, builds, and mounts a Honua layer; the public first-map story stays with create-honua-app's own docs."

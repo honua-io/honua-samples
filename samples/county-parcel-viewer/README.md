@@ -27,7 +27,7 @@ npm ci
 npm run dev
 ```
 
-Open the URL Vite prints. The first load shows an example parcel (TMK 2-1-5-010:777). `npm run build` typechecks
+Open the URL Vite prints. The first load shows an example parcel (TMK 2-3-4-008:053, downtown Wailuku). `npm run build` typechecks
 and writes the static app to `dist/`; any static file server can host it, at any path (`base: "./"`).
 
 ## What the code does

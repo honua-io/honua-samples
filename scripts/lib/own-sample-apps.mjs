@@ -45,6 +45,11 @@ export const OWN_SAMPLE_SOURCE_REPO = "honua-samples";
 // published packages only). They are libraries, not data origins.
 export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https://unpkg.com"]);
 
+// Sites a sample only links to (attribution and the official flood map), never
+// fetches from (R13). They are not data origins. The browser verify lanes
+// assert at runtime that no request goes to them.
+export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://msc.fema.gov"]);
+
 const REGULAR_FILE_MODES = new Set(["100644", "100755"]);
 const ORIGIN_PATTERN = /https:\/\/[a-z0-9.-]+(?::\d+)?/giu;
 // Source files the data-origin scan reads. Built samples add TypeScript.
@@ -110,7 +115,7 @@ export function dataOriginsOf(text) {
   const origins = new Set();
   for (const match of String(text).matchAll(ORIGIN_PATTERN)) {
     const origin = match[0].toLowerCase();
-    if (!LIBRARY_ORIGINS.includes(origin)) origins.add(origin);
+    if (!LIBRARY_ORIGINS.includes(origin) && !NAVIGATION_ORIGINS.includes(origin)) origins.add(origin);
   }
   return [...origins].sort();
 }

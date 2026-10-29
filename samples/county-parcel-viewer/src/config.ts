@@ -12,7 +12,9 @@
 //   tmk             the selected parcel (9 digits)
 
 export const DEFAULT_BASE_URL = "https://demo.honua.io";
-export const EXAMPLE_TMK = "215010777";
+// A downtown Wailuku parcel (B-3 Business, 100%): the first load shows a full
+// zoning and flood result rather than an empty zoning match.
+export const EXAMPLE_TMK = "234008053";
 
 /** URL parameters that choose data, carried into every share link. */
 export const LAYER_PARAMS = ["baseUrl", "parcelsUrl", "zoningUrl", "floodUrl", "parcelTilesUrl", "basemap"] as const;

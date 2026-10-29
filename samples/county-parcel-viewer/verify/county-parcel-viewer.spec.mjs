@@ -29,12 +29,14 @@ const APP_PATH = "/county-parcel-viewer/app/";
 const DATA_BASE = (process.env.HONUA_SAMPLE_TARGET_BASE_URL || "https://demo.honua.io").replace(/\/+$/u, "");
 const DATA_ORIGIN = new URL(DATA_BASE).origin;
 const LIVE_BUDGET_MS = Number(process.env.HONUA_SAMPLE_LIVE_BUDGET_MS ?? 5_000);
-const EXAMPLE_TMK = "215010777";
+const EXAMPLE_TMK = "234008053";
 const PARCELS = `${DATA_BASE}/rest/services/maui-parcels/FeatureServer/1`;
 // A downtown Wailuku parcel (200 S High St) and the island's largest parcel,
 // whose 4,500-vertex outline exercises the POST candidate path.
 const WAILUKU_TMK = "234008053";
 const LARGE_TMK = "249002001";
+// A coastal parcel in a VE flood zone, distinct from the example parcel.
+const COASTAL_TMK = "215010777";
 
 test.describe.configure({ mode: "serial" });
 
@@ -299,11 +301,11 @@ test("keyboard search moves focus to the parcel heading", async ({ page }) => {
   await settled(page);
   await page.locator("#q").focus();
   await page.keyboard.press("ControlOrMeta+a");
-  await page.keyboard.type(WAILUKU_TMK);
+  await page.keyboard.type(COASTAL_TMK);
   await page.keyboard.press("Enter");
   await settled(page);
   await expect(page.locator("#parcel-title")).toBeFocused();
-  expect(new URL(page.url()).searchParams.get("tmk")).toBe(WAILUKU_TMK);
+  expect(new URL(page.url()).searchParams.get("tmk")).toBe(COASTAL_TMK);
 });
 
 test("framed in the gallery, the app offers its own full-screen link to the selected parcel", async ({ page }) => {
