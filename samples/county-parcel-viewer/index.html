@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>County parcel viewer · Honua</title>
+    <meta name="description" content="Find a Maui parcel by TMK or street address and see its zoning and FEMA flood zones, built on the Honua JavaScript SDK." />
+  </head>
+  <body data-sample-status="loading">
+    <header class="bar">
+      <div class="brand">Honua <span>· County parcel viewer</span></div>
+      <a class="fullscreen" id="fullscreen" href="./" target="_blank" rel="noopener" hidden>Open full screen ↗</a>
+      <span class="tag">Maui demo data</span>
+    </header>
+
+    <form class="search" id="search" role="search" novalidate>
+      <div class="field">
+        <label for="q">Parcel number (TMK) or street address</label>
+        <div class="row">
+          <input id="q" name="q" type="text" inputmode="text" autocomplete="off" spellcheck="false" aria-describedby="q-hint" />
+          <button class="btn" id="find" type="submit">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" /></svg>
+            Find parcel
+          </button>
+        </div>
+        <p class="hint" id="q-hint">9-digit TMK, with or without dashes, or an address on Maui</p>
+        <p class="field-error" id="q-error" role="alert" hidden></p>
+      </div>
+    </form>
+
+    <main class="work">
+      <aside class="panel" id="panel" aria-live="polite" aria-label="Parcel results">
+        <div class="panel-inner" id="panel-inner"></div>
+      </aside>
+
+      <div class="map" role="region" aria-label="Map of the selected parcel and surrounding area">
+        <div id="map" class="map-canvas"></div>
+        <p class="map-loading" id="map-loading" role="status"><span class="spinner" aria-hidden="true"></span>Loading map…</p>
+        <p class="map-note" id="map-note" hidden></p>
+        <div class="legend" aria-hidden="true">
+          <span><i class="swatch selected"></i>Selected parcel</span>
+          <span><i class="swatch flood"></i>FEMA flood zone</span>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <details class="tech" id="tech">
+        <summary>Technical details (requests this page made)</summary>
+        <p class="diag" id="diag"></p>
+        <pre id="requests" aria-label="Requests this page made"></pre>
+      </details>
+      <p class="foot">
+        Geocoding © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> · Demo on public Maui County data, not
+        affiliated with the County of Maui
+      </p>
+    </footer>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

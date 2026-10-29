@@ -1,0 +1,41 @@
+{
+  "id": "county-parcel-viewer",
+  "title": "County parcel viewer",
+  "description": "A county parcel viewer built on the published Honua JavaScript SDK: find a Maui parcel by TMK, street address or a map click, and see its zoning districts and FEMA flood zones with the share of the parcel each covers, an assessor link and a shareable URL. Parcel outlines come from a PMTiles archive; lookups and overlap queries go to FeatureServer.",
+  "contentKind": "example",
+  "learning": {
+    "goal": "build-map",
+    "level": "intermediate",
+    "estimatedMinutes": 20,
+    "prerequisites": [
+      "Node.js 22.12 or later",
+      "Modern web browser",
+      "Internet access"
+    ]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
+  "capabilities": [
+    "serve.geoservices-featureserver",
+    "serve.geoservices-geocodeserver",
+    "serve.vector-tiles"
+  ],
+  "sdks": [
+    "js"
+  ],
+  "protocols": [
+    "geoservices-rest",
+    "pmtiles"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "browser",
+    "command": "index.html",
+    "build": {
+      "command": "npm ci && npm run build",
+      "outputDir": "dist",
+      "publishedEntrypoint": "index.html"
+    }
+  },
+  "status": "active"
+}

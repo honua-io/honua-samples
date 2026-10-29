@@ -150,6 +150,13 @@ test("a public-live sample must name exactly one data origin", async () => {
 
   assert.deepEqual(dataOriginsOf(PAGE), ["https://demo.honua.io"]);
   assert.deepEqual(dataOriginsOf(`<script src="https://unpkg.com/x@1/x.js"></script>`), []);
+  // Attribution and flood-map links are navigation, not data (R13); any other
+  // second origin still counts.
+  assert.deepEqual(
+    dataOriginsOf(`${PAGE}<a href="https://www.openstreetmap.org/copyright">OSM</a><a href="https://msc.fema.gov/portal">FEMA</a>`),
+    ["https://demo.honua.io"],
+  );
+  assert.deepEqual(dataOriginsOf(`${PAGE}<a href="https://maps.example.org/">x</a>`), ["https://demo.honua.io", "https://maps.example.org"]);
 });
 
 test("a non-sha source commit is refused before reading git", async () => {
