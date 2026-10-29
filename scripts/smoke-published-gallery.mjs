@@ -232,7 +232,14 @@ async function smokeOwnApp(browser, origin, app) {
     if (/Failed to load resource: the server responded with a status of 4\d\d/u.test(message.text())) return;
     failures.push(`console: ${message.text()}`);
   });
-  page.on("requestfailed", (request) => failures.push(`requestfailed: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ""}`));
+  page.on("requestfailed", (request) => {
+    const errorText = request.failure()?.errorText ?? "";
+    // MapLibre cancels PMTiles range requests a resize or pan supersedes. That
+    // is the client working, not a failure; the rendered-features proof below
+    // still requires the tiles to draw.
+    if (errorText === "net::ERR_ABORTED" && dataOrigin && request.url().startsWith(`${dataOrigin}/api/v1/tiles/pmtiles/`)) return;
+    failures.push(`requestfailed: ${request.method()} ${request.url()} ${errorText}`);
+  });
   page.on("response", (response) => {
     const url = new URL(response.url());
     observedRequests.add(`${url.origin}${url.pathname}`);

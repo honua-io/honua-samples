@@ -136,7 +136,9 @@ export async function candidatesFor(
   const outFields = fields.label ? [fields.code, fields.label] : [fields.code];
   const candidates: OverlapCandidate[] = [];
   const pageSize = 2000;
-  for (let offset = 0; ; offset += pageSize) {
+  // Advance by what the server returned: a layer capped below pageSize still
+  // pages through every candidate instead of skipping the gap.
+  for (let offset = 0, pages = 0; ; pages += 1) {
     const response = await QueryBuilder.for(client, serviceId, layerId)
       .where("1=1")
       .geometry(filter.geometry)
@@ -158,7 +160,8 @@ export async function candidatesFor(
       candidates.push({ code: String(code), label: String(label ?? code), geometry });
     }
     if (!response.exceededTransferLimit || !response.features?.length) return candidates;
-    if (offset > 20 * pageSize) throw new Error(`${layerUrl} returned more than ${20 * pageSize} polygons for one parcel`);
+    offset += response.features.length;
+    if (pages >= 20) throw new Error(`${layerUrl} returned more than ${offset} polygons over 20 pages for one parcel`);
   }
 }
 

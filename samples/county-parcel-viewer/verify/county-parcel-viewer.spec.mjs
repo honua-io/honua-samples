@@ -104,8 +104,10 @@ test("first load shows the example parcel from PMTiles outlines within the live 
   await settled(page);
   await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass");
   await expect(page.locator("#example-note")).toHaveText("Example parcel. Enter your parcel number above.");
-  await expect(page.locator("#parcel-title")).toHaveText("TMK 2-1-5-010:777");
+  await expect(page.locator("#parcel-title")).toHaveText("TMK 2-3-4-008:053");
   await expect(page.locator("body")).toHaveAttribute("data-tmk", EXAMPLE_TMK);
+  // The gallery smoke's rendered-result proof: outlines drawn from PMTiles.
+  await expect.poll(async () => Number(await page.locator("body").getAttribute("data-rendered-features"))).toBeGreaterThan(0);
   expect(new URL(page.url()).searchParams.has("tmk"), "the example parcel leaves the URL clean (D20)").toBe(false);
   for (const section of ["zoning", "flood"]) {
     expect(["success", "empty"]).toContain(await page.locator("body").getAttribute(`data-${section}-state`));

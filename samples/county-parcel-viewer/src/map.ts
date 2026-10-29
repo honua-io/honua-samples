@@ -184,6 +184,12 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
     map.once("load", () => container.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));
   }
   (window as unknown as { sampleMap: maplibregl.Map }).sampleMap = map;
+  // body[data-rendered-features]: parcel outlines the map has drawn in view,
+  // the rendered-result proof the gallery smoke reads for every own sample.
+  map.on("idle", () => {
+    const count = map.getLayer("parcel-outlines") ? map.queryRenderedFeatures({ layers: ["parcel-outlines"] }).length : 0;
+    document.body.dataset.renderedFeatures = String(count);
+  });
 
   let selectedTmk: string | null = null;
 
