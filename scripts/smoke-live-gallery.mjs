@@ -586,7 +586,11 @@ async function ownAppDataOrigin(page, baseUrl, id) {
 }
 
 function isAllowedAbort(sampleId, request) {
-  return sampleId === "overture-geoparquet" && request.failure()?.errorText === "net::ERR_ABORTED" && /duckdb|eh\.wasm|mvp\.wasm/iu.test(request.url());
+  if (request.failure()?.errorText !== "net::ERR_ABORTED") return false;
+  if (sampleId === "overture-geoparquet") return /duckdb|eh\.wasm|mvp\.wasm/iu.test(request.url());
+  // MapLibre cancels PMTiles range requests a resize or pan supersedes; the own
+  // sample proof (renderedFeatures and drawn) still requires the tiles to draw.
+  return /^https:\/\/[^/]+\/api\/v1\/tiles\/pmtiles\//u.test(request.url());
 }
 
 function isSdkExampleFolder(href, id) {
