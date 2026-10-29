@@ -1,0 +1,10 @@
+{
+  "format": "honua.samples.required-published-apps.v1",
+  "_comment": "Every app listed here must be published as a runnable app in the gallery artifact, or the browser gate fails (scripts/smoke-published-gallery.mjs). It replaces the old 11-app count floor: a count never guaranteed which apps were live. Add each county app here when it ships.",
+  "apps": [
+    { "sourceRepo": "honua-samples", "id": "esri-leaflet-featurelayer" },
+    { "sourceRepo": "honua-samples", "id": "maplibre-category-style-legend" },
+    { "sourceRepo": "honua-samples", "id": "maplibre-featureserver-layer" },
+    { "sourceRepo": "honua-samples", "id": "maplibre-ogc-tiles-mvt" }
+  ]
+}

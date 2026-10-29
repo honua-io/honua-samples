@@ -22,14 +22,14 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "columnar-query-quickstart",
-      "disposition": "public",
-      "reason": "Public only as the exact governed 4,160-byte Honua Server GeoArrow 0.2 fixture workflow. Live Arrow, GeoArrow, or GeoParquet service capability remains unavailable."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/columnar-query-quickstart/ renders a moved page. Previously public because: Public only as the exact governed 4,160-byte Honua Server GeoArrow 0.2 fixture workflow. Live Arrow, GeoArrow, or GeoParquet service capability remains unavailable."
     },
     {
       "sourceRepo": "honua-sdk-js",
       "id": "coverages-wcs-basic",
-      "disposition": "public",
-      "reason": "Public only as deterministic OGC API Coverages/WCS fixture evidence. Anonymous live coverage evidence remains planned and no deployed capability is claimed."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/coverages-wcs-basic/ renders a moved page. Previously public because: Public only as deterministic OGC API Coverages/WCS fixture evidence. Anonymous live coverage evidence remains planned and no deployed capability is claimed."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -40,8 +40,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "geocoding-quickstart",
-      "disposition": "public",
-      "reason": "The rebuilt standalone recipe leads with a synchronized MapLibre pin and keeps the reviewed address, score, locator, and fixture provenance in view."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/geocoding-quickstart/ renders a moved page. Previously public because: The rebuilt standalone recipe leads with a synchronized MapLibre pin and keeps the reviewed address, score, locator, and fixture provenance in view."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -52,8 +52,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "imagery-cog-quickstart",
-      "disposition": "public",
-      "reason": "Public only as a deterministic SDK COG fixture walkthrough. samples.honua.io does not claim a deployed Honua STAC/COG canary or live service capability."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/imagery-cog-quickstart/ renders a moved page. Previously public because: Public only as a deterministic SDK COG fixture walkthrough. samples.honua.io does not claim a deployed Honua STAC/COG canary or live service capability."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -64,8 +64,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "maplibre-quickstart",
-      "disposition": "public",
-      "reason": "The qualified First Map journey leads with all 48 governed Maui census tracts and carries bound fixture, live, accessibility, responsive, performance, and reproducible visual evidence."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/maplibre-quickstart/ renders a moved page. Previously public because: The qualified First Map journey leads with all 48 governed Maui census tracts and carries bound fixture, live, accessibility, responsive, performance, and reproducible visual evidence."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -100,8 +100,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "overture-geoparquet",
-      "disposition": "public",
-      "reason": "Public as a production-shaped client project with complete source. It is not evidence of a deployed Honua GeoParquet or GeoArrow service."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/overture-geoparquet/ renders a moved page. Previously public because: Public as a production-shaped client project with complete source. It is not evidence of a deployed Honua GeoParquet or GeoArrow service."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -112,8 +112,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "pmtiles-static",
-      "disposition": "public",
-      "reason": "A fast static PMTiles map is immediate, recognizable, and differentiated."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/pmtiles-static/ renders a moved page. Previously public because: A fast static PMTiles map is immediate, recognizable, and differentiated."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -124,8 +124,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "realtime-incident-dashboard",
-      "disposition": "public",
-      "reason": "Realtime incident operations present a clear map-first operational outcome."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/realtime-incident-dashboard/ renders a moved page. Previously public because: Realtime incident operations present a clear map-first operational outcome."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -136,8 +136,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "service-explorer",
-      "disposition": "public",
-      "reason": "Public as the qualified Universal Service Explorer project: source, docs and journey evidence. Its bundle needs a live endpoint, so the gallery links the project instead of embedding it."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/service-explorer/ renders a moved page. Previously public because: Public as the qualified Universal Service Explorer project: source, docs and journey evidence. Its bundle needs a live endpoint, so the gallery links the project instead of embedding it."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -148,8 +148,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "sketch-editing",
-      "disposition": "public",
-      "reason": "Direct sketch and edit interaction produces an immediate recognizable GIS result."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/sketch-editing/ renders a moved page. Previously public because: Direct sketch and edit interaction produces an immediate recognizable GIS result."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -160,8 +160,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "stac-imagery-browser",
-      "disposition": "public",
-      "reason": "Public as a task-oriented SDK browser walkthrough, not as samples-owned live STAC/COG evidence. No deployed Honua STAC/COG canary is claimed."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/stac-imagery-browser/ renders a moved page. Previously public because: Public as a task-oriented SDK browser walkthrough, not as samples-owned live STAC/COG evidence. No deployed Honua STAC/COG canary is claimed."
     },
     {
       "sourceRepo": "honua-sdk-js",
@@ -172,8 +172,8 @@
     {
       "sourceRepo": "honua-sdk-js",
       "id": "temporal-playback",
-      "disposition": "public",
-      "reason": "Time playback produces an immediate and recognizable changing-map outcome."
+      "disposition": "moved",
+      "reason": "Moved out of the gallery on 2026-10-28: county apps built on the SDK replace the SDK sample cards, and /sdk/temporal-playback/ renders a moved page. Previously public because: Time playback produces an immediate and recognizable changing-map outcome."
     },
     {
       "sourceRepo": "honua-sdk-js",

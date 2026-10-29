@@ -5,7 +5,7 @@ import test from "node:test";
 import { earliestEvidenceExpiry, judgeEvidenceHorizon } from "../check-producer-evidence-horizon.mjs";
 
 const handoff = (...expiries) => ({
-  qualifiedJourneys: expiries.map((expiresAt, index) => ({ journeyId: `j${index}`, visualEvidence: { expiresAt } })),
+  qualifiedJourneys: expiries.map((expiresAt, index) => ({ journeyId: `j${index}`, sampleId: `s${index}`, visualEvidence: { expiresAt } })),
 });
 
 test("earliest expiry is the minimum across qualified journeys", () => {
@@ -40,4 +40,21 @@ test("the committed snapshot for the locked producer has a parseable evidence wi
   const earliest = earliestEvidenceExpiry(snapshot);
   assert.equal(earliest.error, undefined);
   assert.ok(Number.isFinite(earliest.expiresAt));
+});
+
+test("only published samples' journeys count toward the horizon", () => {
+  const pair = handoff("2026-10-22T00:00:00Z", "2026-11-30T00:00:00Z");
+  const now = new Date("2026-10-28T00:00:00Z");
+  assert.equal(judgeEvidenceHorizon(pair, { now, horizonDays: 3 }).ok, false);
+  assert.equal(judgeEvidenceHorizon(pair, { now, horizonDays: 3, publishedSampleIds: ["s1"] }).ok, true);
+  assert.equal(judgeEvidenceHorizon(pair, { now, horizonDays: 3, publishedSampleIds: ["s0"] }).ok, false);
+});
+
+test("no published SDK sample means no window can lapse onto a page", () => {
+  const verdict = judgeEvidenceHorizon(handoff("2026-10-22T00:00:00Z"), {
+    now: new Date("2026-10-28T00:00:00Z"),
+    publishedSampleIds: [],
+  });
+  assert.equal(verdict.ok, true);
+  assert.match(verdict.message, /publishes no SDK sample/);
 });

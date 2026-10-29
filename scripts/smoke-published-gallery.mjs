@@ -9,7 +9,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT, resultTimeoutMs, viewportFailure, visibleViewportRatio } from "./lib/gallery-visual-contract.mjs";
 import { SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
-import { loadGalleryPublicPortfolio } from "./lib/gallery-public-portfolio.mjs";
+import { loadGalleryPublicPortfolio, movedEntries } from "./lib/gallery-public-portfolio.mjs";
+import { loadRequiredPublishedApps, missingRequiredApps } from "./lib/required-published-apps.mjs";
 import {
   documentedDegradedResponse,
   isOwnBrowserSample,
@@ -25,7 +26,6 @@ const snapshotPath = path.join(repoRoot, "config", "sample-bundles.snapshot.json
 const stagedStatusPath = path.join(repoRoot, ".sample-bundles-staging", "status.json");
 const evidenceDir = path.join(repoRoot, ".artifacts", "gallery-browser-smoke");
 const evidencePath = path.join(evidenceDir, "browser-smoke.v1.json");
-const minimumApps = parseMinimum(process.env.MIN_PUBLISHED_RUNNABLE_APPS ?? "1");
 const expectedSourceCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim() || null;
 
 const mediaTypes = new Map([
@@ -62,9 +62,6 @@ async function main() {
       // The count gate below reports missing apps without claiming they ran.
     }
   }
-  if (published.length < minimumApps) {
-    throw new Error(`gallery browser gate requires ${minimumApps} published standalone app(s), found ${published.length}`);
-  }
   for (const sample of published) {
     if (sample.builtFrom?.commit !== SDK_PRODUCER_LOCK.revision) {
       throw new Error(`published sample ${sample.id} is not bound to locked SDK producer ${SDK_PRODUCER_LOCK.revision}`);
@@ -76,6 +73,21 @@ async function main() {
   // manifest. A missing app fails here instead of silently shipping the
   // no-bundle panel.
   const ownApps = await loadPublishedOwnApps();
+
+  // Moved SDK samples: the historical /sdk/<id>/ URL resolves to a moved page
+  // and never to the sample or its embed.
+  await assertMovedPages();
+
+  // Publish floor: every app named in config/required-published-apps.v1.json
+  // must be live in this artifact.
+  const requiredApps = await loadRequiredPublishedApps();
+  const missingRequired = missingRequiredApps(requiredApps, [
+    ...published.map((sample) => ({ sourceRepo: "honua-sdk-js", id: sample.id })),
+    ...ownApps.map((app) => ({ sourceRepo: OWN_SAMPLE_SOURCE_REPO, id: app.id })),
+  ]);
+  if (missingRequired.length) {
+    throw new Error(`required published app(s) are not runnable in this gallery artifact: ${missingRequired.join(", ")}`);
+  }
 
   await mkdir(evidenceDir, { recursive: true });
   const server = createStaticServer();
@@ -109,7 +121,7 @@ async function main() {
     samplesSourceCommit: process.env.EXPECTED_SOURCE_COMMIT ?? null,
     sourceBundleCommit: published[0]?.builtFrom?.commit ?? null,
     summary: {
-      required: minimumApps,
+      required: requiredApps.length,
       ownAppsRequired: ownApps.length,
       total: results.length,
       passed: results.filter((result) => result.passed && !result.unverified).length,
@@ -125,6 +137,23 @@ async function main() {
     for (const failure of result.failures) process.stdout.write(`  ${failure}\n`);
   }
   if (receipt.summary.failed > 0) process.exitCode = 1;
+}
+
+async function assertMovedPages() {
+  const problems = [];
+  for (const entry of movedEntries(await loadGalleryPublicPortfolio(), "honua-sdk-js")) {
+    const dir = path.join(siteRoot, "sdk", entry.id);
+    let html = "";
+    try {
+      html = await readFile(path.join(dir, "index.html"), "utf8");
+    } catch {
+      problems.push(`${entry.id}: no moved page at /sdk/${entry.id}/`);
+      continue;
+    }
+    if (!html.includes("This sample has moved.")) problems.push(`${entry.id}: /sdk/${entry.id}/ is not a moved page`);
+    if (await stat(path.join(dir, "app")).then(() => true, () => false)) problems.push(`${entry.id}: moved page still ships an app`);
+  }
+  if (problems.length) throw new Error(`moved SDK page(s) are wrong:\n  - ${problems.join("\n  - ")}`);
 }
 
 async function loadPublishedOwnApps() {
@@ -472,14 +501,6 @@ function parseRange(header, size) {
     return null;
   }
   return { start, end: Math.min(end, size - 1) };
-}
-
-function parseMinimum(value) {
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) {
-    throw new Error(`MIN_PUBLISHED_RUNNABLE_APPS must be a positive integer, received ${JSON.stringify(value)}`);
-  }
-  return parsed;
 }
 
 function sendStatus(response, status, message) {

@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 
 const PORTFOLIO_FORMAT = "honua.gallery-public-portfolio.v1";
-const DISPOSITIONS = new Set(["public", "rework-map-first", "internal-qualification"]);
+// "moved": withheld from the gallery, and its historical /sdk/<id>/ URL
+// renders a moved page instead of the sample (build-gallery.mjs).
+const DISPOSITIONS = new Set(["public", "rework-map-first", "internal-qualification", "moved"]);
 const DEFAULT_PATH = new URL("../../config/gallery-public-portfolio.v1.json", import.meta.url);
 
 function key(sourceRepo, id) {
@@ -35,4 +37,18 @@ export function applyGalleryPublicPortfolio(cards, portfolio) {
     else excluded.push({ sourceRepo: card.sourceRepo, id: card.id, disposition: decision.disposition, reason: decision.reason });
   }
   return { publicCards, excluded };
+}
+
+/** Ids the portfolio publishes for one source repo. */
+export function publicSampleIds(portfolio, sourceRepo) {
+  return [...portfolio.byIdentity.values()]
+    .filter((entry) => entry.sourceRepo === sourceRepo && entry.disposition === "public")
+    .map((entry) => entry.id);
+}
+
+/** Portfolio entries for one source repo whose old URL renders a moved page. */
+export function movedEntries(portfolio, sourceRepo) {
+  return [...portfolio.byIdentity.values()].filter(
+    (entry) => entry.sourceRepo === sourceRepo && entry.disposition === "moved",
+  );
 }

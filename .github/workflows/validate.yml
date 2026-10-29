@@ -164,12 +164,11 @@ jobs:
         run: node scripts/build-gallery.mjs --check
 
   exact-head-browser:
-    name: exact head gallery browser (11 apps / 4 jobs)
+    name: exact head gallery browser (required apps / 4 jobs)
     runs-on: ubuntu-latest
     env:
       SDK_PRODUCER_ENFORCE_LOCK: "1"
       MIN_RUNNABLE_BUNDLES: "11"
-      MIN_PUBLISHED_RUNNABLE_APPS: "11"
       MIN_JOB_PAGES: "4"
       EXPECTED_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:

@@ -129,12 +129,25 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
  * decision (NFR-002); no network, no filesystem, no ambient clock unless
  * `now` is omitted.
  *
- * @param {{ handoffText: string, fixtureText: string, now?: Date, requireFreshEvidence?: boolean }} input
+ * `freshEvidenceSampleIds` scopes the freshness requirement to the SDK
+ * samples the gallery publishes. A journey for a sample outside that set may
+ * carry lapsed evidence: no page renders its qualification, so no stale badge
+ * ships. Omitted (null), every qualified journey must be fresh.
+ *
+ * @param {{ handoffText: string, fixtureText: string, now?: Date, requireFreshEvidence?: boolean,
+ *           freshEvidenceSampleIds?: Iterable<string>|null }} input
  * @returns {{ ok: true, handoff: object, fixture: object, errors: [] } |
  *           { ok: false, handoff: object|null, fixture: object|null, errors: string[] }}
  */
-export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date(), requireFreshEvidence = true }) {
+export function admitSdkJsHandoff({
+  handoffText,
+  fixtureText,
+  now = new Date(),
+  requireFreshEvidence = true,
+  freshEvidenceSampleIds = null,
+}) {
   const errors = [];
+  const freshScope = freshEvidenceSampleIds === null ? null : new Set(freshEvidenceSampleIds);
   const reject = (handoff = null, fixture = null, contract = null) => ({
     ok: false,
     handoff,
@@ -324,9 +337,11 @@ export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date(), 
   }
 
   // Qualification honesty + staleness: every qualified card needs a current
-  // qualified journey; expired visual-evidence windows make the whole
-  // handoff stale (the producer refreshes evidence on its own cadence -- a
-  // lapsed window must fail this build rather than ship a stale badge).
+  // qualified journey; an expired visual-evidence window on a published
+  // sample makes the whole handoff stale (the producer refreshes evidence on
+  // its own cadence -- a lapsed window must fail this build rather than ship
+  // a stale badge). Samples outside freshScope are not published, so their
+  // windows cannot put a badge on any page.
   const journeysBySample = new Map();
   for (const journey of qualifiedJourneys) {
     if (!ids.has(journey.sampleId)) {
@@ -341,7 +356,11 @@ export function admitSdkJsHandoff({ handoffText, fixtureText, now = new Date(), 
       errors.push(
         `qualified journey "${journey.journeyId}" claims evidence observed in the future (${journey.visualEvidence.observedAt})`,
       );
-    } else if (requireFreshEvidence && expiresAt <= now.getTime()) {
+    } else if (
+      requireFreshEvidence &&
+      expiresAt <= now.getTime() &&
+      (freshScope === null || freshScope.has(journey.sampleId))
+    ) {
       errors.push(
         `stale handoff: qualified journey "${journey.journeyId}" visual evidence expired ${journey.visualEvidence.expiresAt} ` +
           `(validation clock ${now.toISOString()}) -- refresh from the producer instead of publishing an expired qualification`,
@@ -528,6 +547,7 @@ export async function loadSdkJsHandoff({
   metaPath = DEFAULT_SNAPSHOT_META_PATH,
   refreshSnapshot = true,
   now = new Date(),
+  freshEvidenceSampleIds = null,
   fetchTextFn = fetchText,
 } = {}) {
   assertLockedProducerUrl("handoffV2", nextHandoffUrl);
@@ -538,6 +558,7 @@ export async function loadSdkJsHandoff({
     handoffUrl: nextHandoffUrl,
     fixtureUrl: nextFixtureUrl,
     now,
+    freshEvidenceSampleIds,
     fetchTextFn,
   });
   if (nextLive.state === "invalid") {
@@ -562,6 +583,7 @@ export async function loadSdkJsHandoff({
     snapshotPath: nextSnapshotPath,
     fixtureSnapshotPath: nextFixtureSnapshotPath,
     now,
+    freshEvidenceSampleIds,
   });
   if (nextSnapshot.state === "invalid") {
     throw presentInvalidError(`next snapshot (${path.relative(REPO_ROOT, nextSnapshotPath)})`, nextSnapshot);
@@ -571,7 +593,7 @@ export async function loadSdkJsHandoff({
   }
   console.warn(`build-gallery: next sdk-js handoff snapshot pair unavailable (${nextSnapshot.error.message})`);
 
-  const legacyLive = await acquireLivePair({ handoffUrl, fixtureUrl, now, fetchTextFn });
+  const legacyLive = await acquireLivePair({ handoffUrl, fixtureUrl, now, freshEvidenceSampleIds, fetchTextFn });
   if (legacyLive.state === "valid") {
     if (refreshSnapshot) {
       await writeSnapshotPair({
@@ -591,7 +613,7 @@ export async function loadSdkJsHandoff({
       : `unavailable: ${legacyLive.error.message}`;
   console.warn(`build-gallery: legacy sdk-js handoff live pair unusable (${legacyLiveFailure})`);
 
-  const legacySnapshot = await acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now });
+  const legacySnapshot = await acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now, freshEvidenceSampleIds });
   if (legacySnapshot.state === "valid") {
     return admittedResult(legacySnapshot, `legacy committed snapshot (${path.relative(REPO_ROOT, snapshotPath)})`);
   }
@@ -654,7 +676,7 @@ async function fetchText(url) {
   return await response.text();
 }
 
-async function acquireLivePair({ handoffUrl, fixtureUrl, now, fetchTextFn }) {
+async function acquireLivePair({ handoffUrl, fixtureUrl, now, freshEvidenceSampleIds = null, fetchTextFn }) {
   let handoffText;
   let fixtureText;
   try {
@@ -662,13 +684,19 @@ async function acquireLivePair({ handoffUrl, fixtureUrl, now, fetchTextFn }) {
   } catch (error) {
     return { state: "unavailable", error };
   }
-  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now });
+  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now, freshEvidenceSampleIds });
   return admission.ok
     ? { state: "valid", admission, handoffText, fixtureText }
     : { state: "invalid", admission, handoffText, fixtureText };
 }
 
-async function acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now, requireFreshEvidence = true }) {
+async function acquireSnapshotPair({
+  snapshotPath,
+  fixtureSnapshotPath,
+  now,
+  requireFreshEvidence = true,
+  freshEvidenceSampleIds = null,
+}) {
   let handoffText;
   let fixtureText;
   try {
@@ -679,7 +707,7 @@ async function acquireSnapshotPair({ snapshotPath, fixtureSnapshotPath, now, req
   } catch (error) {
     return { state: "unavailable", error };
   }
-  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now, requireFreshEvidence });
+  const admission = admitSdkJsHandoff({ handoffText, fixtureText, now, requireFreshEvidence, freshEvidenceSampleIds });
   return admission.ok
     ? { state: "valid", admission, handoffText, fixtureText }
     : { state: "invalid", admission, handoffText, fixtureText };
