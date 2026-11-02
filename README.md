@@ -158,8 +158,8 @@ sample's `entrypoint.command`, and writes
 You need, from a clone of this repository:
 
 - Docker with Compose v2 (`docker compose`), and ports `8080` and `5432` free.
-- Node.js 22+ with `npm` (`wms-getmap-check` needs 22; the `honua` CLI from
-  `@honua/sdk-js` needs 20.19 or later).
+- Node.js 22+ with `npm` (the `honua` CLI from `@honua/sdk-js` needs 20.19 or
+  later).
 - Port `3000` free as well: the browser lane serves its pages from
   `http://localhost:3000`, the one origin `docker/compose.yml` allows through
   CORS.
@@ -371,7 +371,7 @@ the manifest's `builtFrom`, never guessed.
 **Honesty rules.** An sdk-js entry the manifest doesn't cover (or that didn't
 verify this run) renders an explicit "No runnable build published yet" panel
 -- never a broken or empty iframe. This repo's own headless/CLI samples (like
-`hello-featureserver-rest`) get a distinct "Headless sample -- run it locally"
+`odata-query-rest`) get a distinct "Headless sample -- run it locally"
 panel with the run command and a link to CI run receipts, never a fake embed
 either.
 

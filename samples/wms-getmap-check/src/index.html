@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>A WMS layer drawn from GetMap</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css"
+    integrity="sha384-Q5Blg3vUVAlUKqIPJYz7wGnz40Vwrx4pVuFVicI73+8c/26Zr5hhckfuIiIUflLE" crossorigin="anonymous" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs" crossorigin="anonymous" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl-shared.mjs" crossorigin="anonymous" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: grid; grid-template-rows: auto minmax(320px, 1fr) auto auto; font: 15px/1.45 system-ui, sans-serif; color: #17221c; background: #f4f1e8; }
+    header { padding: 0.75rem 1rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.15rem; }
+    #status { margin: 0; }
+    #map { min-height: 320px; }
+    #layer { padding: 0.5rem 1rem; font-size: 13px; border-top: 1px solid #b9b5a8; }
+    #layer h2 { margin: 0 0 0.25rem; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: #4d5a52; }
+    #layer dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 1rem; margin: 0; }
+    #layer dt { font-weight: 600; }
+    #layer dd { margin: 0; overflow-wrap: anywhere; }
+    pre { margin: 0; padding: 0.5rem 1rem; max-height: 7rem; overflow: auto; font-size: 12px; background: #fffdf6; border-top: 1px solid #b9b5a8; }
+    [data-state="pass"] { color: #17633a; }
+    [data-state="fail"] { color: #a12b1f; }
+  </style>
+</head>
+<body data-sample-status="loading">
+  <header>
+    <h1>A WMS layer drawn from GetMap</h1>
+    <p id="status">Reading GetCapabilities and requesting the map image...</p>
+  </header>
+  <div id="map" role="region" aria-label="Map"></div>
+  <section id="layer" aria-label="Inspected layer">
+    <h2>Inspected layer</h2>
+    <dl id="detail"></dl>
+  </section>
+  <pre id="requests" aria-label="Requests this page made"></pre>
+  <script type="module">
+    // MapLibre GL JS 6 is published as ES modules; importing it dynamically lets
+    // the WMS requests below start while the library downloads.
+    const maplibreReady = import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs");
+
+    const params = new URLSearchParams(location.search);
+    const baseUrl = (params.get("baseUrl") ?? "https://demo.honua.io").replace(/\/+$/, "");
+    const service = params.get("service") ?? "maui-buildings";
+    const wantedLayer = params.get("layer");
+    // `bbox` is minLon,minLat,maxLon,maxLat (Kahului by default) or "layer"
+    // for the layer's advertised geographic bounds.
+    const bboxParam = params.get("bbox") ?? "-156.52,20.86,-156.46,20.90";
+    const width = Math.max(1, Number(params.get("width") ?? "640") || 640);
+    const height = Math.max(1, Number(params.get("height") ?? "427") || 427);
+    const wmsUrl = `${baseUrl}/ogc/services/${encodeURIComponent(service)}/wms`;
+    const status = document.querySelector("#status");
+    const requests = document.querySelector("#requests");
+    const detail = document.querySelector("#detail");
+
+    function logRequest(url) {
+      requests.textContent += `GET ${url}\n`;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    }
+
+    function describe(rows) {
+      detail.innerHTML = rows.map(([term, value]) => `<dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd>`).join("");
+    }
+
+    function text(element, name) {
+      return [...element.children].find((child) => child.localName === name)?.textContent.trim();
+    }
+
+    // Optional basemap: the server's own Protomaps PMTiles archive, used only
+    // when it answers with a PMTiles header. Otherwise the plain background stays.
+    async function addBasemapIfAvailable(map, beforeId) {
+      if (params.get("basemap") === "none") return "off";
+      const url = `${baseUrl}/api/v1/tiles/pmtiles/maui-basemap`;
+      try {
+        logRequest(`${url} (Range: bytes=0-6, basemap probe)`);
+        const response = await fetch(url, { headers: { Range: "bytes=0-6" } });
+        const magic = new TextDecoder().decode(await response.arrayBuffer()).slice(0, 7);
+        if (!response.ok || magic !== "PMTiles") return `not available (HTTP ${response.status}), plain background`;
+        await new Promise((resolve, reject) => {
+          const script = Object.assign(document.createElement("script"), {
+            src: "https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js",
+            integrity: "sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn",
+            crossOrigin: "anonymous",
+            onload: resolve,
+            onerror: () => reject(new Error("pmtiles.js did not load")),
+          });
+          document.head.append(script);
+        });
+        maplibregl.addProtocol("pmtiles", new window.pmtiles.Protocol().tile);
+        map.addSource("basemap", { type: "vector", url: `pmtiles://${url}` });
+        map.addLayer({ id: "basemap-earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e7e3d6" } }, beforeId);
+        map.addLayer({ id: "basemap-water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#c9dbe3" } }, beforeId);
+        map.addLayer({ id: "basemap-roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#ffffff", "line-width": 1 } }, beforeId);
+        return "Protomaps PMTiles from the same server";
+      } catch (error) {
+        return `not available (${error.message}), plain background`;
+      }
+    }
+
+    // 1. GetCapabilities: the named layers, their CRSs and geographic bounds.
+    async function getCapabilities() {
+      const query = new URLSearchParams({ SERVICE: "WMS", VERSION: "1.3.0", REQUEST: "GetCapabilities" });
+      const url = `${wmsUrl}?${query}`;
+      logRequest(url);
+      const response = await fetch(url);
+      const xml = await response.text();
+      if (!response.ok) throw new Error(`GetCapabilities failed (HTTP ${response.status}).`);
+      const doc = new DOMParser().parseFromString(xml, "text/xml");
+      if (doc.querySelector("parsererror")) throw new Error("GetCapabilities did not return well-formed XML.");
+      const layers = [...doc.querySelectorAll("Layer")]
+        .filter((layer) => text(layer, "Name"))
+        .map((layer) => {
+          const box = [...layer.children].find((child) => child.localName === "EX_GeographicBoundingBox");
+          return {
+            name: text(layer, "Name"),
+            title: text(layer, "Title") ?? text(layer, "Name"),
+            abstract: text(layer, "Abstract") ?? "",
+            queryable: layer.getAttribute("queryable") === "1",
+            crs: [...layer.children].filter((child) => child.localName === "CRS").map((child) => child.textContent.trim()),
+            bounds: box && [text(box, "westBoundLongitude"), text(box, "southBoundLatitude"), text(box, "eastBoundLongitude"), text(box, "northBoundLatitude")].map(Number),
+          };
+        });
+      if (layers.length === 0) throw new Error("GetCapabilities advertises no named layer.");
+      const formats = [...doc.querySelectorAll("GetMap > Format")].map((format) => format.textContent.trim());
+      return { layers, formats };
+    }
+
+    // 2. GetMap: the image must be a PNG of exactly the requested size, not
+    //    merely a 200 status. WMS 1.3.0 orders EPSG:4326 as lat,lon.
+    async function getMap(layerName, [minLon, minLat, maxLon, maxLat]) {
+      const query = new URLSearchParams({
+        SERVICE: "WMS", VERSION: "1.3.0", REQUEST: "GetMap", LAYERS: layerName, STYLES: "", CRS: "EPSG:4326",
+        BBOX: `${minLat},${minLon},${maxLat},${maxLon}`, WIDTH: String(width), HEIGHT: String(height), FORMAT: "image/png", TRANSPARENT: "TRUE",
+      });
+      const url = `${wmsUrl}?${query}`;
+      logRequest(url);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`GetMap failed (HTTP ${response.status}).`);
+      const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+      if (!contentType.startsWith("image/png")) throw new Error(`GetMap content type was ${contentType || "missing"}, not image/png.`);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.length <= 100) throw new Error(`GetMap response was suspiciously small (${bytes.length} bytes).`);
+      const magic = [137, 80, 78, 71, 13, 10, 26, 10];
+      if (!magic.every((byte, i) => bytes[i] === byte)) throw new Error("GetMap response was not a PNG.");
+      const view = new DataView(bytes.buffer);
+      const imageWidth = view.getUint32(16);
+      const imageHeight = view.getUint32(20);
+      if (imageWidth !== width || imageHeight !== height) {
+        throw new Error(`GetMap dimensions mismatch: requested ${width}x${height}, received ${imageWidth}x${imageHeight}.`);
+      }
+      return { url: URL.createObjectURL(new Blob([bytes], { type: "image/png" })), bytes: bytes.length, imageWidth, imageHeight };
+    }
+
+    const capabilities = getCapabilities();
+    capabilities.catch(() => {});
+    const maplibregl = await maplibreReady;
+    const map = new maplibregl.Map({
+      container: "map",
+      style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2ee" } }] },
+      center: [-156.33, 20.8],
+      zoom: 8,
+      attributionControl: { compact: true, customAttribution: "Data: Honua demo (Maui)" },
+    });
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    const mapLoaded = new Promise((resolve) => map.once("load", resolve));
+    window.sampleMap = map;
+
+    try {
+      const { layers, formats } = await capabilities;
+      const layer = wantedLayer ? layers.find((candidate) => candidate.name === wantedLayer) : layers[0];
+      if (!layer) throw new Error(`GetCapabilities advertises no layer named "${wantedLayer}" (found ${layers.map((l) => l.name).join(", ")}).`);
+      let bbox;
+      if (bboxParam === "layer") {
+        if (!layer.bounds || layer.bounds.some((n) => !Number.isFinite(n))) throw new Error(`Layer ${layer.name} advertises no geographic bounds.`);
+        bbox = layer.bounds;
+      } else {
+        bbox = bboxParam.split(",").map(Number);
+        if (bbox.length !== 4 || bbox.some((n) => !Number.isFinite(n))) throw new Error(`bbox must be minLon,minLat,maxLon,maxLat (got "${bboxParam}").`);
+      }
+      describe([
+        ["Service", wmsUrl],
+        ["Layer", `${layer.name}${layer.title !== layer.name ? ` · ${layer.title}` : ""} · ${layers.length} named layer(s) advertised`],
+        ["Abstract", layer.abstract || "(none)"],
+        ["CRS", layer.crs.join(", ") || "(none advertised)"],
+        ["Bounds", layer.bounds ? layer.bounds.join(", ") : "(none advertised)"],
+        ["Queryable", layer.queryable ? "yes (GetFeatureInfo)" : "no"],
+        ["GetMap formats", formats.join(", ") || "(none advertised)"],
+        ["This request", `${width}x${height} image/png over ${bbox.join(", ")}`],
+      ]);
+
+      const [image] = await Promise.all([getMap(layer.name, bbox), mapLoaded]);
+      const [minLon, minLat, maxLon, maxLat] = bbox;
+      map.addSource("getmap", { type: "image", url: image.url, coordinates: [[minLon, maxLat], [maxLon, maxLat], [maxLon, minLat], [minLon, minLat]] });
+      map.addLayer({ id: "getmap-image", type: "raster", source: "getmap", paint: { "raster-opacity": 1, "raster-fade-duration": 0 } });
+      const basemap = addBasemapIfAvailable(map, "getmap-image");
+      map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: 20, duration: 0 });
+      const basemapNote = await basemap;
+      map.triggerRepaint();
+      await map.once("idle");
+      if (!map.isSourceLoaded("getmap")) throw new Error("The GetMap image did not finish loading on the map.");
+
+      const elapsed = Math.round(performance.now()); // since navigation start
+      document.body.dataset.layerName = layer.name;
+      document.body.dataset.layerCount = String(layers.length);
+      document.body.dataset.imageWidth = String(image.imageWidth);
+      document.body.dataset.imageHeight = String(image.imageHeight);
+      document.body.dataset.imageBytes = String(image.bytes);
+      document.body.dataset.sampleElapsedMs = String(elapsed);
+      status.textContent = `PASS: GetMap for ${layer.name} returned a ${image.imageWidth}x${image.imageHeight} image/png (${image.bytes} bytes), drawn over its bounding box, ${elapsed} ms. Basemap: ${basemapNote}.`;
+      status.dataset.state = "pass";
+      document.body.dataset.sampleStatus = "pass";
+    } catch (error) {
+      status.textContent = `FAIL: ${error.message}`;
+      status.dataset.state = "fail";
+      document.body.dataset.sampleStatus = "fail";
+      document.body.dataset.sampleError = error.message;
+    }
+  </script>
+</body>
+</html>

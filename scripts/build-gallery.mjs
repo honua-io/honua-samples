@@ -147,14 +147,6 @@ const SDK_SEARCH_ALIASES = new Map([
   ["overture-geoparquet", ["GeoParquet", "GeoArrow", "Overture", "columnar"]],
 ]);
 const WALKTHROUGH_GUIDES = new Map([
-  ["wms-getmap-check", {
-    steps: [
-      "Start a local Honua Server and import the included GeoJSON fixture.",
-      "Publish the layer, request WMS GetCapabilities, and confirm the advertised layer.",
-      "Request GetMap and assert that the response is a correctly sized PNG, not merely a successful status code.",
-    ],
-    outcome: "A verified WMS layer and map image produced through the complete import-to-render path.",
-  }],
   ["overture-geoparquet", {
     steps: [
       "Open the configured Overture GeoParquet source and inspect its spatial metadata.",

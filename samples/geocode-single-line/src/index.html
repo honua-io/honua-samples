@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Address search for county apps</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css"
+    integrity="sha384-Q5Blg3vUVAlUKqIPJYz7wGnz40Vwrx4pVuFVicI73+8c/26Zr5hhckfuIiIUflLE" crossorigin="anonymous" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs" crossorigin="anonymous" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl-shared.mjs" crossorigin="anonymous" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: grid; grid-template-rows: auto minmax(320px, 1fr) auto; font: 15px/1.45 system-ui, sans-serif; color: #17221c; background: #f4f1e8; }
+    header { padding: 0.75rem 1rem; }
+    h1 { margin: 0 0 0.35rem; font-size: 1.15rem; }
+    form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0 0 0.35rem; }
+    form label { font-weight: 600; }
+    form input { flex: 1 1 18rem; min-width: 0; padding: 0.35rem 0.5rem; font: inherit; border: 1px solid #8f8a7a; border-radius: 3px; background: #fffdf6; }
+    form button { padding: 0.35rem 0.8rem; font: inherit; font-weight: 600; color: #fffdf6; background: #1d4f3a; border: 0; border-radius: 3px; cursor: pointer; }
+    #status { margin: 0; }
+    #map { min-height: 320px; }
+    pre { margin: 0; padding: 0.5rem 1rem; max-height: 7rem; overflow: auto; font-size: 12px; background: #fffdf6; border-top: 1px solid #b9b5a8; }
+    [data-state="pass"] { color: #17633a; }
+    [data-state="fail"] { color: #a12b1f; }
+    .maplibregl-popup-content table { border-collapse: collapse; font-size: 12px; }
+    .maplibregl-popup-content td { padding: 1px 6px 1px 0; vertical-align: top; }
+  </style>
+</head>
+<body data-sample-status="loading">
+  <header>
+    <h1>Address search for county apps</h1>
+    <form id="search">
+      <label for="address">Address</label>
+      <input id="address" name="address" type="text" autocomplete="street-address" required />
+      <button type="submit">Find</button>
+    </form>
+    <p id="status">Geocoding the address...</p>
+  </header>
+  <div id="map" role="region" aria-label="Map"></div>
+  <pre id="requests" aria-label="Requests this page made"></pre>
+  <script type="module">
+    // MapLibre GL JS 6 is published as ES modules; importing it dynamically lets
+    // the geocode request below start while the library downloads.
+    const maplibreReady = import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs");
+
+    const params = new URLSearchParams(location.search);
+    const baseUrl = (params.get("baseUrl") ?? "https://demo.honua.io").replace(/\/+$/, "");
+    // The default is the county building in Wailuku. `region` is the
+    // lon/lat box the match must fall in (Maui Nui by default); "none" skips it.
+    const initialAddress = params.get("address") ?? "200 S High St, Wailuku, HI";
+    const region = parseBox(params.get("region") ?? "-157.35,20.45,-155.95,21.25");
+    const geocodeUrl = `${baseUrl}/rest/services/GeocodeServer/findAddressCandidates`;
+    const status = document.querySelector("#status");
+    const requests = document.querySelector("#requests");
+    const form = document.querySelector("#search");
+    const input = document.querySelector("#address");
+    input.value = initialAddress;
+
+    function parseBox(text) {
+      if (text === "none") return null;
+      const box = text.split(",").map(Number);
+      if (box.length !== 4 || box.some((n) => !Number.isFinite(n))) throw new Error(`region must be minLon,minLat,maxLon,maxLat (got "${text}")`);
+      return box;
+    }
+
+    function logRequest(url) {
+      requests.textContent += `GET ${url}\n`;
+    }
+
+    async function getJson(url) {
+      logRequest(url);
+      const response = await fetch(url);
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body.error) throw new Error(body.error?.message ?? `HTTP ${response.status}`);
+      return body;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    }
+
+    // Optional basemap: the server's own Protomaps PMTiles archive, used only
+    // when it answers with a PMTiles header. Otherwise the plain background stays.
+    async function addBasemapIfAvailable(map) {
+      if (params.get("basemap") === "none") return "off";
+      const url = `${baseUrl}/api/v1/tiles/pmtiles/maui-basemap`;
+      try {
+        logRequest(`${url} (Range: bytes=0-6, basemap probe)`);
+        const response = await fetch(url, { headers: { Range: "bytes=0-6" } });
+        const magic = new TextDecoder().decode(await response.arrayBuffer()).slice(0, 7);
+        if (!response.ok || magic !== "PMTiles") return `not available (HTTP ${response.status}), plain background`;
+        await new Promise((resolve, reject) => {
+          const script = Object.assign(document.createElement("script"), {
+            src: "https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js",
+            integrity: "sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn",
+            crossOrigin: "anonymous",
+            onload: resolve,
+            onerror: () => reject(new Error("pmtiles.js did not load")),
+          });
+          document.head.append(script);
+        });
+        maplibregl.addProtocol("pmtiles", new window.pmtiles.Protocol().tile);
+        map.addSource("basemap", { type: "vector", url: `pmtiles://${url}` });
+        map.addLayer({ id: "basemap-earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": "#e7e3d6" } });
+        map.addLayer({ id: "basemap-water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": "#c9dbe3" } });
+        map.addLayer({ id: "basemap-roads", type: "line", source: "basemap", "source-layer": "roads", paint: { "line-color": "#ffffff", "line-width": 1 } });
+        return "Protomaps PMTiles from the same server";
+      } catch (error) {
+        return `not available (${error.message}), plain background`;
+      }
+    }
+
+    const maplibregl = await maplibreReady;
+    const map = new maplibregl.Map({
+      container: "map",
+      style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2ee" } }] },
+      center: [-156.33, 20.8],
+      zoom: 8,
+      attributionControl: { compact: true, customAttribution: "Geocoder: Honua demo" },
+    });
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    const mapLoaded = new Promise((resolve) => map.once("load", resolve));
+    window.sampleMap = map;
+    const basemap = mapLoaded.then(() => addBasemapIfAvailable(map));
+    let marker = null;
+
+    function clearResult() {
+      for (const name of ["candidateCount", "score", "matchX", "matchY", "sampleElapsedMs", "sampleError"]) delete document.body.dataset[name];
+      marker?.remove();
+      marker = null;
+    }
+
+    // One GeoServices GeocodeServer request: the best candidate becomes a pin
+    // with its address and score. A candidate outside `region` is a failure,
+    // not a quiet pin in another state.
+    async function findAddress(address, startedAt) {
+      document.body.dataset.sampleStatus = "loading";
+      status.textContent = `Geocoding "${address}"...`;
+      status.dataset.state = "";
+      clearResult();
+      const query = new URLSearchParams({ SingleLine: address, f: "json" });
+      const result = await getJson(`${geocodeUrl}?${query}`);
+      const candidates = result.candidates ?? [];
+      const best = candidates[0];
+      if (!best?.address || typeof best.location?.x !== "number" || typeof best.location?.y !== "number") {
+        throw new Error(`No candidate with an address and a location came back for "${address}".`);
+      }
+      const score = Number(best.score);
+      if (!Number.isFinite(score)) throw new Error(`The candidate "${best.address}" has no numeric score.`);
+      const { x, y } = best.location;
+      if (region && !(x >= region[0] && x <= region[2] && y >= region[1] && y <= region[3])) {
+        throw new Error(`The best candidate "${best.address}" is at (${x}, ${y}), outside the expected region ${region.join(",")}.`);
+      }
+
+      await mapLoaded;
+      const provider = best.attributes?.Provider ?? "unknown";
+      const rows = [["address", best.address], ["score", score], ["provider", provider], ["x", x], ["y", y]]
+        .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`)
+        .join("");
+      marker = new maplibregl.Marker({ color: "#1d4f3a" })
+        .setLngLat([x, y])
+        .setPopup(new maplibregl.Popup({ maxWidth: "320px", offset: 36 }).setHTML(`<strong class="popup-title">${escapeHtml(best.address)}</strong><table>${rows}</table>`))
+        .addTo(map);
+      map.jumpTo({ center: [x, y], zoom: 15 });
+      marker.togglePopup();
+      const basemapNote = await basemap;
+      map.triggerRepaint();
+      await map.once("idle");
+
+      const elapsed = Math.round(performance.now() - startedAt);
+      document.body.dataset.candidateCount = String(candidates.length);
+      document.body.dataset.score = String(score);
+      document.body.dataset.matchX = String(x);
+      document.body.dataset.matchY = String(y);
+      document.body.dataset.sampleElapsedMs = String(elapsed);
+      status.textContent = `PASS: "${address}" matched "${best.address}" at (${x}, ${y}), score ${score}, ${candidates.length} candidate(s) from ${provider}, ${elapsed} ms. Basemap: ${basemapNote}.`;
+      status.dataset.state = "pass";
+      document.body.dataset.sampleStatus = "pass";
+    }
+
+    async function run(address, startedAt) {
+      try {
+        await findAddress(address, startedAt);
+      } catch (error) {
+        status.textContent = `FAIL: ${error.message}`;
+        status.dataset.state = "fail";
+        document.body.dataset.sampleStatus = "fail";
+        document.body.dataset.sampleError = error.message;
+      }
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      run(input.value.trim(), performance.now());
+    });
+    // The first search times from navigation start, like the other map samples.
+    run(initialAddress, 0);
+  </script>
+</body>
+</html>

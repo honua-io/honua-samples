@@ -1,21 +1,21 @@
 {
   "id": "wms-getmap-check",
-  "title": "WMS GetCapabilities + GetMap check (Node.js)",
-  "description": "Zero-dependency Node.js walkthrough of classic WMS: imports a tiny GeoJSON dataset, publishes it, requests GetCapabilities and GetMap, and asserts a real, correctly-sized PNG comes back -- not just a 200 status.",
-  "contentKind": "walkthrough",
+  "title": "A WMS layer drawn from GetMap",
+  "description": "One HTML file reads a service's WMS GetCapabilities, requests GetMap for its first layer, verifies the answer is a PNG of exactly the requested size, and draws that image over its bounding box in MapLibre GL JS with the inspected layer's metadata and every request below.",
+  "contentKind": "example",
   "learning": {
     "goal": "build-map",
-    "level": "advanced",
-    "estimatedMinutes": 8,
+    "level": "intermediate",
+    "estimatedMinutes": 10,
     "prerequisites": [
-      "Local Honua Server",
-      "Node.js 22+"
+      "Modern web browser",
+      "Internet access",
+      "Any static file server (for example `npx serve src`)"
     ]
   },
-  "dataMode": "local-integration",
-  "auth": "admin-api-key",
+  "dataMode": "public-live",
+  "auth": "anonymous",
   "capabilities": [
-    "import.file",
     "serve.wms"
   ],
   "sdks": [
@@ -26,8 +26,8 @@
   ],
   "edition": "community",
   "entrypoint": {
-    "type": "node",
-    "command": "node src/run.mjs"
+    "type": "browser",
+    "command": "src/index.html"
   },
   "status": "active"
 }
