@@ -1,54 +1,70 @@
-# Verify a WMS GetMap response
+# A WMS layer drawn from GetMap
 
-Publish three points to a local Honua deployment, enable WMS, request
-`GetCapabilities`, and verify that `GetMap` returns a real `317x241` PNG.
-The runner is zero-dependency Node.js using the platform `fetch()` API.
+Read a service's classic WMS `GetCapabilities`, request `GetMap` for its
+first named layer, and draw the returned image over its bounding box in
+MapLibre GL JS. The answer is checked as an image, not as a status code: it
+must be a PNG of exactly the requested size. The inspected layer's metadata
+and every request sit under the map. The default is Maui building footprints
+around Kahului. One HTML file, no build step.
 
-## Prerequisites
-
-- A clone of this repository; run the commands below from its root
-- Docker with Compose v2 (`docker compose`), and ports `8080` and `5432` free
-- Node.js 22 or later (no npm dependencies)
+| | |
+| --- | --- |
+| Goal | Get a map image out of WMS and see it in place |
+| Level | Intermediate |
+| Time | About 10 minutes |
+| Prerequisites | A modern web browser, internet access, any static file server |
+| Libraries | `maplibre-gl@6.4.1` (ES module from jsDelivr, pinned) |
 
 ## Run
 
-Start the repository compose stack on the 2026.1 candidate. The stack
-defaults to that image and sets `Licensing__Mode=Disabled`. The admin key is
-the stack's `HONUA_ADMIN_PASSWORD`, which `docker/compose.yml` defaults to
-`quickstart-admin-password`:
+Serve `src/` with any static web server. With Node.js 20+:
 
+<!-- doc-run: run ready-url="http://localhost:3000/" -->
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-8cb074f@sha256:2d7877c4d1cb3b30647fb225893d41b13728f0448997997cdf4bf40fe99be07d
-docker compose -f docker/compose.yml up -d --wait
-HONUA_BASE_URL=http://localhost:8080 \
-HONUA_ADMIN_API_KEY="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}" \
-node samples/wms-getmap-check/src/run.mjs
+npx serve src
 ```
 
-The last line reports
-`[wms-getmap-check] PASS in ...ms: 317x241 image/png (... bytes)`.
+Open `http://localhost:3000`.
 
-Environment variables (all optional):
+## What the code does
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `HONUA_BASE_URL` | `http://localhost:8080` | Base URL of the composed server. |
-| `HONUA_ADMIN_API_KEY` | `quickstart-admin-password` | `X-API-Key` used for admin calls. |
-| `HONUA_SAMPLE_CONNECTION` | `local` | Connection name to register/reuse. |
-| `HONUA_SAMPLE_SERVICE` | `wms-getmap-check-sample` | Service name this sample publishes under. |
-| `HONUA_SAMPLE_TABLE` | `honua_samples_wms_<timestamp>` | Table name for the imported data. |
+1. `GET /ogc/services/<service>/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities`
+   is parsed with `DOMParser`: every `Layer` with a `Name` is a candidate,
+   with its title, abstract, CRS list, geographic bounds and `queryable` flag.
+2. `GET …/wms?…&REQUEST=GetMap&LAYERS=<name>&CRS=EPSG:4326&BBOX=…&WIDTH=…&HEIGHT=…&FORMAT=image/png&TRANSPARENT=TRUE`
+   fetches the image. WMS 1.3.0 orders an `EPSG:4326` `BBOX` as
+   `minLat,minLon,maxLat,maxLon`. The response must be `image/png`, larger
+   than 100 bytes, start with the PNG signature, and its IHDR width and height
+   must equal the request. Anything else is a `FAIL`.
+3. The verified PNG becomes a MapLibre image source whose corners are the
+   bounding box, drawn as a raster layer; the map fits the box.
 
-Exit code is `0` on success, `1` on any failure (with a message describing
-which step failed).
+The `<pre>` under the map lists every request. There are no third-party
+basemap tiles; the server's own Protomaps archive is used only if it answers,
+and it is drawn beneath the WMS image.
 
-Without `HONUA_SERVER_IMAGE`, `docker/compose.yml` still uses the candidate
-image above. The floating `:trunk` tag is not the 2026.1 release.
+## Parameters
 
-Stop the stack and remove its data when you are done:
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `baseUrl` | `https://demo.honua.io` | Honua server. |
+| `service` | `maui-buildings` | Service whose WMS endpoint is read. |
+| `layer` | (first named layer) | Layer name to request. |
+| `bbox` | `-156.52,20.86,-156.46,20.90` | `minLon,minLat,maxLon,maxLat`, or `layer` for the advertised bounds. |
+| `width`, `height` | `640`, `427` | Requested image size in pixels. |
+| `basemap` | (probe) | `none` skips the PMTiles basemap probe. |
 
-```bash
-docker compose -f docker/compose.yml down -v
-```
+On success the page sets `data-sample-status="pass"` with `data-layer-name`,
+`data-layer-count`, `data-image-width`, `data-image-height`,
+`data-image-bytes` and `data-sample-elapsed-ms`; on failure it shows
+`FAIL: <message>`.
 
-This is intentionally a local integration sample. It does not claim the
-public API currently exposes a working anonymous WMS service.
+## Verification
+
+`verify/` holds the Playwright spec: against a composed server with the
+committed fixture published as a WMS-enabled service it waits for
+`GetCapabilities` to advertise the fixture layer, then checks that the page
+names that layer, that the `GetMap` answer is a PNG of the requested
+`317x241`, and that both requests were made; that a missing service reports
+`FAIL`; and that the page's public-live default draws on the public
+deployment within the time budget.

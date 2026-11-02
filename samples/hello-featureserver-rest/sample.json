@@ -1,13 +1,17 @@
 {
   "id": "hello-featureserver-rest",
-  "title": "Query a public FeatureServer (plain REST)",
-  "description": "Discovers the first layer in the public Maui buildings service and queries three real features with plain fetch().",
+  "title": "Your first FeatureServer query, drawn on a map",
+  "description": "One HTML file discovers a public service's first layer with plain fetch(), asks it for three real features, draws them in MapLibre GL JS, and shows the endpoint detail and every request below the map.",
   "contentKind": "example",
   "learning": {
     "goal": "connect-data",
     "level": "beginner",
-    "estimatedMinutes": 7,
-    "prerequisites": ["Node.js 20+", "Internet access"]
+    "estimatedMinutes": 8,
+    "prerequisites": [
+      "Modern web browser",
+      "Internet access",
+      "Any static file server (for example `npx serve src`)"
+    ]
   },
   "dataMode": "public-live",
   "auth": "anonymous",
@@ -22,8 +26,8 @@
   ],
   "edition": "community",
   "entrypoint": {
-    "type": "node",
-    "command": "node src/run.mjs"
+    "type": "browser",
+    "command": "src/index.html"
   },
   "status": "active"
 }

@@ -16,17 +16,17 @@ test("the gallery portfolio classifies the 32 SDK and 15 owned cards", async () 
   assert.equal(portfolio.entries.length, 47);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-sdk-js").length, 32);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 15);
-  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, moved: 12, public: 5 });
+  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 8, moved: 12, public: 8 });
   // SDK sample cards are out of the gallery; their old URLs render moved pages.
   assert.deepEqual(publicSampleIds(portfolio, "honua-sdk-js"), []);
   assert.equal(movedEntries(portfolio, "honua-sdk-js").length, 12);
-  // The county parcel viewer and the four map-first browser samples are the owned public cards.
+  // The county parcel viewer and the seven map-first browser samples are the owned public cards.
   assert.deepEqual(
     portfolio.entries
       .filter((entry) => entry.sourceRepo === "honua-samples" && entry.disposition === "public")
       .map((entry) => entry.id)
       .sort(),
-    ["county-parcel-viewer", "esri-leaflet-featurelayer", "maplibre-category-style-legend", "maplibre-featureserver-layer", "maplibre-ogc-tiles-mvt"],
+    ["county-parcel-viewer", "esri-leaflet-featurelayer", "geocode-single-line", "hello-featureserver-rest", "maplibre-category-style-legend", "maplibre-featureserver-layer", "maplibre-ogc-tiles-mvt", "wms-getmap-check"],
   );
 });
 
