@@ -226,8 +226,8 @@
     {
       "sourceRepo": "honua-samples",
       "id": "geocode-single-line",
-      "disposition": "rework-map-first",
-      "reason": "Render the matched location and score on a map before showing the raw geocoding request."
+      "disposition": "public",
+      "reason": "County app: address search for county apps. The matched location and score render on a map before the raw geocoding request."
     },
     {
       "sourceRepo": "honua-samples",
@@ -238,8 +238,8 @@
     {
       "sourceRepo": "honua-samples",
       "id": "hello-featureserver-rest",
-      "disposition": "rework-map-first",
-      "reason": "Turn the raw FeatureServer request into a first mapped feature result with endpoint detail below."
+      "disposition": "public",
+      "reason": "Map-first first query: the FeatureServer request draws its features on a map with endpoint detail below."
     },
     {
       "sourceRepo": "honua-samples",
@@ -280,8 +280,8 @@
     {
       "sourceRepo": "honua-samples",
       "id": "wms-getmap-check",
-      "disposition": "rework-map-first",
-      "reason": "Lead with the returned WMS map image and inspected layer, with request mechanics below."
+      "disposition": "public",
+      "reason": "Map-first WMS proof: the returned GetMap image and inspected layer lead, with request mechanics below."
     }
   ]
 }
