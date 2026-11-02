@@ -417,6 +417,17 @@ entries -- React/Node/web-components framework bindings, migration tooling,
 etc., per that repo's crosswalk) are listed honestly under "Other", never
 silently dropped.
 
+The gallery is drawn in honua.io's visual world (the "Geodetic Control
+Network" recorded in honua-site's `DESIGN.md`): the same dark ocean palette
+(`scripts/gallery-assets/gallery.css` carries honua-site's `assets/theme.css`
+tokens under the `--honua-*` names, pinned by
+`scripts/test/county-parcel-viewer-tokens.test.mjs`), the same self-hosted
+type (Archivo served as HonuaSans, Martian Mono as HonuaMono, both OFL, under
+`scripts/gallery-assets/fonts/` with their licence text; no font CDN), the
+same nav and footer collar. Sample apps inside the iframes keep their own
+styling. Every page is rendered by `scripts/build-gallery.mjs`; the stylesheet
+and `site-nav.js` (the mobile nav toggle) are copied into `site/assets/`.
+
 Filtering is dependency-free client-side JS
 (`scripts/gallery-assets/gallery-filter.js`, copied into `site/assets/` at
 build time) across four facets: **capability**, **SDK**, **edition**, and
