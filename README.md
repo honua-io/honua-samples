@@ -200,7 +200,9 @@ floating `:trunk` tag is not the 2026.1 candidate. `HONUA_ADMIN_API_KEY`
 must match the composed server's admin password; browser specs use it when
 they create fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
 copy of honua-server's own init script); the server's readiness probe is
-`GET /healthz/ready`, which `--wait` and the runner both wait for.
+`GET /healthz/ready`, which `--wait` and the runner both wait for. The server
+image ships `bash` but no HTTP client such as `wget`, so the Compose healthcheck sends
+that request over bash's `/dev/tcp` and passes only on an exact `200`.
 
 Additional optional environment variables: `HONUA_BASE_URL` (default `http://localhost:8080`),
 `HONUA_READY_TIMEOUT_MS` (default `120000`), `HONUA_SAMPLE_MAX_ATTEMPTS`
@@ -289,7 +291,7 @@ from **two inputs**:
    SDK projection since
    [honua-io/honua-samples#16](https://github.com/honua-io/honua-samples/issues/16),
    fetched at the locked producer revision from
-   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/a9ed6e2d588f0412b09426620532228d2317b6e1/samples/dist/honua-site-consumer-handoff.v2.json)
+   [`samples/dist/honua-site-consumer-handoff.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/fcecc81ac298316bace51502272e75609a10190a/samples/dist/honua-site-consumer-handoff.v2.json)
    together with its v4 consumer fixture, which content-binds the handoff by
    exact bytes + sha256. `scripts/lib/sdkjs-handoff.mjs` admits the pair
    through a fail-closed gate (schema/version compatibility, fixture digest
@@ -302,7 +304,7 @@ from **two inputs**:
    qualified-journey evidence, and explicit coverage gaps survive the merge
    as card/detail metadata, never as cloned cards. Nothing is vendored:
    every card links out to its GitHub source and docs in honua-sdk-js.
-   [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/a9ed6e2d588f0412b09426620532228d2317b6e1/samples/catalog.v2.json)
+   [`samples/catalog.v2.json`](https://raw.githubusercontent.com/honua-io/honua-sdk-js/fcecc81ac298316bace51502272e75609a10190a/samples/catalog.v2.json)
    is still consumed, but only to enrich each admitted card with its
    materialized canonical `capabilityKeys`
    ([honua-io/honua-sdk-js#635](https://github.com/honua-io/honua-sdk-js/issues/635));
@@ -434,8 +436,8 @@ migration footprint scanner, lands here pre-filtered to the matching samples.
 
 The build fetches honua-sdk-js's handoff and catalog, so it needs internet
 access, and it reads the vendored sample-bundle archive for producer pin
-`a9ed6e2d588f0412b09426620532228d2317b6e1`. Qualified journey evidence on that
-handoff runs through 2026-11-03T06:36Z
+`fcecc81ac298316bace51502272e75609a10190a`. Qualified journey evidence on that
+handoff runs through 2026-11-09T22:30Z
 ([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)).
 `validate.yml` runs daily, and its `producer evidence horizon` job
 (`node scripts/check-producer-evidence-horizon.mjs`) fails when that window is
