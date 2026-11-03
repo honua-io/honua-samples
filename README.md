@@ -201,7 +201,7 @@ must match the composed server's admin password; browser specs use it when
 they create fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
 copy of honua-server's own init script); the server's readiness probe is
 `GET /healthz/ready`, which `--wait` and the runner both wait for. The server
-image ships `bash` but no `wget` or `curl`, so the Compose healthcheck sends
+image ships `bash` but no HTTP client such as `wget`, so the Compose healthcheck sends
 that request over bash's `/dev/tcp` and passes only on an exact `200`.
 
 Additional optional environment variables: `HONUA_BASE_URL` (default `http://localhost:8080`),
