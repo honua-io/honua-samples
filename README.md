@@ -200,7 +200,9 @@ floating `:trunk` tag is not the 2026.1 candidate. `HONUA_ADMIN_API_KEY`
 must match the composed server's admin password; browser specs use it when
 they create fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
 copy of honua-server's own init script); the server's readiness probe is
-`GET /healthz/ready`, which `--wait` and the runner both wait for.
+`GET /healthz/ready`, which `--wait` and the runner both wait for. The server
+image ships `bash` but no `wget` or `curl`, so the Compose healthcheck sends
+that request over bash's `/dev/tcp` and passes only on an exact `200`.
 
 Additional optional environment variables: `HONUA_BASE_URL` (default `http://localhost:8080`),
 `HONUA_READY_TIMEOUT_MS` (default `120000`), `HONUA_SAMPLE_MAX_ATTEMPTS`

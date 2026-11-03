@@ -25,6 +25,10 @@ HONUA_ADMIN_API_KEY="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}" \
 node samples/wms-getmap-check/src/run.mjs
 ```
 
+`--wait` returns once the server's Compose healthcheck sees `200` from
+`/healthz/ready`. The server image has no `wget` or `curl`; the healthcheck
+uses the image's `bash`.
+
 The last line reports
 `[wms-getmap-check] PASS in ...ms: 317x241 image/png (... bytes)`.
 
