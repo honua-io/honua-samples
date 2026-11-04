@@ -68,7 +68,7 @@
 //   SAMPLE_BUNDLES_TARBALL_URL  see scripts/lib/sample-bundles.mjs
 
 import { execFileSync } from "node:child_process";
-import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCapabilityKeyRecords } from "./lib/capability-keys.mjs";
@@ -749,36 +749,44 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeAttr(description)}" />
 <link rel="stylesheet" href="${assetPrefix}/gallery.css" />
+<link rel="icon" href="${assetPrefix}/honua-logo.svg" type="image/svg+xml" />
 </head>
-<body>
+<body class="${depth === 0 ? "page-index" : "page-detail"}">
 <header class="site-header">
-  <a class="brand" href="${homeHref}">Honua Samples</a>
-  <nav aria-label="Primary navigation">
+  <a class="brand" href="${homeHref}" aria-label="Honua Samples home"><img src="${assetPrefix}/honua-logo.svg" alt="" width="28" height="28" /><span>honua</span><small>Samples</small></a>
+  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+  <nav id="primary-navigation" aria-label="Primary navigation">
     <a href="${homeHref}#examples">Examples</a>
     <a href="${homeHref}#walkthroughs">Walkthroughs</a>
     <a href="${homeHref}#projects">Projects</a>
     <a href="${CAPABILITIES_CATALOG_URL}">Capability catalog</a>
-    <a href="https://github.com/${OWN_REPO}" target="_blank" rel="noopener noreferrer">honua-samples ↗</a>
-    <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js ↗</a>
+    <a href="https://honua.io/">honua.io ↗</a>
+    <a href="https://github.com/${OWN_REPO}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
   </nav>
 </header>
 <main>
 ${bodyHtml}
 </main>
-<footer class="site-footer">${renderFooter(generatedAt, sourceCommit, bundleNotice)}</footer>
+<footer class="site-footer">${renderFooter({ homeHref, assetPrefix, generatedAt, sourceCommit, bundleNotice })}</footer>
+<script src="${assetPrefix}/site-nav.js"></script>
 ${depth === 0 ? `<script src="${assetPrefix}/gallery-filter.js"></script>` : `<script src="${assetPrefix}/source-preview.js"></script><script src="${assetPrefix}/job-page.js"></script>`}
 </body>
 </html>
 `;
 }
 
-function renderFooter(generatedAt, sourceCommit, bundleNotice) {
+// The honua.io footer collar: brand, the licence and trademark lines that
+// honua.io's own footer carries, and this build's receipt (generated-at and
+// the source commit, which smoke-live-gallery.mjs reads back).
+function renderFooter({ homeHref, assetPrefix, generatedAt, sourceCommit, bundleNotice }) {
   const commitLink =
     sourceCommit && /^[0-9a-f]{40}$/i.test(sourceCommit)
       ? `<a href="https://github.com/${OWN_REPO}/commit/${sourceCommit}" target="_blank" rel="noopener noreferrer">${sourceCommit.slice(0, 12)}</a>`
       : escapeHtml(sourceCommit ?? "unknown");
   const notice = bundleNotice ? `<span class="bundle-notice">⚠ ${escapeHtml(bundleNotice)}</span>` : "";
-  return `<span>Generated ${escapeHtml(generatedAt)}</span><span>Source commit: ${commitLink}</span>${notice}`;
+  return `<div class="footer-top"><a class="brand" href="${homeHref}" aria-label="Honua Samples home"><img src="${assetPrefix}/honua-logo.svg" alt="" width="28" height="28" /><span>honua</span><small>Samples</small></a><p>Spatial systems, reimagined.</p><a href="https://honua.io/">honua.io ↗</a></div>
+<div class="footer-links"><a href="${CAPABILITIES_CATALOG_URL}">Capabilities &amp; evidence</a><a href="https://github.com/${OWN_REPO}" target="_blank" rel="noopener noreferrer">honua-samples on GitHub</a><a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js on GitHub</a><a href="https://github.com/honua-io/honua-server/releases">Releases</a><a href="https://github.com/honua-io/honua-server/discussions">Community</a><a href="https://honua.io/privacy.html">Privacy &amp; cookies</a><a href="https://honua.io/terms.html">Terms</a></div>
+<div class="footer-bottom"><p>Server &amp; Collect: Fair Core License (FCL-1.0-ALv2). Other platform components: Apache 2.0.<br>Mobile SDK and Collect are experimental.<br>Esri and ArcGIS are trademarks of Esri. Honua is independent and is not affiliated with or endorsed by Esri.</p><p class="build-stamp"><span>Generated ${escapeHtml(generatedAt)}</span><span>Source commit: ${commitLink}</span>${notice}</p></div>`;
 }
 
 function chip(text, extraClass) {
@@ -889,12 +897,12 @@ function renderIndexPage({ contentSections, cards, keyByKey, generatedAt, source
   const bodyHtml = `
 <section class="intro">
   <div class="intro-copy">
-    <p class="eyebrow">Canonical code catalog / ${cards.length} maintained entries</p>
     <h1>Make the first request. See the exact result.</h1>
     <p>Small, reproducible examples across Honua Server and the JavaScript SDK. Run a verified browser build when one exists, then inspect the source and evidence.</p>
     <div class="intro-actions"><a class="button primary" href="#examples">Start with examples</a><a class="button" href="#catalog">Search all content</a></div>
   </div>
   <dl class="catalog-stats" aria-label="Catalog composition">
+    <div><dt>${cards.length}</dt><dd>maintained entries in the canonical code catalog</dd></div>
     <div><dt>${ownCount}</dt><dd>server samples executed by this repository</dd></div>
     <div><dt>${jobCount}</dt><dd>server-first tasks with cross-SDK references</dd></div>
     <div><dt>${sdkCount}</dt><dd>SDK entries admitted from the producer handoff</dd></div>
@@ -904,11 +912,11 @@ function renderIndexPage({ contentSections, cards, keyByKey, generatedAt, source
   ${contentSections.map(renderContentKindNavItem).join("\n")}
 </nav>
 ${starters.length ? `<section class="starter-section" aria-labelledby="starter-heading">
-  <div class="section-heading"><div><p class="eyebrow">Recommended starts</p><h2 id="starter-heading">Choose the client you already have.</h2></div><p>Each path produces a concrete result before it introduces the wider platform.</p></div>
+  <div class="section-heading"><div><h2 id="starter-heading">Choose the client you already have.</h2></div><p>Each path produces a concrete result before it introduces the wider platform.</p></div>
   <div class="starter-grid">${starters.map(renderStarterCard).join("\n")}</div>
 </section>` : ""}
 <section id="catalog" class="catalog-section" aria-labelledby="catalog-heading">
-  <div class="catalog-heading"><div><p class="eyebrow">Full catalog</p><h2 id="catalog-heading">Find one concept.</h2></div><div class="catalog-search"><label for="filter-search">Search samples</label><input id="filter-search" type="search" placeholder="Try: geocode, OGC, React..." autocomplete="off" /><kbd>/</kbd></div></div>
+  <div class="catalog-heading"><div><h2 id="catalog-heading">Find one concept.</h2></div><div class="catalog-search"><label for="filter-search">Search samples</label><input id="filter-search" type="search" placeholder="Try: geocode, OGC, React..." autocomplete="off" /><kbd>/</kbd></div></div>
   <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="catalog-filters">Filters <span id="filter-active-count">0</span></button>
 <div class="layout">
   <aside id="catalog-filters" class="filters">
@@ -941,8 +949,7 @@ function renderContentKindNavItem(section) {
 function renderStarterCard({ card, number, eyebrow, action }) {
   const time = card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} min` : card.bundleRunnable ? "Run in browser" : "Source available";
   return `<a class="starter-card" href="${card.detailPath}">
-  <span class="starter-number">${escapeHtml(number)}</span><span class="starter-eyebrow">${escapeHtml(eyebrow)}</span>
-  <h3>${escapeHtml(action)}</h3><p>${escapeHtml(card.summary)}</p>
+  <h3>${escapeHtml(action)}</h3><span class="starter-eyebrow">${escapeHtml(eyebrow)}</span><p>${escapeHtml(card.summary)}</p>
   <span class="starter-meta">${escapeHtml(time)} <b>Open sample &rarr;</b></span>
 </a>`;
 }
@@ -1069,7 +1076,7 @@ function renderContentKindSection(section) {
     ? section.categories.map((category) => renderCategorySection(category)).join("\n")
     : `<div class="content-kind-empty"><strong>No maintained ${escapeHtml(section.label.toLowerCase())} yet.</strong><span>A repository will appear here only after it meets the ${escapeHtml(section.singular.toLowerCase())} content contract.</span></div>`;
   return `<section id="${escapeAttr(section.slug)}" class="content-kind-section" data-kind-section="${escapeAttr(section.id)}">
-  <div class="content-kind-heading"><div><p class="eyebrow">${escapeHtml(section.singular)} contract</p><h2>${escapeHtml(section.label)}</h2></div><p>${escapeHtml(section.description)}</p><span>${section.cards.length}</span></div>
+  <div class="content-kind-heading"><div><h2>${escapeHtml(section.label)}</h2></div><p>${escapeHtml(section.description)}</p><span>${section.cards.length}</span></div>
   ${body}
 </section>`;
 }
@@ -1109,14 +1116,14 @@ ${renderContentKindLabel(card)}
 <p>${escapeHtml(card.summary)}</p>
 ${learningContent}
 <dl class="sample-facts">
-  <div><dt>Time</dt><dd>${escapeHtml(card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} minutes` : "Not stated")}</dd></div>
-  <div><dt>Level</dt><dd>${escapeHtml(card.learning?.level ?? "Not stated")}</dd></div>
-  <div><dt>Data</dt><dd>${escapeHtml(card.dataMode ?? "Not stated")}</dd></div>
-  <div><dt>Auth</dt><dd>${escapeHtml(card.auth ?? "Not stated")}</dd></div>
+  <div><dt>Capabilities</dt><dd>${capabilityChips(card.capabilities, keyByKey)}</dd></div>
+  <div><dt>Edition</dt><dd>${escapeHtml(card.edition ?? "Not stated")}</dd></div>
+  <div><dt>Data · auth</dt><dd>${escapeHtml(card.dataMode ?? "Not stated")} · ${escapeHtml(card.auth ?? "Not stated")}</dd></div>
+  <div><dt>Run receipt</dt><dd>${runBadgeHtml(card.runBadge) || "Not yet run"} <a href="https://github.com/${OWN_REPO}/actions/workflows/run-samples.yml" target="_blank" rel="noopener noreferrer">CI run receipts ↗</a></dd></div>
+  <div><dt>Time · level</dt><dd>${escapeHtml(card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} minutes` : "Not stated")} · ${escapeHtml(card.learning?.level ?? "Not stated")}</dd></div>
+  <div><dt>Before you run it</dt><dd class="prerequisites">${escapeHtml(prerequisites)}</dd></div>
 </dl>
-<p class="prerequisites"><strong>Before you run it:</strong> ${escapeHtml(prerequisites)}</p>
-${runBadgeHtml(card.runBadge)}
-<div class="detail-footer"><div><h2>Capabilities</h2>${capabilityChips(card.capabilities, keyByKey)}</div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open repository source ↗</a></div>
+<div class="detail-footer"><div><h2>Source</h2><p>The exact file this page runs, at the staged commit.</p></div><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open repository source ↗</a></div>
 `;
   return pageShell({
     title: `${card.title} — Honua Samples`,
@@ -1144,13 +1151,13 @@ function renderOwnNotes(card, expanded) {
 
 function renderProjectSourcePanel(card) {
   const surfaces = [...new Set([...(card.protocols ?? []), ...(card.renderers ?? [])])];
-  return `<section class="project-source-panel"><p class="eyebrow">Complete application source</p><h2>Start with the application architecture.</h2><p>Projects span multiple files, state, configuration, and deployment concerns. The complete SDK example folder is the primary artifact; the embedded build is supporting runtime evidence.</p><dl class="project-architecture"><div><dt>Example folder</dt><dd><code>${escapeHtml(card.sourcePath ?? card.id)}</code></dd></div><div><dt>Integration surfaces</dt><dd>${escapeHtml(surfaces.join(", ") || "See project source")}</dd></div><div><dt>Support tier</dt><dd>${escapeHtml(card.supportTier ?? "See project source")}</dd></div></dl><a class="button primary" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open complete SDK example folder &nearr;</a></section>`;
+  return `<section class="project-source-panel"><h2>Start with the application architecture.</h2><p>Projects span multiple files, state, configuration, and deployment concerns. The complete SDK example folder is the primary artifact; the embedded build is supporting runtime evidence.</p><dl class="project-architecture"><div><dt>Example folder</dt><dd><code>${escapeHtml(card.sourcePath ?? card.id)}</code></dd></div><div><dt>Integration surfaces</dt><dd>${escapeHtml(surfaces.join(", ") || "See project source")}</dd></div><div><dt>Support tier</dt><dd>${escapeHtml(card.supportTier ?? "See project source")}</dd></div></dl><a class="button primary" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">Open complete SDK example folder &nearr;</a></section>`;
 }
 
 function renderWalkthroughGuide(card) {
   const guide = WALKTHROUGH_GUIDES.get(card.id);
   if (!guide) return "";
-  return `<section class="walkthrough-guide" aria-labelledby="walkthrough-guide-${escapeAttr(card.id)}"><p class="eyebrow">Task walkthrough</p><h2 id="walkthrough-guide-${escapeAttr(card.id)}">Complete the workflow.</h2><ol>${guide.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol><p class="expected-outcome"><strong>Expected outcome</strong><span>${escapeHtml(guide.outcome)}</span></p></section>`;
+  return `<section class="walkthrough-guide" aria-labelledby="walkthrough-guide-${escapeAttr(card.id)}"><h2 id="walkthrough-guide-${escapeAttr(card.id)}">Complete the workflow.</h2><ol>${guide.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol><p class="expected-outcome"><strong>Expected outcome</strong><span>${escapeHtml(guide.outcome)}</span></p></section>`;
 }
 
 function renderInlineCodePanel(card, { collapsed = false } = {}) {
@@ -1208,7 +1215,7 @@ function renderJobServerPanel(job, keyByKey) {
   const limitations = job.maturity.limitations.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const docs = job.server.docs.map((url) => `<li>${renderPublishedSourceLink(url, url)}</li>`).join("");
   return `<section class="server-contract" aria-labelledby="server-contract-${escapeAttr(job.id)}">
-  <div class="job-section-heading"><div><p class="eyebrow">Server contract first</p><h2 id="server-contract-${escapeAttr(job.id)}">${escapeHtml(job.server.operation)}</h2></div><span class="contract-state state-${escapeAttr(job.maturity.state)}">${escapeHtml(job.maturity.state)}</span></div>
+  <div class="job-section-heading"><div><h2 id="server-contract-${escapeAttr(job.id)}">${escapeHtml(job.server.operation)}</h2></div><span class="contract-state state-${escapeAttr(job.maturity.state)}">${escapeHtml(job.maturity.state)}</span></div>
   <dl class="server-facts">
     <div><dt>Fixture endpoint</dt><dd>${fixture.endpoint ? `<code>${escapeHtml(fixture.endpoint)}</code>` : "No runnable endpoint admitted"}</dd></div>
     <div><dt>Service manifest key</dt><dd>${fixture.serviceManifestKey ? `<code>${escapeHtml(fixture.serviceManifestKey)}</code>` : "Not admitted"}</dd></div>
@@ -1231,7 +1238,7 @@ function renderProtocolContract(job, protocol, index) {
     ? `<a class="button protocol-open" href="${escapeAttr(protocol.concreteEndpoint)}" target="_blank" rel="noopener noreferrer">Open GET endpoint &nearr;</a>`
     : "";
   return `<article class="server-protocol" data-protocol="${escapeAttr(protocol.id)}" data-availability="${escapeAttr(protocol.availability)}">
-  <header><div><p class="eyebrow">${escapeHtml(protocol.availability)}</p><h3>${escapeHtml(protocol.id)}</h3></div><code>${escapeHtml(protocol.method)} ${escapeHtml(protocol.endpointTemplate)}</code></header>
+  <header><div><h3>${escapeHtml(protocol.id)}</h3><span class="protocol-availability">${escapeHtml(protocol.availability)}</span></div><code>${escapeHtml(protocol.method)} ${escapeHtml(protocol.endpointTemplate)}</code></header>
   <p>${escapeHtml(protocol.notes)}</p>${open}
   <div class="inspector-grid">${renderJsonInspector(`${job.id}-protocol-${index}-request`, "Raw request", "request", request)}${renderJsonInspector(`${job.id}-protocol-${index}-response`, "Expected response", "response", protocol.response)}</div>
 </article>`;
@@ -1262,7 +1269,7 @@ function renderJobLanguageTabs(job) {
       : `<div class="language-gap"><strong>Unavailable - no pseudocode shown.</strong><p>${escapeHtml(ref.gap ?? "No admitted implementation is available for this surface.")}</p></div>`;
     return `<section role="tabpanel" id="panel-${escapeAttr(job.id)}-${surface}" aria-labelledby="tab-${escapeAttr(job.id)}-${surface}" data-language="${surface}" data-state="${escapeAttr(ref.availability)}"${index === 0 ? "" : " hidden"}><div class="language-reference"><span>${symbol}</span>${link}</div>${content}</section>`;
   }).join("");
-  return `<section class="job-language-section" aria-labelledby="language-heading-${escapeAttr(job.id)}"><p class="eyebrow">Equivalent client surfaces</p><h2 id="language-heading-${escapeAttr(job.id)}">Choose a language without changing the job.</h2><div class="job-tabs" role="tablist" aria-label="SDK language">${tabButtons}</div><div class="job-tab-panels">${panels}</div></section>`;
+  return `<section class="job-language-section" aria-labelledby="language-heading-${escapeAttr(job.id)}"><h2 id="language-heading-${escapeAttr(job.id)}">Choose a language without changing the job.</h2><div class="job-tabs" role="tablist" aria-label="SDK language">${tabButtons}</div><div class="job-tab-panels">${panels}</div></section>`;
 }
 
 function isPublishableSourceLink(value) {
@@ -1287,17 +1294,17 @@ function renderJobReferenceMatrix(job) {
       : `${exact}${ref.deepLink?.includes("/trunk/") ? '<br><small class="reference-gap">Unpinned upstream link withheld</small>' : ""}`;
     return `<tr data-reference-surface="${escapeAttr(ref.surface)}" data-state="${escapeAttr(ref.availability)}"><th scope="row">${escapeHtml(surfaceLabels[ref.surface] ?? ref.surface)}<small>${escapeHtml(ref.availability)}</small></th><td>${linked}</td><td>${escapeHtml(ref.package ?? "Not applicable")}<br><small>min ${escapeHtml(ref.minVersion ?? "n/a")} - ${escapeHtml(ref.supportTier)}</small></td><td><strong>${escapeHtml(ref.owner)}</strong><br>Auth: ${escapeHtml(ref.auth)}<br>Cancel: ${escapeHtml(ref.cancellation)}<br>Errors: ${escapeHtml(ref.errors)}</td></tr>`;
   }).join("");
-  return `<section class="job-reference" aria-labelledby="reference-heading-${escapeAttr(job.id)}"><p class="eyebrow">Exact reference matrix</p><h2 id="reference-heading-${escapeAttr(job.id)}">Raw contract and public symbols</h2><div class="reference-scroll"><table><thead><tr><th>Surface</th><th>Operation or symbol</th><th>Package and version</th><th>Ownership and behavior</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  return `<section class="job-reference" aria-labelledby="reference-heading-${escapeAttr(job.id)}"><h2 id="reference-heading-${escapeAttr(job.id)}">Raw contract and public symbols</h2><div class="reference-scroll"><table><thead><tr><th>Surface</th><th>Operation or symbol</th><th>Package and version</th><th>Ownership and behavior</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
 }
 
 function renderJobWalkthrough(job) {
   if (!job.walkthrough.length) return "";
   const steps = job.walkthrough.map((step) => `<li data-state="${escapeAttr(step.state)}"><div><span>${escapeHtml(step.state)}</span><strong>${escapeHtml(step.title)}</strong></div><p>${escapeHtml(step.action)}</p><p><em>Expected:</em> ${escapeHtml(step.expectedOutcome)}</p></li>`).join("");
-  return `<section class="walkthrough-guide job-walkthrough" aria-labelledby="walkthrough-guide-${escapeAttr(job.id)}"><p class="eyebrow">Ordered job walkthrough</p><h2 id="walkthrough-guide-${escapeAttr(job.id)}">Complete the lifecycle deliberately.</h2><ol>${steps}</ol><p class="expected-outcome"><strong>Final assertion</strong><span>${escapeHtml(job.semantics.assertion)}</span></p></section>`;
+  return `<section class="walkthrough-guide job-walkthrough" aria-labelledby="walkthrough-guide-${escapeAttr(job.id)}"><h2 id="walkthrough-guide-${escapeAttr(job.id)}">Complete the lifecycle deliberately.</h2><ol>${steps}</ol><p class="expected-outcome"><strong>Final assertion</strong><span>${escapeHtml(job.semantics.assertion)}</span></p></section>`;
 }
 
 function renderJobProjectPanel(card) {
-  return `<section class="project-source-panel project-status-planned"><p class="eyebrow">Governed project blueprint</p><h2>Architecture and admission gaps come before code.</h2><p>This is not a runnable application. It records the current server contract, ordered product gaps, approval boundaries, and the evidence required before runtime admission.</p><dl class="project-architecture"><div><dt>Contract source</dt><dd><code>${escapeHtml(card.sourcePath)}</code></dd></div><div><dt>Runtime</dt><dd>Not admitted</dd></div><div><dt>Evidence</dt><dd>${escapeHtml(card.job.server.fixture.evidenceState)}</dd></div></dl><a class="button primary" href="${escapeAttr(card.githubUrl)}" target="_blank" rel="noopener noreferrer">Open governed project contract &nearr;</a></section>`;
+  return `<section class="project-source-panel project-status-planned"><h2>Architecture and admission gaps come before code.</h2><p>This is not a runnable application. It records the current server contract, ordered product gaps, approval boundaries, and the evidence required before runtime admission.</p><dl class="project-architecture"><div><dt>Contract source</dt><dd><code>${escapeHtml(card.sourcePath)}</code></dd></div><div><dt>Runtime</dt><dd>Not admitted</dd></div><div><dt>Evidence</dt><dd>${escapeHtml(card.job.server.fixture.evidenceState)}</dd></div></dl><a class="button primary" href="${escapeAttr(card.githubUrl)}" target="_blank" rel="noopener noreferrer">Open governed project contract &nearr;</a></section>`;
 }
 
 function renderJobConsolePanel(job) {
@@ -1306,14 +1313,14 @@ function renderJobConsolePanel(job) {
   const image = visual.state === "captured" && visual.path
     ? `<figure class="console-visual"><img src="../../${escapeAttr(visual.path)}" alt="${escapeAttr(visual.alt)}" /><figcaption>${escapeHtml(visual.viewport)} - ${escapeHtml(visual.redaction)}</figcaption></figure>`
     : `<div class="governed-empty"><strong>No screenshot published.</strong><p>${escapeHtml(visual.alt)} This remains ${escapeHtml(visual.state)} until a real route and golden receipt exist.</p></div>`;
-  return `<section class="job-console" data-console-state="${escapeAttr(consoleContract.state)}"><p class="eyebrow">Console configuration</p><h2>${consoleContract.route ? "Equivalent UI, raw contract retained" : "Planned UI, raw contract only"}</h2><dl class="console-facts"><div><dt>Route</dt><dd>${escapeHtml(consoleContract.route ?? "Not implemented")}</dd></div><div><dt>Required role</dt><dd>${escapeHtml(consoleContract.requiredRole ?? "Not defined")}</dd></div><div><dt>Visual receipt</dt><dd>${escapeHtml(visual.goldenReceipt ?? "Not captured")}</dd></div></dl>${renderJsonInspector(`${job.id}-console-config`, "Searchable equivalent configuration", "configuration", consoleContract.equivalentConfig)}${image}</section>`;
+  return `<section class="job-console" data-console-state="${escapeAttr(consoleContract.state)}"><h2>${consoleContract.route ? "Equivalent UI, raw contract retained" : "Planned UI, raw contract only"}</h2><dl class="console-facts"><div><dt>Route</dt><dd>${escapeHtml(consoleContract.route ?? "Not implemented")}</dd></div><div><dt>Required role</dt><dd>${escapeHtml(consoleContract.requiredRole ?? "Not defined")}</dd></div><div><dt>Visual receipt</dt><dd>${escapeHtml(visual.goldenReceipt ?? "Not captured")}</dd></div></dl>${renderJsonInspector(`${job.id}-console-config`, "Searchable equivalent configuration", "configuration", consoleContract.equivalentConfig)}${image}</section>`;
 }
 
 function renderJobAiPanel(job) {
   const ai = job.ai;
   if (!ai) return "";
   const list = (items) => `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
-  return `<section class="job-ai" data-ai-state="${escapeAttr(ai.state)}"><p class="eyebrow">Optional AI context - ${escapeHtml(ai.state)}</p><h2>${ai.api ? escapeHtml(ai.api) : "No executable Honua AI surface admitted"}</h2><div class="ai-grid"><div><h3>Allowed drafting tasks</h3>${list(ai.allowedTasks)}<h3>Context inputs</h3>${list(ai.contextInputs)}</div><div><h3>Provider and data boundary</h3><p>${escapeHtml(ai.providerBoundary)}</p><h3>Injection and privacy boundary</h3><p>${escapeHtml(ai.security)}</p></div><div><h3>Deterministic validation</h3><p>${escapeHtml(ai.validation)}</p><h3>Approval boundary</h3><p>${escapeHtml(ai.approvalBoundary)}</p></div><div><h3>Prohibited autonomous actions</h3>${list(ai.prohibitedActions)}<h3>Fallback and provenance</h3><p>${escapeHtml(ai.fallback)}</p><p>${escapeHtml(ai.provenance)}</p></div></div></section>`;
+  return `<section class="job-ai" data-ai-state="${escapeAttr(ai.state)}"><h2>${ai.api ? escapeHtml(ai.api) : "No executable Honua AI surface admitted"}</h2><p class="ai-state">Optional AI context · ${escapeHtml(ai.state)}</p><div class="ai-grid"><div><h3>Allowed drafting tasks</h3>${list(ai.allowedTasks)}<h3>Context inputs</h3>${list(ai.contextInputs)}</div><div><h3>Provider and data boundary</h3><p>${escapeHtml(ai.providerBoundary)}</p><h3>Injection and privacy boundary</h3><p>${escapeHtml(ai.security)}</p></div><div><h3>Deterministic validation</h3><p>${escapeHtml(ai.validation)}</p><h3>Approval boundary</h3><p>${escapeHtml(ai.approvalBoundary)}</p></div><div><h3>Prohibited autonomous actions</h3>${list(ai.prohibitedActions)}<h3>Fallback and provenance</h3><p>${escapeHtml(ai.fallback)}</p><p>${escapeHtml(ai.provenance)}</p></div></div></section>`;
 }
 
 function domId(value) {
@@ -1613,10 +1620,15 @@ async function assertNoMutableTrunkLinks(root) {
 
 async function copyAssets() {
   const destDir = path.join(SITE_DIR, "assets");
-  await mkdir(destDir, { recursive: true });
-  for (const name of ["gallery.css", "gallery-filter.js", "source-preview.js", "job-page.js"]) {
+  await mkdir(path.join(destDir, "fonts"), { recursive: true });
+  for (const name of ["gallery.css", "gallery-filter.js", "source-preview.js", "job-page.js", "site-nav.js", "honua-logo.svg"]) {
     const content = await readFile(path.join(ASSETS_SRC_DIR, name), "utf8");
     await writeFile(path.join(destDir, name), content, "utf8");
+  }
+  // Self-hosted type (Archivo as HonuaSans, Martian Mono as HonuaMono) with
+  // its OFL text, the same files honua.io serves; no font CDN.
+  for (const name of ["archivo-latin.woff2", "archivo-italic-latin.woff2", "martian-mono-latin.woff2", "OFL.txt"]) {
+    await copyFile(path.join(ASSETS_SRC_DIR, "fonts", name), path.join(destDir, "fonts", name));
   }
 }
 
