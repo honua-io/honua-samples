@@ -3,7 +3,7 @@
 // that env var is unset -- e.g. a local run) listing every sample in the
 // latest results/run-results.v1.json whose result has "flaky": true (passed,
 // but only after at least one failed attempt). Used by the run-samples
-// workflow's nightly schedule (honua-io/honua-samples#2, deliverable 3) so a
+// workflow's nightly schedule, so a
 // flake doesn't just disappear into a green checkmark unattended.
 //
 // Zero npm dependencies, matching the rest of this repo's scripts.

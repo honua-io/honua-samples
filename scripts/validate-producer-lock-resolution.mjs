@@ -1,14 +1,12 @@
 #!/usr/bin/env node
-// Fails loudly when a configured honua-sdk-js producer acquisition no longer
-// resolves, or resolves to a format this consumer does not understand.
+// Fails loudly when a configured honua-sdk-js producer acquisition fails to
+// resolve, or resolves to a format this consumer does not understand.
 //
-// honua-io/honua-samples#48: `scripts/lib/sample-bundles.mjs` consumed a
-// rolling `sample-bundles-latest` release tag and a v1 manifest long after the
-// producer retired both. Nothing failed. samples.honua.io simply rendered its
-// "no runnable build published yet" panel -- the honest degradation, and
-// exactly why the breakage stayed invisible for weeks. The pin has since moved
-// to a per-commit revision and the v2 manifest; this check is what makes the
-// *next* retirement a red CI step instead of a discovery.
+// sample-bundles.mjs can follow a rolling `sample-bundles-latest` tag or a v1
+// manifest after the producer has retired both, and samples.honua.io then
+// renders "no runnable build published yet" with no failed check. This check
+// makes that retirement a red CI step. The lock pins a per-commit revision
+// and the v2 manifest.
 //
 // Two lanes, because the acquisitions are not all the same kind of thing:
 //
@@ -51,7 +49,7 @@ export function partitionAcquisitions(lock = SDK_PRODUCER_LOCK) {
 /**
  * Every acquisition in the lock must be classified. An unclassified kind means
  * a new producer input was added without teaching this check how to prove it
- * resolves, which is the same silence #48 was about.
+ * resolves. That silence is what this check exists to catch.
  */
 export function unclassifiedKinds(lock = SDK_PRODUCER_LOCK) {
   const known = new Set([...REMOTE_KINDS, ...ASSET_KINDS]);
@@ -69,7 +67,7 @@ export function unclassifiedKinds(lock = SDK_PRODUCER_LOCK) {
  * the gallery build already admit against `new Date()` and fail the deploy on a
  * lapsed window. Repeating it here would leave this check permanently red for a
  * reason that has nothing to do with resolution, and a permanently red check
- * gets ignored -- which is the disease #48 describes, not the cure.
+ * gets ignored. A check that stays red forever is not the cure.
  *
  * So admit against the producer's own publication instant: the latest evidence
  * observation in the payload. A self-consistent handoff always satisfies

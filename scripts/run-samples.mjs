@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Headless sample runner (honua-io/honua-samples#2).
+// Headless sample runner.
 //
 // Executes every samples/<id>/sample.json with status "active" against an
 // already-composed Honua server (see docker/compose.yml,
@@ -7,8 +7,7 @@
 // a per-sample result envelope to results/run-results.v1.json for
 // honua-evidence to ingest.
 //
-// Three things beyond the original scaffold (see this repo's #2 for the
-// full history):
+// Browser samples, the edition filter, and retries:
 //   - `entrypoint.type: "browser"` samples are proven by their Playwright
 //     specs (samples/<id>/verify/*.spec.mjs, scripts/lib/browser-lane.mjs,
 //     docs/browser-verification/) against the composed server. They get one

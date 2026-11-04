@@ -1,7 +1,6 @@
 // Loads honua-io/honua-sdk-js's samples/catalog.v2.json projection -- the
-// second of the gallery's two inputs per the owner decision on
-// honua-io/honua-samples#3 ("samples.honua.io is the single canonical
-// gallery ... render BOTH inputs"). Never vendors SDK source: entries link
+// second of the gallery's two inputs. samples.honua.io is the single
+// canonical gallery and renders both inputs. Never vendors SDK source: entries link
 // out to GitHub (sourcePath/docsPath), consumed as data only.
 //
 // Resolution order for the catalog itself:
@@ -19,7 +18,7 @@
 // occasionally so the offline fallback doesn't drift far behind trunk.
 //
 // capabilityKeys are materialized on most catalog.v2.json entries already
-// (honua-io/honua-sdk-js#635); deriveCapabilityKeys() below is the fallback
+// deriveCapabilityKeys() below is the fallback
 // path for any entry (or catalog version) that doesn't carry the field yet,
 // applying the same crosswalk file honua-sdk-js validates in its own CI.
 
@@ -112,9 +111,9 @@ export async function loadCapabilityCrosswalk({
 
 /**
  * Prefers an entry's own materialized `capabilityKeys` (present on most
- * catalog.v2.json entries as of honua-sdk-js#635). Falls back to mapping its
+ * catalog.v2.json entries). Falls back to mapping its
  * SDK-vocabulary `capabilities` tags through the crosswalk for any entry (or
- * older catalog snapshot) that predates that field, skipping tags the
+ * catalog snapshot) that lacks that field, skipping tags the
  * crosswalk marks `internalOnly` (SDK-internal concepts with no canonical
  * platform capability).
  */

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Fails before the pinned SDK producer's visual evidence expires.
 //
-// honua-io/honua-samples#57 (a recurrence of #50): the gallery admission gate
-// refuses a handoff whose qualified-journey visual evidence has expired. That
+// The gallery admission gate refuses a handoff whose qualified-journey
+// visual evidence has expired. That
 // refusal is correct, but it is driven by the clock, not by a commit. validate
 // only ran when a pull request or push touched its paths, so the lapse stayed
 // hidden for weeks until an unrelated PR went red.

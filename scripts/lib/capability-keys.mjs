@@ -4,7 +4,7 @@
 // Resolution order:
 //   1. KEY_LIST_URL env var, if set to an http(s) URL -- fetched at run time.
 //      Workflows set it to the published capability-keys.v1.json at the
-//      pinned honua-server revision (honua-io/honua-server#2893).
+//      pinned honua-server revision.
 //   2. schemas/fixtures/capability-keys.fixture.json -- the pinned fixture
 //      committed in this repo (see the loud comment in that file), used when
 //      KEY_LIST_URL is unset (e.g. a local run with no env configured).
@@ -77,7 +77,7 @@ async function loadRawKeyList() {
 
 /**
  * Accepts a bare array of keys, an object with a `keys` array, or the
- * canonical capability-keys.v1.json shape from honua-server#2893
+ * canonical capability-keys.v1.json shape
  * (`{ capabilities: [{ key, ... }] }`).
  */
 export function toKeySet(json) {

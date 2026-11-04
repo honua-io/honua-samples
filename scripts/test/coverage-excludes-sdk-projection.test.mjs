@@ -1,4 +1,4 @@
-// Evidence-boundary test (honua-io/honua-samples#16): a card projected from
+// Evidence-boundary test: a card projected from
 // the honua-sdk-js site-consumer handoff must NEVER appear in
 // samples-coverage.v1.json -- that artifact is reserved for samples this
 // repo executes in its own run-samples workflow. Runs the real

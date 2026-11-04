@@ -38,7 +38,6 @@ const geometryOps: Promise<GeometryOps> = import("@honua/sdk-js/geometry").then(
 }));
 geometryOps.catch(() => {});
 
-// ---- DOM ------------------------------------------------------------------
 
 function byId<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
@@ -90,7 +89,6 @@ function femaLink(text = "official FEMA Flood Map Service Center"): HTMLElement 
   return h("a", { href: FEMA_MSC_URL, target: "_blank", rel: "noopener noreferrer" }, text);
 }
 
-// ---- verify signal ----------------------------------------------------------
 
 function signal(values: Record<string, string | undefined>): void {
   for (const [key, value] of Object.entries(values)) {
@@ -108,7 +106,6 @@ onRequestLog((entries) => {
   document.body.dataset.requestCount = String(entries.length);
 });
 
-// ---- share URL (design R14, R21) ---------------------------------------------
 
 /** The standalone app URL for a parcel, with any data parameters this page was opened with. */
 function shareUrl(tmk: string | null): string {
@@ -136,7 +133,6 @@ function updateFullscreen(tmk: string | null): void {
   fullscreen.href = shareUrl(tmk);
 }
 
-// ---- lookups ------------------------------------------------------------------
 
 interface HistoryState {
   readonly tmk: string;
@@ -306,7 +302,6 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-// ---- results panel ----------------------------------------------------------------
 
 function safeHttpsUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -560,7 +555,6 @@ async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { 
   settle();
 }
 
-// ---- wiring -------------------------------------------------------------------------
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
