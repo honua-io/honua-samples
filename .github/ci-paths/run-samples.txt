@@ -1,0 +1,13 @@
+# Paths whose change makes run-samples.yml's pull request and trunk jobs run (git glob pathspecs).
+samples/**
+scripts/run-samples.mjs
+scripts/generate-samples-coverage.mjs
+scripts/lib/**
+scripts/browser-verification/**
+schemas/samples-coverage.v1.schema.json
+docker/**
+playwright.config.ts
+package.json
+package-lock.json
+.github/workflows/run-samples.yml
+.github/ci-paths/run-samples.txt
