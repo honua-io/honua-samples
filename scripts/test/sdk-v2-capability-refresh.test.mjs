@@ -90,8 +90,8 @@ test("preserves governed support, fixture, and live states for admitted cloud-na
   );
   const disposition = new Map(portfolio.entries.map((entry) => [`${entry.sourceRepo}:${entry.id}`, entry.disposition]));
   for (const id of ["imagery-cog-quickstart", "columnar-query-quickstart", "coverages-wcs-basic", "overture-geoparquet"]) {
-    // Admitted by the producer, then moved out of the gallery by the portfolio.
-    assert.equal(disposition.get(`honua-sdk-js:${id}`), "moved");
+    // Admitted by the producer and public in the portfolio again since 2026-11-02.
+    assert.equal(disposition.get(`honua-sdk-js:${id}`), "public");
   }
 });
 

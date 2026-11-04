@@ -36,8 +36,13 @@ whose `status <> 'ok'`, coloured by status. Click a point for its attributes.
 3. `bindPopup` renders the clicked feature's attributes.
 
 The `<pre>` under the map lists every request esri-leaflet made
-(`requeststart` events). There are no basemap tiles; the layer draws over a
-plain background.
+(`requeststart` events) plus one range probe for the basemap. The basemap is
+the server's own Protomaps PMTiles archive
+(`/api/v1/tiles/pmtiles/maui-basemap` on the layer's origin), drawn by
+[protomaps-leaflet](https://github.com/protomaps/protomaps-leaflet) beneath the
+feature layer only when the probe answers with a PMTiles header; otherwise the
+layer draws over a plain background. `?basemap=none` turns it off. The
+esri-leaflet code is the same either way.
 
 ## Parameters
 
@@ -45,6 +50,7 @@ plain background.
 | --- | --- | --- |
 | `url` | `https://demo.honua.io/rest/services/maui-inspections/FeatureServer/12` | FeatureServer layer URL. |
 | `where` | `status <> 'ok'` | Query filter. |
+| `basemap` | (on) | `none` skips the PMTiles basemap probe and draws over a plain background. |
 
 On success the page sets `data-sample-status="pass"` with
 `data-feature-count`, `data-rendered-features` (SVG paths drawn) and

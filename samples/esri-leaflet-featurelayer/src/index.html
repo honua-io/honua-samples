@@ -58,10 +58,56 @@
       document.body.dataset.sampleError = message;
     }
 
-    // No basemap tiles: the layer draws over a plain background.
     const map = L.map("map", { attributionControl: true }).setView([20.8, -156.33], 9);
     map.attributionControl.addAttribution("Data: Honua demo (Maui)");
     window.sampleMap = map;
+
+    function loadScript(src, integrity) {
+      return new Promise((resolve, reject) => {
+        const script = Object.assign(document.createElement("script"), {
+          src,
+          integrity,
+          crossOrigin: "anonymous",
+          onload: resolve,
+          onerror: () => reject(new Error(`${src.split("/npm/")[1] ?? src} did not load`)),
+        });
+        document.head.append(script);
+      });
+    }
+
+    // Optional basemap: the server's own Protomaps PMTiles archive, drawn by
+    // protomaps-leaflet in Leaflet's tile pane beneath the feature layer. It is
+    // used only when the server answers with a PMTiles header; otherwise the
+    // plain background stays. The esri-leaflet code above is unaffected either way.
+    async function addBasemapIfAvailable(map) {
+      if (params.get("basemap") === "none") return "off";
+      const basemapUrl = `${new URL(url).origin}/api/v1/tiles/pmtiles/maui-basemap`;
+      try {
+        logRequest(`${basemapUrl} (Range: bytes=0-6, basemap probe)`);
+        const response = await fetch(basemapUrl, { headers: { Range: "bytes=0-6" } });
+        const magic = new TextDecoder().decode(await response.arrayBuffer()).slice(0, 7);
+        if (!response.ok || magic !== "PMTiles") return `not available (HTTP ${response.status}), plain background`;
+        await loadScript("https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js", "sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn");
+        await loadScript("https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js", "sha384-pAKrddYWxjFAIJwatOtmmtq9ebz3ZwluHCEg3pqOMpOporUofLqz/l5hs+0LAWaH");
+        protomapsL
+          .leafletLayer({
+            // A PMTiles instance, not a URL string: the archive route has no .pmtiles suffix.
+            url: new pmtiles.PMTiles(basemapUrl),
+            attribution: "",
+            labelRules: [],
+            paintRules: [
+              { dataLayer: "earth", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#e7e3d6" }) },
+              { dataLayer: "water", symbolizer: new protomapsL.PolygonSymbolizer({ fill: "#c9dbe3" }) },
+              { dataLayer: "roads", symbolizer: new protomapsL.LineSymbolizer({ color: "#ffffff", width: 1 }) },
+            ],
+          })
+          .addTo(map);
+        return "Protomaps PMTiles from the same server";
+      } catch (error) {
+        return `not available (${error.message}), plain background`;
+      }
+    }
+    const basemap = addBasemapIfAvailable(map);
 
     const colours = { urgent: "#c0392b", needs_attention: "#e67e22", ok: "#2f7d5b" };
     const layer = L.esri.featureLayer({
@@ -90,7 +136,7 @@
       if (error) return fail(error.message);
       if (!bounds?.isValid()) return fail("The filter matched no features.");
       map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
-      layer.once("load", () => {
+      layer.once("load", async () => {
         if (document.body.dataset.sampleStatus === "fail") return;
         let count = 0;
         layer.eachFeature(() => count++);
@@ -100,7 +146,8 @@
         document.body.dataset.featureCount = String(count);
         document.body.dataset.renderedFeatures = String(drawn);
         document.body.dataset.sampleElapsedMs = String(elapsed);
-        status.textContent = `PASS: ${count} features where ${where}, ${drawn} drawn, ${elapsed} ms. Click one for its attributes.`;
+        const basemapNote = await basemap;
+        status.textContent = `PASS: ${count} features where ${where}, ${drawn} drawn, ${elapsed} ms. Basemap: ${basemapNote}. Click one for its attributes.`;
         status.dataset.state = "pass";
         document.body.dataset.sampleStatus = "pass";
       });

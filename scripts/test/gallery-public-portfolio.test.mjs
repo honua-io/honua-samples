@@ -16,10 +16,24 @@ test("the gallery portfolio classifies the 32 SDK and 15 owned cards", async () 
   assert.equal(portfolio.entries.length, 47);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-sdk-js").length, 32);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 15);
-  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, moved: 12, public: 5 });
-  // SDK sample cards are out of the gallery; their old URLs render moved pages.
-  assert.deepEqual(publicSampleIds(portfolio, "honua-sdk-js"), []);
-  assert.equal(movedEntries(portfolio, "honua-sdk-js").length, 12);
+  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, public: 17 });
+  // The twelve qualified SDK samples were restored on 2026-11-02 until the
+  // county apps that are to replace them ship; nothing renders a moved page.
+  assert.deepEqual(publicSampleIds(portfolio, "honua-sdk-js").sort(), [
+    "columnar-query-quickstart",
+    "coverages-wcs-basic",
+    "geocoding-quickstart",
+    "imagery-cog-quickstart",
+    "maplibre-quickstart",
+    "overture-geoparquet",
+    "pmtiles-static",
+    "realtime-incident-dashboard",
+    "service-explorer",
+    "sketch-editing",
+    "stac-imagery-browser",
+    "temporal-playback",
+  ]);
+  assert.equal(movedEntries(portfolio, "honua-sdk-js").length, 0);
   // The county parcel viewer and the four map-first browser samples are the owned public cards.
   assert.deepEqual(
     portfolio.entries
@@ -37,9 +51,8 @@ test("only explicitly public technically qualified cards are admitted", async ()
     { sourceRepo: "honua-sdk-js", id: "pmtiles-static" },
     { sourceRepo: "honua-samples", id: "odata-query-rest" }
   ], portfolio);
-  assert.deepEqual(result.publicCards.map((card) => card.id), ["maplibre-featureserver-layer"]);
+  assert.deepEqual(result.publicCards.map((card) => card.id), ["maplibre-featureserver-layer", "pmtiles-static"]);
   assert.deepEqual(result.excluded.map((entry) => [entry.id, entry.disposition]), [
-    ["pmtiles-static", "moved"],
     ["odata-query-rest", "internal-qualification"]
   ]);
 });
