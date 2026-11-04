@@ -30,32 +30,8 @@ name: run-samples
 # this repo's own runs; honua-evidence will pull it once its side lands.
 on:
   pull_request:
-    paths:
-      - "samples/**"
-      - "scripts/run-samples.mjs"
-      - "scripts/generate-samples-coverage.mjs"
-      - "scripts/lib/**"
-      - "scripts/browser-verification/**"
-      - "schemas/samples-coverage.v1.schema.json"
-      - "docker/**"
-      - "playwright.config.ts"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/run-samples.yml"
   push:
     branches: [trunk]
-    paths:
-      - "samples/**"
-      - "scripts/run-samples.mjs"
-      - "scripts/generate-samples-coverage.mjs"
-      - "scripts/lib/**"
-      - "scripts/browser-verification/**"
-      - "schemas/samples-coverage.v1.schema.json"
-      - "docker/**"
-      - "playwright.config.ts"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/run-samples.yml"
   schedule:
     - cron: "17 5 * * *" # nightly
   workflow_dispatch: {}
@@ -67,8 +43,15 @@ env:
   HONUA_PUBLIC_BASE_URL: https://demo.honua.io
 
 jobs:
+  changes:
+    uses: honua-io/.github/.github/workflows/relevant-changes.yml@59eaa6c5bd779ab6b66f51319f1792e36c49484e # v1.2.0
+    with:
+      patterns-file: .github/ci-paths/run-samples.txt
+
   run:
     name: run active samples
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

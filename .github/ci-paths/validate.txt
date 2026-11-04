@@ -1,0 +1,19 @@
+# Paths whose change makes validate.yml's pull request and trunk jobs run (git glob pathspecs).
+**/*.md
+**/*.mdx
+**/*.rst
+**/*.txt
+samples/**
+jobs/**
+schemas/**
+scripts/**
+site/**
+config/**
+vendor/**
+audits/**
+generated/**
+docs/release-certification.md
+.github/workflows/validate.yml
+package.json
+package-lock.json
+.github/ci-paths/validate.txt
