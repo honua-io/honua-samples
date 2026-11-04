@@ -1,6 +1,6 @@
 # Geocode one address
 
-Send one anonymous request to Honua's Esri-compatible GeocodeServer and print
+Send one anonymous request to Honua's GeoServices REST GeocodeServer and print
 the best candidate.
 
 ## Run
