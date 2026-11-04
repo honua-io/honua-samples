@@ -69,7 +69,7 @@
     },
     "conformance": [
       "49 entries / 417 proving tests.",
-      "GeoServices parity is partial; JS/CLI interop is unknown and ArcGIS-stub evidence stale."
+      "GeoServices parity is partial; JS/CLI interop is unknown and geoservices-rest-stub evidence stale."
     ],
     "limits": [
       "Bounded query required; release limit receipt missing."
