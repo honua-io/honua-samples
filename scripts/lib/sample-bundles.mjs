@@ -1,7 +1,6 @@
 // Fetches, integrity-verifies, and stages honua-sdk-js's published browser
 // sample bundles so scripts/build-gallery.mjs can embed the *actual running
-// app* on a gallery detail page (honua-io/honua-samples#11, consuming
-// honua-io/honua-sdk-js#642/#648's immutable release asset IDs).
+// app* on a gallery detail page, from the producer's immutable release asset IDs.
 //
 // Contract consumed (honua-sdk-js's samples/contract/v2/schemas/sample-bundles.schema.json,
 // format "honua.sdk.sample-bundles.v2"): a manifest JSON asset
@@ -15,7 +14,7 @@
 // stored as ordered parts and concatenated back to that archive before the
 // digest and member checks.
 //
-// HONESTY RULES (see honua-io/honua-samples#11):
+// HONESTY RULES:
 //   - Every file extracted from the tarball is SHA-256-verified against the
 //     manifest before it is staged anywhere the gallery can serve it. Any
 //     mismatch throws -- this is a hard failure, not a warning, and is meant
@@ -635,7 +634,6 @@ async function writeStatus(statusPath, result) {
   await writeFile(statusPath, JSON.stringify(result, null, 2) + "\n", "utf8");
 }
 
-// ---- CLI entry point (pages.yml's dedicated staging step) ----------------
 
 const isMain = (() => {
   try {

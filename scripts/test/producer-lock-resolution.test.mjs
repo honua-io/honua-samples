@@ -17,9 +17,9 @@ import {
 } from "../validate-producer-lock-resolution.mjs";
 import { readDeclaredAssetBytes, SDK_PRODUCER_LOCK } from "../lib/sdk-producer-lock.mjs";
 
-// honua-samples#48: the consumer pointed at a retired rolling tag and a v1
-// manifest for weeks and nothing went red, because the page degraded honestly.
-// Every case below is a way that can happen again; all of them must be loud.
+// A retired rolling tag or a v1 manifest can resolve while the page still
+// degrades honestly, so nothing goes red. Every case below is one of those
+// paths; all of them must be loud.
 
 const CATALOG = { format: "honua.sdk.sample-catalog.v2", schemaVersion: 2 };
 
@@ -239,7 +239,7 @@ test("resolution is judged against the producer's clock, not the wall clock", ()
   // The latest observation, so a self-consistent payload satisfies
   // observedAt <= now < expiresAt and only its schema can fail. Long-expired
   // evidence must not make this check red: freshness is the staging lane's
-  // gate, and a permanently red check is exactly what #48 was about.
+  // gate. A check that stays red forever stops meaning anything.
   assert.equal(producerClock(handoff).toISOString(), "2026-03-01T00:00:00.000Z");
   assert.ok(producerClock({}) instanceof Date, "a handoff with no journeys still yields a clock");
   assert.ok(producerClock({ qualifiedJourneys: [] }) instanceof Date);

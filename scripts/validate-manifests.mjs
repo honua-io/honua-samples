@@ -12,7 +12,7 @@
 // Capability key list resolution order:
 //   1. KEY_LIST_URL env var, if set to an http(s) URL -- fetched at run time.
 //      Workflows set it to the published capability-keys.v1.json at the
-//      pinned honua-server revision (honua-io/honua-server#2893).
+//      pinned honua-server revision.
 //   2. schemas/fixtures/capability-keys.fixture.json -- the pinned fixture
 //      committed in this repo (see the loud comment in that file).
 
@@ -120,7 +120,6 @@ async function listSampleDirs(samplesDir) {
   return dirs.sort();
 }
 
-// ---- reporting --------------------------------------------------------
 
 function report(errorsByFile, manifestCount, keyListSize, keyListSource) {
   console.log(`Checked ${manifestCount} manifest(s) against ${keyListSize} known capability key(s) from ${keyListSource}.`);

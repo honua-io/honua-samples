@@ -46,7 +46,6 @@ export function serverEnv() {
   return { baseUrl, adminApiKey };
 }
 
-// ---- fixture + oracle ---------------------------------------------------
 
 /**
  * Loads the committed fixture and derives everything a spec asserts on:
@@ -109,7 +108,6 @@ export function outsidePoint(fixture, view) {
   return candidate;
 }
 
-// ---- seeding the composed server ----------------------------------------
 
 async function adminFetch(env, method, apiPath, body) {
   const headers = { "X-API-Key": env.adminApiKey };
@@ -227,7 +225,6 @@ async function waitForFeatureServer({ env, layerUrl, allowAnonymous, expectedCou
   }
 }
 
-// ---- processes ----------------------------------------------------------
 
 /** Runs a command to completion; rejects with the output tail on failure. */
 export function runCommand(command, args, { cwd, env = process.env, label = command } = {}) {
@@ -284,7 +281,6 @@ export async function startVitePreview({ appDir, outDir }) {
   };
 }
 
-// ---- create-honua-app templates -----------------------------------------
 
 /**
  * Scaffolds a create-honua-app template from the PUBLISHED package at the
@@ -337,7 +333,7 @@ export async function prepareTemplateApp({ sampleDir, templateId, builds }) {
   await runCommand("npm", ["run", "typecheck"], { cwd: appDir, label: "npm run typecheck" });
   // From create-honua-app 0.2, a live VITE_HONUA_ENDPOINT also mounts the online
   // (third-party) basemap beneath the layer, so the pixel oracle's control pixel
-  // would read whatever tiles that service serves today (honua-samples#69). The
+  // would read whatever tiles that service serves today. The
   // template's documented VITE_HONUA_BASEMAP_STYLE override points the live lane at
   // a self-hosted style whose only layer is the template's own solid background.
   // The binding paints that colour under the operational layers and fetches no tiles.
@@ -419,7 +415,6 @@ export async function readTemplateView(sourceFile) {
   };
 }
 
-// ---- map pixels ---------------------------------------------------------
 
 /**
  * Web Mercator projection of a lon/lat onto a MapLibre map of the given CSS

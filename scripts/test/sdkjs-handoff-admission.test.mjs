@@ -1,5 +1,5 @@
 // Admission + merge tests for the sdk-js site-consumer handoff boundary
-// (honua-io/honua-samples#16). Runs with the built-in Node test runner --
+// Runs with the built-in Node test runner --
 // `node --test scripts/test/` -- zero npm dependencies, no network: every
 // case works from the committed byte-exact snapshot pair, so the whole suite
 // is deterministic for a pinned handoff fixture (NFR-002).
@@ -238,7 +238,6 @@ test("qualified card without a backing qualified journey is rejected", () => {
   assert.match(result.errors.join("\n"), /claims qualification "qualified" but no qualified journey backs it/);
 });
 
-// ---- cross-source merge ----------------------------------------------------
 
 const admitted = admitSdkJsHandoff({ handoffText: nextHandoffText, fixtureText: nextFixtureText, now: NEXT_FRESH_NOW });
 assert.equal(admitted.ok, true);

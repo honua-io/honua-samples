@@ -1,4 +1,4 @@
-// GP process template contract (honua-io/honua-samples#65): the committed
+// GP process template contract: the committed
 // templates match their TEMPLATE-MANIFEST.json byte for byte, carry every file
 // `honua-gp-devkit init` mirrors, and their golden digests describe the
 // committed golden artifacts. Network-independent.

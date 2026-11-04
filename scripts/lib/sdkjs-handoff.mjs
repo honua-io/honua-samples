@@ -1,6 +1,5 @@
 // Consumer-admission boundary for honua-io/honua-sdk-js's versioned
-// site-consumer handoff (honua-io/honua-samples#16, consuming the
-// honua-sdk-js#550 S3d producer contract).
+// site-consumer handoff, consuming the S3d producer contract.
 //
 // The handoff artifact (samples/dist/honua-site-consumer-handoff.v1.json on
 // sdk-js trunk) is the AUTHORITATIVE SDK projection for the gallery: one
@@ -121,7 +120,6 @@ export const DEFAULT_SNAPSHOT_V2_META_PATH = path.join(REPO_ROOT, "config", "sdk
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 
-// ---- pure admission gate --------------------------------------------------
 
 /**
  * Validates a fetched (or snapshotted) handoff + consumer-fixture text pair.
@@ -411,7 +409,6 @@ export function normalizeSdkJsProjection(handoff) {
   });
 }
 
-// ---- cross-source merge ----------------------------------------------------
 
 /**
  * Merges the admitted handoff (authoritative projection) with the legacy
@@ -516,8 +513,8 @@ export function mergeSdkProjection({ handoff, catalogEntries, crosswalk, deriveC
 /**
  * The stable identities of every SDK-projected card in a handoff document.
  * Used by scripts/generate-samples-coverage.mjs to keep gallery-only SDK
- * projections OUT of samples-coverage.v1.json (the evidence boundary on
- * honua-io/honua-samples#16 -- see this file's header).
+ * projections OUT of samples-coverage.v1.json (the evidence boundary;
+ * see this file's header).
  *
  * @param {object} handoff
  * @returns {Set<string>} card ids
@@ -526,7 +523,6 @@ export function listSdkProjectedIdentities(handoff) {
   return new Set((handoff?.cards ?? []).map((c) => c?.id).filter((id) => typeof id === "string"));
 }
 
-// ---- loading ---------------------------------------------------------------
 
 /**
  * Loads and admits the handoff + fixture pair in this strict order:

@@ -2,7 +2,7 @@
 // Joins samples/<id>/sample.json manifests with the latest
 // results/run-results.v1.json envelope into samples-coverage.v1.json: the
 // producer snapshot honua-evidence's capability matrix ingests, keyed by
-// capability -> covering sample(s) (honua-io/honua-samples#5).
+// capability -> covering sample(s).
 //
 // Zero npm dependencies, matching the rest of this repo's scripts. Capability
 // keys are validated against the same canonical key list
@@ -16,7 +16,7 @@
 // `capabilities` map only contains keys with >=1 entry, so honua-evidence's
 // matrix renders missing coverage honestly instead of as a padded gap.
 //
-// Evidence boundary (honua-io/honua-samples#16): samples-coverage.v1.json is
+// Evidence boundary: samples-coverage.v1.json is
 // reserved for samples THIS repo executes in its own run-samples workflow.
 // Cards projected from honua-sdk-js's site-consumer handoff are gallery-only
 // (display + provenance + evidence links) and are EXCLUDED here: sdk-js
@@ -75,7 +75,7 @@ async function main() {
   for (const { dirName, manifest } of manifests) {
     if (sdkProjectedIds.has(manifest.id)) {
       excludedSdkProjections++;
-      // Gallery-only SDK projection (honua-io/honua-samples#16) -- never a
+      // Gallery-only SDK projection -- never a
       // samples-coverage receipt. See the header comment.
       console.warn(
         `generate-samples-coverage: excluding samples/${dirName}/ -- id "${manifest.id}" is an SDK-projected gallery-only identity from the honua-sdk-js site-consumer handoff; samples-coverage.v1.json is reserved for samples this repo executes itself. Rename the local sample if it is genuinely independent.`,
@@ -215,8 +215,8 @@ async function loadLatestResults() {
   const resultsById = new Map();
   for (const result of envelope.results ?? []) {
     if (!result?.id) continue;
-    // "skipped" (honua-io/honua-samples#2 -- an edition-gated sample the
-    // runner didn't have a high enough --edition to attempt) isn't a real
+    // "skipped" (an edition-gated sample the runner didn't have a high
+    // enough --edition to attempt) isn't a real
     // run outcome for coverage purposes -- samples-coverage.v1.schema.json's
     // lastRun.outcome only knows "pass"/"fail", and a skip means the sample
     // effectively hasn't run yet, same as no entry at all.

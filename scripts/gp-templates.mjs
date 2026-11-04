@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// GP process template contract (honua-io/honua-samples#65).
+// GP process template contract.
 //
 // templates/gp-python and templates/gp-dotnet are the source that
-// `honua-gp-devkit init` mirrors (honua-io/honua-server#6217). Each template
+// `honua-gp-devkit init` mirrors. Each template
 // carries a TEMPLATE-MANIFEST.json listing every file with its SHA-256 so the
 // devkit side can verify its embedded copy byte for byte and so a template edit
 // that forgets the manifest fails `check` here instead of drifting silently.
