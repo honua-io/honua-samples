@@ -55,7 +55,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       SDK_PRODUCER_ENFORCE_LOCK: "1"
       SDKJS_ROOT: ${{ github.workspace }}/.sdk-producer/honua-sdk-js
@@ -244,7 +244,7 @@ jobs:
     name: verify deployed gallery
     needs: deploy
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 

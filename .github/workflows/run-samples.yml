@@ -52,7 +52,7 @@ jobs:
     name: run active samples
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
