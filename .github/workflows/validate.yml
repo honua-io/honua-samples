@@ -142,7 +142,7 @@ jobs:
     name: exact head gallery browser (required apps / 4 jobs)
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       SDK_PRODUCER_ENFORCE_LOCK: "1"
       MIN_RUNNABLE_BUNDLES: "11"
