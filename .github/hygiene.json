@@ -1,0 +1,26 @@
+{
+  "roots": [
+    ".gitattributes",
+    ".github/",
+    ".gitignore",
+    "AGENTS.md",
+    "LICENSE",
+    "README.md",
+    "config/",
+    "docker/",
+    "docs/",
+    "generated/",
+    "jobs/",
+    "package-lock.json",
+    "package.json",
+    "playwright.config.ts",
+    "samples/",
+    "schemas/",
+    "scripts/",
+    "site/",
+    "templates/",
+    "vendor/"
+  ],
+  "gate_inputs": {},
+  "samples": true
+}
