@@ -70,8 +70,8 @@ below.
 
 ## Samples coverage snapshot
 
-`scripts/generate-samples-coverage.mjs` joins every `samples/<id>/sample.json`
-manifest with the latest
+`scripts/generate-samples-coverage.mjs` joins every non-draft
+`samples/<id>/sample.json` manifest with the latest
 [`results/run-results.v1.json`](schemas/run-results.v1.schema.json) envelope
 (written by `scripts/run-samples.mjs`) into
 [`samples-coverage.v1.json`](schemas/samples-coverage.v1.schema.json): the
@@ -104,8 +104,8 @@ Rules:
   with an empty array — a missing key means zero coverage, not a schema quirk.
 - **`lastRun` is present only when the sample has actually been executed** —
   i.e. it's `status: "active"` and has a matching entry in the latest
-  `run-results.v1.json`. Draft samples, or active samples that haven't run
-  yet, simply omit it.
+  `run-results.v1.json`. Active samples that have not run yet omit it. Draft
+  samples are excluded from the snapshot entirely.
 - **Capability keys are validated the same way `validate-manifests.mjs` does**
   (`KEY_LIST_URL` env var, falling back to the pinned fixture) — this is
   defense in depth so a typo'd key can never reach the published snapshot,
