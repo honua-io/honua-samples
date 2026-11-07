@@ -1,0 +1,32 @@
+{
+  "id": "stac-ops",
+  "title": "STAC operations dashboard",
+  "description": "Standalone Blazor dashboard for STAC discovery, collection validators, extension declarations and query probes.",
+  "contentKind": "example",
+  "learning": {
+    "goal": "explore-imagery-3d",
+    "level": "intermediate",
+    "estimatedMinutes": 15,
+    "prerequisites": [
+      ".NET 10 SDK",
+      "Honua Server with STAC enabled and browser CORS configured"
+    ]
+  },
+  "dataMode": "public-live",
+  "auth": "anonymous",
+  "capabilities": [
+    "serve.stac"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "stac"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "script",
+    "command": "dotnet run --project Honua.StacOpsDemo.csproj --urls http://localhost:5173"
+  },
+  "status": "draft"
+}

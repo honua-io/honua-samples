@@ -25,6 +25,7 @@ const MIME_TYPES = {
   ".png": "image/png",
   ".ico": "image/x-icon",
   ".txt": "text/plain; charset=utf-8",
+  ".wasm": "application/wasm",
 };
 
 /**
@@ -71,7 +72,7 @@ export function startStaticServer({ rootDir, port }) {
     // to the same interface, so this has to match verbatim.
     server.listen(port, "localhost", () => {
       resolve({
-        url: `http://localhost:${port}`,
+        url: `http://localhost:${server.address().port}`,
         close: () => new Promise((r) => server.close(() => r())),
       });
     });

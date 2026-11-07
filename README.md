@@ -16,10 +16,22 @@ samples/<sample-id>/
 Rules:
 
 - **Manifests are validated in CI** against the canonical capability key list published by honua-server — unknown keys fail the build.
-- **Every sample runs headless in CI** against the composed 2026.1 candidate with licensing disabled. Run results are published as evidence.
-- **Published packages only** (npm/NuGet/PyPI) — no source copies, no sibling project references. Getting-started blocks do not use a shell HTTP client or a dev-edition grant. Protocol samples may still call the public HTTP API; that is wire evidence, not the install path.
+- **Active samples run headless in CI** against the composed 2026.1 candidate with licensing disabled. Run results are published as evidence. Draft authoring and operator samples have the separate checks listed below.
+- **Active gallery samples consume published packages** (npm/NuGet/PyPI). Draft extension examples may consume the exact public SDK source revision in `config/server-sdk.v1.json` until those contracts are published; the checkout stays under ignored `artifacts/`. Product source is not vendored into samples. Getting-started blocks do not use a shell HTTP client or a dev-edition grant. The separately tested local GP walkthrough documents its Development-only configuration.
 - Samples that demonstrate Esri-client compatibility point at the same endpoints ArcGIS clients use, unchanged.
 - **Capabilities are never padded with zero-sample entries** in the coverage snapshot (below) — a capability with no covering sample is simply absent, so the honua-evidence matrix renders that honestly as a gap.
+
+## Standalone and authoring samples
+
+These draft samples have their own `Standalone samples` CI workflow. They do
+not claim active-gallery or release certification coverage.
+
+| Sample | Runnable behavior | CI validation |
+| --- | --- | --- |
+| [STAC operations](samples/stac-ops/README.md) | Independently hosted Blazor dashboard targeting a selected STAC server | Dashboard regression tests, published WebAssembly build, Chromium loading and source switching |
+| [Local GP](samples/gp-local-dev/README.md) | Published Python SDK submits a metric buffer to the pinned local server | Real PostgreSQL/Redis/server execution with polygon bounds and area assertions |
+| [Plugin endpoint](samples/plugin-endpoint/README.md) | Executes the public custom-endpoint contract | Compiles against the pinned SDK and validates the response |
+| [GP process templates](samples/gp-process-templates/README.md) | Custom Python and .NET summary tools | Golden, invalid-input, missing-input and output-cap tests against the pinned harness |
 
 ## Manifest schema
 

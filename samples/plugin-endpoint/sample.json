@@ -1,0 +1,33 @@
+{
+  "id": "plugin-endpoint",
+  "title": "Implement a public plugin endpoint",
+  "description": "Implements and executes the public custom-endpoint plugin contract against an exact pinned SDK source revision.",
+  "contentKind": "example",
+  "learning": {
+    "goal": "automate-workflow",
+    "level": "intermediate",
+    "estimatedMinutes": 10,
+    "prerequisites": [
+      ".NET 10 SDK",
+      "Git",
+      "Pinned public plugin SDK source"
+    ]
+  },
+  "dataMode": "fixture",
+  "auth": "none",
+  "capabilities": [
+    "plugin.sdk"
+  ],
+  "sdks": [
+    "dotnet"
+  ],
+  "protocols": [
+    "plugin-contract"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "script",
+    "command": "dotnet run --project PluginEndpointDemo.csproj --configuration Release"
+  },
+  "status": "draft"
+}

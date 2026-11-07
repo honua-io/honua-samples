@@ -13,10 +13,15 @@ its `TEMPLATE-MANIFEST.json`.
 ## Run
 
 ```bash
-HONUA_SERVER_CHECKOUT=/path/to/honua-server bash src/run.sh
+bash scripts/sync-server-sdk.sh
+HONUA_SERVER_CHECKOUT="$PWD/artifacts/server-sdk" \
+HONUA_GP_PYTHON_VENV="$PWD/artifacts/gp-template-venv" \
+bash samples/gp-process-templates/src/run.sh
 ```
 
-The script installs the Python custom-code harness into a template-local
+Run these commands from the repository root. The SDK checkout is pinned by
+`config/server-sdk.v1.json` and contains only the authoring contracts and their
+build dependencies. The script installs the Python custom-code harness into an ignored
 virtual environment, runs the Python golden tests, runs the .NET golden tests
 (which build the process, the harness, and the SDK from the checkout), and
 verifies the template manifests. No server, Redis, Docker, or cloud credentials
@@ -29,4 +34,6 @@ honua-server checkout because they are not published as packages yet. The
 headless runner executes active samples against published artifacts only, so
 this manifest stays `draft` (validated, not executed by `run-samples.mjs`)
 until the packages exist. The template manifests and layout are checked on
-every PR regardless.
+every PR regardless. `Standalone samples` also executes both template test
+suites against the pinned source contracts, without adding them to the active
+gallery's coverage claims.
