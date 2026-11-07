@@ -7,16 +7,20 @@ import {
   publicSampleIds,
 } from "../lib/gallery-public-portfolio.mjs";
 
-test("the gallery portfolio classifies the 32 SDK and 15 owned cards", async () => {
+test("the gallery portfolio classifies the 32 SDK and 18 owned cards", async () => {
   const portfolio = await loadGalleryPublicPortfolio();
   const counts = portfolio.entries.reduce((result, entry) => {
     result[entry.disposition] = (result[entry.disposition] ?? 0) + 1;
     return result;
   }, {});
-  assert.equal(portfolio.entries.length, 47);
+  assert.equal(portfolio.entries.length, 50);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-sdk-js").length, 32);
-  assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 15);
-  assert.deepEqual(counts, { "internal-qualification": 19, "rework-map-first": 11, moved: 12, public: 5 });
+  assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 18);
+  assert.deepEqual(counts, { "internal-qualification": 22, "rework-map-first": 11, moved: 12, public: 5 });
+  for (const id of ["gp-local-dev", "plugin-endpoint", "stac-ops"]) {
+    const entry = portfolio.entries.find((candidate) => candidate.sourceRepo === "honua-samples" && candidate.id === id);
+    assert.equal(entry?.disposition, "internal-qualification", id);
+  }
   // SDK sample cards are out of the gallery; their old URLs render moved pages.
   assert.deepEqual(publicSampleIds(portfolio, "honua-sdk-js"), []);
   assert.equal(movedEntries(portfolio, "honua-sdk-js").length, 12);
