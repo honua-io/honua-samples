@@ -10,6 +10,7 @@ services:
   honua:
     environment:
       ConnectionStrings__Redis: redis:6379
+      # Development-only Redis entitlement for the local job queue.
       Licensing__DevGrantEdition: Pro
     depends_on:
       postgres:

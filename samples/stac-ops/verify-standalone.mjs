@@ -24,7 +24,7 @@ test("standalone dashboard loads and switches its STAC source", { timeout: 60_00
       const url = new URL(route.request().url());
       requestedSources.add(url.origin);
       const body = url.pathname.startsWith("/healthz/")
-        ? "Ready"
+        ? (url.pathname.endsWith("/live") ? "Healthy" : "Ready")
         : JSON.stringify(url.pathname === "/stac/collections"
           ? { collections: [], links: [] }
           : url.pathname === "/stac/search"
@@ -36,12 +36,23 @@ test("standalone dashboard loads and switches its STAC source", { timeout: 60_00
         body,
       });
     });
-    await page.goto(`${server.url}/?source=https://first.example.test`);
+    await page.goto(server.url);
+    await expect(page.getByRole("heading", { name: "Select a STAC source" })).toBeVisible({ timeout: 30_000 });
+    assert.equal(requestedSources.size, 0);
+    await page.locator("#source-input").fill("https://first.example.test");
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page.locator(".control-meta strong")).toHaveText("https://first.example.test", { timeout: 30_000 });
     await expect(page.locator(".status-card-pass")).not.toHaveCount(0);
     await page.locator("#source-input").fill("https://second.example.test");
     await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page.locator(".control-meta strong")).toHaveText("https://second.example.test");
+    assert.equal(new URL(page.url()).pathname, "/");
+    await page.reload();
+    await expect(page.locator(".control-meta strong")).toHaveText("https://second.example.test");
+    await page.getByRole("button", { name: "Clear source", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Select a STAC source" })).toBeVisible();
+    assert.equal(new URL(page.url()).pathname, "/");
+    assert.equal(new URL(page.url()).searchParams.get("source"), null);
     assert.deepEqual([...requestedSources].sort(), ["https://first.example.test", "https://second.example.test"]);
     assert.deepEqual(errors, []);
   } catch (error) {

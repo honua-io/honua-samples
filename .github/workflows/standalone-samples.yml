@@ -27,30 +27,41 @@ on:
       - scripts/lib/browser-lane.mjs
       - .github/workflows/standalone-samples.yml
 
+defaults:
+  run:
+    shell: bash
+
 permissions:
   contents: read
-  packages: read
 
 jobs:
   stac-ops:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
       - name: Test dashboard behavior
         run: dotnet test samples/stac-ops/tests/StacOps.Tests.csproj --configuration Release --logger trx --results-directory artifacts/stac-ops-tests
       - name: Publish standalone dashboard
-        run: dotnet publish samples/stac-ops/Honua.StacOpsDemo.csproj --configuration Release --output artifacts/stac-ops
-      - uses: actions/setup-node@v4
+        run: |
+          rm -rf artifacts/stac-ops
+          dotnet publish samples/stac-ops/Honua.StacOpsDemo.csproj --configuration Release --output artifacts/stac-ops
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path("artifacts/stac-ops")
+          assert not any("tests" in path.relative_to(root).parts or path.name == "sample.json" for path in root.rglob("*"))
+          PY
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Test published dashboard in Chromium
         run: node --test samples/stac-ops/verify-standalone.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: stac-ops
@@ -62,8 +73,8 @@ jobs:
     env:
       COMPOSE_PROJECT_NAME: gp-local-sample
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Install the pinned published SDK
@@ -82,7 +93,7 @@ jobs:
       - name: Stop the local stack
         if: always()
         run: docker compose -f docker/compose.yml -f docker/compose.gp.yml down --volumes --remove-orphans
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: gp-local-dev
@@ -94,22 +105,29 @@ jobs:
     env:
       HONUA_SERVER_CHECKOUT: ${{ github.workspace }}/artifacts/server-sdk
       HONUA_GP_PYTHON_VENV: ${{ github.workspace }}/artifacts/gp-template-venv
-      NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
-          source-url: https://nuget.pkg.github.com/honua-io/index.json
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Acquire the pinned public SDK contracts
         run: bash scripts/sync-server-sdk.sh
       - name: Execute the public plugin endpoint
-        run: dotnet run --project samples/plugin-endpoint/PluginEndpointDemo.csproj --configuration Release
+        run: |
+          mkdir -p artifacts/authoring-results
+          dotnet run --project samples/plugin-endpoint/PluginEndpointDemo.csproj --configuration Release | tee artifacts/authoring-results/plugin-output.txt
       - name: Verify Python and .NET custom process templates
         run: bash samples/gp-process-templates/src/run.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: authoring-contracts
+          path: |
+            artifacts/authoring-results/
+            artifacts/gp-template-tests/

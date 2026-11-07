@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
 using Honua.Plugins.Abstractions;
-using Honua.Sample.UtilityValidationPlugin;
+using Honua.Samples.PluginEndpoint;
 
 var endpoint = new UtilityStatusEndpointPlugin();
 var emptyValues = ImmutableDictionary<string, string?>.Empty;

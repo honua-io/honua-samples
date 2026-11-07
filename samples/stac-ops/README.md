@@ -28,6 +28,9 @@ the dashboard service and reload-coordination regression tests:
 ```bash
 dotnet test samples/stac-ops/tests/StacOps.Tests.csproj --configuration Release
 dotnet publish samples/stac-ops/Honua.StacOpsDemo.csproj --configuration Release --output artifacts/stac-ops
+npm ci
+npx playwright install chromium
+node --test samples/stac-ops/verify-standalone.mjs
 ```
 
 The dashboard and its existing regression cases were ported from the public

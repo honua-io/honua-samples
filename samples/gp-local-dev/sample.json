@@ -22,7 +22,7 @@
     "python"
   ],
   "protocols": [
-    "geoservices-rest"
+    "ogc-api-processes"
   ],
   "edition": "pro",
   "entrypoint": {

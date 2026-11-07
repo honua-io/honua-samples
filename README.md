@@ -2,7 +2,7 @@
 
 **Runnable samples as executable evidence.**
 
-Cross-SDK, cross-protocol samples for [Honua Server](https://github.com/honua-io/honua-server) — each one declared against the canonical capability vocabulary and executed headless in CI against a real composed server. A green sample run is a receipt, not a promise: results feed the [honua-evidence](https://github.com/honua-io/honua-evidence) capability matrix with the same standing as tests.
+Cross-SDK, cross-protocol samples for [Honua Server](https://github.com/honua-io/honua-server). Active gallery samples use the canonical capability vocabulary and run headless in CI against a real composed server. Standalone operator and authoring examples have separate checks below. Active run results feed the [honua-evidence](https://github.com/honua-io/honua-evidence) capability matrix.
 
 ## Layout
 
@@ -48,7 +48,7 @@ Every `samples/<sample-id>/sample.json` is validated against
 | `protocols` | string[] | Wire protocols exercised, min 1. |
 | `edition` | string | `community` \| `pro` \| `enterprise`; defaults to `community`. The runner may skip a higher edition. 2026.1 does not grant an edition — see [Licensing](#licensing). |
 | `entrypoint` | object | `{ "type": "node" \| "python" \| "dotnet" \| "script" \| "browser", "command": "..." }` -- how the headless runner executes the sample. For `browser`, `command` is the HTML file (relative to the sample dir) to serve and open, not a shell command -- see [Browser lane](#browser-lane). |
-| `status` | string | `active` (executed by the runner) or `draft` (validated only). |
+| `status` | string | `active` (executed by the gallery runner) or `draft` (excluded from that runner and its coverage snapshot). |
 
 ### Capability key list
 

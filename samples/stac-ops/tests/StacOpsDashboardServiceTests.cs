@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text;
 using FluentAssertions;
 
-namespace Honua.Server.Tests.Features.Protocols.Stac;
+namespace Honua.Samples.StacOps.Tests;
 
 public sealed class StacOpsDashboardServiceTests
 {
@@ -121,8 +121,7 @@ public sealed class StacOpsDashboardServiceTests
             BaseAddress = new Uri("https://demo.example/")
         };
 
-        var sampleAssembly = typeof(Honua.StacOpsDemo.Services.StacOpsDashboardService).Assembly;
-        var serviceType = sampleAssembly.GetType("Honua.StacOpsDemo.Services.StacOpsDashboardService", throwOnError: true)!;
+        var serviceType = typeof(Honua.StacOpsDemo.Services.StacOpsDashboardService);
         var constructor = serviceType.GetConstructor(
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
             binder: null,
@@ -220,7 +219,7 @@ public sealed class StacOpsDashboardServiceTests
                 }
                 """,
                 "\"collection-alpha-fresh\""),
-            "/stac/collections/alpha/items?limit=2" or "/stac/collections/alpha/items%3Flimit=2" => CreateJsonResponse(
+            "/stac/collections/alpha/items?limit=2" => CreateJsonResponse(
                 """
                 {
                   "features": [
@@ -429,7 +428,7 @@ public sealed class StacOpsDashboardServiceTests
                 }
                 """,
                 "\"collection-alpha-fresh\""),
-            "/stac/collections/alpha/items?limit=2" or "/stac/collections/alpha/items%3Flimit=2" => CreateJsonResponse(CreateTemporalDriftItemsResponse()),
+            "/stac/collections/alpha/items?limit=2" => CreateJsonResponse(CreateTemporalDriftItemsResponse()),
             "/stac/search?limit=50" => CreateJsonResponse(CreateTemporalDriftItemsResponse()),
             "/stac/search?collections=alpha&limit=3" => CreateJsonResponse(CreateTemporalDriftItemsResponse()),
             "/stac/search?collections=alpha&limit=2" => CreateJsonResponse(CreateTemporalDriftItemsResponse()),
@@ -524,7 +523,7 @@ public sealed class StacOpsDashboardServiceTests
 
         return pathAndQuery switch
         {
-            "/stac/collections/alpha/items?limit=2" or "/stac/collections/alpha/items%3Flimit=2" => CreateJsonResponse(CreateNullDatetimeItemsResponse()),
+            "/stac/collections/alpha/items?limit=2" => CreateJsonResponse(CreateNullDatetimeItemsResponse()),
             "/stac/search?limit=50" => CreateJsonResponse(CreateNullDatetimeItemsResponse()),
             "/stac/search?collections=alpha&limit=3" => CreateJsonResponse(CreateNullDatetimeItemsResponse()),
             "/stac/search?collections=alpha&limit=2" => CreateJsonResponse(CreateNullDatetimeItemsResponse()),

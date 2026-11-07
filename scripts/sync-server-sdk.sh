@@ -5,10 +5,15 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["revision"])' "${root}/config/server-sdk.v1.json")"
 [[ "${revision}" =~ ^[0-9a-f]{40}$ ]] || { echo "SDK revision must be a full commit SHA" >&2; exit 2; }
 sdk="${root}/artifacts/server-sdk"
+sdk_repository_url=https://github.com/honua-io/honua-server.git
 if [[ ! -d "${sdk}/.git" ]]; then
   mkdir -p "${sdk}"
   git -C "${sdk}" init -q
-  git -C "${sdk}" remote add origin https://github.com/honua-io/honua-server.git
+fi
+if git -C "${sdk}" remote get-url origin >/dev/null 2>&1; then
+  git -C "${sdk}" remote set-url origin "${sdk_repository_url}"
+else
+  git -C "${sdk}" remote add origin "${sdk_repository_url}"
 fi
 git -C "${sdk}" sparse-checkout init --no-cone
 git -C "${sdk}" sparse-checkout set --no-cone --stdin <<'PATHS'

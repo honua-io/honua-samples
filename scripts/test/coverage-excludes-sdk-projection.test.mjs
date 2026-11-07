@@ -42,7 +42,7 @@ async function writeManifest(samplesDir, id, capabilities) {
   );
 }
 
-test("SDK-projected identities are excluded from samples-coverage output", async (t) => {
+test("SDK-projected identities and drafts are excluded from samples-coverage output", async (t) => {
   const workDir = await mkdtemp(path.join(os.tmpdir(), "samples-coverage-boundary-"));
   t.after(() => rm(workDir, { recursive: true, force: true }));
 
@@ -59,6 +59,11 @@ test("SDK-projected identities are excluded from samples-coverage output", async
   const samplesDir = path.join(workDir, "samples");
   await writeManifest(samplesDir, "maplibre-quickstart", [anyKey]);
   await writeManifest(samplesDir, "own-executed-sample", [anyKey]);
+  const draftId = "draft-authoring-sample";
+  await writeManifest(samplesDir, draftId, [anyKey]);
+  const draftPath = path.join(samplesDir, draftId, "sample.json");
+  const draft = JSON.parse(await readFile(draftPath, "utf8"));
+  await writeFile(draftPath, JSON.stringify({ ...draft, status: "draft" }));
   const outPath = path.join(workDir, "coverage", "samples-coverage.v1.json");
 
   const { stderr } = await execFileAsync(process.execPath, [GENERATOR], {
@@ -75,6 +80,7 @@ test("SDK-projected identities are excluded from samples-coverage output", async
 
   const snapshot = JSON.parse(await readFile(outPath, "utf8"));
   const allEntries = Object.values(snapshot.capabilities).flat();
+  assert.ok(!allEntries.some((entry) => entry.id === draftId), "drafts cannot claim active-gallery coverage");
   assert.ok(
     allEntries.some((e) => e.id === "own-executed-sample"),
     "own-executed sample is counted",

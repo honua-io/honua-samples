@@ -3,7 +3,7 @@
 
 using Honua.Plugins.Abstractions;
 
-namespace Honua.Sample.UtilityValidationPlugin;
+namespace Honua.Samples.PluginEndpoint;
 
 [Plugin("utility-status-endpoint", "1.0.0",
     Description = "Exposes a read-only plugin status route.",

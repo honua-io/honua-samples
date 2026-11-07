@@ -11,7 +11,7 @@
             <p class="eyebrow">Operator Sample</p>
             <h1>Honua STAC Ops Demo</h1>
             <p class="hero-summary">
-                Live same-origin STAC situational awareness for discovery health, extension declarations, paging behavior,
+                Live STAC situational awareness for discovery health, extension declarations, paging behavior,
                 and drift signals.
             </p>
             <div class="hero-chips">
@@ -28,12 +28,12 @@
                     <input id="source-input"
                            @bind="_sourceInput"
                            @bind:event="oninput"
-                           placeholder="Same origin by default or https://example.test" />
+                           placeholder="https://your-honua-server.example" />
                     <button type="button" class="action-button" @onclick="ApplySourceOverrideAsync">Apply</button>
                 </div>
                 <div class="control-meta">
-                    <span>Current source: <strong>@(_snapshot?.SourceBaseUrl ?? "loading")</strong></span>
-                    <button type="button" class="link-button" @onclick="UseSameOriginAsync">Use same origin</button>
+                    <span>Current source: <strong>@(_snapshot?.SourceBaseUrl ?? "not selected")</strong></span>
+                    <button type="button" class="link-button" @onclick="ClearSourceAsync">Clear source</button>
                 </div>
             </div>
             <div class="control-card scenario-card">
@@ -353,6 +353,13 @@
             </section>
         </div>
     }
+    else
+    {
+        <section class="state-panel">
+            <h2>Select a STAC source</h2>
+            <p>Enter a running Honua Server URL to load the dashboard.</p>
+        </section>
+    }
 </div>
 
 @code {
@@ -373,6 +380,16 @@
 
     private async Task ReloadAsync()
     {
+        if (string.IsNullOrWhiteSpace(_sourceInput))
+        {
+            _loadCoordinator.CancelActiveLoad();
+            _snapshot = null;
+            _errorMessage = null;
+            _isLoading = false;
+            StateHasChanged();
+            return;
+        }
+
         using var load = _loadCoordinator.BeginLoad();
         _isLoading = true;
         _errorMessage = null;
@@ -394,9 +411,7 @@
         }
         catch (Exception caughtException) when (caughtException is not OutOfMemoryException)
         {
-            // Intentional catch-all: this is the top-level UI load boundary for the demo
-            // page, and any failure (network, parsing, provider) must degrade to the
-            // user-visible error banner below rather than crash the render.
+            // The UI load boundary keeps network and parser failures visible without crashing the page.
             if (!load.IsActive || _disposed)
             {
                 return;
@@ -417,19 +432,17 @@
 
     private Task ApplySourceOverrideAsync()
     {
-        var destination = string.IsNullOrWhiteSpace(_sourceInput)
-            ? "/samples/stac-ops/"
-            : $"/samples/stac-ops/?source={Uri.EscapeDataString(_sourceInput.Trim())}";
+        var destination = NavigationManager.GetUriWithQueryParameter("source",
+            string.IsNullOrWhiteSpace(_sourceInput) ? null : _sourceInput.Trim());
 
         NavigationManager.NavigateTo(destination);
         return Task.CompletedTask;
     }
 
-    private Task UseSameOriginAsync()
+    private Task ClearSourceAsync()
     {
         _sourceInput = string.Empty;
-        NavigationManager.NavigateTo("/samples/stac-ops/");
-        return Task.CompletedTask;
+        return ApplySourceOverrideAsync();
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs args)

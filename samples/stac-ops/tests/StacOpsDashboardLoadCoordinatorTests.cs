@@ -4,7 +4,7 @@
 using System.Reflection;
 using FluentAssertions;
 
-namespace Honua.Server.Tests.Features.Protocols.Stac;
+namespace Honua.Samples.StacOps.Tests;
 
 public sealed class StacOpsDashboardLoadCoordinatorTests
 {
@@ -52,8 +52,7 @@ public sealed class StacOpsDashboardLoadCoordinatorTests
     }
 
     private static readonly Type CoordinatorType =
-        typeof(Honua.StacOpsDemo.Services.StacOpsDashboardService).Assembly
-            .GetType("Honua.StacOpsDemo.Services.DashboardLoadCoordinator", throwOnError: true)!;
+        typeof(Honua.StacOpsDemo.Services.DashboardLoadCoordinator);
 
     private static readonly MethodInfo BeginLoadMethod =
         CoordinatorType.GetMethod("BeginLoad", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
