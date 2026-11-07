@@ -430,6 +430,16 @@ internal sealed class StacOpsDashboardService(HttpClient httpClient)
             ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var secondIds = secondPage.Document?.Features?.Select(static item => item.Id).Where(static id => !string.IsNullOrWhiteSpace(id)).Cast<string>().ToHashSet(StringComparer.OrdinalIgnoreCase)
             ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (secondIds.Count == 0)
+        {
+            return new QueryProbeInsight(
+                Label: "Paging continuity",
+                Level: SignalLevel.Warn,
+                Verdict: "Page advancement not established",
+                Detail: "The next link returned no identifiable items, so continuity could not be proven from live data.",
+                RequestPath: secondPage.Request.Url);
+        }
+
         var overlap = firstIds.Intersect(secondIds, StringComparer.OrdinalIgnoreCase).ToArray();
 
         return overlap.Length == 0
@@ -618,7 +628,7 @@ internal sealed class StacOpsDashboardService(HttpClient httpClient)
         }
 
         var mismatches = probe.Document?.Features?
-            .Where(item => TryReadNumeric(item.Properties, "quality_score") is double score && score < 70d)
+            .Where(item => TryReadNumeric(item.Properties, "quality_score") is not { } score || !double.IsFinite(score) || score < 70d)
             .Select(static item => item.Id ?? "unknown")
             .ToArray() ?? [];
 
@@ -628,7 +638,7 @@ internal sealed class StacOpsDashboardService(HttpClient httpClient)
             Verdict: mismatches.Length == 0 ? "CQL2 filter matched the sampled values" : "Filter/search mismatch detected",
             Detail: mismatches.Length == 0
                 ? "Every returned item satisfied the sampled quality_score threshold."
-                : $"Returned item ids below the expected threshold: {string.Join(", ", mismatches)}.",
+                : $"Returned item ids with missing, nonnumeric, nonfinite or below-threshold scores: {string.Join(", ", mismatches)}.",
             RequestPath: probe.Request.Url);
     }
 

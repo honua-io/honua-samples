@@ -11,6 +11,56 @@ namespace Honua.Samples.StacOps.Tests;
 
 public sealed class StacOpsDashboardServiceTests
 {
+    [Theory]
+    [InlineData("{}", "Warn")]
+    [InlineData("{\"quality_score\":null}", "Warn")]
+    [InlineData("{\"quality_score\":\"unknown\"}", "Warn")]
+    [InlineData("{\"quality_score\":\"NaN\"}", "Warn")]
+    [InlineData("{\"quality_score\":\"Infinity\"}", "Warn")]
+    [InlineData("{\"quality_score\":69}", "Warn")]
+    [InlineData("{\"quality_score\":70}", "Pass")]
+    [InlineData("{\"quality_score\":90}", "Pass")]
+    public async Task LoadAsync_FilteredScore_OnlyPassesVerifiedThreshold(string properties, string expectedLevel)
+    {
+        var snapshot = await LoadSnapshotAsync(request =>
+            request.RequestUri!.Query.Contains("filter=", StringComparison.Ordinal)
+                ? CreateJsonResponse($$"""
+                    {"features":[{"id":"filtered-item","properties":{{properties}}}],"links":[]}
+                    """)
+                : HandleRequestWithTemporalDriftFixture(request));
+        var probe = GetQueryProbe(snapshot, "Filter probe");
+
+        probe.GetType().GetProperty("Level")!.GetValue(probe)!.ToString().Should().Be(expectedLevel);
+        if (expectedLevel == "Warn")
+        {
+            probe.GetType().GetProperty("Detail")!.GetValue(probe).Should().BeOfType<string>()
+                .Which.Should().Contain("filtered-item");
+        }
+    }
+
+    [Theory]
+    [InlineData("[]", "Warn")]
+    [InlineData("[{\"id\":\"\"}]", "Warn")]
+    [InlineData("[{}]", "Warn")]
+    [InlineData("[{\"id\":\"item-1\"}]", "Warn")]
+    [InlineData("[{\"id\":\"item-3\"}]", "Pass")]
+    public async Task LoadAsync_NextPage_OnlyPassesIdentifiableAdvancement(string features, string expectedLevel)
+    {
+        var snapshot = await LoadSnapshotAsync(request => request.RequestUri!.PathAndQuery switch
+        {
+            "/stac/search?collections=alpha&limit=2" => CreateJsonResponse("""
+                {"features":[{"id":"item-1"}],"links":[{"rel":"next","href":"/stac/search?cursor=next"}]}
+                """),
+            "/stac/search?cursor=next" => CreateJsonResponse($$"""
+                {"features":{{features}},"links":[]}
+                """),
+            _ => HandleRequest(request)
+        });
+        var probe = GetQueryProbe(snapshot, "Paging continuity");
+
+        probe.GetType().GetProperty("Level")!.GetValue(probe)!.ToString().Should().Be(expectedLevel);
+    }
+
     [Fact]
     public async Task LoadAsync_RootRelativeProbePaths_UseSelectedHttpOrigin()
     {
