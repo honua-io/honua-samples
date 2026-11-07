@@ -527,7 +527,7 @@ function toOwnCard(sample, runResults, keyByKey, problems, sourceCommit) {
 
 function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
   if (manifest.status === "draft") {
-    return { state: "draft", label: "Draft — validated only, not yet executed in CI" };
+    return { state: "draft", label: "Draft — outside the active gallery's verified sample set" };
   }
   if (!result) {
     return { state: "none", label: "Active — no run results yet" };

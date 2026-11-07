@@ -1,0 +1,19 @@
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  honua:
+    environment:
+      ConnectionStrings__Redis: redis:6379
+      # Development-only Redis entitlement for the local job queue.
+      Licensing__DevGrantEdition: Pro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

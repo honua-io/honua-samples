@@ -27,3 +27,5 @@ coverage/
 site/*
 !site/CNAME
 !site/.nojekyll
+
+artifacts/

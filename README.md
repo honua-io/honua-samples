@@ -2,7 +2,7 @@
 
 **Runnable samples as executable evidence.**
 
-Cross-SDK, cross-protocol samples for [Honua Server](https://github.com/honua-io/honua-server) — each one declared against the canonical capability vocabulary and executed headless in CI against a real composed server. A green sample run is a receipt, not a promise: results feed the [honua-evidence](https://github.com/honua-io/honua-evidence) capability matrix with the same standing as tests.
+Cross-SDK, cross-protocol samples for [Honua Server](https://github.com/honua-io/honua-server). Active gallery samples use the canonical capability vocabulary and run headless in CI against a real composed server. Standalone operator and authoring examples have separate checks below. Active run results feed the [honua-evidence](https://github.com/honua-io/honua-evidence) capability matrix.
 
 ## Layout
 
@@ -16,10 +16,22 @@ samples/<sample-id>/
 Rules:
 
 - **Manifests are validated in CI** against the canonical capability key list published by honua-server — unknown keys fail the build.
-- **Every sample runs headless in CI** against the composed 2026.1 candidate with licensing disabled. Run results are published as evidence.
-- **Published packages only** (npm/NuGet/PyPI) — no source copies, no sibling project references. Getting-started blocks do not use a shell HTTP client or a dev-edition grant. Protocol samples may still call the public HTTP API; that is wire evidence, not the install path.
+- **Active samples run headless in CI** against the composed 2026.1 candidate with licensing disabled. Run results are published as evidence. Draft authoring and operator samples have the separate checks listed below.
+- **Active gallery samples consume published packages** (npm/NuGet/PyPI). Draft extension examples may consume the exact public SDK source revision in `config/server-sdk.v1.json` until those contracts are published; the checkout stays under ignored `artifacts/`. Product source is not vendored into samples. Getting-started blocks do not use a shell HTTP client or a dev-edition grant. The separately tested local GP walkthrough documents its Development-only configuration.
 - Samples that demonstrate Esri-client compatibility point at the same endpoints ArcGIS clients use, unchanged.
 - **Capabilities are never padded with zero-sample entries** in the coverage snapshot (below) — a capability with no covering sample is simply absent, so the honua-evidence matrix renders that honestly as a gap.
+
+## Standalone and authoring samples
+
+These draft samples have their own `Standalone samples` CI workflow. They do
+not claim active-gallery or release certification coverage.
+
+| Sample | Runnable behavior | CI validation |
+| --- | --- | --- |
+| [STAC operations](samples/stac-ops/README.md) | Independently hosted Blazor dashboard targeting a selected STAC server | Dashboard regression tests, published WebAssembly build, Chromium loading and source switching |
+| [Local GP](samples/gp-local-dev/README.md) | Published Python SDK submits a metric buffer to the pinned local server | Real PostgreSQL/Redis/server execution with polygon bounds and area assertions |
+| [Plugin endpoint](samples/plugin-endpoint/README.md) | Executes the public custom-endpoint contract | Compiles against the pinned SDK and validates the response |
+| [GP process templates](samples/gp-process-templates/README.md) | Custom Python and .NET summary tools | Golden, invalid-input, missing-input and output-cap tests against the pinned harness |
 
 ## Manifest schema
 
@@ -36,7 +48,7 @@ Every `samples/<sample-id>/sample.json` is validated against
 | `protocols` | string[] | Wire protocols exercised, min 1. |
 | `edition` | string | `community` \| `pro` \| `enterprise`; defaults to `community`. The runner may skip a higher edition. 2026.1 does not grant an edition — see [Licensing](#licensing). |
 | `entrypoint` | object | `{ "type": "node" \| "python" \| "dotnet" \| "script" \| "browser", "command": "..." }` -- how the headless runner executes the sample. For `browser`, `command` is the HTML file (relative to the sample dir) to serve and open, not a shell command -- see [Browser lane](#browser-lane). |
-| `status` | string | `active` (executed by the runner) or `draft` (validated only). |
+| `status` | string | `active` (executed by the gallery runner) or `draft` (excluded from that runner and its coverage snapshot). |
 
 ### Capability key list
 
@@ -58,8 +70,8 @@ below.
 
 ## Samples coverage snapshot
 
-`scripts/generate-samples-coverage.mjs` joins every `samples/<id>/sample.json`
-manifest with the latest
+`scripts/generate-samples-coverage.mjs` joins every non-draft
+`samples/<id>/sample.json` manifest with the latest
 [`results/run-results.v1.json`](schemas/run-results.v1.schema.json) envelope
 (written by `scripts/run-samples.mjs`) into
 [`samples-coverage.v1.json`](schemas/samples-coverage.v1.schema.json): the
@@ -92,8 +104,8 @@ Rules:
   with an empty array — a missing key means zero coverage, not a schema quirk.
 - **`lastRun` is present only when the sample has actually been executed** —
   i.e. it's `status: "active"` and has a matching entry in the latest
-  `run-results.v1.json`. Draft samples, or active samples that haven't run
-  yet, simply omit it.
+  `run-results.v1.json`. Active samples that have not run yet omit it. Draft
+  samples are excluded from the snapshot entirely.
 - **Capability keys are validated the same way `validate-manifests.mjs` does**
   (`KEY_LIST_URL` env var, falling back to the pinned fixture) — this is
   defense in depth so a typo'd key can never reach the published snapshot,

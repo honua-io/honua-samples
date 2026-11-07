@@ -25,6 +25,7 @@ const MIME_TYPES = {
   ".png": "image/png",
   ".ico": "image/x-icon",
   ".txt": "text/plain; charset=utf-8",
+  ".wasm": "application/wasm",
 };
 
 /**
@@ -33,7 +34,7 @@ const MIME_TYPES = {
  * over http(s) -- Playwright can't navigate to file:// and have fetch() to a
  * cross-origin server behave like a real deployed page.
  *
- * Binds to a fixed port (default 3000) rather than an ephemeral one because
+ * The gallery uses port 3000 because
  * docker/compose.yml's Cors:AllowedOrigins is pinned to
  * "http://localhost:3000" -- browser samples' fetch() calls to the composed
  * honua-server need that origin to match exactly.
@@ -71,7 +72,7 @@ export function startStaticServer({ rootDir, port }) {
     // to the same interface, so this has to match verbatim.
     server.listen(port, "localhost", () => {
       resolve({
-        url: `http://localhost:${port}`,
+        url: `http://localhost:${server.address().port}`,
         close: () => new Promise((r) => server.close(() => r())),
       });
     });

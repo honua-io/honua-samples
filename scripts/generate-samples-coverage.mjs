@@ -73,6 +73,9 @@ async function main() {
   let excludedSdkProjections = 0;
 
   for (const { dirName, manifest } of manifests) {
+    if (manifest.status === "draft") {
+      continue;
+    }
     if (sdkProjectedIds.has(manifest.id)) {
       excludedSdkProjections++;
       // Gallery-only SDK projection -- never a

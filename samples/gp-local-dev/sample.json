@@ -1,0 +1,33 @@
+{
+  "id": "gp-local-dev",
+  "title": "Local GP buffer with the Python SDK",
+  "description": "Submits a metric buffer through the published Python SDK and verifies the returned polygon bounds and area against a local Redis-backed server.",
+  "contentKind": "walkthrough",
+  "learning": {
+    "goal": "automate-workflow",
+    "level": "intermediate",
+    "estimatedMinutes": 10,
+    "prerequisites": [
+      "Python 3.11+",
+      "Docker Compose",
+      "Published Honua Python SDK"
+    ]
+  },
+  "dataMode": "local-integration",
+  "auth": "admin-api-key",
+  "capabilities": [
+    "process.geoprocessing"
+  ],
+  "sdks": [
+    "python"
+  ],
+  "protocols": [
+    "ogc-api-processes"
+  ],
+  "edition": "pro",
+  "entrypoint": {
+    "type": "script",
+    "command": "bash submit-buffer.sh"
+  },
+  "status": "draft"
+}

@@ -282,6 +282,24 @@
       "id": "wms-getmap-check",
       "disposition": "rework-map-first",
       "reason": "Lead with the returned WMS map image and inspected layer, with request mechanics below."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "gp-local-dev",
+      "disposition": "internal-qualification",
+      "reason": "Local GP development qualification; draft walkthrough is not a public gallery experience."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "plugin-endpoint",
+      "disposition": "internal-qualification",
+      "reason": "Plugin authoring qualification; draft SDK example is not a public gallery experience."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "stac-ops",
+      "disposition": "internal-qualification",
+      "reason": "Standalone STAC operator qualification; draft dashboard is not a public gallery experience."
     }
   ]
 }
