@@ -1,10 +1,10 @@
-import type { ViewerConfig } from "./config.js";
+import type { ViewerConfig, PlanningKey } from "./config.js";
 import { candidatesFor, type Parcel } from "./data.js";
 import { h } from "./dom.js";
 import { overlapByCode, shareLabel, type GeometryOps } from "./overlap.js";
 
 interface PlanningLayer {
-  readonly key: string;
+  readonly key: PlanningKey;
   readonly title: string;
   readonly code: string;
   readonly label?: string;
@@ -32,7 +32,7 @@ const DISTRICTS: Readonly<Record<string, string>> = { U: "Urban", A: "Agricultur
 function evidenceLink(url: string, id: unknown, idField = ""): HTMLElement {
   const featureId = typeof id === "number" && Number.isSafeInteger(id) && id >= 0 ? id
     : typeof id === "string" && /^\d+$/u.test(id) ? id : null;
-  if (featureId === null || !/^[a-zA-Z_][a-zA-Z0-9_]*$/u.test(idField)) return h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, "Layer reference · feature ID unavailable");
+  if (featureId === null || !/^[a-zA-Z_][a-zA-Z0-9_]*$/u.test(idField)) return h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, "Layer reference");
   const query = new URL(`${url}/query`);
   query.search = new URLSearchParams({ f: "pjson", where: `${idField}=${featureId}`, outFields: "*", returnGeometry: "false", resultRecordCount: "1" }).toString();
   return h("a", { href: query.href, target: "_blank", rel: "noopener noreferrer" }, `Source feature ${featureId}`);
@@ -64,7 +64,7 @@ async function checkLayer(target: HTMLElement, query: { layer: PlanningLayer; ur
     result.replaceChildren(...groups.map((group) => h("div", { class: "planning-match" },
       h("strong", {}, layer.key === "stateLandUseUrl" ? DISTRICTS[group.code] ?? group.label : group.label),
       h("span", { class: "coverage" }, `${shareLabel(group.share)} of parcel · code ${group.code}`),
-      ...candidates.filter((candidate) => candidate.code === group.code && ops.intersect(parcel.geometry, candidate.geometry)).map((candidate) => evidenceLink(url, candidate.sourceId, candidate.sourceIdField)),
+      ...group.sources.map((candidate) => evidenceLink(url, candidate.sourceId, candidate.sourceIdField)),
     )));
   } catch {
     if (context.signal.aborted) return;

@@ -17,7 +17,9 @@ export const DEFAULT_BASE_URL = "https://demo.honua.io";
 export const EXAMPLE_TMK = "234008053";
 
 /** URL parameters that choose data, carried into every share link. */
-export const LAYER_PARAMS = ["baseUrl", "parcelsUrl", "zoningUrl", "floodUrl", "parcelTilesUrl", "basemap", "stateLandUseUrl", "smaUrl", "growthBoundariesUrl", "growthAreasUrl", "tsunamiUrl", "seaLevelRiseUrl"] as const;
+export const PLANNING_PARAMS = ["stateLandUseUrl", "smaUrl", "growthBoundariesUrl", "growthAreasUrl", "tsunamiUrl", "seaLevelRiseUrl"] as const;
+export type PlanningKey = typeof PLANNING_PARAMS[number];
+export const LAYER_PARAMS = ["baseUrl", "parcelsUrl", "zoningUrl", "floodUrl", "parcelTilesUrl", "basemap", ...PLANNING_PARAMS] as const;
 
 export interface ViewerConfig {
   readonly baseUrl: string;
@@ -30,7 +32,7 @@ export interface ViewerConfig {
   readonly basemapUrl: string | null;
   readonly geocoderLocator: string;
   /** Receipt-bound planning layers; absent means not deployed, never no restriction. */
-  readonly planning: Readonly<Record<string, string | null>>;
+  readonly planning: Readonly<Record<PlanningKey, string | null>>;
 }
 
 function trimSlash(value: string): string {
@@ -48,8 +50,6 @@ export function readConfig(params: URLSearchParams): ViewerConfig {
     parcelTilesUrl: tiles === "none" ? null : trimSlash(tiles || `${baseUrl}/api/v1/tiles/pmtiles/maui-parcels-static`),
     basemapUrl: params.get("basemap") === "none" ? null : `${baseUrl}/api/v1/tiles/pmtiles/maui-basemap`,
     geocoderLocator: "World",
-    planning: Object.fromEntries([
-      "stateLandUseUrl", "smaUrl", "growthBoundariesUrl", "growthAreasUrl", "tsunamiUrl", "seaLevelRiseUrl",
-    ].map((key) => [key, params.get(key) ? trimSlash(params.get(key)!) : null])),
+    planning: Object.fromEntries(PLANNING_PARAMS.map((key) => [key, params.get(key) ? trimSlash(params.get(key)!) : null])) as ViewerConfig["planning"],
   };
 }

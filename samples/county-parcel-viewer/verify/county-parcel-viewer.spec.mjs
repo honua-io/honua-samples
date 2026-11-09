@@ -340,7 +340,7 @@ test("PRM-11 PRM-13 PRM-14 missing planning layers remain unknown; plan boundari
   await expect(page.locator(".planning-result[data-state=unconfigured]")).toHaveCount(6);
   await expect(page.locator(".planning-stack")).toContainText("Community-plan area boundaries do not establish land-use designations");
   await expect(page.locator(".planning-stack")).toContainText("No conflict or buildability conclusion is available");
-  expect(seen.some((request) => /state-land-use|growth-boundar|tsunami/u.test(request.url))).toBe(false);
+  expect(queries((request) => !/maui-parcels|maui-zoning|maui-flood-hazard/u.test(request.url))).toEqual([]);
 });
 
 test("PRM-10 property planning and County handoff remain usable at 390 pixels", async ({ page }, testInfo) => {
@@ -392,3 +392,47 @@ test("PRM-11 PRM-17 a connected planning layer uses its declared ID field and re
   expect(requests.every((request) => request.method === "POST")).toBe(true);
   expect(new URLSearchParams(requests.at(-1).body).get("outFields").split(",")).toContain("source_id");
 });
+
+
+test("PRM-11 a connected layer with no features reports screening absence without a determination", async ({ page }) => {
+  const layerUrl = `${DATA_BASE}/rest/services/empty-planning-test/FeatureServer/7`;
+  await page.route(`${layerUrl}**`, (route) => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith("/query")
+    ? { features: [], exceededTransferLimit: false }
+    : { id: 7, name: "Empty planning fixture", type: "Feature Layer", geometryType: "esriGeometryPolygon", objectIdField: "id", fields: [{ name: "id", type: "esriFieldTypeOID" }, { name: "ludcode", type: "esriFieldTypeString" }], capabilities: "Query" } }));
+  await page.goto(appUrl({ stateLandUseUrl: layerUrl }));
+  const layer = page.locator('[data-planning-layer="stateLandUseUrl"]');
+  await expect(layer.locator(".planning-result")).toHaveAttribute("data-state", "empty");
+  await expect(layer).toContainText("No positive-area overlap in this source snapshot. This is not a determination.");
+  await expect(layer.getByRole("link", { name: "Layer reference", exact: true })).toHaveAttribute("href", layerUrl);
+  await expect(layer.getByRole("link", { name: /^Source feature/u })).toHaveCount(0);
+});
+
+test("PRM-12 an incomplete zoning polygon makes the result unknown", async ({ page }) => {
+  const parcel = await liveParcel(EXAMPLE_TMK);
+  await page.route("**/rest/services/maui-zoning/FeatureServer/2/query**", (route) => route.fulfill({ json: {
+    features: [{ attributes: { id: 47 }, geometry: parcel.geometry }], exceededTransferLimit: false,
+  } }));
+  await page.goto(appUrl());
+  await settled(page);
+  await expect(page.locator("body")).toHaveAttribute("data-zoning-state", "error");
+  await expect(page.locator("#zoning-body")).toContainText("Zoning check failed.");
+  await expect(page.locator("#zoning-body")).not.toContainText("Not in the county zoning layer");
+});
+
+for (const missing of ["metadata", "value"]) {
+  test(`PRM-04 missing TMK ${missing} prevents an empty County permit handoff`, async ({ page }) => {
+    await page.route(`${PARCELS}**`, async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      if (new URL(route.request().url()).pathname.endsWith("/query")) {
+        if (missing === "value") for (const feature of body.features ?? []) delete feature.attributes.tmk_txt;
+      } else if (missing === "metadata") body.fields = (body.fields ?? []).filter((field) => field.name !== "tmk_txt");
+      await route.fulfill({ response, json: body });
+    });
+    await page.goto(appUrl());
+    await settled(page);
+    await expect(page.locator("body")).toHaveAttribute("data-sample-status", "fail");
+    await expect(page.locator("#county-permit-link")).toHaveCount(0);
+    await expect(page.locator("#panel-inner [role=alert]")).toBeVisible();
+  });
+}
