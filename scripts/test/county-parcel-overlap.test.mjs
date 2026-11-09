@@ -6,9 +6,12 @@ const polygon = (area) => ({ type: "Polygon", coordinates: [], area });
 
 test("PRM-17 citations include only positive-area contributors and merged coverage counts once", () => {
   const parcel = polygon(100);
-  const inside = polygon(60);
+  const inside = polygon(160);
   const touching = polygon(0);
-  const overlapping = polygon(40);
+  const overlapping = polygon(140);
+  const clippedInside = polygon(60);
+  const clippedOverlapping = polygon(40);
+  const clips = new Map([[inside, clippedInside], [touching, polygon(0)], [overlapping, clippedOverlapping]]);
   const intersections = [];
   const candidates = [inside, touching, overlapping].map((geometry, index) => ({
     code: "U", label: "Urban", geometry, sourceId: index + 1, sourceIdField: "id",
@@ -18,10 +21,10 @@ test("PRM-17 citations include only positive-area contributors and merged covera
     intersect: (left, right) => {
       assert.equal(left, parcel);
       intersections.push(right);
-      return right;
+      return clips.get(right);
     },
     union: (...parts) => {
-      assert.deepEqual(parts, [inside, overlapping]);
+      assert.deepEqual(parts, [clippedInside, clippedOverlapping]);
       return polygon(75);
     },
   };

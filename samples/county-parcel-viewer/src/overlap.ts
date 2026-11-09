@@ -42,7 +42,7 @@ export const ZONING_MIN_AREA_M2 = 10;
 const isPolygonal = (geometry: GeoJsonGeometry | null | undefined): geometry is GeoJsonGeometry =>
   geometry?.type === "Polygon" || geometry?.type === "MultiPolygon";
 
-/** Every code that overlaps the parcel at all, largest first. */
+/** Every code with positive-area parcel overlap, largest first. */
 export function overlapByCode(parcel: GeoJsonGeometry, candidates: readonly OverlapCandidate[], ops: GeometryOps): { parcelAreaM2: number; groups: OverlapGroup[] } {
   const parcelAreaM2 = ops.area(parcel);
   if (!(parcelAreaM2 > 0)) throw new Error("The parcel geometry has no area.");
