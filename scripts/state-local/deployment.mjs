@@ -64,6 +64,16 @@ export async function readDeployment(env, options) {
   return deployment;
 }
 
+async function accessPolicy(env, receipt) {
+  const response = await adminFetch(env, { method: "GET",
+    apiPath: `/api/v1/admin/services/${encodeURIComponent(receipt.serviceName)}/settings` });
+  return response?.data?.accessPolicy;
+}
+
+function publicReadOnly(policy) {
+  return policy?.allowAnonymous === true && policy.allowAnonymousWrite === false;
+}
+
 export async function activateDeployment(env, options) {
   const receipt = await readDeployment(env, options);
   const { layer: current } = await verifyLayer(env, receipt);
@@ -72,6 +82,11 @@ export async function activateDeployment(env, options) {
       apiPath: `${layersPath(receipt)}/${receipt.layerId}/enabled?serviceName=${encodeURIComponent(receipt.serviceName)}`,
       body: { enabled: true } });
   }
+  if (!publicReadOnly(await accessPolicy(env, receipt))) {
+    await adminFetch(env, { method: "PUT",
+      apiPath: `/api/v1/admin/services/${encodeURIComponent(receipt.serviceName)}/access-policy`,
+      body: { allowAnonymous: true, allowAnonymousWrite: false } });
+  }
   return activeDeployment(env, options);
 }
 
@@ -79,6 +94,7 @@ export async function activeDeployment(env, options) {
   const receipt = await readDeployment(env, options);
   const { layer: activated, service } = await verifyLayer(env, receipt);
   if (activated.enabled !== true) throw new Error("Layer activation was not confirmed");
+  if (!publicReadOnly(await accessPolicy(env, receipt))) throw new Error("Public read-only access was not confirmed");
   return { ...receipt, enabled: true,
     layerUrl: `${receipt.baseUrl}/rest/services/${encodeURIComponent(service.folderName)}/${encodeURIComponent(service.publicName)}/FeatureServer/${receipt.layerId}` };
 }

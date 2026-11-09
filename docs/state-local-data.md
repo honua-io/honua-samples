@@ -138,7 +138,8 @@ node scripts/state-local/cli.mjs activate maui-roads artifacts/state-local/run-0
 
 Activation revalidates the snapshot and deployment receipt against this server,
 checks the current table and folder, enables the layer through the managed
-connection API, and confirms the resulting public layer URL. Repeated activation
+connection API, grants anonymous read access with anonymous writes disabled through
+the service access-policy API, and confirms that policy and the public layer URL. Repeated activation
 does not create another layer. A changed table, service, source hash, folder or
 server stops activation. Staging remains non-idempotent; if saving its receipt
 fails, inspect Console before attempting another import.

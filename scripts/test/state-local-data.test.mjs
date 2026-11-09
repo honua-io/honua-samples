@@ -42,9 +42,16 @@ async function deploymentFixture(t) {
   const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
   const staged = { source: "basins", serviceName: "basins-test", folderId: "works-folder",
     layerId: 7, enabled: false, schema: "honua_data", table: "managed_basins", cleanSha256: receipt.cleanSha256 };
-  const state = { layer: { ...staged, description: `SHA-256 ${receipt.cleanSha256}` }, folderId: staged.folderId, writes: 0 };
+  const state = { layer: { ...staged, description: `SHA-256 ${receipt.cleanSha256}` }, folderId: staged.folderId, writes: 0, policyWrites: 0, policy: { allowAnonymous: false, allowAnonymousWrite: true } };
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
+    if (url.pathname.endsWith("/settings")) return response({ data: { accessPolicy: state.policy } });
+    if (url.pathname.endsWith("/access-policy")) {
+      assert.deepEqual(JSON.parse(options.body), { allowAnonymous: true, allowAnonymousWrite: false });
+      state.policy = JSON.parse(options.body);
+      state.policyWrites++;
+      return response({ data: { accessPolicy: state.policy } });
+    }
     if (url.pathname.endsWith("/enabled")) {
       assert.equal(options.method, "PUT");
       assert.deepEqual(JSON.parse(options.body), { enabled: true });
@@ -69,6 +76,8 @@ test("deployment activation rechecks table, snapshot, service and department bef
   assert.equal(active.enabled, true);
   await activateDeployment(env, options);
   assert.equal(state.writes, 1);
+  assert.equal(state.policyWrites, 1);
+  assert.deepEqual(state.policy, { allowAnonymous: true, allowAnonymousWrite: false });
   await assert.rejects(saveDeployment(env, { staged, directory: output, connection: "managed" }), /remain disabled/);
 });
 
@@ -87,6 +96,7 @@ test("deployment activation refuses drift and server changes without enabling an
   state.folderId = "other-folder";
   await assert.rejects(activateDeployment(env, options), /department folder/);
   assert.equal(state.writes, 0);
+  assert.equal(state.policyWrites, 0);
 });
 
 test("cleaning retains only allowlisted properties and rejects unusable geometry", () => {

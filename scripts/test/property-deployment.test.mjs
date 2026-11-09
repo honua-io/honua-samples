@@ -30,9 +30,12 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
     if (url.pathname.endsWith('/services/')) return json({ data: { items: layers } });
-    const layer = layers.find((item) => item.serviceName === url.searchParams.get('serviceName'));
+    const layer = layers.find((item) => item.serviceName === url.searchParams.get('serviceName')
+      || url.pathname.includes(`/services/${item.serviceName}/`));
     assert.ok(layer);
-    if (options.method === 'PUT') layer.enabled = true;
+    if (url.pathname.endsWith('/settings')) return json({ data: { accessPolicy: layer.policy } });
+    if (url.pathname.endsWith('/access-policy')) layer.policy = JSON.parse(options.body);
+    else if (options.method === 'PUT') layer.enabled = true;
     return json({ data: { items: [layer] } });
   };
   for (const staged of layers) {
@@ -50,6 +53,9 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
   layers.at(-1).enabled = false;
   await assert.rejects(propertyApp(env, directory), /activation was not confirmed/);
   layers.at(-1).enabled = true;
+  layers[0].policy.allowAnonymousWrite = true;
+  await assert.rejects(propertyApp(env, directory), /Public read-only access/);
+  layers[0].policy.allowAnonymousWrite = false;
   layers[0].table = 'replacement';
   await assert.rejects(propertyApp(env, directory), /no longer matches/);
 });
