@@ -33,7 +33,9 @@ is a demo extent, **not an Orleans Parish boundary clip**. The receipt records
 accepted and rejected counts. It does not certify polygon topology or repair
 self-intersections. Only the source-specific field allowlist is fetched; owner,
 applicant, contractor and free-text descriptions are excluded. Cleaning activity
-is historical maintenance, not an inspection or a work-order system.
+comes from the portal dataset titled "Catch Basin Cleanings / Inspections";
+these selected fields show historical maintenance and do not establish inspection
+results or a work-order system.
 
 ## Stage through the Honua admin import flow
 
@@ -49,11 +51,18 @@ Staging verifies snapshot hashes and rebuilds the cleaned collection before any
 server write. It uploads GeoJSON through `/api/v1/admin/import/upload`, then
 publishes a **disabled** layer through the connection's admin publishing flow.
 It carries source attribution, licence URL and snapshot hash into layer metadata.
-The folder/service names are `Planning/<source>-<run>`,
-`Public Works/<source>-<run>` and `311/<source>-<run>`; Emergency Management awaits
-cleared sources. Each run creates new names. This is not an idempotent updater.
+The service names are flat: `planning-<source>-<run>`,
+`public-works-<source>-<run>` and `311-<source>-<run>`. Department folders are an
+unmet requirement: current service routes accept a single path segment.
+Emergency Management awaits cleared sources. Each run creates new names. This is not an idempotent updater.
 Inspect the returned table/service in Console before retrying or removing it;
 failed imports/publications can leave staged tables or jobs.
+
+For background uploads, the script polls the import job and stops with its job ID.
+The current job-status response does not expose the completed physical table
+receipt, so automated publication cannot safely continue. Review that import in
+Console and publish manually; do not rerun it blindly. Synchronous uploads can
+continue to disabled publication. Real-server validation remains pending.
 
 The script does not enable anonymous access or release a Studio application.
 Those steps require a verified candidate-server run and reviewed data. No
@@ -83,5 +92,7 @@ node --test scripts/test/state-local-data.test.mjs
 ```
 
 Tests use synthetic records generated in memory. They verify pagination,
-coordinate rejection, field minimisation, tamper detection and the disabled
-admin import contract. They do not replace real-server candidate CI.
+coordinate rejection, field minimisation, change/corruption detection and the disabled
+admin import contract. The receipt is unsigned and stored alongside its files:
+these checks do not establish authenticity against deliberate edits to both files
+and receipt. They do not replace real-server candidate CI.

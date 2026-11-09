@@ -1,7 +1,8 @@
 import { coverageBounds } from "./sources.mjs";
 
 function numericCoordinate(value) {
-  return value !== null && value !== undefined && String(value).trim() !== "" && Number.isFinite(Number(value));
+  return (typeof value === "number" || typeof value === "string")
+    && String(value).trim() !== "" && Number.isFinite(Number(value));
 }
 
 function geometryFor(row, geometry) {

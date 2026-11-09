@@ -21,6 +21,24 @@ async function publishedLayer(env, publication) {
   throw new Error("Layer publication still pending; inspect Console before retrying");
 }
 
+async function completedUpload(env, uploaded) {
+  if (!uploaded?.jobId) return uploaded;
+  const apiPath = `/api/v1/admin/import/jobs/${encodeURIComponent(uploaded.jobId)}`;
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    const job = await adminFetch(env, { method: "GET", apiPath });
+    if ([3, 4, "Failed", "Cancelled"].includes(job?.status)) {
+      throw new Error(`Import failed or cancelled; inspect Console job ${uploaded.jobId} before retrying`);
+    }
+    if ([2, "Completed"].includes(job?.status)) {
+      // ImportProgress exposes the logical table, not ImportResult.PhysicalTableName.
+      throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
+    }
+    await setTimeout(500);
+  }
+  throw new Error(`Import still pending; inspect Console job ${uploaded.jobId} before retrying`);
+}
+
 export async function stageSnapshot(env, options) {
   const { name, directory, connection } = options;
   if (!connection) throw new Error("HONUA_SAMPLE_CONNECTION must name this server's managed import database");
@@ -28,11 +46,12 @@ export async function stageSnapshot(env, options) {
   const { receipt, geojson } = await readSnapshot(name, directory);
   const runId = randomUUID().replaceAll("-", "");
   const tableName = `demo_${name}_${runId}`;
-  const serviceName = `${source.department}/${name}-${runId}`;
+  const serviceName = `${source.department.toLowerCase().replaceAll(" ", "-")}-${name}-${runId}`;
   const form = new FormData();
   form.set("file", new Blob([JSON.stringify(geojson)], { type: "application/geo+json" }), `${name}.geojson`);
   form.set("TableName", tableName);
-  const uploaded = await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form });
+  const uploaded = await completedUpload(env,
+    await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form }));
   if (uploaded?.featureCount !== receipt.accepted || !uploaded.physicalTableName) throw new Error("Import did not confirm the snapshot table and feature count");
   const published = await adminFetch(env, {
     method: "POST", apiPath: `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers`,

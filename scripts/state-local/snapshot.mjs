@@ -35,6 +35,13 @@ function recordsUrl(source, offset) {
   return url;
 }
 
+function provenance(source) {
+  return { department: source.department, licenseUrl: source.licenseUrl,
+    metadataUrl: `${portal}/api/views/${source.id}.json`,
+    attribution: source.attribution, sourceCrs, outputCrs: sourceCrs, coverageBounds,
+    selection: { kind: "ordered-preview", order: ":id", limit: previewLimit, completeDataset: false } };
+}
+
 async function downloadRows(source) {
   const rows = [];
   const requests = [];
@@ -68,11 +75,8 @@ export async function fetchSnapshot(name, directory) {
   const clean = JSON.stringify(geojson);
   const metadataText = JSON.stringify(metadata);
   const receipt = {
-    source: name, dataset: source.id, department: source.department, metadataUrl, requests,
+    source: name, dataset: source.id, ...provenance(source), requests,
     retrievedAt: new Date().toISOString(), sourceRevision: initialRevision,
-    licenseUrl: source.licenseUrl, attribution: source.attribution,
-    sourceCrs, outputCrs: sourceCrs, coverageBounds,
-    selection: { kind: "ordered-preview", order: ":id", limit: previewLimit, completeDataset: false },
     downloaded: rows.length, rejected, accepted: geojson.features.length,
     rawSha256: sha256(raw), cleanSha256: sha256(clean), metadataSha256: sha256(metadataText),
   };
@@ -85,9 +89,13 @@ export async function fetchSnapshot(name, directory) {
 }
 
 function checkProvenance(receipt, source, rows) {
-  const expected = { department: source.department, licenseUrl: source.licenseUrl,
-    attribution: source.attribution, sourceCrs, outputCrs: sourceCrs, coverageBounds,
-    selection: { kind: "ordered-preview", order: ":id", limit: previewLimit, completeDataset: false } };
+  const expected = provenance(source);
+  const pageCount = Math.min(previewLimit / pageSize, Math.floor((Array.isArray(rows) ? rows.length : 0) / pageSize) + 1);
+  expected.requests = Array.from({ length: pageCount }, (_, index) => String(recordsUrl(source, index * pageSize)));
+  const timestamp = Date.parse(receipt.retrievedAt);
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== receipt.retrievedAt) {
+    throw new Error("Snapshot provenance mismatch");
+  }
   if (!Array.isArray(rows) || rows.length > previewLimit || receipt.downloaded !== rows.length
     || Object.entries(expected).some(([key, value]) => JSON.stringify(receipt[key]) !== JSON.stringify(value))) {
     throw new Error("Snapshot provenance mismatch");

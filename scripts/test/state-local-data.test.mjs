@@ -7,7 +7,7 @@ import { adminFetch } from "../lib/admin-api.mjs";
 import { cleanRows } from "../state-local/clean.mjs";
 import { stageSnapshot } from "../state-local/import.mjs";
 import { fetchSnapshot, readSnapshot } from "../state-local/snapshot.mjs";
-import { getSource } from "../state-local/sources.mjs";
+import { getSource, sources } from "../state-local/sources.mjs";
 
 const metadata = { licenseId: "CC0_10", rowsUpdatedAt: 100, viewLastModified: 90 };
 const point = [-90.08, 29.95];
@@ -34,7 +34,7 @@ function sourceFetch(t, records = [row(1)]) {
 }
 
 test("cleaning retains only allowlisted properties and rejects unusable geometry", () => {
-  const invalid = [null, [], [0, 0], [-90.08, null], ["", 29.95], [-91, 30], [-90.08, 29.95, 0]];
+  const invalid = [null, [], [[-90.08], [29.95]], [{ valueOf: () => -90.08 }, 29.95], [0, 0], [-90.08, null], ["", 29.95], [-91, 30], [-90.08, 29.95, 0]];
   const records = invalid.map((coordinates, id) => ({ ...row(id), the_geom: { type: "Point", coordinates } }));
   records.push({ ...row("good"), the_geom: { type: "Point", coordinates: point.map(String) } });
   const cleaned = cleanRows(records, getSource("basins"));
@@ -83,7 +83,8 @@ test("snapshot validation detects changed records, metadata and receipt provenan
   const file = path.join(output, "basins.receipt.json");
   const receipt = JSON.parse(await readFile(file, "utf8"));
   for (const changed of [{ outputCrs: "EPSG:3857" }, { selection: { ...receipt.selection, completeDataset: true } },
-    { licenseUrl: "https://example.test/terms" }, { department: "Wrong" }]) {
+    { licenseUrl: "https://example.test/terms" }, { department: "Wrong" }, { metadataUrl: "https://example.test" },
+    { requests: ["https://example.test"] }, { retrievedAt: "not a date" }]) {
     await writeFile(file, JSON.stringify({ ...receipt, ...changed }));
     await assert.rejects(readSnapshot("basins", output), /provenance mismatch/);
   }
@@ -122,7 +123,7 @@ test("stage uses multipart import, preserves governance and creates a disabled d
   assert.equal(calls[0].options.headers["X-API-Key"], "test-key");
   assert.equal(calls[0].options.headers["Content-Type"], undefined);
   const published = JSON.parse(calls[1].options.body);
-  assert.match(published.serviceName, /^Public Works\/basins-/);
+  assert.match(published.serviceName, /^public-works-basins-/);
   assert.equal(published.enabled, false);
   assert.equal(published.table, "managed_basins");
   assert.equal(published.license, "CC0-1.0");
@@ -175,4 +176,52 @@ test("stage follows completed async publication and rejects failed or enabled re
   status = "Completed";
   enabled = true;
   await assert.rejects(stageSnapshot(env, options), /disabled layer/);
+});
+
+
+test("all geometry readers minimise fields and reject invalid 311 coordinates", () => {
+  const privateFields = { owner: "omit", applicant: "omit", contractors: "omit", description: "omit", comments: "omit" };
+  for (const [name, coordinates] of [["permits", { location_1: { longitude: "-90.08", latitude: "29.95" } }],
+    ["requests", { longitude: "-90.08", latitude: "29.95" }], ["cleanings", { x: "-90.08", y: "29.95" }]]) {
+    const cleaned = cleanRows([{ ...privateFields, ...coordinates, ":id": "safe" }], getSource(name));
+    assert.deepEqual(cleaned.geojson.features[0].geometry.coordinates, point);
+    assert.deepEqual(cleaned.geojson.features[0].properties, {});
+  }
+  assert.equal(cleanRows([{ longitude: 0, latitude: 0 }], getSource("requests")).rejected, 1);
+  assert.ok(Object.values(sources).every((source) => source.fields.every((field) => !/owner|applicant|contractor|description|comment/i.test(field))));
+});
+
+test("policy source stages without inventing a CC0 licence", async (t) => {
+  const output = await directory(t);
+  t.mock.method(globalThis, "fetch", async (input) => new URL(input).pathname.startsWith("/api/views/")
+    ? response({ ...metadata, licenseId: undefined }) : response([{ ":id": "cleaning-1", x: point[0], y: point[1] }]));
+  await fetchSnapshot("cleanings", output);
+  globalThis.fetch = async (input, options) => {
+    if (input.endsWith("/import/upload")) return response({ featureCount: 1, physicalTableName: "cleanings" });
+    const body = JSON.parse(options.body);
+    assert.equal(body.license, undefined);
+    assert.match(body.licenseUrl, /No-AA135-Data-Policy/);
+    return response({ data: { layerId: 20, enabled: false } });
+  };
+  await stageSnapshot({ baseUrl: "https://server.test", adminApiKey: "test-key" },
+    { name: "cleanings", directory: output, connection: "managed" });
+});
+
+test("background upload polls terminal state and never guesses a physical table", async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot("basins", output);
+  const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
+  const options = { name: "basins", directory: output, connection: "managed" };
+  for (const status of [2, 3, 4]) {
+    const paths = [];
+    globalThis.fetch = async (input) => {
+      const url = new URL(input);
+      paths.push(url.pathname);
+      return url.pathname.endsWith("/upload") ? response({ jobId: "upload-job", statusUrl: "https://untrusted.test" }, 202)
+        : response({ jobId: "upload-job", status, tableName: "logical-name", featuresProcessed: 1 });
+    };
+    await assert.rejects(stageSnapshot(env, options), status === 2 ? /physical table receipt/ : /import failed or cancelled/i);
+    assert.deepEqual(paths, ["/api/v1/admin/import/upload", "/api/v1/admin/import/jobs/upload-job"]);
+  }
 });
