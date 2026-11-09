@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { sha256 } from './checksum.mjs';
+import { sha256 } from '../lib/checksum.mjs';
 
 const recipes = {
   'maui-demo-requests': { anchor: 'maui-roads', department: '311', kind: 'service_request', count: 468 },

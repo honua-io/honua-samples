@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { cleanRows } from './clean.mjs';
-import { sha256 } from './checksum.mjs';
+import { sha256 } from '../lib/checksum.mjs';
 import { download, fetchJson } from './download.mjs';
 
 const pageSize = 100;

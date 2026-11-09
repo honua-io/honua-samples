@@ -20,7 +20,8 @@
 // same validator its consumer uses, so this check cannot drift away from what
 // the gallery will actually accept at build time.
 
-import { createHash } from "node:crypto";
+import { sha256 } from "./lib/checksum.mjs";
+export { sha256 };
 import { fileURLToPath } from "node:url";
 
 import { readDeclaredAssetBytes, SDK_PRODUCER_LOCK } from "./lib/sdk-producer-lock.mjs";
@@ -91,9 +92,6 @@ export function assertContract(kind, payload, contract) {
   }
 }
 
-export function sha256(bytes) {
-  return createHash("sha256").update(bytes).digest("hex");
-}
 
 /** Verify one vendored asset against the digest the lock declares for it. */
 export async function checkLocalAsset(kind, url, lock = SDK_PRODUCER_LOCK) {

@@ -1,6 +1,6 @@
 import { generateExercise, readExercise } from "./exercise.mjs";
 import { fetchMauiSnapshot, readMauiSnapshot } from "./maui-snapshot.mjs";
-import { sha256 } from "./checksum.mjs";
+import { sha256 } from "../lib/checksum.mjs";
 import { fetchJson } from "./download.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
