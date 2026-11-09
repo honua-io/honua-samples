@@ -13,17 +13,27 @@ export function stagingTableName(name, runId) {
   return `demo_${name.replaceAll("-", "_").slice(0, 25).replace(/_+$/, "")}_${runId}`;
 }
 
+export function layersPath(connection) {
+  return `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers`;
+}
+
+export async function listLayers(env, connection, serviceName) {
+  const response = await adminFetch(env, { method: "GET",
+    apiPath: `${layersPath(connection)}?serviceName=${encodeURIComponent(serviceName)}` });
+  return response?.data?.items ?? response?.data ?? [];
+}
+
 async function publishedLayer(env, publication) {
   const { response, connection, serviceName } = publication;
   if (!response?.data?.jobId) return response?.data;
-  const root = `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers`;
+  const root = layersPath(connection);
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     const job = await adminFetch(env, { method: "GET", apiPath: `${root}/jobs/${encodeURIComponent(response.data.jobId)}` });
     if (["Failed", "Cancelled"].includes(job?.data?.status)) throw new Error("Layer publication failed; inspect Console before retrying");
     if (job?.data?.status === "Completed") {
-      const layers = await adminFetch(env, { method: "GET", apiPath: `${root}?serviceName=${encodeURIComponent(serviceName)}` });
-      return (layers?.data?.items ?? layers?.data)?.find((layer) => layer.layerId === job.data.layerId);
+      const layers = await listLayers(env, connection, serviceName);
+      return layers.find((layer) => layer.layerId === job.data.layerId);
     }
     await setTimeout(500);
   }
@@ -72,7 +82,7 @@ export async function stageSnapshot(env, options) {
     await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form }));
   if (uploaded?.featureCount !== receipt.accepted || !uploaded.physicalTableName) throw new Error("Import did not confirm the snapshot table and feature count");
   const published = await adminFetch(env, {
-    method: "POST", apiPath: `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers`,
+    method: "POST", apiPath: layersPath(connection),
     body: {
       schema: uploaded.schema ?? "honua_data", table: uploaded.physicalTableName,
       layerName: name, serviceName, folderId, srid: 4326, enabled: false,

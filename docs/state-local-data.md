@@ -137,10 +137,11 @@ node scripts/state-local/cli.mjs activate maui-roads artifacts/state-local/run-0
 ```
 
 Activation revalidates the snapshot and deployment receipt against this server,
-checks the current table and folder, enables the layer through the managed
-connection API, grants anonymous read access with anonymous writes disabled through
-the service access-policy API, and confirms that policy and the public layer URL. Repeated activation
-does not create another layer. A changed table, service, source hash, folder or
+checks the current table and folder, grants anonymous read access with anonymous
+writes disabled through the service access-policy API, then enables the layer
+through the managed connection API. It confirms that policy and anonymously
+fetches the public layer metadata to verify its ID. Repeated activation does not
+create another layer. A changed table, service, source hash, folder or
 server stops activation. Staging remains non-idempotent; if saving its receipt
 fails, inspect Console before attempting another import.
 
@@ -171,8 +172,8 @@ The approved shared-demo load budget is under 1 GB including indexes: no raster
 loads into PostGIS, simplified display geometry, low-traffic loading, and fewer
 than 130 concurrent database connections. Use the deployment operator's approved
 credential and monitoring path before loading the shared server; check capacity
-during the load and stop if its budget is exceeded. The small CI sample uses a disposable server and
-imports disabled layers; it never changes the public demo database.
+during the load and stop if its budget is exceeded. The small CI sample uses a
+disposable server and imports disabled layers; it never changes the public demo database.
 
 ## Verification
 

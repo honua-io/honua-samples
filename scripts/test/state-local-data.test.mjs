@@ -42,9 +42,13 @@ async function deploymentFixture(t) {
   const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
   const staged = { source: "basins", serviceName: "basins-test", folderId: "works-folder",
     layerId: 7, enabled: false, schema: "honua_data", table: "managed_basins", cleanSha256: receipt.cleanSha256 };
-  const state = { layer: { ...staged, description: `SHA-256 ${receipt.cleanSha256}` }, folderId: staged.folderId, writes: 0, policyWrites: 0, policy: { allowAnonymous: false, allowAnonymousWrite: true } };
+  const state = { layer: { ...staged, description: `SHA-256 ${receipt.cleanSha256}` }, folderId: staged.folderId, writes: 0, policyWrites: 0, policy: { allowAnonymous: true, allowAnonymousWrite: true }, publicId: 7, publicStatus: 200, folderName: "public-works", publicName: "public-basins", serviceMissing: false };
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
+    if (url.pathname.includes("/FeatureServer/")) {
+      assert.equal(options, undefined, "public request must not carry admin credentials");
+      return response({ id: state.publicId }, state.publicStatus);
+    }
     if (url.pathname.endsWith("/settings")) return response({ data: { accessPolicy: state.policy } });
     if (url.pathname.endsWith("/access-policy")) {
       assert.deepEqual(JSON.parse(options.body), { allowAnonymous: true, allowAnonymousWrite: false });
@@ -53,13 +57,16 @@ async function deploymentFixture(t) {
       return response({ data: { accessPolicy: state.policy } });
     }
     if (url.pathname.endsWith("/enabled")) {
+      assert.equal(url.pathname, "/api/v1/admin/connections/managed/layers/7/enabled");
+      assert.equal(url.searchParams.get("serviceName"), staged.serviceName);
+      assert.deepEqual(state.policy, { allowAnonymous: true, allowAnonymousWrite: false }, "deny anonymous writes before enabling");
       assert.equal(options.method, "PUT");
       assert.deepEqual(JSON.parse(options.body), { enabled: true });
       state.layer.enabled = true;
       state.writes++;
       return response({ data: state.layer });
     }
-    if (url.pathname.endsWith("/services/")) return response({ data: { items: [{ serviceName: staged.serviceName, folderId: state.folderId, folderName: "public-works", publicName: "public-basins" }] } });
+    if (url.pathname.endsWith("/services/")) return response({ data: { items: state.serviceMissing ? [] : [{ serviceName: staged.serviceName, folderId: state.folderId, folderName: state.folderName, publicName: state.publicName }] } });
     return response({ data: { items: [state.layer] } });
   };
   return { output, env, staged, state };
@@ -97,6 +104,28 @@ test("deployment activation refuses drift and server changes without enabling an
   await assert.rejects(activateDeployment(env, options), /department folder/);
   assert.equal(state.writes, 0);
   assert.equal(state.policyWrites, 0);
+});
+
+test("deployment rejects inaccessible public routes and missing department paths", async (t) => {
+  const { output, env, staged, state } = await deploymentFixture(t);
+  await saveDeployment(env, { staged, directory: output, connection: "managed" });
+  const options = { name: "basins", directory: output };
+  for (const field of ["folderName", "publicName", "serviceMissing"]) {
+    const original = state[field];
+    state[field] = field === "serviceMissing" ? true : "";
+    await assert.rejects(activateDeployment(env, options), /department/);
+    state[field] = original;
+  }
+  assert.equal(state.writes + state.policyWrites, 0);
+  state.publicStatus = 403;
+  await assert.rejects(activateDeployment(env, options), /Anonymous public layer/);
+  state.publicStatus = 200;
+  state.publicId = 8;
+  await assert.rejects(activateDeployment(env, options), /Anonymous public layer/);
+  const file = path.join(output, "basins.deployment.json");
+  const receipt = JSON.parse(await readFile(file, "utf8"));
+  await writeFile(file, JSON.stringify({ ...receipt, cleanSha256: "changed" }));
+  await assert.rejects(readDeployment(env, options), /this server and snapshot/);
 });
 
 test("cleaning retains only allowlisted properties and rejects unusable geometry", () => {

@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { adminFetch } from "../lib/admin-api.mjs";
+import { layersPath, listLayers } from "./import.mjs";
 import { readSnapshot } from "./snapshot.mjs";
 import { getSource } from "./sources.mjs";
 
@@ -15,15 +16,13 @@ function serverUrl(env) {
   return url.href.replace(/\/+$/, "");
 }
 
-function layersPath(receipt) {
-  return `/api/v1/admin/connections/${encodeURIComponent(receipt.connection)}/layers`;
+function servicePath(serviceName) {
+  return `/api/v1/admin/services/${encodeURIComponent(serviceName)}`;
 }
 
 async function verifyLayer(env, receipt) {
-  const response = await adminFetch(env, { method: "GET",
-    apiPath: `${layersPath(receipt)}?serviceName=${encodeURIComponent(receipt.serviceName)}` });
-  const matches = (response?.data?.items ?? response?.data ?? [])
-    .filter((layer) => layer.layerId === receipt.layerId);
+  const layers = await listLayers(env, receipt.connection, receipt.serviceName);
+  const matches = layers.filter((layer) => layer.layerId === receipt.layerId);
   const layer = matches.length === 1 ? matches[0] : null;
   if (!layer || layer.serviceName !== receipt.serviceName || layer.schema !== receipt.schema
     || layer.table !== receipt.table || !layer.description?.includes(`SHA-256 ${receipt.cleanSha256}`)) {
@@ -66,7 +65,7 @@ export async function readDeployment(env, options) {
 
 async function accessPolicy(env, receipt) {
   const response = await adminFetch(env, { method: "GET",
-    apiPath: `/api/v1/admin/services/${encodeURIComponent(receipt.serviceName)}/settings` });
+    apiPath: `${servicePath(receipt.serviceName)}/settings` });
   return response?.data?.accessPolicy;
 }
 
@@ -77,15 +76,15 @@ function publicReadOnly(policy) {
 export async function activateDeployment(env, options) {
   const receipt = await readDeployment(env, options);
   const { layer: current } = await verifyLayer(env, receipt);
-  if (current.enabled !== true) {
-    await adminFetch(env, { method: "PUT",
-      apiPath: `${layersPath(receipt)}/${receipt.layerId}/enabled?serviceName=${encodeURIComponent(receipt.serviceName)}`,
-      body: { enabled: true } });
-  }
   if (!publicReadOnly(await accessPolicy(env, receipt))) {
     await adminFetch(env, { method: "PUT",
-      apiPath: `/api/v1/admin/services/${encodeURIComponent(receipt.serviceName)}/access-policy`,
+      apiPath: `${servicePath(receipt.serviceName)}/access-policy`,
       body: { allowAnonymous: true, allowAnonymousWrite: false } });
+  }
+  if (current.enabled !== true) {
+    await adminFetch(env, { method: "PUT",
+      apiPath: `${layersPath(receipt.connection)}/${receipt.layerId}/enabled?serviceName=${encodeURIComponent(receipt.serviceName)}`,
+      body: { enabled: true } });
   }
   return activeDeployment(env, options);
 }
@@ -95,6 +94,9 @@ export async function activeDeployment(env, options) {
   const { layer: activated, service } = await verifyLayer(env, receipt);
   if (activated.enabled !== true) throw new Error("Layer activation was not confirmed");
   if (!publicReadOnly(await accessPolicy(env, receipt))) throw new Error("Public read-only access was not confirmed");
-  return { ...receipt, enabled: true,
-    layerUrl: `${receipt.baseUrl}/rest/services/${encodeURIComponent(service.folderName)}/${encodeURIComponent(service.publicName)}/FeatureServer/${receipt.layerId}` };
+  const layerUrl = `${receipt.baseUrl}/rest/services/${encodeURIComponent(service.folderName)}/${encodeURIComponent(service.publicName)}/FeatureServer/${receipt.layerId}`;
+  const response = await fetch(`${layerUrl}?f=json`);
+  const metadata = response.ok ? await response.json() : null;
+  if (metadata?.id !== receipt.layerId || metadata.error) throw new Error("Anonymous public layer URL was not confirmed");
+  return { ...receipt, enabled: true, layerUrl };
 }

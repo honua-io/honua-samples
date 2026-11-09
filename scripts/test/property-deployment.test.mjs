@@ -30,12 +30,20 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
     if (url.pathname.endsWith('/services/')) return json({ data: { items: layers } });
+    if (url.pathname.includes('/FeatureServer/')) {
+      assert.equal(options, undefined);
+      return json({ id: Number(url.pathname.split('/').at(-1)) });
+    }
     const layer = layers.find((item) => item.serviceName === url.searchParams.get('serviceName')
       || url.pathname.includes(`/services/${item.serviceName}/`));
     assert.ok(layer);
     if (url.pathname.endsWith('/settings')) return json({ data: { accessPolicy: layer.policy } });
     if (url.pathname.endsWith('/access-policy')) layer.policy = JSON.parse(options.body);
-    else if (options.method === 'PUT') layer.enabled = true;
+    else if (options.method === 'PUT') {
+      assert.equal(url.pathname, `/api/v1/admin/connections/managed/layers/${layer.layerId}/enabled`);
+      assert.equal(url.searchParams.get('serviceName'), layer.serviceName);
+      layer.enabled = true;
+    }
     return json({ data: { items: [layer] } });
   };
   for (const staged of layers) {
