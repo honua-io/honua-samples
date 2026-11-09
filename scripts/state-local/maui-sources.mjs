@@ -1,10 +1,11 @@
 export const mauiBounds = [-157.4, 20.45, -155.95, 21.25];
+const hawaiiBounds = [-161, 18, -154, 23];
 const portal = 'https://geodata.hawaii.gov/arcgis/rest/services/';
 const licenseUrl = 'https://planning.hawaii.gov/gis/download-gis-data-expanded/';
 
 function source(endpoint, department, details) {
   return { id: endpoint, url: `${portal}${endpoint}`, department,
-    license: 'public-domain', licenseUrl, bounds: mauiBounds, geometryBounds: [-161, 18, -154, 23],
+    license: 'public-domain', licenseUrl, bounds: mauiBounds, geometryBounds: hawaiiBounds,
     geometry: { field: 'the_geom' }, ...details };
 }
 const metadata = (file) => `https://files.hawaii.gov/dbedt/op/gis/data/${file}`;

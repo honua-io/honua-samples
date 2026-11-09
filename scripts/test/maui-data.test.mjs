@@ -9,9 +9,9 @@ import { ensureDepartments, departments } from '../state-local/departments.mjs';
 import { fetchSnapshot, readSnapshot } from '../state-local/snapshot.mjs';
 import { stagingServiceName, stagingTableName } from '../state-local/import.mjs';
 
-test('department staging service names fit the server limit without truncating run identity', () => {
+test('staging service names fit the server limit without truncating run identity', () => {
   const runId = 'f'.repeat(32);
-  const name = stagingServiceName('Emergency Management', 'maui-fire-stations', runId);
+  const name = stagingServiceName('maui-fire-stations', runId);
   assert.ok(name.length <= 64);
   assert.ok(!name.includes('--'));
   assert.ok(name.endsWith(`-${runId}`));
@@ -165,8 +165,12 @@ test('PRM-04: fictional permit records are unavailable', async (t) => {
 
 test('all source identifiers retain full run identity within publication and PostgreSQL limits', () => {
   const runId = 'f'.repeat(32);
-  for (const [name, source] of Object.entries(sources)) {
-    const service = stagingServiceName(source.department, name, runId);
+  const readableNames = new Set();
+  for (const name of Object.keys(sources)) {
+    const service = stagingServiceName(name, runId);
+    const readable = service.slice(0, -runId.length - 1);
+    assert.ok(!readableNames.has(readable), name);
+    readableNames.add(readable);
     const table = stagingTableName(name, runId);
     assert.ok(service.length <= 64, name);
     assert.ok(table.length <= 63, name);

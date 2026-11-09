@@ -5,9 +5,8 @@ import { getSource } from "./sources.mjs";
 import { readSnapshot } from "./snapshot.mjs";
 
 // Keep the full random suffix while respecting the server's 64-character limit.
-export function stagingServiceName(department, name, runId) {
-  const prefix = `department-${department.toLowerCase().replaceAll(" ", "-")}-${name}`;
-  return `${prefix.slice(0, 31).replace(/-+$/, "")}-${runId}`;
+export function stagingServiceName(name, runId) {
+  return `${name.slice(0, 31).replace(/-+$/, "")}-${runId}`;
 }
 
 export function stagingTableName(name, runId) {
@@ -65,7 +64,7 @@ export async function stageSnapshot(env, options) {
   const folderId = await departmentFolder(env, source.department);
   const runId = randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);
-  const serviceName = stagingServiceName(source.department, name, runId);
+  const serviceName = stagingServiceName(name, runId);
   const form = new FormData();
   form.set("file", new Blob([JSON.stringify(geojson)], { type: "application/geo+json" }), `${name}.geojson`);
   form.set("TableName", tableName);

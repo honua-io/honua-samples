@@ -59,8 +59,10 @@ source changes detected between before/after metadata and ID checks stop the run
 Attribute edits without editingInfo may remain undetectable: this is not an atomic
 upstream transaction. Field allowlists exclude parcel ownership and free text.
 
-Cleaning checks 2D coordinate structure, closed rings and the Maui Nui envelope
-`[-157.4, 20.45, -155.95, 21.25]`. It neither repairs nor certifies topology.
+Cleaning checks 2D coordinate structure, closed rings and source-specific coordinate
+bounds. The Maui Nui envelope `[-157.4, 20.45, -155.95, 21.25]` selects upstream
+features; intersecting geometries are retained whole. Cleaning neither repairs nor
+certifies topology.
 Receipts contain request URLs, retrieval time, source/output CRS, accepted/rejected
 counts and SHA-256 hashes of raw rows, cleaned GeoJSON, metadata, policy and source
 summary. Stage verifies hashes, provenance and deterministic cleaning before writes.

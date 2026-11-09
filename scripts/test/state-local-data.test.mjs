@@ -125,7 +125,7 @@ test("stage uses multipart import, preserves governance and creates a disabled d
   assert.equal(calls[1].options.headers["X-API-Key"], "test-key");
   assert.equal(calls[1].options.headers["Content-Type"], undefined);
   const published = JSON.parse(calls[2].options.body);
-  assert.match(published.serviceName, /^department-public-works-basins-/);
+  assert.match(published.serviceName, /^basins-/);
   assert.equal(published.enabled, false);
   assert.equal(published.folderId, "works-folder");
   assert.equal(published.table, "managed_basins");

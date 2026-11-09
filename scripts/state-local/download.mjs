@@ -4,6 +4,6 @@ export async function download(url, timeout = 120_000) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-export async function fetchJson(url) {
-  return JSON.parse((await download(url)).toString());
+export async function fetchJson(url, timeout) {
+  return JSON.parse((await download(url, timeout)).toString());
 }

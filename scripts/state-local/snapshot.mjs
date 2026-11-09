@@ -2,7 +2,6 @@ import { generateExercise, readExercise } from "./exercise.mjs";
 import { fetchMauiSnapshot, readMauiSnapshot } from "./maui-snapshot.mjs";
 import { sha256 } from "./checksum.mjs";
 import { fetchJson } from "./download.mjs";
-export { sha256 } from "./checksum.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { cleanRows } from "./clean.mjs";
@@ -42,7 +41,7 @@ async function downloadRows(source) {
   const seen = new Set();
   for (let offset = 0; offset < previewLimit; offset += pageSize) {
     const url = recordsUrl(source, offset);
-    const page = await fetchJson(url);
+    const page = await fetchJson(url, 60_000);
     if (!Array.isArray(page)) throw new Error("Source did not return a record array");
     if (page.length > pageSize) throw new Error("Source exceeded the requested page size");
     for (const row of page) {
@@ -61,10 +60,10 @@ export async function fetchSnapshot(name, directory) {
   if (source.synthetic) return generateExercise({ name, directory, source, anchor: await readSnapshot(source.anchor, directory) });
   if (source.url) return fetchMauiSnapshot({ name, directory, source });
   const metadataUrl = `${portal}/api/views/${source.id}.json`;
-  const metadata = await fetchJson(metadataUrl);
+  const metadata = await fetchJson(metadataUrl, 60_000);
   const initialRevision = revision(metadata, source);
   const { rows, requests } = await downloadRows(source);
-  if (revision(await fetchJson(metadataUrl), source) !== initialRevision) throw new Error("Source changed during pagination; discard and retry");
+  if (revision(await fetchJson(metadataUrl, 60_000), source) !== initialRevision) throw new Error("Source changed during pagination; discard and retry");
   const { geojson, rejected } = cleanRows(rows, source);
   if (!geojson.features.length) throw new Error("Snapshot has no valid features");
   const raw = JSON.stringify(rows);
