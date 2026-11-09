@@ -39,11 +39,21 @@ async function completedUpload(env, uploaded) {
   throw new Error(`Import still pending; inspect Console job ${uploaded.jobId} before retrying`);
 }
 
+async function departmentFolder(env, department) {
+  const folders = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/folders" });
+  const matches = folders?.data?.filter((folder) => !folder.deleted
+    && folder.metadata?.title === department && typeof folder.metadata?.id === "string"
+    && folder.metadata.id.length > 0);
+  if (matches?.length !== 1) throw new Error(`Create exactly one ${department} department folder in Console before staging`);
+  return matches[0].metadata.id;
+}
+
 export async function stageSnapshot(env, options) {
   const { name, directory, connection } = options;
   if (!connection) throw new Error("HONUA_SAMPLE_CONNECTION must name this server's managed import database");
   const source = getSource(name);
   const { receipt, geojson } = await readSnapshot(name, directory);
+  const folderId = await departmentFolder(env, source.department);
   const runId = randomUUID().replaceAll("-", "");
   const tableName = `demo_${name}_${runId}`;
   const serviceName = `${source.department.toLowerCase().replaceAll(" ", "-")}-${name}-${runId}`;
@@ -57,7 +67,7 @@ export async function stageSnapshot(env, options) {
     method: "POST", apiPath: `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers`,
     body: {
       schema: uploaded.schema ?? "honua_data", table: uploaded.physicalTableName,
-      layerName: name, serviceName, srid: 4326, enabled: false,
+      layerName: name, serviceName, folderId, srid: 4326, enabled: false,
       license: source.license === "CC0_10" ? "CC0-1.0" : undefined,
       licenseUrl: source.licenseUrl, attribution: source.attribution,
       sourceUrl: `https://data.nola.gov/d/${source.id}`,
@@ -68,6 +78,6 @@ export async function stageSnapshot(env, options) {
   if (!Number.isInteger(layer?.layerId) || layer.enabled !== false) {
     throw new Error("Publish did not confirm a disabled layer; inspect Console before retrying");
   }
-  return { source: name, serviceName, layerId: layer.layerId, enabled: false,
+  return { source: name, serviceName, folderId, layerId: layer.layerId, enabled: false,
     schema: uploaded.schema ?? "honua_data", table: uploaded.physicalTableName, cleanSha256: receipt.cleanSha256 };
 }

@@ -47,14 +47,20 @@ database. Use an isolated demo server running the current default PostGIS image.
 node scripts/state-local/cli.mjs stage basins artifacts/state-local/run-001
 ```
 
+Create the department folders in Console first, with titles `Planning`,
+`Public Works`, `Emergency Management` and `311`. Folder names must begin with a
+letter; use `planning`, `public-works`, `emergency-management` and
+`service-requests` respectively.
+
 Staging verifies snapshot hashes and rebuilds the cleaned collection before any
 server write. It uploads GeoJSON through `/api/v1/admin/import/upload`, then
 publishes a **disabled** layer through the connection's admin publishing flow.
 It carries source attribution, licence URL and snapshot hash into layer metadata.
-The service names are flat: `planning-<source>-<run>`,
-`public-works-<source>-<run>` and `311-<source>-<run>`. Department folders are an
-unmet requirement: current service routes accept a single path segment.
-Emergency Management awaits cleared sources. Each run creates new names. This is not an idempotent updater.
+Before upload, it resolves exactly one active folder matching the source's
+department title; missing or ambiguous folders stop the run. Publication passes
+that folder ID. Service names also include the department, source and run ID.
+Emergency Management awaits cleared sources. Each run creates new names. This is
+not an idempotent updater.
 Inspect the returned table/service in Console before retrying or removing it;
 failed imports/publications can leave staged tables or jobs.
 
@@ -62,7 +68,10 @@ For background uploads, the script polls the import job and stops with its job I
 The current job-status response does not expose the completed physical table
 receipt, so automated publication cannot safely continue. Review that import in
 Console and publish manually; do not rerun it blindly. Synchronous uploads can
-continue to disabled publication. Real-server validation remains pending.
+continue to disabled publication. A local default PostGIS candidate run imported 5,000 catch basins and confirmed
+EPSG:4326 geometry and disabled publication. Background-import publication
+remains blocked by [the missing completed receipt](https://github.com/honua-io/honua-server/issues/7217).
+This is a bounded pipeline check, not validation of the four demo journeys.
 
 The script does not enable anonymous access or release a Studio application.
 Those steps require a verified candidate-server run and reviewed data. No

@@ -13,6 +13,7 @@ const metadata = { licenseId: "CC0_10", rowsUpdatedAt: 100, viewLastModified: 90
 const point = [-90.08, 29.95];
 const row = (id) => ({ ":id": `row-${id}`, objectid: String(id), gisid: `CB-${id}`,
   the_geom: { type: "Point", coordinates: point }, owner: "EXCLUDE", description: "EXCLUDE" });
+const folders = () => response({ data: [{ metadata: { id: "works-folder", title: "Public Works" } }] });
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status });
 
 async function directory(t) {
@@ -110,6 +111,7 @@ test("stage uses multipart import, preserves governance and creates a disabled d
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options });
+    if (url.endsWith("/folders")) return folders();
     if (url.endsWith("/import/upload")) {
       assert.ok(options.body instanceof FormData);
       assert.equal(JSON.parse(await options.body.get("file").text()).features.length, 1);
@@ -119,12 +121,13 @@ test("stage uses multipart import, preserves governance and creates a disabled d
   };
   const result = await stageSnapshot({ baseUrl: "https://server.test", adminApiKey: "test-key" },
     { name: "basins", directory: output, connection: "managed" });
-  assert.equal(calls.length, 2);
-  assert.equal(calls[0].options.headers["X-API-Key"], "test-key");
-  assert.equal(calls[0].options.headers["Content-Type"], undefined);
-  const published = JSON.parse(calls[1].options.body);
+  assert.equal(calls.length, 3);
+  assert.equal(calls[1].options.headers["X-API-Key"], "test-key");
+  assert.equal(calls[1].options.headers["Content-Type"], undefined);
+  const published = JSON.parse(calls[2].options.body);
   assert.match(published.serviceName, /^public-works-basins-/);
   assert.equal(published.enabled, false);
+  assert.equal(published.folderId, "works-folder");
   assert.equal(published.table, "managed_basins");
   assert.equal(published.license, "CC0-1.0");
   assert.match(published.description, new RegExp(receipt.cleanSha256));
@@ -139,7 +142,7 @@ test("stage rejects missing connection and unexpected upload count before public
   const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
   await assert.rejects(stageSnapshot(env, { name: "basins", directory: output }), /HONUA_SAMPLE_CONNECTION/);
   let calls = 0;
-  globalThis.fetch = async () => { calls++; return response({ featureCount: 2, physicalTableName: "wrong" }); };
+  globalThis.fetch = async (url) => { if (url.endsWith("/folders")) return folders(); calls++; return response({ featureCount: 2, physicalTableName: "wrong" }); };
   await assert.rejects(stageSnapshot(env, { name: "basins", directory: output, connection: "managed" }), /feature count/);
   assert.equal(calls, 1);
 });
@@ -163,6 +166,7 @@ test("stage follows completed async publication and rejects failed or enabled re
   const paths = [];
   globalThis.fetch = async (input) => {
     const url = new URL(input);
+    if (url.pathname.endsWith("/folders")) return folders();
     paths.push(url.pathname);
     if (url.pathname.endsWith("/import/upload")) return response({ featureCount: 1, physicalTableName: "basins" });
     if (url.pathname.endsWith("/jobs/job-id")) return response({ data: { status, layerId: 19 } });
@@ -197,6 +201,7 @@ test("policy source stages without inventing a CC0 licence", async (t) => {
     ? response({ ...metadata, licenseId: undefined }) : response([{ ":id": "cleaning-1", x: point[0], y: point[1] }]));
   await fetchSnapshot("cleanings", output);
   globalThis.fetch = async (input, options) => {
+    if (input.endsWith("/folders")) return folders();
     if (input.endsWith("/import/upload")) return response({ featureCount: 1, physicalTableName: "cleanings" });
     const body = JSON.parse(options.body);
     assert.equal(body.license, undefined);
@@ -217,11 +222,28 @@ test("background upload polls terminal state and never guesses a physical table"
     const paths = [];
     globalThis.fetch = async (input) => {
       const url = new URL(input);
-      paths.push(url.pathname);
+      if (url.pathname.endsWith("/folders")) return folders();
+    paths.push(url.pathname);
       return url.pathname.endsWith("/upload") ? response({ jobId: "upload-job", statusUrl: "https://untrusted.test" }, 202)
         : response({ jobId: "upload-job", status, tableName: "logical-name", featuresProcessed: 1 });
     };
     await assert.rejects(stageSnapshot(env, options), status === 2 ? /physical table receipt/ : /import failed or cancelled/i);
     assert.deepEqual(paths, ["/api/v1/admin/import/upload", "/api/v1/admin/import/jobs/upload-job"]);
+  }
+});
+
+
+test("staging requires exactly one department folder before uploading", async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot("basins", output);
+  const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
+  for (const data of [[], [{ metadata: { id: "other", title: "Planning" } }],
+    [1, 2].map((id) => ({ metadata: { id: String(id), title: "Public Works" } }))]) {
+    globalThis.fetch = async (url) => {
+      assert.ok(url.endsWith("/folders"), "must stop before upload");
+      return response({ data });
+    };
+    await assert.rejects(stageSnapshot(env, { name: "basins", directory: output, connection: "managed" }), /exactly one.*Public Works/);
   }
 });
