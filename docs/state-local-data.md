@@ -125,6 +125,38 @@ Background completion currently stops at the missing physical-table receipt
 ([tracked server issue](https://github.com/honua-io/honua-server/issues/7217));
 synchronous imports can continue. No database credentials belong in browser code.
 
+After staging, the CLI verifies the disabled layer's table, service, snapshot hash
+and department folder, then saves a private `<source>.deployment.json` receipt
+beside the snapshot. The receipt contains the server URL and connection ID, never
+the admin API key. Keep it with the ignored snapshot directory.
+
+Review the imported records and provenance in Console before making them public:
+
+```sh
+node scripts/state-local/cli.mjs activate maui-roads artifacts/state-local/run-001
+```
+
+Activation revalidates the snapshot and deployment receipt against this server,
+checks the current table and folder, grants anonymous read access with anonymous
+writes disabled through the service access-policy API, then enables the layer
+through the managed connection API. It confirms that policy and anonymously
+fetches the public layer metadata to verify its ID. Repeated activation does not
+create another layer. A changed table, service, source hash, folder or
+server stops activation. Staging remains non-idempotent; if saving its receipt
+fails, inspect Console before attempting another import.
+
+After reviewing and activating all nine property layers, build a receipt-bound
+public app link:
+
+```sh
+node scripts/state-local/cli.mjs property-app maui artifacts/state-local/run-001
+```
+
+This read-only command checks every source receipt and its current enabled
+publication, then returns the app URL with all nine explicit layer URLs. It
+disables legacy parcel-outline tiles so fresh parcel geometry is authoritative.
+Missing or disabled layers stop link generation; no old service ID is substituted.
+
 The existing Orleans preview keys remain available for compatibility, with their
 original licence and bounding-box checks. They are not the selected demo community.
 
@@ -138,9 +170,10 @@ attribution for their public-domain geometry anchors.
 
 The approved shared-demo load budget is under 1 GB including indexes: no raster
 loads into PostGIS, simplified display geometry, low-traffic loading, and fewer
-than 130 concurrent database connections. Shared-demo loading waits for founder
-approval of the demo mockups. The small CI sample uses a disposable server and
-imports disabled layers; it never changes the public demo database.
+than 130 concurrent database connections. Use the deployment operator's approved
+credential and monitoring path before loading the shared server; check capacity
+during the load and stop if its budget is exceeded. The small CI sample uses a
+disposable server and imports disabled layers; it never changes the public demo database.
 
 ## Verification
 
