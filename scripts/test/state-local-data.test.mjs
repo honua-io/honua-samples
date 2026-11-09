@@ -6,6 +6,7 @@ import test from "node:test";
 import { adminFetch } from "../lib/admin-api.mjs";
 import { cleanRows } from "../state-local/clean.mjs";
 import { stageSnapshot } from "../state-local/import.mjs";
+import { activateDeployment, readDeployment, saveDeployment } from "../state-local/deployment.mjs";
 import { fetchSnapshot, readSnapshot } from "../state-local/snapshot.mjs";
 import { getSource, sources } from "../state-local/sources.mjs";
 
@@ -33,6 +34,60 @@ function sourceFetch(t, records = [row(1)]) {
   });
   return requests;
 }
+
+async function deploymentFixture(t) {
+  const output = await directory(t);
+  sourceFetch(t);
+  const receipt = await fetchSnapshot("basins", output);
+  const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
+  const staged = { source: "basins", serviceName: "basins-test", folderId: "works-folder",
+    layerId: 7, enabled: false, schema: "honua_data", table: "managed_basins", cleanSha256: receipt.cleanSha256 };
+  const state = { layer: { ...staged, description: `SHA-256 ${receipt.cleanSha256}` }, folderId: staged.folderId, writes: 0 };
+  globalThis.fetch = async (input, options) => {
+    const url = new URL(input);
+    if (url.pathname.endsWith("/enabled")) {
+      assert.equal(options.method, "PUT");
+      assert.deepEqual(JSON.parse(options.body), { enabled: true });
+      state.layer.enabled = true;
+      state.writes++;
+      return response({ data: state.layer });
+    }
+    if (url.pathname.endsWith("/services/")) return response({ data: { items: [{ serviceName: staged.serviceName, folderId: state.folderId, folderName: "public-works", publicName: "public-basins" }] } });
+    return response({ data: { items: [state.layer] } });
+  };
+  return { output, env, staged, state };
+}
+
+test("deployment activation rechecks table, snapshot, service and department before enabling, and is repeatable", async (t) => {
+  const { output, env, staged, state } = await deploymentFixture(t);
+  const saved = await saveDeployment(env, { staged, directory: output, connection: "managed" });
+  assert.equal(saved.baseUrl, env.baseUrl);
+  assert.equal(JSON.stringify(saved).includes(env.adminApiKey), false);
+  const options = { name: "basins", directory: output };
+  const active = await activateDeployment(env, options);
+  assert.equal(active.layerUrl, "https://server.test/rest/services/public-works/public-basins/FeatureServer/7");
+  assert.equal(active.enabled, true);
+  await activateDeployment(env, options);
+  assert.equal(state.writes, 1);
+  await assert.rejects(saveDeployment(env, { staged, directory: output, connection: "managed" }), /remain disabled/);
+});
+
+test("deployment activation refuses drift and server changes without enabling anything", async (t) => {
+  const { output, env, staged, state } = await deploymentFixture(t);
+  await saveDeployment(env, { staged, directory: output, connection: "managed" });
+  const options = { name: "basins", directory: output };
+  await assert.rejects(readDeployment({ ...env, baseUrl: "https://other.test" }, options), /this server/);
+  for (const changes of [{ table: "other_table" }, { schema: "other_schema" },
+    { description: "SHA-256 changed" }, { serviceName: "other-service" }, { layerId: 8 }]) {
+    const original = { ...state.layer };
+    Object.assign(state.layer, changes);
+    await assert.rejects(activateDeployment(env, options), /no longer matches/);
+    state.layer = original;
+  }
+  state.folderId = "other-folder";
+  await assert.rejects(activateDeployment(env, options), /department folder/);
+  assert.equal(state.writes, 0);
+});
 
 test("cleaning retains only allowlisted properties and rejects unusable geometry", () => {
   const invalid = [null, [], [[-90.08], [29.95]], [{ valueOf: () => -90.08 }, 29.95], [0, 0], [-90.08, null], ["", 29.95], [-91, 30], [-90.08, 29.95, 0]];

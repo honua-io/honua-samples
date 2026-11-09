@@ -1,7 +1,7 @@
 {
   "id": "maui-data-pipeline",
   "title": "Maui County department data pipeline",
-  "description": "Fetch a small real Maui fire-station snapshot, verify source terms and checksums, and import it into an Emergency Management folder for review. Source layers stay disabled until approved.",
+  "description": "Fetch a small real Maui fire-station snapshot, verify source terms and checksums, import it into Emergency Management, then activate the reviewed layer and verify its anonymous public query on a disposable server.",
   "contentKind": "walkthrough",
   "learning": {
     "goal": "connect-data",
