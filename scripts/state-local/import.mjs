@@ -4,6 +4,12 @@ import { adminFetch } from "../lib/admin-api.mjs";
 import { getSource } from "./sources.mjs";
 import { readSnapshot } from "./snapshot.mjs";
 
+// Keep the full random suffix while respecting the server's 64-character limit.
+export function stagingServiceName(department, name, runId) {
+  const prefix = `${department.toLowerCase().replaceAll(" ", "-")}-${name}`;
+  return `${prefix.slice(0, 31).replace(/-+$/, "")}-${runId}`;
+}
+
 async function publishedLayer(env, publication) {
   const { response, connection, serviceName } = publication;
   if (!response?.data?.jobId) return response?.data;
@@ -14,7 +20,7 @@ async function publishedLayer(env, publication) {
     if (["Failed", "Cancelled"].includes(job?.data?.status)) throw new Error("Layer publication failed; inspect Console before retrying");
     if (job?.data?.status === "Completed") {
       const layers = await adminFetch(env, { method: "GET", apiPath: `${root}?serviceName=${encodeURIComponent(serviceName)}` });
-      return layers?.data?.find((layer) => layer.layerId === job.data.layerId);
+      return (layers?.data?.items ?? layers?.data)?.find((layer) => layer.layerId === job.data.layerId);
     }
     await setTimeout(500);
   }
@@ -31,7 +37,6 @@ async function completedUpload(env, uploaded) {
       throw new Error(`Import failed or cancelled; inspect Console job ${uploaded.jobId} before retrying`);
     }
     if ([2, "Completed"].includes(job?.status)) {
-      // ImportProgress exposes the logical table, not ImportResult.PhysicalTableName.
       throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
     }
     await setTimeout(500);
@@ -55,8 +60,8 @@ export async function stageSnapshot(env, options) {
   const { receipt, geojson } = await readSnapshot(name, directory);
   const folderId = await departmentFolder(env, source.department);
   const runId = randomUUID().replaceAll("-", "");
-  const tableName = `demo_${name}_${runId}`;
-  const serviceName = `${source.department.toLowerCase().replaceAll(" ", "-")}-${name}-${runId}`;
+  const tableName = `demo_${name.replaceAll("-", "_")}_${runId}`;
+  const serviceName = stagingServiceName(source.department, name, runId);
   const form = new FormData();
   form.set("file", new Blob([JSON.stringify(geojson)], { type: "application/geo+json" }), `${name}.geojson`);
   form.set("TableName", tableName);
@@ -68,10 +73,11 @@ export async function stageSnapshot(env, options) {
     body: {
       schema: uploaded.schema ?? "honua_data", table: uploaded.physicalTableName,
       layerName: name, serviceName, folderId, srid: 4326, enabled: false,
-      license: source.license === "CC0_10" ? "CC0-1.0" : undefined,
+      license: source.license === "public-domain" ? "LicenseRef-Hawaii-Statewide-GIS-Public-Domain"
+        : source.license === "CC0_10" ? "CC0-1.0" : source.license ?? undefined,
       licenseUrl: source.licenseUrl, attribution: source.attribution,
-      sourceUrl: `https://data.nola.gov/d/${source.id}`,
-      description: `Ordered preview, at most ${receipt.selection.limit} source rows; not a complete dataset. SHA-256 ${receipt.cleanSha256}`,
+      sourceUrl: source.url ?? `https://data.nola.gov/d/${source.id}`,
+      description: `${receipt.selection.kind}; ${receipt.accepted} accepted, ${receipt.rejected} rejected. SHA-256 ${receipt.cleanSha256}`,
     },
   });
   const layer = await publishedLayer(env, { response: published, connection, serviceName });

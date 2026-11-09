@@ -1,3 +1,5 @@
+import { generateExercise, readExercise } from "./exercise.mjs";
+import { fetchMauiSnapshot, readMauiSnapshot } from "./maui-snapshot.mjs";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -64,6 +66,8 @@ async function downloadRows(source) {
 
 export async function fetchSnapshot(name, directory) {
   const source = getSource(name);
+  if (source.synthetic) return generateExercise({ name, directory, source });
+  if (source.url) return fetchMauiSnapshot({ name, directory, source });
   const metadataUrl = `${portal}/api/views/${source.id}.json`;
   const metadata = await fetchJson(metadataUrl);
   const initialRevision = revision(metadata, source);
@@ -105,6 +109,9 @@ function checkProvenance(receipt, source, rows) {
 }
 
 export async function readSnapshot(name, directory) {
+  const mauiSource = getSource(name);
+  if (mauiSource.synthetic) return readExercise({ name, directory, source: mauiSource });
+  if (mauiSource.url) return readMauiSnapshot({ name, directory, source: mauiSource });
   const receipt = JSON.parse(await readFile(path.join(directory, `${name}.receipt.json`), "utf8"));
   const raw = await readFile(path.join(directory, `${name}.raw.json`), "utf8");
   const clean = await readFile(path.join(directory, `${name}.geojson`), "utf8");

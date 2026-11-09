@@ -1,0 +1,160 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import { fetchSnapshot, readSnapshot } from '../state-local/snapshot.mjs';
+import { stagingServiceName } from '../state-local/import.mjs';
+
+test('department staging service names fit the server limit without truncating run identity', () => {
+  const runId = 'f'.repeat(32);
+  const name = stagingServiceName('Emergency Management', 'maui-fire-stations', runId);
+  assert.ok(name.length <= 64);
+  assert.ok(!name.includes('--'));
+  assert.ok(name.endsWith(`-${runId}`));
+  assert.match(name, /^[a-z0-9-]+$/);
+});
+
+const response = (body) => new Response(JSON.stringify(body));
+const metadata = { name: 'Maui roads', fields: [{ name: 'objectid', type: 'esriFieldTypeOID' }],
+  extent: { spatialReference: { wkid: 102202, latestWkid: 3750 } } };
+const feature = (id) => ({ type: 'Feature', properties: { objectid: id, fullname: `Road ${id}`, owner: 'excluded' },
+  geometry: { type: 'LineString', coordinates: [[-156.5, 20.8], [-156.49, 20.81]] } });
+
+async function directory(t) {
+  const value = await mkdtemp(path.join(os.tmpdir(), 'honua-maui-'));
+  t.after(() => rm(value, { recursive: true, force: true }));
+  return value;
+}
+
+function sourceFetch(t, overrides = {}) {
+  const requests = [];
+  t.mock.method(globalThis, 'fetch', async (input) => {
+    const url = new URL(input);
+    requests.push(url);
+    if (url.pathname.endsWith('/query')) {
+      if (url.searchParams.has('returnIdsOnly')) return response(overrides.selection ?? { objectIds: Array.from({ length: 101 }, (_, i) => i + 1) });
+      const ids = url.searchParams.get('objectIds').split(',').map(Number);
+      return response(overrides.page ?? { type: 'FeatureCollection', features: ids.map(feature) });
+    }
+    if (url.searchParams.get('f') === 'json') return response(overrides.metadata ?? metadata);
+    if (url.pathname.endsWith('.pdf')) return new Response('source summary');
+    return new Response(overrides.policy ?? 'The contents of this web page are public domain');
+  });
+  return requests;
+}
+
+test('Maui pagination preserves all selected IDs, explicit reprojection and attribution', async (t) => {
+  const output = await directory(t);
+  const requests = sourceFetch(t);
+  const receipt = await fetchSnapshot('maui-roads', output);
+  const snapshot = await readSnapshot('maui-roads', output);
+  assert.equal(snapshot.geojson.features.length, 101);
+  assert.equal(snapshot.geojson.features.at(-1).id, '101');
+  assert.equal(snapshot.geojson.features[0].properties.owner, undefined);
+  assert.deepEqual(receipt.sourceCrs, { wkid: 102202, latestWkid: 3750 });
+  assert.equal(receipt.outputCrs, 'EPSG:4326');
+  assert.equal(receipt.license, 'public-domain');
+  assert.match(receipt.attribution, /County of Maui/);
+  assert.equal(receipt.selection.completeDataset, false);
+  const pages = requests.filter((url) => url.searchParams.has('objectIds'));
+  assert.deepEqual(pages.map((url) => url.searchParams.get('objectIds').split(',').length), [100, 1]);
+  assert.ok(pages.every((url) => url.searchParams.get('outSR') === '4326'));
+});
+
+test('Maui rejects changed terms and unknown native CRS before accepting a snapshot', async (t) => {
+  const output = await directory(t);
+  sourceFetch(t, { policy: 'All rights reserved' });
+  await assert.rejects(fetchSnapshot('maui-roads', output), /terms changed/);
+  t.mock.restoreAll();
+  sourceFetch(t, { metadata: { ...metadata, extent: {} } });
+  await assert.rejects(fetchSnapshot('maui-roads', output), /Unexpected source CRS/);
+});
+
+test('Maui rejects duplicate or truncated ID selections and incomplete pages', async (t) => {
+  const output = await directory(t);
+  for (const selection of [{ objectIds: [1, 1] }, { objectIds: [1], exceededTransferLimit: true }, { objectIds: ['1'] }]) {
+    sourceFetch(t, { selection });
+    await assert.rejects(fetchSnapshot('maui-roads', output), /ID selection/);
+    t.mock.restoreAll();
+  }
+  for (const page of [{ type: 'FeatureCollection', features: [] },
+    { type: 'FeatureCollection', features: [feature(1)], exceededTransferLimit: true },
+    { type: 'FeatureCollection', features: [feature(1)], crs: { properties: { name: 'EPSG:3857' } } }]) {
+    sourceFetch(t, { selection: { objectIds: [1] }, page });
+    await assert.rejects(fetchSnapshot('maui-roads', output), /missing|untruncated/);
+    t.mock.restoreAll();
+  }
+});
+
+test('Maui detects source inventory changes during download', async (t) => {
+  const output = await directory(t);
+  let selections = 0;
+  const original = sourceFetch(t);
+  const mockedFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => new URL(input).searchParams.has('returnIdsOnly')
+    ? response({ objectIds: ++selections === 1 ? [1] : [1, 2] }) : mockedFetch(input);
+  await assert.rejects(fetchSnapshot('maui-roads', output), /changed during download/);
+  assert.ok(original.length > 0);
+});
+
+test('Maui checksum and query provenance are verified before any server import', async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot('maui-roads', output);
+  for (const suffix of ['raw', 'geojson', 'metadata', 'policy', 'summary']) {
+    const file = path.join(output, `maui-roads.${suffix}`);
+    const original = await readFile(file);
+    await writeFile(file, Buffer.concat([original, Buffer.from('corrupt')]));
+    await assert.rejects(readSnapshot('maui-roads', output), /checksum mismatch/);
+    await writeFile(file, original);
+  }
+  const file = path.join(output, 'maui-roads.receipt.json');
+  const original = JSON.parse(await readFile(file, 'utf8'));
+  for (const changed of [{ requests: ['https://example.test/unrelated'] }, { department: 'wrong' },
+    { outputCrs: 'EPSG:3857' }, { selectedIds: [1] }, { retrievedAt: 'invalid' }]) {
+    await writeFile(file, JSON.stringify({ ...original, ...changed }));
+    await assert.rejects(readSnapshot('maui-roads', output), /provenance mismatch/);
+  }
+});
+
+test('SR-02/SR-03: 468 fictional requests cover twelve weeks with labels, joins and anchor checksum', async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot('maui-roads', output);
+  await fetchSnapshot('maui-demo-requests', output);
+  const snapshot = await readSnapshot('maui-demo-requests', output);
+  assert.equal(snapshot.geojson.features.length, 468);
+  assert.equal(new Set(snapshot.geojson.features.map(({ properties }) => properties.created_at)).size, 84);
+  for (const { properties } of snapshot.geojson.features) {
+    assert.equal(properties.is_demo, true);
+    assert.equal(properties.exercise_only, true);
+    assert.equal(properties.data_origin, 'synthetic_demo');
+    assert.match(properties.display_label, /DEMO DATA/);
+    assert.match(properties.operational_use, /Not a real/);
+    assert.equal(properties.asset_id, `maui-roads:${properties.anchor_feature_id}`);
+  }
+  assert.equal(snapshot.receipt.license, 'CC0-1.0');
+  const file = path.join(output, 'maui-demo-requests.geojson');
+  const edited = JSON.parse(await readFile(file, 'utf8'));
+  edited.features[0].properties.is_demo = false;
+  await writeFile(file, JSON.stringify(edited));
+  await assert.rejects(readSnapshot('maui-demo-requests', output), /anchor provenance mismatch/);
+});
+
+test('PW-03: fictional work orders cover 34 records and all five exercise stages', async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot('maui-roads', output);
+  await fetchSnapshot('maui-demo-work-orders', output);
+  const { geojson } = await readSnapshot('maui-demo-work-orders', output);
+  assert.equal(geojson.features.length, 34);
+  assert.equal(new Set(geojson.features.map(({ properties }) => properties.status)).size, 5);
+  for (const { properties } of geojson.features) {
+    assert.equal(properties.closed_at !== null, properties.status === 'exercise_closed');
+  }
+});
+
+test('PRM-04: fictional permit records are unavailable', async (t) => {
+  await assert.rejects(fetchSnapshot('maui-demo-permits', await directory(t)), /Unknown source/);
+});

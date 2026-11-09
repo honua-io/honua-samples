@@ -6,8 +6,8 @@ export function serverEnv() {
   return { baseUrl, adminApiKey };
 }
 
-export async function adminFetch(env, { method, apiPath, body }) {
-  const headers = { "X-API-Key": env.adminApiKey };
+export async function adminFetchResponse(env, { method, apiPath, body, headers: requestHeaders }) {
+  const headers = { ...requestHeaders, "X-API-Key": env.adminApiKey };
   let payload = body;
   if (body !== undefined && !(body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
@@ -21,5 +21,9 @@ export async function adminFetch(env, { method, apiPath, body }) {
   if (!response.ok || json?.success === false) {
     throw new Error(`${method} ${apiPath} -> HTTP ${response.status}: ${text.slice(0, 500)}`);
   }
-  return json;
+  return { json, headers: response.headers };
+}
+
+export async function adminFetch(env, request) {
+  return (await adminFetchResponse(env, request)).json;
 }

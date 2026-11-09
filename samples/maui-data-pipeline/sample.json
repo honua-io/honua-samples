@@ -1,0 +1,33 @@
+{
+  "id": "maui-data-pipeline",
+  "title": "Maui County department data pipeline",
+  "description": "Fetch a small real Maui fire-station snapshot, verify source terms and checksums, and import it into an Emergency Management folder for review. Source layers stay disabled until approved.",
+  "contentKind": "walkthrough",
+  "learning": {
+    "goal": "connect-data",
+    "level": "advanced",
+    "estimatedMinutes": 10,
+    "prerequisites": [
+      "Local Honua Server candidate with department folders",
+      "Node.js 22+",
+      "Network access to Hawaii Statewide GIS"
+    ]
+  },
+  "dataMode": "local-integration",
+  "auth": "admin-api-key",
+  "capabilities": [
+    "import.file"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "honua-admin-rest"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "node",
+    "command": "node src/run.mjs"
+  },
+  "status": "active"
+}

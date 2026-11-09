@@ -1,3 +1,5 @@
+import { exerciseSources } from "./exercise.mjs";
+import { mauiSources } from "./maui-sources.mjs";
 const portalPolicy = "https://nola.gov/nola/media/CAO/Policy/No-AA135-Data-Policy.pdf";
 
 function source(id, department, details) {
@@ -10,6 +12,8 @@ const cc0 = (attribution) => ({
 const cityPolicy = (attribution) => ({ license: null, licenseUrl: portalPolicy, attribution });
 
 export const sources = {
+  ...mauiSources,
+  ...exerciseSources,
   parcels: source("v9q5-fz7t", "Planning", {
     fields: ["geopin", "situs_number", "situs_dir", "situs_street", "situs_type", "acres"],
     geometry: { field: "the_geom" }, ...cityPolicy("City of New Orleans — parcels; Policy 135 §V.2"),

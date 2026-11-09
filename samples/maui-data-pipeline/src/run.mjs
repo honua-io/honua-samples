@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { adminFetch, serverEnv } from '../../../scripts/lib/admin-api.mjs';
+import { ensureConnection } from '../../../scripts/lib/sample-connection.mjs';
+import { ensureDepartments } from '../../../scripts/state-local/departments.mjs';
+import { fetchSnapshot } from '../../../scripts/state-local/snapshot.mjs';
+import { stageSnapshot } from '../../../scripts/state-local/import.mjs';
+
+const env = serverEnv();
+const connection = process.env.HONUA_SAMPLE_CONNECTION ?? 'local';
+const root = fileURLToPath(new URL('../../../artifacts/state-local/ci/', import.meta.url));
+await mkdir(root, { recursive: true });
+const directory = await mkdtemp(`${root}maui-`);
+await ensureConnection(env, connection);
+await ensureDepartments(env);
+const name = 'maui-fire-stations';
+const receipt = await fetchSnapshot(name, directory);
+assert.ok(receipt.accepted > 0, 'EM data: the real source must contain fire stations');
+assert.equal(receipt.rejected, 0, 'EM data: no silent feature loss');
+const staged = await stageSnapshot(env, { name, directory, connection });
+const { data: layers } = await adminFetch(env, { method: 'GET',
+  apiPath: `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers?serviceName=${staged.serviceName}` });
+const layer = layers.items.find((entry) => entry.layerId === staged.layerId);
+assert.equal(layer.enabled, false, 'Imported source must wait for publication approval');
+const { data: services } = await adminFetch(env, { method: 'GET', apiPath: '/api/v1/admin/services/' });
+const service = services.items.find((entry) => entry.serviceName === staged.serviceName);
+assert.equal(service.folderId, staged.folderId, 'Imported source must belong to its department');
+assert.equal(layer.license, 'LicenseRef-Hawaii-Statewide-GIS-Public-Domain');
+assert.equal(layer.licenseUrl, receipt.licenseUrl);
+assert.equal(layer.attribution, receipt.attribution);
+assert.match(layer.description, new RegExp(receipt.cleanSha256));
+console.log(`PASS Maui real-source import: ${receipt.accepted} stations; Emergency Management; disabled; licence and checksum retained`);

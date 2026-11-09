@@ -17,6 +17,7 @@
 // pixel), never a fixed sleep.
 
 import { adminFetch, serverEnv } from "../lib/admin-api.mjs";
+import { ensureConnection } from "../lib/sample-connection.mjs";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -102,21 +103,6 @@ export function outsidePoint(fixture, view) {
   return candidate;
 }
 
-
-async function ensureConnection(env, name) {
-  const existing = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/connections" });
-  if ((existing.data ?? []).some((connection) => connection.name === name)) return;
-  await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/connections", body: {
-    name,
-    host: process.env.HONUA_SAMPLE_DB_HOST ?? "postgres",
-    port: 5432,
-    databaseName: "honua_dev",
-    username: "honua_user",
-    password: "honua_password",
-    sslRequired: false,
-    sslMode: "Prefer",
-  } });
-}
 
 /**
  * Imports the fixture into a fresh table and publishes it as a FeatureServer
