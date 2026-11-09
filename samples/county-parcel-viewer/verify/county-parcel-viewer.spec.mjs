@@ -320,3 +320,119 @@ test("framed in the gallery, the app offers its own full-screen link to the sele
   await expect(app.locator("#fullscreen")).toBeVisible();
   await expect(app.locator("#fullscreen")).toHaveAttribute("href", appUrl({ tmk: WAILUKU_TMK }));
 });
+
+test("PRM-04 County permit handoff preserves the original TMK without inventing URL prefill", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: server.url });
+  await page.goto(appUrl({ tmk: WAILUKU_TMK }));
+  await settled(page);
+  await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass");
+  await expect(page.locator("#permit-tmk")).toHaveValue(WAILUKU_TMK);
+  await expect(page.locator("#county-permit-link")).toHaveAttribute("href", "https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx");
+  await page.getByRole("button", { name: "Copy TMK", exact: true }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(WAILUKU_TMK);
+  await expect(page.locator(".permit-handoff")).toContainText("Automatic TMK prefill is not verified");
+});
+
+test("PRM-11 PRM-13 PRM-14 missing planning layers remain unknown; plan boundaries do not become designations", async ({ page }) => {
+  await page.goto(appUrl());
+  await settled(page);
+  await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass");
+  await expect(page.locator(".planning-result[data-state=unconfigured]")).toHaveCount(6);
+  await expect(page.locator(".planning-stack")).toContainText("Community-plan area boundaries do not establish land-use designations");
+  await expect(page.locator(".planning-stack")).toContainText("No conflict or buildability conclusion is available");
+  expect(queries((request) => !/maui-parcels|maui-zoning|maui-flood-hazard/u.test(request.url))).toEqual([]);
+});
+
+test("PRM-10 property planning and County handoff remain usable at 390 pixels", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(appUrl());
+  await settled(page);
+  await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.locator("#county-permit-link").scrollIntoViewIfNeeded();
+  await expect(page.locator("#county-permit-link")).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath("PRM-10-property-mobile.png") });
+});
+
+
+test("PRM-11 PRM-17 a connected planning layer uses its declared ID field and retries failed screening", async ({ page }) => {
+  const layerUrl = `${DATA_BASE}/rest/services/planning-test/FeatureServer/7`;
+  const parcel = await liveParcel(EXAMPLE_TMK);
+  let queryFails = true;
+  let paginationIncomplete = true;
+  await page.route(`${layerUrl}**`, async (route) => {
+    if (!new URL(route.request().url()).pathname.endsWith("/query")) {
+      await route.fulfill({ json: { id: 7, name: "Planning test fixture", type: "Feature Layer", geometryType: "esriGeometryPolygon", objectIdField: "source_id", spatialReference: { wkid: 4326 }, fields: [
+        { name: "source_id", type: "esriFieldTypeOID" }, { name: "ludcode", type: "esriFieldTypeString" },
+      ], capabilities: "Query", advancedQueryCapabilities: { supportsPagination: true } } });
+      return;
+    }
+    if (queryFails) await route.fulfill({ status: 503, json: { error: { code: 503, message: "Test outage" } } });
+    else if (paginationIncomplete) await route.fulfill({ json: { features: [], exceededTransferLimit: true } });
+    else await route.fulfill({ json: { objectIdFieldName: "source_id", geometryType: "esriGeometryPolygon", spatialReference: { wkid: 4326 }, features: [
+      { attributes: { source_id: 47, ludcode: "U" }, geometry: parcel.geometry },
+    ] } });
+  });
+  await page.goto(appUrl({ stateLandUseUrl: layerUrl }));
+  const layer = page.locator('[data-planning-layer="stateLandUseUrl"]');
+  await expect(layer.locator(".planning-result")).toHaveAttribute("data-state", "error");
+  await expect(layer).toContainText("Applicability unknown");
+  queryFails = false;
+  await layer.getByRole("button", { name: "Retry layer check" }).click();
+  await expect(layer.locator(".planning-result")).toHaveAttribute("data-state", "error");
+  await expect(layer).toContainText("Applicability unknown");
+  paginationIncomplete = false;
+  await layer.getByRole("button", { name: "Retry layer check" }).click();
+  await expect(layer.locator(".planning-result")).toHaveAttribute("data-state", "success");
+  await expect(layer).toContainText("Urban");
+  await expect(layer).toContainText("Hawaiʻi Land Use Commission");
+  const citation = layer.getByRole("link", { name: "Source feature 47", exact: true });
+  expect(new URL(await citation.getAttribute("href")).searchParams.get("where")).toBe("source_id=47");
+  const requests = seen.filter((request) => request.url.startsWith(`${layerUrl}/query`));
+  expect(requests.every((request) => request.method === "POST")).toBe(true);
+  expect(new URLSearchParams(requests.at(-1).body).get("outFields").split(",")).toContain("source_id");
+});
+
+
+test("PRM-11 a connected layer with no features reports screening absence without a determination", async ({ page }) => {
+  const layerUrl = `${DATA_BASE}/rest/services/empty-planning-test/FeatureServer/7`;
+  await page.route(`${layerUrl}**`, (route) => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith("/query")
+    ? { features: [], exceededTransferLimit: false }
+    : { id: 7, name: "Empty planning fixture", type: "Feature Layer", geometryType: "esriGeometryPolygon", objectIdField: "id", fields: [{ name: "id", type: "esriFieldTypeOID" }, { name: "ludcode", type: "esriFieldTypeString" }], capabilities: "Query" } }));
+  await page.goto(appUrl({ stateLandUseUrl: layerUrl }));
+  const layer = page.locator('[data-planning-layer="stateLandUseUrl"]');
+  await expect(layer.locator(".planning-result")).toHaveAttribute("data-state", "empty");
+  await expect(layer).toContainText("No positive-area overlap in this source snapshot. This is not a determination.");
+  await expect(layer.getByRole("link", { name: "Layer reference", exact: true })).toHaveAttribute("href", layerUrl);
+  await expect(layer.getByRole("link", { name: /^Source feature/u })).toHaveCount(0);
+});
+
+test("PRM-12 an incomplete zoning polygon makes the result unknown", async ({ page }) => {
+  const parcel = await liveParcel(EXAMPLE_TMK);
+  await page.route("**/rest/services/maui-zoning/FeatureServer/2/query**", (route) => route.fulfill({ json: {
+    features: [{ attributes: { id: 47 }, geometry: parcel.geometry }], exceededTransferLimit: false,
+  } }));
+  await page.goto(appUrl());
+  await settled(page);
+  await expect(page.locator("body")).toHaveAttribute("data-zoning-state", "error");
+  await expect(page.locator("#zoning-body")).toContainText("Zoning check failed.");
+  await expect(page.locator("#zoning-body")).not.toContainText("Not in the county zoning layer");
+});
+
+for (const missing of ["metadata", "value"]) {
+  test(`PRM-04 missing TMK ${missing} prevents an empty County permit handoff`, async ({ page }) => {
+    await page.route(`${PARCELS}**`, async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      if (new URL(route.request().url()).pathname.endsWith("/query")) {
+        if (missing === "value") for (const feature of body.features ?? []) delete feature.attributes.tmk_txt;
+      } else if (missing === "metadata") body.fields = (body.fields ?? []).filter((field) => field.name !== "tmk_txt");
+      await route.fulfill({ response, json: body });
+    });
+    await page.goto(appUrl());
+    await settled(page);
+    await expect(page.locator("body")).toHaveAttribute("data-sample-status", "fail");
+    await expect(page.locator("#county-permit-link")).toHaveCount(0);
+    await expect(page.locator("#panel-inner [role=alert]")).toBeVisible();
+  });
+}

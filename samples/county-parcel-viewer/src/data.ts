@@ -36,6 +36,8 @@ interface LayerHandle {
   readonly client: HonuaClient;
   readonly serviceId: string;
   readonly layerId: number;
+  readonly idField: string;
+  readonly fields: ReadonlySet<string>;
 }
 
 const handles = new Map<string, Promise<LayerHandle>>();
@@ -58,7 +60,11 @@ export function layer(url: string): Promise<LayerHandle> {
         authorizationScopeFingerprint: "anonymous-public",
         clientOptions: { fetchFn: loggedFetch, timeoutMs: 30_000 },
       });
-      return { client: connection.dataset.client, serviceId, layerId };
+      const client = connection.dataset.client;
+      const metadata = await client.getLayerMetadata(serviceId, layerId);
+      const idField = metadata.objectIdField;
+      if (!idField || !/^[a-zA-Z_][a-zA-Z0-9_]*$/u.test(idField)) throw new Error("Layer has no valid object ID field.");
+      return { client, serviceId, layerId, idField, fields: new Set(metadata.fields?.map((field) => field.name)) };
     })();
     // A failed discovery is retried on the next call, not cached.
     handle.catch(() => handles.delete(url));
@@ -72,9 +78,11 @@ function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unk
   const esri = feature.geometry as { rings?: number[][][] } | null | undefined;
   const geometry = esriGeometryToGeoJSON(esri as Record<string, unknown> | null);
   if (!esri?.rings?.length || !geometry) throw new Error("The parcel layer returned a parcel without a polygon.");
+  const tmk = attributes["tmk_txt"];
+  if (typeof tmk !== "string" || !tmk.trim()) throw new Error("The parcel has no source TMK; County permit lookup is unavailable.");
   const number = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
   return {
-    tmk: String(attributes["tmk_txt"] ?? ""),
+    tmk,
     gisAcres: number(attributes["gisacres"]),
     taxAcres: number(attributes["taxacres"]),
     qpubLink: attributes["qpub_link"],
@@ -83,15 +91,20 @@ function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unk
   };
 }
 
-const PARCEL_FIELDS = ["tmk_txt", "gisacres", "taxacres", "qpub_link"];
+const OPTIONAL_PARCEL_FIELDS = ["gisacres", "taxacres", "qpub_link"];
+
+function parcelFields(fields: ReadonlySet<string>): string[] {
+  if (!fields.has("tmk_txt")) throw new Error("The parcel layer has no source TMK field.");
+  return ["tmk_txt", ...OPTIONAL_PARCEL_FIELDS.filter((field) => fields.has(field))];
+}
 
 /** The parcel with this TMK, or null. `digits` must already be validated. */
 export async function parcelByTmk(config: ViewerConfig, digits: string, signal: AbortSignal): Promise<Parcel | null> {
   const where = tmkWhere(digits);
-  const { client, serviceId, layerId } = await layer(config.parcelsUrl);
+  const { client, serviceId, layerId, fields } = await layer(config.parcelsUrl);
   const response = await QueryBuilder.for(client, serviceId, layerId)
     .where(where)
-    .outFields(...PARCEL_FIELDS)
+    .outFields(...parcelFields(fields))
     .returnGeometry(true)
     .limit(2)
     .extraParams({ outSR: 4326 })
@@ -103,14 +116,14 @@ export async function parcelByTmk(config: ViewerConfig, digits: string, signal: 
 
 /** The parcel under a WGS84 point (map click or geocoded address), or null. */
 export async function parcelAtPoint(config: ViewerConfig, lngLat: readonly [number, number], signal: AbortSignal): Promise<Parcel | null> {
-  const { client, serviceId, layerId } = await layer(config.parcelsUrl);
+  const { client, serviceId, layerId, fields } = await layer(config.parcelsUrl);
   const filter = point(lngLat[0], lngLat[1], { wkid: 4326 });
   const response = await QueryBuilder.for(client, serviceId, layerId)
     .where("1=1")
     .geometry(filter.geometry)
     .geometryType(filter.geometryType)
     .spatialRel("esriSpatialRelIntersects")
-    .outFields(...PARCEL_FIELDS)
+    .outFields(...parcelFields(fields))
     .returnGeometry(true)
     .limit(1)
     .extraParams({ outSR: 4326 })
@@ -128,12 +141,11 @@ export async function parcelAtPoint(config: ViewerConfig, lngLat: readonly [numb
 export async function candidatesFor(
   layerUrl: string,
   parcel: Parcel,
-  fields: { code: string; label?: string },
-  signal: AbortSignal,
+  options: { code: string; label?: string; signal: AbortSignal },
 ): Promise<OverlapCandidate[]> {
-  const { client, serviceId, layerId } = await layer(layerUrl);
+  const { client, serviceId, layerId, idField } = await layer(layerUrl);
   const filter = polygon(parcel.rings, { wkid: 4326 });
-  const outFields = fields.label ? [fields.code, fields.label] : [fields.code];
+  const outFields = [...new Set([options.code, ...(options.label ? [options.label] : []), idField])];
   const candidates: OverlapCandidate[] = [];
   const pageSize = 2000;
   // Advance by what the server returned: a layer capped below pageSize still
@@ -150,16 +162,17 @@ export async function candidatesFor(
       .limit(pageSize)
       .extraParams({ outSR: 4326 })
       .method("POST")
-      .signal(signal)
+      .signal(options.signal)
       .run();
     for (const feature of response.features ?? []) {
       const geometry = esriGeometryToGeoJSON(feature.geometry ?? null);
-      const code = feature.attributes[fields.code];
-      if (!geometry || code === null || code === undefined || code === "") continue;
-      const label = fields.label ? feature.attributes[fields.label] : undefined;
-      candidates.push({ code: String(code), label: String(label ?? code), geometry });
+      const code = feature.attributes[options.code];
+      if (!geometry || code === null || code === undefined || code === "") throw new Error("Layer returned an incomplete polygon; applicability is unknown.");
+      const label = options.label ? feature.attributes[options.label] : undefined;
+      candidates.push({ code: String(code), label: String(label ?? code), geometry, sourceId: feature.attributes[idField] ?? null, sourceIdField: idField });
     }
-    if (!response.exceededTransferLimit || !response.features?.length) return candidates;
+    if (!response.exceededTransferLimit) return candidates;
+    if (!response.features?.length) throw new Error("Layer pagination stopped before all polygons were returned; applicability is unknown.");
     offset += response.features.length;
     if (pages >= 20) throw new Error(`${layerUrl} returned more than ${offset} polygons over 20 pages for one parcel`);
   }

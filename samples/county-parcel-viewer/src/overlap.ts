@@ -22,6 +22,8 @@ export interface OverlapCandidate {
   /** Display text: the layer's zone_dist for zoning, the code for flood. */
   readonly label: string;
   readonly geometry: GeoJsonGeometry;
+  readonly sourceId?: unknown;
+  readonly sourceIdField?: string;
 }
 
 export interface OverlapGroup {
@@ -31,6 +33,7 @@ export interface OverlapGroup {
   /** Share of the parcel's area, 0..1. */
   readonly share: number;
   readonly geometry: GeoJsonGeometry;
+  readonly sources: readonly OverlapCandidate[];
 }
 
 export const ZONING_MIN_SHARE = 0.01;
@@ -39,31 +42,27 @@ export const ZONING_MIN_AREA_M2 = 10;
 const isPolygonal = (geometry: GeoJsonGeometry | null | undefined): geometry is GeoJsonGeometry =>
   geometry?.type === "Polygon" || geometry?.type === "MultiPolygon";
 
-/** Every code that overlaps the parcel at all, largest first. */
+/** Every code with positive-area parcel overlap, largest first. */
 export function overlapByCode(parcel: GeoJsonGeometry, candidates: readonly OverlapCandidate[], ops: GeometryOps): { parcelAreaM2: number; groups: OverlapGroup[] } {
   const parcelAreaM2 = ops.area(parcel);
   if (!(parcelAreaM2 > 0)) throw new Error("The parcel geometry has no area.");
-  const byCode = new Map<string, { label: string; polygons: GeoJsonGeometry[] }>();
+  const byCode = new Map<string, { label: string; polygons: GeoJsonGeometry[]; sources: OverlapCandidate[] }>();
   for (const candidate of candidates) {
     if (!isPolygonal(candidate.geometry)) continue;
-    const group = byCode.get(candidate.code) ?? { label: candidate.label, polygons: [] };
-    group.polygons.push(candidate.geometry);
+    const clipped = ops.intersect(parcel, candidate.geometry);
+    if (!isPolygonal(clipped) || !(ops.area(clipped) > 0)) continue;
+    const group = byCode.get(candidate.code) ?? { label: candidate.label, polygons: [], sources: [] };
+    group.polygons.push(clipped);
+    group.sources.push(candidate);
     byCode.set(candidate.code, group);
   }
   const groups: OverlapGroup[] = [];
-  for (const [code, { label, polygons }] of byCode) {
-    // Merge each code's polygons first, then clip once: parcel ∩ (A ∪ B) is
-    // (parcel ∩ A) ∪ (parcel ∩ B), and a large parcel's long outline is
-    // clipped once per code instead of once per polygon.
+  for (const [code, { label, polygons, sources }] of byCode) {
     const merged = polygons.length === 1 ? polygons[0] : ops.union(...polygons);
-    const pieces = merged ? [ops.intersect(parcel, merged)] : polygons.map((polygon) => ops.intersect(parcel, polygon));
-    const parts = pieces.filter(isPolygonal);
-    if (parts.length === 0) continue;
-    // union() returns null only when its inputs do not form a polygon; the
-    // separate pieces' areas are then the honest total.
-    const areaM2 = parts.reduce((sum, part) => sum + ops.area(part), 0);
+    if (!isPolygonal(merged)) throw new Error("Could not merge overlap polygons; coverage is unknown.");
+    const areaM2 = ops.area(merged);
     if (!(areaM2 > 0)) continue;
-    groups.push({ code, label, areaM2, share: Math.min(1, areaM2 / parcelAreaM2), geometry: parts[0] });
+    groups.push({ code, label, areaM2, share: Math.min(1, areaM2 / parcelAreaM2), geometry: merged, sources });
   }
   groups.sort((a, b) => b.areaM2 - a.areaM2);
   return { parcelAreaM2, groups };
