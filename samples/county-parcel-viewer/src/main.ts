@@ -13,6 +13,8 @@ import "@fontsource/public-sans/700.css";
 import "@fontsource/source-serif-4/500.css";
 import "@fontsource/source-serif-4/700.css";
 import "./styles.css";
+import { h, fill } from "./dom.js";
+import { planningPanel } from "./planning.js";
 
 import { EXAMPLE_TMK, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
 import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelByTmk } from "./data.js";
@@ -55,25 +57,6 @@ const mapLoading = byId<HTMLParagraphElement>("map-loading");
 const fullscreen = byId<HTMLAnchorElement>("fullscreen");
 const diag = byId<HTMLParagraphElement>("diag");
 const requests = byId<HTMLPreElement>("requests");
-
-type Child = Node | string | null | undefined | false;
-
-/** Builds an element; text always goes in as text, never as HTML. */
-function h(tag: string, attrs: Record<string, string | boolean | undefined> = {}, ...children: Child[]): HTMLElement {
-  const node = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) {
-    if (value === undefined || value === false) continue;
-    if (name === "class") node.className = String(value);
-    else node.setAttribute(name, value === true ? "" : value);
-  }
-  for (const child of children) if (child !== null && child !== undefined && child !== false) node.append(child);
-  return node;
-}
-
-/** replaceChildren that skips empty slots. */
-function fill(target: HTMLElement, ...children: Child[]): void {
-  target.replaceChildren(...children.filter((child): child is Node | string => child !== null && child !== undefined && child !== false));
-}
 
 function svg(markup: string): Node {
   const template = document.createElement("template");
@@ -352,7 +335,7 @@ interface SectionHandles {
   flood: HTMLElement;
 }
 
-function renderParcel(parcel: Parcel, example: boolean): SectionHandles {
+function renderParcel(parcel: Parcel, example: boolean, lookupSignal: AbortSignal): SectionHandles {
   const assessor = safeHttpsUrl(parcel.qpubLink);
   const zoning = h("div", { class: "section-body", id: "zoning-body" });
   const flood = h("div", { class: "section-body", id: "flood-body" });
@@ -371,6 +354,7 @@ function renderParcel(parcel: Parcel, example: boolean): SectionHandles {
       ...copyLinkControls(parcel.tmk),
     ),
     h("section", { class: "group", "aria-labelledby": "zoning-heading" }, h("h2", { id: "zoning-heading" }, "Zoning"), zoning),
+    planningPanel(parcel, { config, geometryOps, signal: lookupSignal }),
     h("section", { class: "group", "aria-labelledby": "flood-heading" }, h("h2", { id: "flood-heading" }, "Flood hazard"), flood),
     h(
       "section",
@@ -474,7 +458,7 @@ interface Lookup {
 }
 
 async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { example: boolean; focus: boolean }): Promise<void> {
-  const sections = renderParcel(parcel, example);
+  const sections = renderParcel(parcel, example, lookup.signal);
   signal({ tmk: parcel.tmk, searchState: "found", example: example ? "true" : undefined });
   input.value = example ? parcel.tmk : input.value || parcel.tmk;
   updateFullscreen(parcel.tmk);
@@ -494,7 +478,7 @@ async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { 
       throw new Error(`overlap check unavailable: ${message(error)}`);
     }
     try {
-      const candidates = await candidatesFor(config.zoningUrl, parcel, { code: "zone_code", label: "zone_dist" }, lookup.signal);
+      const candidates = await candidatesFor(config.zoningUrl, parcel, { code: "zone_code", label: "zone_dist", signal: lookup.signal });
       if (!current(lookup.id)) return;
       const counted = countedZoning(overlapByCode(parcel.geometry, candidates, ops).groups);
       renderZoning(sections.zoning, counted.length ? "success" : "empty", counted);
@@ -518,7 +502,7 @@ async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { 
       throw new Error(`overlap check unavailable: ${message(error)}`);
     }
     try {
-      const candidates = await candidatesFor(config.floodUrl, parcel, { code: "fld_zone" }, lookup.signal);
+      const candidates = await candidatesFor(config.floodUrl, parcel, { code: "fld_zone", signal: lookup.signal });
       if (!current(lookup.id)) return;
       const counted = countedFlood(overlapByCode(parcel.geometry, candidates, ops).groups);
       renderFlood(sections.flood, counted.length ? "success" : "empty", counted);

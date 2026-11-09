@@ -22,6 +22,8 @@ export interface OverlapCandidate {
   /** Display text: the layer's zone_dist for zoning, the code for flood. */
   readonly label: string;
   readonly geometry: GeoJsonGeometry;
+  readonly sourceId?: unknown;
+  readonly sourceIdField?: string;
 }
 
 export interface OverlapGroup {
