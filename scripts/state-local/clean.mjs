@@ -52,7 +52,7 @@ export function cleanRows(rows, source) {
   const features = [];
   let rejected = 0;
   for (const row of rows) {
-    const geometry = checkedGeometry(geometryFor(row, source.geometry), source.bounds ?? coverageBounds);
+    const geometry = checkedGeometry(geometryFor(row, source.geometry), source.geometryBounds ?? source.bounds ?? coverageBounds);
     if (!geometry) { rejected += 1; continue; }
     const properties = Object.fromEntries(source.fields.filter((field) => row[field] !== undefined)
       .map((field) => [field, row[field]]));

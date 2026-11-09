@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { readSnapshot, sha256 } from './snapshot.mjs';
+import { sha256 } from './checksum.mjs';
 
 const recipes = {
   'maui-demo-requests': { anchor: 'maui-roads', department: '311', kind: 'service_request', count: 468 },
@@ -49,8 +49,7 @@ function exerciseFeature(source, feature, index) {
 }
 
 async function build(options) {
-  const { directory, source } = options;
-  const anchor = await readSnapshot(source.anchor, directory);
+  const { anchor, source } = options;
   if (!anchor.geojson.features.length) throw new Error('Exercise requires at least one verified anchor');
   const features = Array.from({ length: source.count ?? 24 }, (_, index) =>
     exerciseFeature(source, anchor.geojson.features[index % anchor.geojson.features.length], index));

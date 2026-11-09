@@ -204,7 +204,7 @@ jobs:
         # (no second network fetch), then copies the verified files into
         # site/sdk/<id>/app/ and renders the embed/no-bundle/headless panels.
         env:
-          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/8cb074f77d01c0a00617ebe426460aa24c7d890b/docs/gis/data/capability-keys.v1.json
+          KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/9d2169cc12ee6323519567368774d0deba829686/docs/gis/data/capability-keys.v1.json
           MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/build-gallery.mjs
 

@@ -1,6 +1,8 @@
 import { generateExercise, readExercise } from "./exercise.mjs";
 import { fetchMauiSnapshot, readMauiSnapshot } from "./maui-snapshot.mjs";
-import { createHash } from "node:crypto";
+import { sha256 } from "./checksum.mjs";
+import { fetchJson } from "./download.mjs";
+export { sha256 } from "./checksum.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { cleanRows } from "./clean.mjs";
@@ -9,16 +11,6 @@ import { getSource, sourceCrs, coverageBounds } from "./sources.mjs";
 const pageSize = 1000;
 const previewLimit = 5000;
 const portal = "https://data.nola.gov";
-
-export function sha256(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-async function fetchJson(url) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-  if (!response.ok) throw new Error(`Source returned HTTP ${response.status}: ${url}`);
-  return response.json();
-}
 
 function revision(metadata, source) {
   if ((metadata.licenseId ?? null) !== source.license) throw new Error("Source license changed; review terms before fetching");
@@ -66,7 +58,7 @@ async function downloadRows(source) {
 
 export async function fetchSnapshot(name, directory) {
   const source = getSource(name);
-  if (source.synthetic) return generateExercise({ name, directory, source });
+  if (source.synthetic) return generateExercise({ name, directory, source, anchor: await readSnapshot(source.anchor, directory) });
   if (source.url) return fetchMauiSnapshot({ name, directory, source });
   const metadataUrl = `${portal}/api/views/${source.id}.json`;
   const metadata = await fetchJson(metadataUrl);
@@ -109,14 +101,13 @@ function checkProvenance(receipt, source, rows) {
 }
 
 export async function readSnapshot(name, directory) {
-  const mauiSource = getSource(name);
-  if (mauiSource.synthetic) return readExercise({ name, directory, source: mauiSource });
-  if (mauiSource.url) return readMauiSnapshot({ name, directory, source: mauiSource });
+  const source = getSource(name);
+  if (source.synthetic) return readExercise({ name, directory, source, anchor: await readSnapshot(source.anchor, directory) });
+  if (source.url) return readMauiSnapshot({ name, directory, source });
   const receipt = JSON.parse(await readFile(path.join(directory, `${name}.receipt.json`), "utf8"));
   const raw = await readFile(path.join(directory, `${name}.raw.json`), "utf8");
   const clean = await readFile(path.join(directory, `${name}.geojson`), "utf8");
   const metadata = await readFile(path.join(directory, `${name}.metadata.json`), "utf8");
-  const source = getSource(name);
   if (receipt.source !== name || receipt.dataset !== source.id) throw new Error("Snapshot source mismatch");
   if (sha256(raw) !== receipt.rawSha256 || sha256(clean) !== receipt.cleanSha256
     || sha256(metadata) !== receipt.metadataSha256) throw new Error("Snapshot checksum mismatch");

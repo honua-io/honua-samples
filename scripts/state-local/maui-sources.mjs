@@ -4,14 +4,14 @@ const licenseUrl = 'https://planning.hawaii.gov/gis/download-gis-data-expanded/'
 
 function source(endpoint, department, details) {
   return { id: endpoint, url: `${portal}${endpoint}`, department,
-    license: 'public-domain', licenseUrl, bounds: mauiBounds,
+    license: 'public-domain', licenseUrl, bounds: mauiBounds, geometryBounds: [-161, 18, -154, 23],
     geometry: { field: 'the_geom' }, ...details };
 }
 const metadata = (file) => `https://files.hawaii.gov/dbedt/op/gis/data/${file}`;
 const state = 'Hawaii Statewide GIS Program';
 export const mauiSources = {
   'maui-parcels': source('ParcelsZoning/MapServer/30', 'Planning', {
-    fields: ['objectid', 'tmk', 'tmk_txt', 'cty_tmk', 'gisacres', 'qpub_link'],
+    fields: ['objectid', 'tmk', 'tmk_txt', 'cty_tmk', 'gisacres'],
     metadataUrl: metadata('niparcels.pdf'), attribution: `County of Maui; ${state}`,
   }),
   'maui-zoning': source('ParcelsZoning/MapServer/33', 'Planning', {

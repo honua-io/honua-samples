@@ -1,20 +1,15 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { cleanRows } from './clean.mjs';
-import { sha256 } from './snapshot.mjs';
+import { sha256 } from './checksum.mjs';
+import { download, fetchJson } from './download.mjs';
 
 const pageSize = 100;
 const maximumFeatures = 100_000;
 const policyStatement = 'The contents of this web page are public domain';
 
-async function download(url) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(120_000) });
-  if (!response.ok) throw new Error(`Source returned HTTP ${response.status}: ${url}`);
-  return Buffer.from(await response.arrayBuffer());
-}
-
 async function json(url) {
-  const data = JSON.parse((await download(url)).toString());
+  const data = await fetchJson(url);
   if (data.error) throw new Error(`Source query failed: ${data.error.message}`);
   return data;
 }
@@ -36,7 +31,7 @@ async function selectedIds(source) {
   return ids.sort((left, right) => left - right);
 }
 
-function sourceCrs(metadata) {
+function nativeSpatialReference(metadata) {
   const reference = metadata.extent?.spatialReference;
   if ((reference?.latestWkid ?? reference?.wkid) !== 3750) throw new Error("Unexpected source CRS; review before downloading");
   return reference;
@@ -47,9 +42,11 @@ function pageUrl(source, batch) {
     outFields: source.fields.join(","), returnGeometry: true, outSR: 4326 });
 }
 
-function pageRequests(source, ids) {
-  return Array.from({ length: Math.ceil(ids.length / pageSize) }, (_, index) =>
-    pageUrl(source, ids.slice(index * pageSize, (index + 1) * pageSize)));
+function pageBatches(source, ids) {
+  return Array.from({ length: Math.ceil(ids.length / pageSize) }, (_, index) => {
+    const batch = ids.slice(index * pageSize, (index + 1) * pageSize);
+    return { batch, url: pageUrl(source, batch) };
+  });
 }
 
 function metadataFingerprint(metadata) {
@@ -61,6 +58,7 @@ function provenance(source) {
   return { dataset: source.id, department: source.department, license: source.license,
     licenseUrl: source.licenseUrl, metadataUrl: source.metadataUrl, sourceUrl: source.url,
     attribution: source.attribution, outputCrs: 'EPSG:4326', coverageBounds: source.bounds,
+    datumTransformation: 'No explicit datum transformation requested; server default NAD83 to WGS84 may differ by approximately one metre',
     selection: { kind: 'Maui Nui envelope intersection; whole features; not a county boundary clip',
       bounds: source.bounds, completeDataset: false, pageSize } };
 }
@@ -68,9 +66,7 @@ function provenance(source) {
 async function downloadRows(source, ids) {
   const rows = [];
   const requests = [];
-  for (let offset = 0; offset < ids.length; offset += pageSize) {
-    const batch = ids.slice(offset, offset + pageSize);
-    const url = pageUrl(source, batch);
+  for (const { batch, url } of pageBatches(source, ids)) {
     const data = await json(url);
     if (data.type !== 'FeatureCollection' || !Array.isArray(data.features) || data.exceededTransferLimit
       || (data.crs && !['urn:ogc:def:crs:OGC:1.3:CRS84', 'urn:ogc:def:crs:EPSG::4326'].includes(data.crs.properties?.name))) {
@@ -89,7 +85,7 @@ async function downloadRows(source, ids) {
 export async function fetchMauiSnapshot(options) {
   const { name, directory, source } = options;
   const metadata = await json(`${source.url}?f=json`);
-  sourceCrs(metadata);
+  nativeSpatialReference(metadata);
   const policy = await download(source.licenseUrl);
   if (!policy.toString().includes(policyStatement)) throw new Error('Source public-domain terms changed; review before downloading');
   const summary = await download(source.metadataUrl);
@@ -104,7 +100,7 @@ export async function fetchMauiSnapshot(options) {
   const files = { raw: JSON.stringify(rows), geojson: JSON.stringify(cleaned.geojson),
     metadata: JSON.stringify(metadata), policy, summary };
   const receipt = { source: name, ...provenance(source), requests, selectedIds: ids,
-    retrievedAt: new Date().toISOString(), sourceCrs: sourceCrs(metadata),
+    retrievedAt: new Date().toISOString(), sourceCrs: nativeSpatialReference(metadata),
     consistency: 'ID set and exposed metadata checked before/after; attribute changes may be undetectable without editingInfo',
     downloaded: rows.length, accepted: cleaned.geojson.features.length, rejected: cleaned.rejected,
     hashes: Object.fromEntries(Object.entries(files).map(([key, value]) => [key, sha256(value)])),
@@ -130,12 +126,12 @@ export async function readMauiSnapshot(options) {
   const metadata = JSON.parse(files.metadata);
   const rows = JSON.parse(files.raw);
   const ids = rows.map((row) => Number(row[':id']));
-  sourceCrs(metadata);
+  nativeSpatialReference(metadata);
   if (!Array.isArray(receipt.selectedIds) || ids.some((id) => !Number.isSafeInteger(id))
     || new Set(ids).size !== ids.length || JSON.stringify(ids) !== JSON.stringify(receipt.selectedIds)
     || rows.length > maximumFeatures || receipt.downloaded !== rows.length
     || ids.some((id, index) => id !== rows[index].objectid || (index > 0 && id <= ids[index - 1]))
-    || JSON.stringify(receipt.requests) !== JSON.stringify(pageRequests(source, ids))
+    || JSON.stringify(receipt.requests) !== JSON.stringify(pageBatches(source, ids).map(({ url }) => url))
     || JSON.stringify(receipt.sourceCrs) !== JSON.stringify(metadata.extent?.spatialReference)
     || !files.policy.toString().includes(policyStatement) || !Number.isFinite(Date.parse(receipt.retrievedAt))) {
     throw new Error('Snapshot provenance mismatch');

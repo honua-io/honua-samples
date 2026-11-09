@@ -1,8 +1,8 @@
 # Composed stack for the headless sample runner (see scripts/run-samples.mjs
 # and .github/workflows/run-samples.yml).
 #
-# 2026.1 default is the platform-manifest candidate
-# (components.honua-server image nightly-jit-9d2169c, digest sha256:48d73e13…),
+# The default is the pinned candidate nightly-jit-9d2169c
+# (digest sha256:48d73e13…),
 # with licensing disabled. HONUA_SERVER_IMAGE may override the image. The
 # floating :trunk tag is not this release.
 services:

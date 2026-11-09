@@ -71,7 +71,7 @@ npx playwright install chromium
 
 # Compose the 2026.1 candidate. docker/compose.yml defaults to this image
 # and sets Licensing__Mode=Disabled.
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-8cb074f@sha256:2d7877c4d1cb3b30647fb225893d41b13728f0448997997cdf4bf40fe99be07d
+export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e
 docker compose -f docker/compose.yml up -d --wait
 
 export HONUA_BASE_URL=http://localhost:8080

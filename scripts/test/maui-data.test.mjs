@@ -3,8 +3,11 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { sources } from '../state-local/sources.mjs';
+import { cleanRows } from '../state-local/clean.mjs';
+import { ensureDepartments, departments } from '../state-local/departments.mjs';
 import { fetchSnapshot, readSnapshot } from '../state-local/snapshot.mjs';
-import { stagingServiceName } from '../state-local/import.mjs';
+import { stagingServiceName, stagingTableName } from '../state-local/import.mjs';
 
 test('department staging service names fit the server limit without truncating run identity', () => {
   const runId = 'f'.repeat(32);
@@ -157,4 +160,51 @@ test('PW-03: fictional work orders cover 34 records and all five exercise stages
 
 test('PRM-04: fictional permit records are unavailable', async (t) => {
   await assert.rejects(fetchSnapshot('maui-demo-permits', await directory(t)), /Unknown source/);
+});
+
+
+test('all source identifiers retain full run identity within publication and PostgreSQL limits', () => {
+  const runId = 'f'.repeat(32);
+  for (const [name, source] of Object.entries(sources)) {
+    const service = stagingServiceName(source.department, name, runId);
+    const table = stagingTableName(name, runId);
+    assert.ok(service.length <= 64, name);
+    assert.ok(table.length <= 63, name);
+    assert.match(service, /^[a-z][a-z0-9-]+$/);
+    assert.match(table, /^[a-z][a-z0-9_]+$/);
+    assert.ok(service.endsWith(runId));
+    assert.ok(table.endsWith(runId));
+  }
+});
+
+test('whole intersecting Maui features may extend beyond the query envelope', () => {
+  const row = { ':id': '1', the_geom: { type: 'LineString', coordinates: [[-156.5, 20.8], [-158, 21.5]] } };
+  assert.equal(cleanRows([row], sources['maui-roads']).rejected, 0);
+  row.the_geom.coordinates[1] = [10, 40];
+  assert.equal(cleanRows([row], sources['maui-roads']).rejected, 1);
+});
+
+test('department creation skips active titles, replaces deleted titles and sends the listing ETag', async (t) => {
+  const writes = [];
+  t.mock.method(globalThis, 'fetch', async (_url, request) => {
+    if (request.method === 'GET') return new Response(JSON.stringify({ data: [
+      { metadata: { title: 'Planning' }, deleted: false },
+      { metadata: { title: 'Public Works' }, deleted: true },
+    ] }), { headers: { ETag: '"version-1"' } });
+    writes.push(request);
+    return response({ success: true });
+  });
+  await ensureDepartments({ baseUrl: 'https://example.test', adminApiKey: 'test' });
+  assert.deepEqual(writes.map(({ body }) => JSON.parse(body)), departments.slice(1));
+  assert.ok(writes.every(({ headers }) => headers['If-Match'] === '"version-1"'));
+});
+
+test('department creation refuses an unversioned listing before writing', async (t) => {
+  const methods = [];
+  t.mock.method(globalThis, 'fetch', async (_url, request) => {
+    methods.push(request.method);
+    return response({ data: [] });
+  });
+  await assert.rejects(ensureDepartments({ baseUrl: 'https://example.test', adminApiKey: 'test' }), /concurrency ETag/);
+  assert.deepEqual(methods, ['GET']);
 });

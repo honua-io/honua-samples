@@ -50,7 +50,8 @@ Attribution is retained even for public-domain data.
 | maui-public-schools | Infrastructure/MapServer/7 | public_schools.pdf / November 2024 | Hawaii Department of Education; State GIS |
 
 These are envelope intersections across Maui Nui, **not a legal county clip**;
-Kalawao may be included. Whole intersecting geometries are retained. Native
+Kalawao may be included. Whole intersecting geometries are retained within statewide coordinate validation
+bounds (161°W–154°W, 18°N–23°N); invalid coordinates are counted as rejected. Native
 EPSG:3750 is explicitly reprojected by the source API to EPSG:4326. IDs are fetched
 first, then paged in batches of 100, with a 100,000-feature safety ceiling. Missing,
 duplicate or truncated IDs, changed public-domain terms, unexpected CRS and
