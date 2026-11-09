@@ -300,6 +300,12 @@
       "id": "stac-ops",
       "disposition": "internal-qualification",
       "reason": "Standalone STAC operator qualification; draft dashboard is not a public gallery experience."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "maui-data-pipeline",
+      "disposition": "internal-qualification",
+      "reason": "Department-folder import qualification supports the Maui use-case demos; public journeys are published separately after approval."
     }
   ]
 }

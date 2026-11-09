@@ -16,6 +16,8 @@
 // Waiting is always on a condition (an HTTP answer, a DOM state, a rendered
 // pixel), never a fixed sleep.
 
+import { adminFetch, serverEnv } from "../lib/admin-api.mjs";
+import { ensureConnection } from "../lib/sample-connection.mjs";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -37,14 +39,7 @@ const NPM_REGISTRY_PREFIX = "https://registry.npmjs.org/";
 const CONVERGENCE_TIMEOUT_MS = 30_000;
 const CONVERGENCE_POLL_MS = 500;
 
-/** The composed server the runner points every sample at. */
-export function serverEnv() {
-  const baseUrl = (process.env.HONUA_BASE_URL ?? "").replace(/\/+$/, "");
-  const adminApiKey = process.env.HONUA_ADMIN_API_KEY ?? "";
-  if (!baseUrl) throw new Error("HONUA_BASE_URL is not set: point it at the composed Honua server.");
-  if (!adminApiKey) throw new Error("HONUA_ADMIN_API_KEY is not set: the harness seeds the fixture through the admin API.");
-  return { baseUrl, adminApiKey };
-}
+export { serverEnv } from "../lib/admin-api.mjs";
 
 
 /**
@@ -109,42 +104,6 @@ export function outsidePoint(fixture, view) {
 }
 
 
-async function adminFetch(env, method, apiPath, body) {
-  const headers = { "X-API-Key": env.adminApiKey };
-  let payload = body;
-  if (body !== undefined && !(body instanceof FormData)) {
-    headers["Content-Type"] = "application/json";
-    payload = JSON.stringify(body);
-  }
-  const response = await fetch(`${env.baseUrl}${apiPath}`, { method, headers, body: payload });
-  const text = await response.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    json = undefined;
-  }
-  if (!response.ok || json?.success === false) {
-    throw new Error(`${method} ${apiPath} -> HTTP ${response.status}: ${text.slice(0, 500)}`);
-  }
-  return json;
-}
-
-async function ensureConnection(env, name) {
-  const existing = await adminFetch(env, "GET", "/api/v1/admin/connections");
-  if ((existing.data ?? []).some((connection) => connection.name === name)) return;
-  await adminFetch(env, "POST", "/api/v1/admin/connections", {
-    name,
-    host: process.env.HONUA_SAMPLE_DB_HOST ?? "postgres",
-    port: 5432,
-    databaseName: "honua_dev",
-    username: "honua_user",
-    password: "honua_password",
-    sslRequired: false,
-    sslMode: "Prefer",
-  });
-}
-
 /**
  * Imports the fixture into a fresh table and publishes it as a FeatureServer
  * service. Unique names keep every spec independent of run order and of
@@ -167,31 +126,31 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
   const form = new FormData();
   form.set("file", new Blob([JSON.stringify(fixture.geojson)], { type: "application/geo+json" }), "operations-areas.geojson");
   form.set("TableName", tableName);
-  const upload = await adminFetch(env, "POST", "/api/v1/admin/import/upload", form);
+  const upload = await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form });
   if (upload.featureCount !== fixture.count) {
     throw new Error(`import reported ${upload.featureCount} feature(s); the fixture has ${fixture.count}`);
   }
 
   const connectionName = process.env.HONUA_SAMPLE_CONNECTION ?? "local";
   await ensureConnection(env, connectionName);
-  const published = await adminFetch(env, "POST", `/api/v1/admin/connections/${connectionName}/layers`, {
+  const published = await adminFetch(env, { method: "POST", apiPath: `/api/v1/admin/connections/${connectionName}/layers`, body: {
     schema: upload.schema ?? "honua_data",
     table: upload.physicalTableName,
     layerName,
     srid: 4326,
     serviceName,
     enabled: true,
-  });
+  } });
   if (published.data?.enabled !== true) {
     throw new Error(`layer publish did not confirm serving enablement: ${JSON.stringify(published).slice(0, 300)}`);
   }
   const layerId = published.data.layerId;
 
-  await adminFetch(env, "PUT", `/api/v1/admin/services/${serviceName}/protocols`, {
+  await adminFetch(env, { method: "PUT", apiPath: `/api/v1/admin/services/${serviceName}/protocols`, body: {
     enabledProtocols: ["FeatureServer", ...protocols.filter((protocol) => protocol !== "FeatureServer")],
-  });
+  } });
   if (allowAnonymous) {
-    await adminFetch(env, "PUT", `/api/v1/admin/services/${serviceName}/access-policy`, { allowAnonymous: true });
+    await adminFetch(env, { method: "PUT", apiPath: `/api/v1/admin/services/${serviceName}/access-policy`, body: { allowAnonymous: true } });
   }
 
   const serviceUrl = `${env.baseUrl}/rest/services/${serviceName}/FeatureServer`;

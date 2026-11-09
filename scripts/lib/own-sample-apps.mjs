@@ -31,7 +31,8 @@
 // A sample that fails any rule is reported with a reason; the gallery then
 // shows the honest no-bundle panel and --check / the browser smoke go red.
 
-import { createHash } from "node:crypto";
+import { sha256 } from "./checksum.mjs";
+export { sha256 };
 import { execFileSync } from "node:child_process";
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -341,9 +342,6 @@ export function documentedDegradedResponse({ url, status, dataOrigin }) {
   return OWN_APP_DEGRADED_RESPONSES.find((entry) => entry.pattern.test(parsed.pathname)) ?? null;
 }
 
-export function sha256(bytes) {
-  return createHash("sha256").update(bytes).digest("hex");
-}
 
 export function dataOriginHost(app) {
   const origin = app?.dataOrigins?.length === 1 ? app.dataOrigins[0] : null;
