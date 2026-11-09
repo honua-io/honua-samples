@@ -65,6 +65,20 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install published state-local SDKs
+        run: |
+          npm ci --prefix scripts/state-local/sdk
+          python -m pip install -r scripts/state-local/sdk/requirements.txt
+          dotnet restore scripts/state-local/sdk/StateLocal.csproj
+
       - name: Determine edition
         # --edition only chooses which manifest editions the runner executes.
         # The optional secret is that selector. It is not passed to Compose
