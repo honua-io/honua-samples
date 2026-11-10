@@ -42,6 +42,7 @@ Attribution is retained even for public-domain data.
 | maui-island-plan-growth-boundaries | ParcelsZoning/MapServer/15 | maui_island_plan.pdf / 2012 plan, 2022 alignment | County of Maui Planning; State GIS |
 | maui-island-plan-growth-areas | ParcelsZoning/MapServer/16 | maui_island_plan.pdf / same vintage | County of Maui Planning; State GIS |
 | maui-roads | Transportation/MapServer/5 | roads_mau.pdf / April 2025 | County of Maui Enterprise GIS; State GIS |
+| maui-bridges | Infrastructure/MapServer/9 | bridges_nbi.html / June 20, 2025 inventory; state download July 13, 2026 | Federal Highway Administration; Bureau of Transportation Statistics; State GIS |
 | maui-flood-hazard | Hazards/MapServer/4 | s_fld_haz_ar_state.pdf / June 2026 | FEMA; State GIS |
 | maui-sea-level-rise | Climate/MapServer/45 | slr_exposure_area_3_pt_2_ft.html / 2017 model | UH Coastal Geology Group; PacIOOS; Tetra Tech; State GIS |
 | maui-place-names | HistoricCultural/MapServer/2 | geonames.pdf / September 2024, GNIS December 2023 | US GNIS; State GIS |
@@ -50,7 +51,10 @@ Attribution is retained even for public-domain data.
 | maui-public-schools | Infrastructure/MapServer/7 | public_schools.pdf / November 2024 | Hawaii Department of Education; State GIS |
 
 These are envelope intersections across Maui Nui, **not a legal county clip**;
-Kalawao may be included. Whole intersecting geometries are retained within statewide coordinate validation
+Kalawao may be included, except bridges additionally require Maui County code `009`
+and exclude Kalawao code `005`. Bridge ratings are historical source codes, not a
+current safety assessment; an unexpected inventory vintage stops the download.
+Whole intersecting geometries are retained within statewide coordinate validation
 bounds (161°W–154°W, 18°N–23°N); invalid coordinates are counted as rejected. Native
 EPSG:3750 is explicitly reprojected by the source API to EPSG:4326. IDs are fetched
 first, then paged in batches of 100, with a 100,000-feature safety ceiling. Missing,

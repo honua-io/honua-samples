@@ -60,8 +60,8 @@ This source is **2025-06-20 inventory**, downloaded by the state on 2026-07-13.
 It is historical, not a current inspection or an assessment of safety. The pipeline selects
 county code `009` (Maui County) within the documented Maui Nui envelope; Kalawao County
 (code `005`, including Kalaupapa) is excluded. The download stops if the source vintage
-statement changes. It keeps original
-NBI structure identifiers, inspection date codes and deck, superstructure, substructure,
+statement changes. It keeps original NBI structure identifiers, inspection date codes
+and deck, superstructure, substructure,
 culvert and overall condition fields. It does not replace missing ratings with estimates.
 Condition values remain source codes; `N` means not applicable, not a zero rating.
 The inventory includes bridges and qualifying culverts, not every drainage culvert.
