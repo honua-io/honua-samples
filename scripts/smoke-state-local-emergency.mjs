@@ -15,7 +15,7 @@ try {
   assert.equal(response.status(), 200);
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
   await expect(page.locator('#freshness')).toContainText('Not a live server check');
-  await expect.poll(() => page.evaluate(() => window.sampleMap?.loaded())).toBe(true);
+  await expect(page.locator('#map-status')).toContainText('records mapped');
   const receipt = await (await page.request.get(`${server.url}/state-local/emergency/data/sources.json`)).json();
   assert.ok(receipt.sources[2].sourceUrl.endsWith('Hazards/MapServer/2'));
   assert.equal(receipt.sources[2].retrievalDate, '2026-11-10T08:28:22.163Z');
