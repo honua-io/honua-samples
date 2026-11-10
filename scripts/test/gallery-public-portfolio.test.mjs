@@ -7,17 +7,18 @@ import {
   publicSampleIds,
 } from "../lib/gallery-public-portfolio.mjs";
 
-test("the gallery portfolio classifies the 32 SDK and 19 owned cards", async () => {
+test("the gallery portfolio classifies the 32 SDK and 23 owned cards", async () => {
   const portfolio = await loadGalleryPublicPortfolio();
   const counts = portfolio.entries.reduce((result, entry) => {
     result[entry.disposition] = (result[entry.disposition] ?? 0) + 1;
     return result;
   }, {});
-  assert.equal(portfolio.entries.length, 51);
+  assert.equal(portfolio.entries.length, 55);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-sdk-js").length, 32);
-  assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 19);
-  assert.deepEqual(counts, { "internal-qualification": 23, "rework-map-first": 11, moved: 12, public: 5 });
-  for (const id of ["gp-local-dev", "plugin-endpoint", "stac-ops", "maui-data-pipeline"]) {
+  assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 23);
+  assert.deepEqual(counts, { "internal-qualification": 27, "rework-map-first": 11, moved: 12, public: 5 });
+  for (const id of ["gp-local-dev", "plugin-endpoint", "stac-ops", "maui-data-pipeline",
+    "maui-property-planning", "maui-emergency", "maui-311", "maui-public-works"]) {
     const entry = portfolio.entries.find((candidate) => candidate.sourceRepo === "honua-samples" && candidate.id === id);
     assert.equal(entry?.disposition, "internal-qualification", id);
   }
