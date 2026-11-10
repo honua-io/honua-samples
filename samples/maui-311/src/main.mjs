@@ -2,7 +2,7 @@ import './dashboard.css';
 import { loadRequests, sourceBinding } from './source.mjs';
 import { exportCsv, exportGeojson, selectRecords } from './records.mjs';
 import { element, renderAnalysis, renderDetail, renderMetrics, renderRows } from './view.mjs';
-import { createRequestMap, updateMap } from './map.mjs';
+import { createRequestMap, mapUnavailable, updateMap } from './map.mjs';
 
 const form = document.querySelector('#filters');
 const refresh = document.querySelector('#refresh');
@@ -43,7 +43,7 @@ async function refreshData() {
     document.querySelector('#dashboard').hidden = false;
     if (!map) {
       try { map = createRequestMap(select); } catch {
-        document.querySelector('#map-status').textContent = 'Map unavailable. The request list and downloads remain available.';
+        mapUnavailable();
       }
     }
     map?.resize();

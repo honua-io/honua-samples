@@ -97,8 +97,13 @@ test('SR-05: unlabelled exercise layer is rejected and retry restores a complete
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'fail');
   await expect(page.locator('#load-status')).toContainText('DEMO DATA provenance');
   await expect(page.locator('#dashboard')).toBeHidden();
-  await ready(page);
+  const queries = `**/rest/services/${binding.serviceName}/FeatureServer/${binding.layerId}/query*`;
+  await page.route(queries, (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 503, message: 'Fixture outage' } }) }));
+  await page.goto(url());
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'fail');
+  await page.unroute(queries);
   await page.getByRole('button', { name: 'Refresh data' }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
   await expect(page.locator('#load-status')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('#result-count')).toContainText('205 matching');
 });

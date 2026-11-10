@@ -15,13 +15,18 @@ Build and run the repository gallery (shared fonts, theme and logos are gallery 
 ```sh
 npm ci
 node scripts/build-gallery.mjs --check
+npm ci --prefix samples/maui-311
+npm run build --prefix samples/maui-311
+mkdir -p site/maui-311/app
+cp -R samples/maui-311/dist/. site/maui-311/app/
 python3 -m http.server 3000 --directory site
 ```
 
 Open `/maui-311/app/?service=YOUR_SERVICE&layer=0` on that local server. The default
 API is `https://demo.honua.io`; a disposable local API can be selected with
 `&baseUrl=http://localhost:8080`. Use the service and layer from the import receipt.
-No API key belongs in the URL or browser. Without a binding the page shows an honest
+This explicit local staging step is needed while the full journey remains withheld
+from the public portfolio. No API key belongs in the URL or browser. Without a binding the page shows an honest
 unconfigured state. See [the import recipe](../../docs/state-local-data.md) to create
 an exercise layer; the public deployment is not activated by this sample.
 

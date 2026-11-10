@@ -12,7 +12,7 @@ const recipes = {
 export const exerciseSources = Object.fromEntries(Object.entries(recipes).map(([name, recipe]) => [name, {
   ...recipe, id: name, synthetic: true, license: 'CC0-1.0',
   fields: ['record_id', 'data_origin', 'is_demo', 'display_label', 'record_type', 'status',
-    'exercise_only', 'operational_use', 'anchor_source', 'anchor_feature_id', 'asset_id', 'district', 'category', 'scenario_date', 'created_at', 'due_at', 'closed_at', 'sla_hours', 'crew', 'condition', 'capacity', 'occupancy', 'case_url'],
+    'exercise_only', 'operational_use', 'anchor_source', 'anchor_feature_id', 'asset_id', 'district', 'category', 'scenario_date', 'opened_at', 'due_at', 'closed_at', 'sla_hours', 'crew', 'condition', 'capacity', 'occupancy', 'case_url'],
   url: 'https://github.com/honua-io/honua-samples/blob/trunk/docs/state-local-data.md',
   licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/legalcode',
   attribution: 'Honua fictional exercise records; geometry from Hawaii Statewide GIS Program public-domain sources',
@@ -26,7 +26,7 @@ function details(source, index) {
     status: source.kind === 'work_order'
       ? ['exercise_new', 'exercise_triaged', 'exercise_scheduled', 'exercise_in_progress', 'exercise_closed'][stage]
       : ['exercise_open', 'exercise_in_progress', 'exercise_closed'][index % 3],
-    created_at: created.toISOString(), due_at: due.toISOString(),
+    opened_at: created.toISOString(), due_at: due.toISOString(),
     closed_at: (source.kind === 'work_order' ? stage === 4 : index % 3 === 2) ? new Date(created.getTime() + 48 * 3_600_000).toISOString() : null,
     sla_hours: 72, crew: `Demo crew ${1 + index % 4} (fictional)`,
     condition: ['exercise_good', 'exercise_fair', 'exercise_poor'][index % 3],

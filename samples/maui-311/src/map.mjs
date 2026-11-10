@@ -1,4 +1,9 @@
 import * as maplibregl from 'maplibre-gl';
+import { positions } from './source.mjs';
+
+export function mapUnavailable() {
+  document.querySelector('#map-status').textContent = 'Map unavailable. The request list and downloads remain available.';
+}
 
 export function createRequestMap(onSelect) {
   const map = new maplibregl.Map({ container: 'map', center: [-156.4, 20.85], zoom: 9,
@@ -6,7 +11,7 @@ export function createRequestMap(onSelect) {
     attributionControl: false });
   map.addControl(new maplibregl.NavigationControl(), 'top-left');
   map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: 'Hawaii Statewide GIS Program · Public domain geometry; Honua CC0 exercise records' }));
-  map.on('error', () => { document.querySelector('#map-status').textContent = 'Map unavailable. The request list and downloads remain available.'; });
+  map.on('error', mapUnavailable);
   map.on('load', () => {
     map.addSource('requests', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     map.addLayer({ id: 'request-lines', type: 'line', source: 'requests', filter: ['==', ['geometry-type'], 'LineString'],
@@ -29,11 +34,13 @@ function statusColor() {
 export function updateMap(map, records) {
   const update = () => {
     map.getSource('requests').setData({ type: 'FeatureCollection', features: records });
-    if (!records.length) return;
+    if (!records.length) {
+      document.querySelector('#map-status').textContent = 'No requests match these filters.';
+      return;
+    }
     const bounds = new maplibregl.LngLatBounds();
     for (const { geometry } of records) {
-      const positions = geometry.type === 'Point' ? [geometry.coordinates] : geometry.coordinates.flat();
-      for (const position of positions) bounds.extend(position);
+      for (const position of positions(geometry)) bounds.extend(position);
     }
     map.fitBounds(bounds, { padding: 36, maxZoom: 14, duration: 0 });
     map.once('idle', () => {

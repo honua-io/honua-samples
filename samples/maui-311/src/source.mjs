@@ -29,10 +29,13 @@ function geojsonGeometry(geometry) {
   throw new Error('Exercise request needs a road line or point geometry in WGS84');
 }
 
+export function positions(geometry) {
+  return geometry.type === 'Point' ? [geometry.coordinates] : geometry.coordinates.flat();
+}
+
 export function requestFeature(feature) {
   const geometry = geojsonGeometry(feature.geometry);
-  const positions = geometry.type === 'Point' ? [geometry.coordinates] : geometry.coordinates.flat();
-  if (positions.some(([x, y]) => !Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 180 || Math.abs(y) > 90)) {
+  if (positions(geometry).some(([x, y]) => !Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 180 || Math.abs(y) > 90)) {
     throw new Error('Exercise geometry is outside WGS84 bounds');
   }
   return { type: 'Feature', id: feature.attributes?.record_id, geometry, properties: validateRecord(feature.attributes) };
@@ -47,9 +50,9 @@ export async function collectRequests(client, binding) {
   const count = (await client.queryFeatures({ ...query, extraParams: { returnCountOnly: true } })).count;
   if (!Number.isSafeInteger(count) || count < 0 || count > MAX_RECORDS) throw new Error('Request count is missing or exceeds the 10,000-record demo limit');
   const records = [];
-  for (let offset = 0; offset < count; offset += PAGE_SIZE) {
+  while (records.length < count) {
     const result = await client.queryFeatures({ ...query, outFields: ['*'], returnGeometry: true, outSr: 4326,
-      orderByFields: 'objectid ASC', resultOffset: offset, resultRecordCount: PAGE_SIZE });
+      orderByFields: 'objectid ASC', resultOffset: records.length, resultRecordCount: PAGE_SIZE });
     if (!Array.isArray(result.features) || !result.features.length) throw new Error('Request pagination ended before the reported count');
     records.push(...result.features.map(requestFeature));
   }

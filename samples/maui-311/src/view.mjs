@@ -11,9 +11,9 @@ const date = (value) => new Date(value).toISOString().replace('T', ' ').slice(0,
 
 export function renderMetrics(records) {
   const totals = summarize(records);
-  const values = [['Open requests', totals.open], ['New on exercise date', totals.today],
+  const values = [['Unresolved requests', totals.unresolved], ['New on exercise date', totals.createdOnScenarioDate],
     ['Median days to close', totals.medianDays?.toFixed(1) ?? 'No closures'],
-    ['Closed within SLA', percent(totals.withinSla)], ['Overdue open requests', totals.overdue]];
+    ['Closed within SLA', percent(totals.withinSla)], ['Overdue unresolved requests', totals.overdue]];
   document.querySelector('#metrics').replaceChildren(...values.map(([label, value]) => {
     const item = element('div', null);
     item.append(element('dt', label), element('dd', value));

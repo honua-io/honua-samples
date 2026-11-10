@@ -8,7 +8,7 @@ export function request(index = 0) {
     status: ['exercise_open', 'exercise_in_progress', 'exercise_closed'][index % 3],
     category: ['drainage', 'road_surface', 'accessibility'][index % 3],
     district: `Demo district ${index % 3 + 1} (fictional)`, crew: `Demo crew ${index % 4 + 1} (fictional)`,
-    scenario_date: '2026-11-03', created_at: '2026-10-30T00:00:00.000Z', due_at: '2026-11-02T00:00:00.000Z',
+    scenario_date: '2026-11-03', opened_at: '2026-10-30T00:00:00.000Z', due_at: '2026-11-02T00:00:00.000Z',
     closed_at: closed ? '2026-11-01T00:00:00.000Z' : null } };
 }
 
