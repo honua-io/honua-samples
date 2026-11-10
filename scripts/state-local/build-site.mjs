@@ -1,6 +1,7 @@
 // The standalone sample owns shared assets so clean sample exports remain buildable.
 import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { approvedPage } from '../../shared/state-local/approved-page.mjs';
 import { DATA_MODE_LABELS } from '../lib/data-mode-labels.mjs';
 import { sampleAppPath } from '../lib/sample-app-url.mjs';
 
@@ -11,8 +12,12 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   const assets = path.join(output, 'assets');
   await mkdir(assets, { recursive: true });
   await cp(path.join(source, 'index.html'), path.join(output, 'index.html'));
-  await cp(path.join(source, 'switching'), path.join(output, 'switching'), { recursive: true });
-  await cp(path.join(source, 'sdk-explorer'), path.join(output, 'sdk-explorer'), { recursive: true });
+  await mkdir(path.join(output, 'switching'), { recursive: true });
+  await writeFile(path.join(output, 'switching/index.html'), await approvedPage({
+    template: path.join(repoRoot, 'scripts/state-local/approved/09-switching.html'),
+    assets: path.join(repoRoot, 'samples/maui-emergency/approved/src'), data: {},
+  }));
+  await mkdir(path.join(output, 'sdk-explorer'), { recursive: true });
   const previews = Object.fromEntries(cards.filter((card) => card.bundleRunnable).map((card) => {
     const app = card.ownApp ?? card.bundleSample;
     return [`${card.sourceRepo === 'honua-sdk-js' ? 'sdk-js' : 'samples'}:${card.id}`, {
@@ -21,6 +26,16 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
     }];
   }));
   await writeFile(path.join(output, 'sdk-explorer/previews.json'), JSON.stringify(previews));
+  const catalog = JSON.parse(await readFile(path.join(source, 'sdk-explorer/catalog.json'), 'utf8'));
+  catalog.server = 'https://demo.honua.io';
+  for (const sample of catalog.samples) {
+    sample.preview = previews[`${sample.repo}:${sample.id}`] ?? null;
+    sample.live = sample.preview ? 'verified' : null;
+  }
+  await writeFile(path.join(output, 'sdk-explorer/index.html'), await approvedPage({
+    template: path.join(repoRoot, 'scripts/state-local/approved/13-sdk-explorer.html'),
+    assets: path.join(repoRoot, 'samples/maui-emergency/approved/src'), data: { '13-sdk-samples': catalog },
+  }));
   await cp(path.join(source, 'overview.css'), path.join(assets, 'overview.css'));
   await cp(path.join(sample, 'src/tokens.css'), path.join(assets, 'tokens.css'));
   const shared = await readFile(path.join(sample, 'src/shared.css'), 'utf8');

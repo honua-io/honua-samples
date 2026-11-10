@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Switching from ArcGIS</title>
+<meta name="description" content="How each ArcGIS product maps to Honua, and the migration path that keeps existing clients working.">
+{{HEAD}}
+<style>
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .hero { padding: 36px 0 24px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: end; }
+  .hero h1 { font-size: 36px; line-height: 1.1; letter-spacing: -0.03em; font-weight: 650; margin: 8px 0 12px; }
+  .hero p { font-size: 15.5px; color: var(--c-text-2); max-width: 60ch; line-height: 1.55; }
+  .hero-facts { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--c-surface); border: 1px solid var(--c-rule); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel); }
+  .hero-facts > div { padding: 14px 16px; border-left: 1px solid var(--c-rule); }
+  .hero-facts > div:first-child { border-left: 0; }
+  .hero-facts .v { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+  .hero-facts .l { font-size: 12px; color: var(--c-text-3); }
+  section.band { padding: 28px 0; border-top: 1px solid var(--c-rule); }
+  .sec-h { margin-bottom: 14px; }
+  .sec-h h2 { font-size: 21px; letter-spacing: -0.02em; }
+  .sec-h p { color: var(--c-text-2); margin-top: 4px; max-width: 76ch; }
+  .map-tbl td { padding: 14px 12px; }
+  .map-tbl td:first-child { width: 26%; }
+  .map-tbl .arr { width: 28px; color: var(--c-border-strong); padding-left: 0; padding-right: 0; }
+  .map-tbl .esri { font-weight: 600; }
+  .map-tbl .esri small { display: block; font-weight: 400; color: var(--c-text-3); font-size: 12px; margin-top: 2px; }
+  .map-tbl .hon { font-weight: 600; color: var(--c-accent-ink); display: flex; gap: 8px; align-items: center; }
+  .map-tbl .hon .ico { color: var(--c-accent); }
+  .map-tbl .what { color: var(--c-text-2); font-size: 13px; margin-top: 3px; }
+  .map-tbl a.screen { font-size: 13px; white-space: nowrap; }
+  .steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; counter-reset: s; position: relative; }
+  .step { padding: 0 14px 0 0; position: relative; }
+  .step .n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--c-surface); border: 2px solid var(--c-accent); color: var(--c-accent-ink); font-weight: 700; font-size: 13px; position: relative; z-index: 1; }
+  .step::before { content: ""; position: absolute; top: 15px; left: 30px; right: 0; height: 2px; background: var(--c-accent-soft); }
+  .step:last-child::before { display: none; }
+  .step .when { font-size: 12px; color: var(--c-text-3); margin-top: 10px; }
+  .step h3 { font-size: 14.5px; margin-top: 2px; }
+  .step p { font-size: 13px; color: var(--c-text-2); margin-top: 6px; }
+  .step ul { margin: 8px 0 0; padding-left: 16px; font-size: 13px; color: var(--c-text-2); }
+  .two { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .checklist { list-style: none; margin: 0; padding: 0; }
+  .checklist li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--c-rule); font-size: 13.5px; }
+  .checklist li:first-child { border-top: 0; }
+  .checklist .ico { color: var(--c-ok); margin-top: 2px; }
+  .checklist small { display: block; color: var(--c-text-3); font-size: 12px; margin-top: 2px; }
+  .checklist code { font-size: 12px; color: var(--c-text-2); white-space: nowrap; }
+  .side-by-side { display: grid; grid-template-columns: 1fr 40px 1fr; align-items: center; gap: 0; }
+  .sbs-col { background: var(--c-surface); border: 1px solid var(--c-rule); border-radius: var(--radius-lg); padding: 12px 14px; }
+  .sbs-col h3 { font-size: 13px; color: var(--c-text-3); font-weight: 500; margin-bottom: 8px; }
+  .sbs-col .it { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .sbs-col .it:first-of-type { border-top: 0; }
+  .sbs-mid { display: grid; place-items: center; color: var(--c-accent); }
+  .faq dt { font-weight: 600; margin-top: 14px; }
+  .faq dd { margin: 4px 0 0; color: var(--c-text-2); font-size: 13.5px; max-width: 80ch; }
+  footer.site { padding: 24px 0 40px; border-top: 1px solid var(--c-rule); color: var(--c-text-2); font-size: 13px; }
+  @media (max-width: 1000px) {
+    .hero, .two { grid-template-columns: minmax(0, 1fr); }
+    .steps { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+    .step::before { display: none; }
+  }
+  @media (max-width: 700px) {
+    .wrap { padding: 0 16px; }
+    .hero h1 { font-size: 27px; }
+    .map-tbl thead { display: none; }
+    .map-tbl tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 10px 0; border-bottom: 1px solid var(--c-rule); }
+    .map-tbl td { border: 0; padding: 3px 0; width: auto !important; }
+    .map-tbl .arr { display: none; }
+    .side-by-side { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+    .sbs-mid { transform: rotate(90deg); height: 28px; }
+    .checklist li { grid-template-columns: 20px minmax(0, 1fr); }
+    .checklist code { grid-column: 2; white-space: normal; word-break: break-all; }
+    .hero-facts .v { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+{{ICONS}}
+<header class="appbar">
+  <a class="wordmark" href="/state-local/"><strong>Honua</strong><small>County of Maui demo</small></a>
+  <nav class="appnav" aria-label="Demo screens">
+    <a href="/state-local/">Overview</a><a href="/state-local/property/">Property</a><a href="/state-local/311/">311</a><a href="/state-local/emergency/">Preparedness</a><a href="/state-local/public-works/">Public works</a><a aria-disabled="true" title="Coming soon">Workbench</a><a aria-disabled="true" title="Coming soon">Console</a><a aria-disabled="true" title="Coming soon">Catalog</a><a aria-disabled="true" title="Coming soon">Agent</a>
+  </nav>
+  <span class="spacer"></span>
+  <a class="btn ghost hide-sm" href="/state-local/switching/" aria-current="page" style="color:var(--c-text);background:var(--c-surface-2)">Switching from ArcGIS</a>
+  <span class="env"><span class="dot"></span>Demo environment</span>
+</header>
+
+<main id="main" class="wrap">
+  <section class="hero" aria-labelledby="h1">
+    <div>
+      <div class="kicker">Switching from ArcGIS</div>
+      <h1 id="h1">Every ArcGIS job has a Honua home. Your tools keep working while you move.</h1>
+      <p>Honua covers the server, the portal and hub, the app builders, administration and AI assistance. During the move, ArcGIS clients and the systems that read your services point at Honua's GeoServices REST and OGC endpoints, so nothing breaks on the way.</p>
+    </div>
+    <div class="hero-facts" aria-label="At a glance">
+      <div><div class="v">6</div><div class="l">ArcGIS product areas mapped</div></div>
+      <div><div class="v">1</div><div class="l">URL change per existing client</div></div>
+      <div><div class="v">0</div><div class="l">records re-keyed by hand</div></div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="mapH">
+    <div class="sec-h"><h2 id="mapH">Product mapping</h2><p>What you run today, the Honua component that does the job, and what you see in this demo.</p></div>
+    <div class="panel"><div class="panel-b" style="padding-top:4px">
+      <table class="tbl map-tbl">
+        <thead><tr><th>ArcGIS product</th><th class="arr"><span class="sr-only">maps to</span></th><th>Honua</th><th>In this demo</th></tr></thead>
+        <tbody>
+          <tr><td class="esri">ArcGIS Enterprise and ArcGIS Server<small>Map, feature, image and geoprocessing services</small></td><td class="arr"><svg class="ico"><use href="#i-arrow-r"/></svg></td>
+            <td><div class="hon"><svg class="ico"><use href="#i-server"/></svg>Honua Server</div><div class="what">Publishes every layer once from PostGIS as GeoServices REST (FeatureServer, MapServer), OGC API Features, Tiles and Processes, WMS, WMTS, WFS, WCS and STAC. Edits through OGC API Features and FeatureServer write to the same records. Runs in your data center, your cloud tenant or disconnected.</div></td>
+            <td><a class="screen" aria-disabled="true" title="Coming soon">Console › services · coming soon</a></td></tr>
+          <tr><td class="esri">ArcGIS Online, Portal and ArcGIS Hub<small>Content, groups, sharing, open data sites</small></td><td class="arr"><svg class="ico"><use href="#i-arrow-r"/></svg></td>
+            <td><div class="hon"><svg class="ico"><use href="#i-grid"/></svg>Honua Catalog and public site</div><div class="what">Folders, services and layers with sharing and anonymous access; the county's open data hub with search by text and map, dataset pages, downloads, DCAT 3 / DCAT-AP, DCAT-US for data.gov, OGC API Records and CKAN harvest.</div></td>
+            <td><a class="screen" aria-disabled="true" title="Coming soon">Open data hub · coming soon</a></td></tr>
+          <tr><td class="esri">Experience Builder, Dashboards and Web AppBuilder<small>Web apps, operations dashboards, embeds</small></td><td class="arr"><svg class="ico"><use href="#i-arrow-r"/></svg></td>
+            <td><div class="hon"><svg class="ico"><use href="#i-map"/></svg>Honua Studio</div><div class="what">Maps, apps and dashboards with draft, version and release; embeds and anonymous public viewing. Web AppBuilder apps are rebuilt in Studio rather than carried forward.</div></td>
+            <td><a class="screen" href="/state-local/property/">Property app</a> · <a class="screen" href="/state-local/311/">311 dashboard</a></td></tr>
+          <tr><td class="esri">ArcGIS Server Manager and Portal administration<small>Services, security, logs, data stores</small></td><td class="arr"><svg class="ico"><use href="#i-arrow-r"/></svg></td>
+            <td><div class="hon"><svg class="ico"><use href="#i-settings"/></svg>Honua Console</div><div class="what">Folders, services and layers with health; connections and imports with coordinate-system detection; styles; roles; jobs; activity and audit; the approvals inbox.</div></td>
+            <td><a class="screen" aria-disabled="true" title="Coming soon">Console · coming soon</a></td></tr>
+          <tr><td class="esri">ArcGIS AI assistants<small>Assistants in apps and the admin experience</small></td><td class="arr"><svg class="ico"><use href="#i-arrow-r"/></svg></td>
+            <td><div class="hon"><svg class="ico"><use href="#i-agent"/></svg>Honua MCP agents</div><div class="what">Agents query real layers through MCP tools, cite the layer and feature for every claim, and work across departments. Any change is a proposal that one named person approves in Console. Other agent platforms can call the same MCP tools.</div></td>
+            <td><a class="screen" aria-disabled="true" title="Coming soon">Agent workspace · coming soon</a></td></tr>
+          <tr><td class="esri">ArcGIS Field Maps<small>Data collection, inspections, offline</small></td><td class="arr"><svg class="ico"><use href="#i-arrow-r"/></svg></td>
+            <td><div class="hon"><svg class="ico"><use href="#i-phone"/></svg>Your existing field apps against Honua services</div><div class="what">Field crews keep collecting with field apps that edit feature services or OGC API Features, including QField, with offline sync and conflict handling on Honua Server. Honua's own mobile SDK and Collect field app are in development and will follow this release.</div></td>
+            <td><a class="screen" href="/state-local/public-works/">Public works › field updates</a></td></tr>
+        </tbody>
+      </table>
+    </div></div>
+  </section>
+
+  <section class="band" aria-labelledby="pathH">
+    <div class="sec-h"><h2 id="pathH">Migration path</h2><p>Honua stands up beside ArcGIS. Each step is reversible until the last one, and nothing has to move on a single weekend.</p></div>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><div class="when">Weeks 1–2</div><h3>Stand up Honua beside ArcGIS</h3><p>Install Honua Server in the county data center or your cloud tenant, connected to PostGIS.</p><ul><li>Single sign-on with county accounts</li><li>Roles mirror existing groups</li></ul></div>
+      <div class="step"><div class="n">2</div><div class="when">Weeks 2–4</div><h3>Publish the same data</h3><p>Import from file geodatabases, shapefiles or existing feature services. Coordinate systems are detected and kept.</p><ul><li>Same layer names and fields</li><li>Styles carried across</li></ul></div>
+      <div class="step"><div class="n">3</div><div class="when">Weeks 4–8</div><h3>Point existing clients at Honua</h3><p>Change the service URL in each desktop project, web map, permitting lookup and EOC board. Test each one in the pilot.</p><ul><li>GeoServices REST and OGC side by side</li><li>Field apps sync against Honua</li></ul></div>
+      <div class="step"><div class="n">4</div><div class="when">Months 2–4</div><h3>Rebuild apps in Studio</h3><p>Recreate public apps, dashboards and the open data hub in Studio and Catalog, then release them on the same addresses.</p><ul><li>Draft, version, release</li><li>Agents turned on with approvals</li></ul></div>
+      <div class="step"><div class="n">5</div><div class="when">At renewal</div><h3>Retire what nobody opens</h3><p>Console activity shows which old services and apps still get traffic. Retire them when the count reaches zero.</p><ul><li>Fewer licences to renew</li><li>One platform to patch and audit</li></ul></div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="keepH">
+    <div class="two">
+      <div>
+        <div class="sec-h"><h2 id="keepH">What keeps working on day one</h2><p>Each item is tested against your own services in the pilot before the client moves. The list is what we check, not a certification.</p></div>
+        <div class="panel"><div class="panel-b">
+          <ul class="checklist">
+            <li><svg class="ico"><use href="#i-check-circle"/></svg><div>ArcGIS Pro projects add Honua layers by URL<small>Feature and map service layers, queries, identify, symbology from the service</small></div><code>/rest/services/…/FeatureServer</code></li>
+            <li><svg class="ico"><use href="#i-check-circle"/></svg><div>Web maps built with the ArcGIS Maps SDK for JavaScript<small>Saved maps keep working after the layer URL changes</small></div><code>/rest/services/…/MapServer</code></li>
+            <li><svg class="ico"><use href="#i-check-circle"/></svg><div>Permitting and land-management parcel lookups<small>Point-in-polygon zoning and overlay queries by TMK</small></div><code>/FeatureServer/0/query</code></li>
+            <li><svg class="ico"><use href="#i-check-circle"/></svg><div>EOC board map layers<small>Zones, shelters and closures as feature or WMS layers</small></div><code>/wms · /FeatureServer</code></li>
+            <li><svg class="ico"><use href="#i-check-circle"/></svg><div>Field Maps and QField edits, offline sync<small>Edits, attachments and conflict handling on the server</small></div><code>/applyEdits · /ogc/…/items</code></li>
+            <li><svg class="ico"><use href="#i-check-circle"/></svg><div>QGIS and partner agencies<small>OGC API Features and Tiles, WFS and WMS</small></div><code>/ogc/collections</code></li>
+          </ul>
+        </div></div>
+      </div>
+      <div>
+        <div class="sec-h"><h2>Side by side during the move</h2><p>Both stacks read the same database until you retire the old one.</p></div>
+        <div class="side-by-side" aria-label="Side-by-side architecture">
+          <div class="sbs-col"><h3>Today</h3>
+            <div class="it"><svg class="ico faint"><use href="#i-server"/></svg>ArcGIS Enterprise</div>
+            <div class="it"><svg class="ico faint"><use href="#i-globe"/></svg>ArcGIS Online and Hub</div>
+            <div class="it"><svg class="ico faint"><use href="#i-map"/></svg>Experience Builder apps</div>
+            <div class="it"><svg class="ico faint"><use href="#i-phone"/></svg>Field Maps</div>
+          </div>
+          <div class="sbs-mid" aria-hidden="true"><svg class="ico" style="width:22px;height:22px"><use href="#i-arrow-r"/></svg></div>
+          <div class="sbs-col" style="border-color:var(--teal-200)"><h3>With Honua</h3>
+            <div class="it"><svg class="ico" style="color:var(--c-accent)"><use href="#i-server"/></svg>Honua Server on county PostGIS</div>
+            <div class="it"><svg class="ico" style="color:var(--c-accent)"><use href="#i-grid"/></svg>Honua Catalog and public site</div>
+            <div class="it"><svg class="ico" style="color:var(--c-accent)"><use href="#i-map"/></svg>Studio apps and dashboards</div>
+            <div class="it"><svg class="ico" style="color:var(--c-accent)"><use href="#i-phone"/></svg>Same field apps, Honua services</div>
+          </div>
+        </div>
+        <dl class="faq">
+          <dt>Is Honua certified by Esri?</dt><dd>No. Honua implements the published GeoServices REST specification and OGC standards. Compatibility is tested client by client in your pilot.</dd>
+          <dt>What does it cost to switch?</dt><dd>The data stays in PostGIS and does not need re-entry. The work is a URL change per client and rebuilding web apps in Studio. Licences you no longer use are dropped at renewal.</dd>
+          <dt>Is Honua open source?</dt><dd>Honua is source-available under the Fair Core licence, built on open standards and self-hostable.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site">ArcGIS, ArcGIS Pro, ArcGIS Online, ArcGIS Enterprise, ArcGIS Hub, Experience Builder, Field Maps and related names are trademarks of Esri, used here only to describe compatibility and equivalent functions. Honua makes no certification claim.</footer>
+</main>
+{{MAPJS}}
+</body>
+</html>
