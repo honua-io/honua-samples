@@ -31,3 +31,17 @@ test('Explorer includes only admitted apps and preserves their build provenance'
     await assert.rejects(buildStateLocalSite({ repoRoot, siteDir, cards: [{ id: 'unsafe', bundleRunnable: true, detailPath: '/unsafe/', ownApp: { entrypoint: '../outside.html' } }] }), /Unsafe sample entrypoint/);
   } finally { await rm(siteDir, { recursive: true, force: true }); }
 });
+
+test('link validation ignores inline source examples while checking actual markup', async () => {
+  const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-links-'));
+  try {
+    for (const route of ['', 'switching/', 'sdk-explorer/']) {
+      const dir = path.join(siteDir, 'state-local', route);
+      await mkdir(dir, { recursive: true });
+      await writeFile(path.join(dir, 'index.html'), '<script>const example = `<a href="missing-source.html">`;</script><a href="#main">Main</a>');
+    }
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/index.html'), '<a href="missing-page.html">Missing</a>');
+    await assert.rejects(validateStateLocalLinks(siteDir), /missing-page.html/);
+  } finally { await rm(siteDir, { recursive: true, force: true }); }
+});

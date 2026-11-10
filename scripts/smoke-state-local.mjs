@@ -60,11 +60,12 @@ try {
     const response = await route.fetch();
     const html = await response.text();
     const catalog = JSON.parse(html.match(/window.HD=(.*?);<\/script>/s)[1]);
-    catalog['13-sdk-samples'].samples[0].readme = malicious;
+    catalog['13-sdk-samples'].samples.find((sample) => sample.id === 'maplibre-quickstart').readme = malicious;
     const json = JSON.stringify(catalog).replaceAll('</', '<\\/');
     await route.fulfill({ response, body: html.replace(/window.HD=.*?;<\/script>/s, () => `window.HD=${json};</script>`) });
   });
-  await page.goto(`${base}/state-local/sdk-explorer/#maplibre-featureserver-layer/md`);
+  await page.goto("about:blank");
+  await page.goto(`${base}/state-local/sdk-explorer/#maplibre-quickstart/md`);
   await expect(page.locator('#md td')).toHaveText('Table cell');
   await expect(page.locator('#md script, #md img, #md a[href^="javascript:"]')).toHaveCount(0);
   assert.equal(await page.evaluate(() => window.explorerXss), undefined);

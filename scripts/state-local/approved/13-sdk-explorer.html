@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SDK Explorer · Honua</title>
-<meta name="description" content="Browsable, runnable gallery of the Honua JS SDK examples and honua-samples on Maui County data: live preview, real source, readme and editable parameters.">
+<meta name="description" content="Browse pinned Honua SDK examples and honua-samples: source, readmes and verified previews for admitted builds.">
 {{HEAD}}
+<style>[aria-disabled="true"]{opacity:.55;cursor:default}</style>
 <style>
   body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
   .sx { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; }
@@ -236,7 +237,7 @@
   <span class="avatar" aria-hidden="true">DV</span>
 </header>
 <div class="demostrip" role="note">
-  <span class="tag-real">Real data</span> Preview provenance is shown for each admitted build.
+  <span class="tag-real">Real data</span> Live previews identify their sources in the admitted app.
   <span class="tag-demo">Demo data</span> Fixture and hybrid previews include demo records.
   <span class="faint" id="revNote"></span>
 </div>
@@ -245,7 +246,7 @@
   <aside class="col left" aria-label="Samples">
     <div class="pagehead">
       <h1>SDK Explorer</h1>
-      <p>Every Honua JS SDK example and honua-sample, with the code, the readme and a live preview on Maui data.</p>
+      <p>Browse Honua JS SDK examples and honua-samples, with code, readmes and verified previews for admitted builds.</p>
     </div>
     <div class="finder">
       <label class="field"><svg class="ico faint" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">Search samples</span><input id="q" type="search" placeholder="Search samples or API names" autocomplete="off"></label>
@@ -298,7 +299,7 @@
       <div id="install"></div>
       <div class="links">
         <a class="btn" aria-disabled="true" title="Coming soon"><svg class="ico"><use href="#i-server"/></svg>Open in Console</a>
-        <a class="btn" href="/state-local/property/"><svg class="ico"><use href="#i-grid"/></svg>Use in Studio</a>
+        <a class="btn" aria-disabled="true" title="Coming soon"><svg class="ico"><use href="#i-grid"/></svg>Studio · coming soon</a>
         <a class="btn" id="ghLink" href="#" target="_blank" rel="noopener"><svg class="ico"><use href="#i-code"/></svg>View on GitHub</a>
         <a class="btn" id="sbLink" href="#" target="_blank" rel="noopener"><svg class="ico"><use href="#i-external"/></svg>StackBlitz</a>
       </div>
@@ -555,7 +556,7 @@ function sanitizedReadme(html) {
   $("#verTop").textContent = VER;
   $("#verBadge").textContent = `SDK ${VER}`;
   $("#revNote").textContent = `· ${D.samples.length} samples from pinned snapshots, ${D.sdkRev.split(" ")[1]}`;
-  $("#revNote").title = `honua-sdk-js ${D.sdkRev}, honua-samples ${D.samplesRev}; endpoints point at ${SERVER}`;
+  $("#revNote").title = `honua-sdk-js ${D.sdkRev}, honua-samples ${D.samplesRev}; source snapshots are unmodified; preview provenance is shown separately`;
   renderList();
   const hash = (location.hash || "").slice(1).split("/");
   select(BY[hash[0]] ? hash[0] : "maplibre-featureserver-layer", { tab: hash[1] === "src" || hash[1] === "md" ? hash[1] : null, keepScroll: true });

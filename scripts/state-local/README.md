@@ -1,6 +1,6 @@
 # State and local gallery
 
-The landing, Switching and SDK Explorer pages use the county parcel sample's shared design tokens and theme preference. The gallery build copies these pages and checks their local links after emitting the sample pages.
+Switching and SDK Explorer port the approved mockup templates and kit from the emergency sample, sharing the honua-theme preference. The landing uses the county parcel tokens pending its approved port. The gallery build assembles the pages and checks local links after emitting sample pages.
 
 The Explorer catalogue is derived from the approved `sdk_samples.py` generator. Regenerate after fetching `origin/trunk` in honua-sdk-js, honua-samples and honua-server:
 
