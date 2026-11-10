@@ -30,6 +30,6 @@ test('both approved layer bindings are required and retain the shared origin pol
   assert.throws(() => namedBindings('?shelterService=schools&shelterLayer=7', ['shelter', 'closure']), /all layers/);
   const params = '?shelterService=schools&shelterLayer=7&closureService=roads&closureLayer=8';
   assert.equal(namedBindings(params, ['shelter', 'closure']).closure.layerId, 8);
-  assert.throws(() => namedBindings(`${params}&baseUrl=https://unapproved.example`, ['shelter', 'closure']), /demo.honua.io/);
+  assert.throws(() => namedBindings(`${params}&baseUrl=https://unapproved.example`, ['shelter', 'closure']), /demo\.honua\.io/);
   assert.throws(() => namedBindings(params.replace('closureLayer=8', 'closureLayer=bad'), ['shelter', 'closure']), /numeric layer/);
 });
