@@ -1,4 +1,4 @@
-import { assertExerciseProvenance } from '../../../shared/state-local/exercise-provenance.mjs';
+import { assertExerciseAnchor } from '../../../shared/state-local/exercise-provenance.mjs';
 import { exerciseTimeline } from '../../../shared/state-local/exercise-time.mjs';
 
 export const STAGES = { exercise_new: 'New', exercise_triaged: 'Triaged', exercise_scheduled: 'Scheduled',
@@ -7,14 +7,10 @@ const INSPECTION_STAGES = ['exercise_open', 'exercise_in_progress', 'exercise_cl
 const CONDITIONS = ['exercise_good', 'exercise_fair', 'exercise_poor'];
 
 export function exerciseRecord(row) {
-  assertExerciseProvenance(row);
+  assertExerciseAnchor(row, 'maui-roads');
   const validStatus = row.record_type === 'work_order' ? Object.hasOwn(STAGES, row.status)
     : row.record_type === 'inspection' && INSPECTION_STAGES.includes(row.status);
-  if (!validStatus || typeof row.record_id !== 'string' || !row.record_id.trim()
-    || !['string', 'number'].includes(typeof row.anchor_feature_id) || !String(row.anchor_feature_id).trim()
-    || (typeof row.anchor_feature_id === 'number' && !Number.isSafeInteger(row.anchor_feature_id))
-    || row.anchor_source !== 'maui-roads'
-    || row.asset_id !== `maui-roads:${row.anchor_feature_id}` || !CONDITIONS.includes(row.condition)
+  if (!validStatus || !CONDITIONS.includes(row.condition)
     || !/^Demo crew [1-4] \(fictional\)$/.test(row.crew)) {
     throw new Error('Record does not match the public works exercise contract');
   }

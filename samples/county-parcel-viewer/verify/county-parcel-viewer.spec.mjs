@@ -134,6 +134,54 @@ test("first load shows the example parcel from PMTiles outlines within the live 
   await page.screenshot({ path: testInfo.outputPath("county-parcel-viewer-desktop.png") });
 });
 
+test("SDK-08 3D renders real Overture buildings, retains the parcel and returns to 2D", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(appUrl());
+  await settled(page);
+  await page.getByRole("button", { name: "Show 3D buildings", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Show 2D map", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => page.evaluate(() => window.sampleMap.queryRenderedFeatures({ layers: ["overture-buildings"] }).filter((feature) => feature.properties.render_height > 0).length), { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect(page.locator(".building-note")).toContainText("Not surveyed elevations");
+  await expect(page.locator(".maplibregl-ctrl-attrib")).toContainText("Overture Maps Foundation");
+  await expect(page.locator(".maplibregl-ctrl-attrib a", { hasText: "ODbL" })).toHaveAttribute("href", "https://opendatacommons.org/licenses/odbl/1-0/");
+  expect(seen.some((request) => request.url === `${DATA_BASE}/api/v1/tiles/pmtiles/maui-buildings-static`)).toBe(true);
+  await expect(page.locator("body")).toHaveAttribute("data-tmk", EXAMPLE_TMK);
+  expect(await page.evaluate(() => window.sampleMap.getPitch())).toBeCloseTo(55, 8);
+  const lightBuildings = await page.evaluate(() => window.sampleMap.getPaintProperty("overture-buildings", "fill-extrusion-color"));
+  await page.screenshot({ path: testInfo.outputPath("property-3d-light.png") });
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  expect(await page.evaluate(() => window.sampleMap.getPaintProperty("overture-buildings", "fill-extrusion-color"))).not.toEqual(lightBuildings);
+  await page.screenshot({ path: testInfo.outputPath("property-3d-dark.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("button", { name: "Show 2D map", exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("property-3d-phone.png") });
+  await page.getByRole("button", { name: "Show 2D map", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Show 3D buildings", exact: true })).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate(() => ({ pitch: window.sampleMap.getPitch(), visibility: window.sampleMap.getLayoutProperty("overture-buildings", "visibility") }))).toEqual({ pitch: 0, visibility: "none" });
+});
+
+test("SDK-08 unavailable buildings offer retry while parcel lookup remains usable", async ({ page }) => {
+  const archiveUrl = `${DATA_BASE}/api/v1/tiles/pmtiles/maui-buildings-static`;
+  await page.route(archiveUrl, (route) => route.fulfill({ status: 404, body: "unavailable" }));
+  await page.goto(appUrl());
+  await settled(page);
+  await page.getByRole("button", { name: "Show 3D buildings", exact: true }).click();
+  await expect(page.locator(".building-note")).toContainText("Select 3D to retry");
+  await expect(page.locator("body")).toHaveAttribute("data-tmk", EXAMPLE_TMK);
+  await page.unroute(archiveUrl);
+  await page.getByRole("button", { name: "Show 3D buildings", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Show 2D map", exact: true })).toBeVisible();
+});
+
+test("SDK-08 buildingsUrl=none removes the optional 3D control and sends no building reads", async ({ page }) => {
+  await page.goto(appUrl({ buildingsUrl: "none" }));
+  await settled(page);
+  await expect(page.locator("body")).toHaveAttribute("data-map-state", "ready");
+  await expect(page.getByRole("button", { name: "Show 3D buildings", exact: true })).toHaveCount(0);
+  expect(seen.filter((request) => request.url.includes("maui-buildings-static"))).toEqual([]);
+});
+
 test("a shared ?tmk= link opens the parcel; the assessor and copy links are exact", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: server.url });
   const expected = await liveParcel(WAILUKU_TMK);
@@ -475,8 +523,10 @@ test("SHELL-02: property theme persists and embedded shell keeps its height", as
   const lightMap = await page.evaluate(() => window.sampleMap.getPaintProperty("background", "background-color"));
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
   expect(await page.evaluate(() => window.sampleMap.getPaintProperty("background", "background-color"))).not.toEqual(lightMap);
-  const controlColor = await page.locator(".maplibregl-ctrl-group").evaluate((element) => getComputedStyle(element).backgroundColor);
-  expect(controlColor).toBe(await page.evaluate(() => { const element = document.createElement("div"); element.style.background = "var(--c-surface)"; document.body.append(element); const color = getComputedStyle(element).backgroundColor; element.remove(); return color; }));
+  const controlColors = await page.locator(".maplibregl-ctrl-group").evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor));
+  const surfaceColor = await page.evaluate(() => { const element = document.createElement("div"); element.style.background = "var(--c-surface)"; document.body.append(element); const color = getComputedStyle(element).backgroundColor; element.remove(); return color; });
+  expect(controlColors.length).toBeGreaterThan(0);
+  for (const color of controlColors) expect(color).toBe(surfaceColor);
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator(".logo-dark")).toBeVisible();

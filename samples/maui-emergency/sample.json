@@ -1,7 +1,7 @@
 {
   "id": "maui-emergency",
-  "title": "Maui emergency exercise SDK queries",
-  "description": "Run the published JavaScript, Python and .NET SDKs against one anonymous Honua layer. CI imports a small synthetic contract fixture into a real PostGIS-only server; the full Maui app is a separate journey.",
+  "title": "Maui emergency preparedness exercise",
+  "description": "Explore real Maui geography and clearly labelled fictional shelters and road closures in a static preparedness exercise. Optional anonymous SDK connections use approved layer receipts.",
   "contentKind": "walkthrough",
   "learning": {
     "goal": "connect-data",
@@ -14,8 +14,8 @@
       "A published Maui layer or a disposable local Honua Server"
     ]
   },
-  "dataMode": "local-integration",
-  "auth": "admin-api-key",
+  "dataMode": "fixture",
+  "auth": "none",
   "capabilities": [
     "import.file",
     "serve.geoservices-featureserver"
@@ -31,8 +31,13 @@
   ],
   "edition": "community",
   "entrypoint": {
-    "type": "node",
-    "command": "node ../../scripts/state-local/sdk/verify.mjs emergency"
+    "type": "browser",
+    "command": "index.html",
+    "build": {
+      "command": "npm ci && npm run build",
+      "outputDir": "dist",
+      "publishedEntrypoint": "index.html"
+    }
   },
   "status": "active"
 }

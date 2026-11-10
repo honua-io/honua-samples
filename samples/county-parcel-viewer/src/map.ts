@@ -1,3 +1,4 @@
+import { DISPLAY_SNAPSHOT } from "./config.js";
 // The map: MapLibre GL JS with every tile read from the one Honua server.
 //   - basemap: the server's Protomaps archive (maui-basemap), or a plain
 //     background when it is unavailable. No SDK or third-party default basemap.
@@ -17,6 +18,8 @@ import * as maplibregl from "maplibre-gl";
 import { FetchSource, PMTiles, Protocol, type RangeResponse, type Source } from "pmtiles";
 
 import type { ViewerConfig } from "./config.js";
+import { installBuildingControl } from "./buildings.js";
+import { token, reducedMotion } from "./dom.js";
 import { isAbort, logRequest, settle } from "./request-log.js";
 
 /** Below this zoom a click would pick a parcel too small to see, so it only hints. */
@@ -64,12 +67,6 @@ function pmtilesArchive(archiveUrl: string): PMTiles {
   protocol.add(archive);
   return archive;
 }
-
-function token(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export interface ParcelMap {
   readonly map: maplibregl.Map;
@@ -143,6 +140,13 @@ async function addBasemap(map: maplibregl.Map, config: ViewerConfig): Promise<st
 }
 
 function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
+  if (DISPLAY_SNAPSHOT) map.addSource("parcels", { type: "geojson", data: config.parcelsUrl });
+  else addParcelTileSource(map, config);
+  if (!map.getSource("parcels")) return;
+  addParcelLayers(map);
+}
+
+function addParcelTileSource(map: maplibregl.Map, config: ViewerConfig): void {
   if (!config.parcelTilesUrl) return;
   const descriptor = registerPmtilesSource({
     directArchiveUrl: config.parcelTilesUrl,
@@ -153,11 +157,15 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
   });
   pmtilesArchive(descriptor.archiveUrl);
   map.addSource("parcels", { ...descriptor.maplibreSource } as maplibregl.VectorSourceSpecification);
+}
+
+function addParcelLayers(map: maplibregl.Map): void {
+  const sourceLayer = DISPLAY_SNAPSHOT ? {} : { "source-layer": PARCEL_SOURCE_LAYER };
   map.addLayer({
     id: "parcel-outlines",
     type: "line",
     source: "parcels",
-    "source-layer": PARCEL_SOURCE_LAYER,
+    ...sourceLayer,
     minzoom: OUTLINE_MIN_ZOOM,
     paint: { "line-color": token("--map-parcel"), "line-width": PARCEL_WIDTH },
   });
@@ -165,7 +173,7 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
     id: "parcel-selected-fill",
     type: FILL_LAYER,
     source: "parcels",
-    "source-layer": PARCEL_SOURCE_LAYER,
+    ...sourceLayer,
     filter: ["==", ["get", "tmk_txt"], ""],
     paint: { "fill-color": token("--map-select"), "fill-opacity": 0.45 },
   });
@@ -173,7 +181,7 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
     id: "parcel-selected-line",
     type: "line",
     source: "parcels",
-    "source-layer": PARCEL_SOURCE_LAYER,
+    ...sourceLayer,
     filter: ["==", ["get", "tmk_txt"], ""],
     paint: { "line-color": token("--map-select-line"), "line-width": 3 },
   });
@@ -186,6 +194,7 @@ function watchTheme(map: maplibregl.Map): void {
       ["basemap-earth", "fill-color", "--map-land"], ["basemap-water", "fill-color", "--map-water"],
       ["basemap-roads", "line-color", "--map-road"], ["parcel-outlines", "line-color", "--map-parcel"],
       ["parcel-selected-fill", "fill-color", "--map-select"], ["parcel-selected-line", "line-color", "--map-select-line"],
+      ["overture-buildings", "fill-extrusion-color", "--map-select"],
       ["flood-fill", "fill-color", "--hz-flood"], ["flood-line", "line-color", "--hz-flood"],
     ] as const;
     for (const [layer, paint, color] of paints) if (map.getLayer(layer)) map.setPaintProperty(layer, paint, token(color));
@@ -234,6 +243,7 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
       map.addLayer({ id: "flood-fill", type: FILL_LAYER, source: "flood", paint: { "fill-color": token("--hz-flood"), "fill-opacity": 0.18 } }, underOutline);
       map.addLayer({ id: "flood-line", type: "line", source: "flood", paint: { "line-color": token("--hz-flood"), "line-opacity": 0.6, "line-width": 1, "line-dasharray": [3, 2] } }, underOutline);
       events.onBasemap(await addBasemap(map, config));
+      installBuildingControl(map, { archiveUrl: config.buildingsUrl, archiveFor: pmtilesArchive });
       resolve();
     });
   });

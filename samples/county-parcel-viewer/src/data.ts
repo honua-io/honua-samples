@@ -1,21 +1,18 @@
-// Every FeatureServer and GeocodeServer call the viewer makes, through the
-// published @honua/sdk-js. connect() discovers each layer with a client whose
-// fetch is the request logger; QueryBuilder then runs the queries on that
-// client. Parcels are never drawn from these responses: outlines come from
-// PMTiles (map.ts). REST is for lookups, identify and overlap only.
+// Live service queries use the published SDK; static publication reads verified display snapshots.
 
 import {
   type HonuaClient,
   HonuaGeocodingClient,
   QueryBuilder,
   connect,
-  esriGeometryToGeoJSON,
+  geoServicesGeometryToGeoJSON,
   point,
   polygon,
 } from "@honua/sdk-js/honua";
 import type { GeoJsonGeometry } from "@honua/sdk-js/geometry";
 
-import type { ViewerConfig } from "./config.js";
+import { DISPLAY_SNAPSHOT, type ViewerConfig } from "./config.js";
+import { displayCandidates, displayParcelAtPoint, displayParcelByTmk } from "./display-data.js";
 import type { OverlapCandidate } from "./overlap.js";
 import { loggedFetch } from "./request-log.js";
 import { tmkWhere } from "./tmk.js";
@@ -26,7 +23,7 @@ export interface Parcel {
   readonly taxAcres: number | null;
   /** The assessor link exactly as the layer stores it (checked before use). */
   readonly qpubLink: unknown;
-  /** WGS84 GeoJSON, for the overlap math and fitting the map. Never drawn. */
+  /** WGS84 GeoJSON for overlap math and fitting the map. */
   readonly geometry: GeoJsonGeometry;
   /** The Esri JSON rings, sent back as the candidate-query polygon. */
   readonly rings: number[][][];
@@ -76,7 +73,7 @@ export function layer(url: string): Promise<LayerHandle> {
 function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unknown }): Parcel {
   const attributes = feature.attributes;
   const esri = feature.geometry as { rings?: number[][][] } | null | undefined;
-  const geometry = esriGeometryToGeoJSON(esri as Record<string, unknown> | null);
+  const geometry = geoServicesGeometryToGeoJSON(esri as Record<string, unknown> | null);
   if (!esri?.rings?.length || !geometry) throw new Error("The parcel layer returned a parcel without a polygon.");
   const tmk = attributes["tmk_txt"];
   if (typeof tmk !== "string" || !tmk.trim()) throw new Error("The parcel has no source TMK; County permit lookup is unavailable.");
@@ -101,6 +98,7 @@ function parcelFields(fields: ReadonlySet<string>): string[] {
 /** The parcel with this TMK, or null. `digits` must already be validated. */
 export async function parcelByTmk(config: ViewerConfig, digits: string, signal: AbortSignal): Promise<Parcel | null> {
   const where = tmkWhere(digits);
+  if (DISPLAY_SNAPSHOT) return displayParcelByTmk(config.parcelsUrl, digits, signal);
   const { client, serviceId, layerId, fields } = await layer(config.parcelsUrl);
   const response = await QueryBuilder.for(client, serviceId, layerId)
     .where(where)
@@ -116,6 +114,7 @@ export async function parcelByTmk(config: ViewerConfig, digits: string, signal: 
 
 /** The parcel under a WGS84 point (map click or geocoded address), or null. */
 export async function parcelAtPoint(config: ViewerConfig, lngLat: readonly [number, number], signal: AbortSignal): Promise<Parcel | null> {
+  if (DISPLAY_SNAPSHOT) return displayParcelAtPoint(config.parcelsUrl, lngLat, signal);
   const { client, serviceId, layerId, fields } = await layer(config.parcelsUrl);
   const filter = point(lngLat[0], lngLat[1], { wkid: 4326 });
   const response = await QueryBuilder.for(client, serviceId, layerId)
@@ -143,6 +142,7 @@ export async function candidatesFor(
   parcel: Parcel,
   options: { code: string; label?: string; signal: AbortSignal },
 ): Promise<OverlapCandidate[]> {
+  if (DISPLAY_SNAPSHOT) return displayCandidates(layerUrl, parcel, options);
   const { client, serviceId, layerId, idField } = await layer(layerUrl);
   const filter = polygon(parcel.rings, { wkid: 4326 });
   const outFields = [...new Set([options.code, ...(options.label ? [options.label] : []), idField])];
@@ -165,7 +165,7 @@ export async function candidatesFor(
       .signal(options.signal)
       .run();
     for (const feature of response.features ?? []) {
-      const geometry = esriGeometryToGeoJSON(feature.geometry ?? null);
+      const geometry = geoServicesGeometryToGeoJSON(feature.geometry ?? null);
       const code = feature.attributes[options.code];
       if (!geometry || code === null || code === undefined || code === "") throw new Error("Layer returned an incomplete polygon; applicability is unknown.");
       const label = options.label ? feature.attributes[options.label] : undefined;
@@ -206,6 +206,7 @@ async function checkGeocoderProvider(config: ViewerConfig): Promise<string> {
 
 /** Up to five address matches. Throws GeocoderUnavailableError when address search cannot run. */
 export async function geocode(config: ViewerConfig, text: string): Promise<AddressMatch[]> {
+  if (DISPLAY_SNAPSHOT) throw new GeocoderUnavailableError("Live data coming. Search by TMK or click a parcel in this snapshot.");
   providerCheck ??= checkGeocoderProvider(config);
   providerCheck.catch(() => (providerCheck = undefined));
   try {
