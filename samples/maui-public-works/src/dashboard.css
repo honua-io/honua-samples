@@ -1,0 +1,13 @@
+@import 'maplibre-gl/dist/maplibre-gl.css';
+@import '../../../shared/state-local/operations.css';
+.inventory, #work-orders, #crews { margin-top: 32px; }
+.board { display: grid; grid-template-columns: repeat(5, minmax(160px, 1fr)); gap: 16px; overflow-x: auto; padding-bottom: 12px; }
+.board-column { border-top: 1px solid var(--c-border); padding-top: 16px; min-width: 0; }
+.board-column h3 { font-size: 14px; margin: 0 0 12px; }
+.board-column ol { padding: 0; margin: 0; list-style: none; }
+.board-column li { border-bottom: 1px solid var(--c-rule); padding: 10px 0; }
+.board-column p { font-size: 12px; margin: 0 0 6px; overflow-wrap: anywhere; }
+#detail ul { padding-left: 20px; }#detail li { overflow-wrap: anywhere; }
+.board-help { display: none; }
+@media (max-width: 1000px) { .board-help { display: block; } }
+@media (max-width: 640px) { nav { gap: 16px; flex-wrap: wrap; }.board { grid-template-columns: repeat(5, 220px); } }

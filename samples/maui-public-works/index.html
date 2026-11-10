@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("honua-theme")==="dark"?"dark":"light"}catch{document.documentElement.dataset.theme="light"}</script>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark"><title>Maui Public Works · Honua</title>
+  <link rel="stylesheet" href="/state-local/assets/tokens.css"><link rel="stylesheet" href="/state-local/assets/shared.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to inventory</a>
+  <header class="topbar">
+    <a class="brand" href="../../state-local/" aria-label="Honua state and local demos"><img class="logo-light" src="/state-local/assets/honua-lockup.svg" alt="Honua" width="94" height="24"><img class="logo-dark" src="/state-local/assets/honua-lockup-on-dark.svg" alt="Honua" width="94" height="24"></a>
+    <span class="app-name">Maui · Public Works</span>
+    <nav aria-label="Public Works"><a href="#main">Inventory</a><a href="#work-orders">Work orders</a><a href="#crews">Crews</a><a href="#connections">Connections</a></nav>
+    <button type="button" class="theme-toggle" aria-label="Switch to dark mode">Dark mode</button>
+  </header>
+  <div class="disclosure"><span id="bridge-provenance"><strong>REAL DATA</strong> Historical NBI bridges · June 20, 2025.</span> <strong>DEMO DATA</strong> Fictional orders, inspections and crews on real Maui roads. No operational use.</div>
+  <main id="main">
+    <div class="heading"><div><h1>Roadway assets and maintenance</h1><p id="scenario">Explore bridge condition and a separate road-maintenance exercise.</p></div><button id="refresh" type="button" disabled>Refresh data</button></div>
+    <p id="load-status" role="status">No layers connected. Use the bridge, work-order and inspection layer IDs from the approved deployment receipts.</p>
+    <div id="dashboard" hidden>
+      <dl id="metrics" class="metrics" aria-label="Inventory and exercise totals"></dl>
+      <form id="filters" class="filters" aria-label="Filter mapped records">
+        <label>Map layer<select name="dataset"><option value="bridges">Bridges · NBI 2025</option><option value="orders">Work orders · DEMO DATA</option><option value="inspections">Inspections · DEMO DATA</option></select></label>
+        <label>Condition<select name="condition" aria-label="Condition"><option value="">All conditions</option></select></label>
+        <label>Work-order stage<select name="status" aria-label="Work-order stage"><option value="">All stages</option></select></label>
+        <label>Find record or crew<input name="search" type="search" placeholder="Record ID, road or crew" autocomplete="off"></label>
+        <button type="reset">Clear filters</button>
+      </form>
+      <div class="workspace"><section class="map-panel" aria-label="Public Works map"><div id="map" role="region" aria-label="Map of Maui inventory records"></div><p class="map-note" id="map-legend"></p><p id="map-status" role="status"></p></section>
+        <aside id="detail" aria-label="Record details" tabindex="-1"><h2>Record details</h2><p>Select a feature on the map or a record in the list.</p></aside></div>
+      <section class="inventory"><div class="section-heading"><h2 id="inventory-title">Bridge inventory</h2><p id="result-count" role="status"></p></div><div class="table-scroll"><table><caption class="sr-only">Filtered mapped records</caption><thead><tr><th>Record</th><th>Road or crew</th><th>Condition</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div><button type="button" id="more" hidden>Show more records</button></section>
+      <section id="work-orders"><h2>Work orders</h2><p>DEMO DATA · all exercise orders, grouped by their recorded stage. Due dates describe the exercise; they are not county schedules.</p><p id="board-help" class="board-help">Scroll across five stages: New, Triaged, Scheduled, In progress and Closed. Keyboard: focus the board and use the arrow keys.</p><div id="board" class="board" role="region" tabindex="0" aria-label="Work-order stages" aria-describedby="board-help"></div></section>
+      <section id="crews"><h2>Exercise crew assignments</h2><p>Fictional crews and assignments. Capacity, availability and live crew locations are not supplied.</p><div class="table-scroll"><table><caption class="sr-only">Fictional crew assignments</caption><thead><tr><th>Fictional crew</th><th>Unclosed orders</th><th>Inspections</th></tr></thead><tbody id="crew-rows"></tbody></table></div></section>
+    </div>
+    <section id="connections" class="feeds"><h2>Public data and the agent task</h2><p>Ask a stock MCP client: “Which unclosed exercise work orders share a road anchor with an exercise inspection? Cite order IDs, inspection IDs, asset IDs and due times.” Check each join in the record details.</p><p>Bridge records are a historical NBI snapshot, not a current safety assessment. Exercise road anchors do not identify bridges, inlets, culverts or signals. Inspections link to orders only by identical asset IDs.</p><p>Field editing and offline sync, a published DCAT catalog, EAM handoff and an approved agent inspection plan are not connected in this sample.</p><p><a href="../">Run the published JavaScript, Python and .NET examples</a></p><p>Bridges: FHWA National Bridge Inventory via Hawaii Statewide GIS Program, public domain. Road geometry: Hawaii Statewide GIS Program, public domain. Exercise records: Honua, CC0.</p></section>
+  </main>
+  <script src="/state-local/assets/theme.js"></script><script type="module" src="/src/main.mjs"></script>
+</body>
+</html>

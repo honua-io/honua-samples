@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { HonuaClient } from '@honua/sdk-js';
-import { assertExerciseProvenance } from '../../../samples/maui-311/src/exercise-provenance.mjs';
+import { assertExerciseProvenance } from '../../../shared/state-local/exercise-provenance.mjs';
 
 const scenarios = JSON.parse(await readFile(new URL('./scenarios.json', import.meta.url), 'utf8'));
 const scenario = scenarios[process.argv[2]];

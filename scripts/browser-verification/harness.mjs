@@ -115,7 +115,7 @@ export function outsidePoint(fixture, view) {
  *
  * @param {{ prefix: string, allowAnonymous: boolean, protocols?: string[], fixture?: {geojson: object, count: number} }} opts
  */
-export async function seedFeatureService({ prefix, allowAnonymous, protocols = [], fixture: suppliedFixture }) {
+export async function seedFeatureService({ prefix, allowAnonymous, protocols = [], fixture: suppliedFixture, description }) {
   const env = serverEnv();
   const fixture = suppliedFixture ?? await loadFixture();
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -137,6 +137,7 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
     schema: upload.schema ?? "honua_data",
     table: upload.physicalTableName,
     layerName,
+    ...(description ? { description } : {}),
     srid: 4326,
     serviceName,
     enabled: true,
@@ -388,6 +389,15 @@ export function projectToMapPixel([lng, lat], view, size) {
   const [px, py] = toWorld([lng, lat]);
   const [cx, cy] = toWorld(view.center);
   return [Math.round(size.width / 2 + (px - cx)), Math.round(size.height / 2 + (py - cy))];
+}
+
+export async function settleMapCanvas(page) {
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('#map canvas');
+    return canvas && Math.abs(canvas.width / devicePixelRatio - canvas.clientWidth) < 1
+      && Math.abs(canvas.height / devicePixelRatio - canvas.clientHeight) < 1;
+  });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
 /** Screenshots `locator` and returns the RGB value at each CSS-pixel point. */

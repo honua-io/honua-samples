@@ -1,45 +1,27 @@
-import { cp, mkdtemp, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
-import { BROWSER_ORIGIN_PORT, readPixels, runCommand, seedFeatureService, serverEnv } from '../../../scripts/browser-verification/harness.mjs';
-import { startStaticServer } from '../../../scripts/lib/browser-lane.mjs';
-import { buildStateLocalSite } from '../../../scripts/state-local/build-site.mjs';
+import { readPixels, serverEnv, settleMapCanvas } from '../../../scripts/browser-verification/harness.mjs';
+import { closeOperationsBrowser, prepareOperationsBrowser } from '../../../scripts/browser-verification/state-local.mjs';
 import { request } from './fixture.mjs';
 
-const sample = fileURLToPath(new URL('..', import.meta.url));
-const repo = path.resolve(sample, '../..');
-let root;
+let browser;
 let server;
 let binding;
 let unsafe;
 
 test.beforeAll(async ({}, info) => {
   info.setTimeout(600_000);
-  const env = serverEnv();
-  if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(env.baseUrl).hostname)) throw new Error('Browser fixture imports require a disposable localhost server');
-  if (!await stat(path.join(sample, 'node_modules/.bin/vite')).catch(() => null)) {
-    await runCommand('npm', ['ci', '--no-audit', '--no-fund'], { cwd: sample, label: 'install dashboard' });
-  }
-  await runCommand('npm', ['test'], { cwd: sample, label: 'dashboard unit tests' });
-  await runCommand('node', ['scripts/state-local/sdk/verify.mjs', '311'], { cwd: repo, label: 'three published SDK contracts' });
-  await runCommand('npm', ['run', 'build'], { cwd: sample, label: 'build dashboard' });
   const geojson = { type: 'FeatureCollection', features: Array.from({ length: 205 }, (_, index) => request(index)) };
-  binding = await seedFeatureService({ prefix: 'maui-311-ui', allowAnonymous: true, protocols: ['OgcFeatures'], fixture: { geojson, count: 205 } });
   const unlabelled = structuredClone(geojson);
   unlabelled.features.forEach(({ properties }) => { properties.is_demo = false; });
-  unsafe = await seedFeatureService({ prefix: 'maui-311-unsafe', allowAnonymous: true, fixture: { geojson: unlabelled, count: 205 } });
-  root = await mkdtemp(path.join(tmpdir(), 'maui-311-'));
-  await cp(path.join(sample, 'dist'), path.join(root, 'maui-311/app'), { recursive: true });
-  await buildStateLocalSite({ repoRoot: repo, siteDir: root });
-  server = await startStaticServer({ rootDir: root, port: BROWSER_ORIGIN_PORT });
+  browser = await prepareOperationsBrowser({ sampleUrl: new URL('..', import.meta.url), scenario: '311', seeds: {
+    binding: { prefix: 'maui-311-ui', allowAnonymous: true, protocols: ['OgcFeatures'], fixture: { geojson, count: 205 } },
+    unsafe: { prefix: 'maui-311-unsafe', allowAnonymous: true, fixture: { geojson: unlabelled, count: 205 } }
+  } });
+  server = browser.server;
+  ({ binding, unsafe } = browser.bindings);
 });
 
-test.afterAll(async () => {
-  await server?.close();
-  if (root) await rm(root, { recursive: true, force: true });
-});
+test.afterAll(async () => { await closeOperationsBrowser(browser); });
 
 function url(source = binding) {
   const target = new URL('/maui-311/app/', server.url);
@@ -69,6 +51,12 @@ test('SR-01/02/03: real-server pagination, filters, metrics, timeline and labele
   await expect(page.locator('#scenario')).toContainText('2026-11-03');
   await expect(page.locator('#trend tr')).toHaveCount(12);
   await page.getByLabel('Request status').selectOption('exercise_closed');
+  await expect(page.locator('#result-count')).toContainText('68 matching');
+  await page.getByLabel('Find request or crew').fill('request-003');
+  await expect(page.locator('#map-status')).toContainText('1 exercise requests mapped');
+  await canvas.click({ position: { x: size.width / 2, y: size.height / 2 } });
+  await expect(page.locator('#detail')).toContainText('Demo crew 3 (fictional)');
+  await page.getByLabel('Find request or crew').fill('');
   await expect(page.locator('#result-count')).toContainText('68 matching');
   await page.getByRole('button', { name: 'Inspect request-003', exact: true }).click();
   await expect(page.locator('#detail')).toContainText('Demo crew 3 (fictional)');
@@ -135,9 +123,11 @@ test('mobile and dark mode retain disclosure, controls and accessible request se
   await page.getByRole('button', { name: /dark mode/i }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await settleMapCanvas(page);
   await page.screenshot({ path: info.outputPath('311-mobile-dark.png'), fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('button', { name: /light mode/i }).click();
+  await settleMapCanvas(page);
   await page.screenshot({ path: info.outputPath('311-desktop-light.png'), fullPage: true });
 });
 

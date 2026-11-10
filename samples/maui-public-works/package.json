@@ -1,0 +1,8 @@
+{
+  "name": "honua-maui-public-works",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "vite build", "test": "node --test verify/*.test.mjs" },
+  "dependencies": { "@honua/sdk-js": "0.3.2", "maplibre-gl": "6.4.1" },
+  "devDependencies": { "vite": "8.2.4" }
+}

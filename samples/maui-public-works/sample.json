@@ -1,12 +1,12 @@
 {
   "id": "maui-public-works",
-  "title": "Maui public works exercise SDK queries",
-  "description": "Run the published JavaScript, Python and .NET SDKs against one anonymous Honua layer. CI imports a small synthetic contract fixture into a real PostGIS-only server; the full Maui app is a separate journey.",
+  "title": "Maui roadway assets and maintenance",
+  "description": "Explore historical Maui NBI bridges alongside clearly labelled fictional road inspections, work orders and crew assignments. Query the imported layers using the published SDKs.",
   "contentKind": "walkthrough",
   "learning": {
     "goal": "connect-data",
     "level": "intermediate",
-    "estimatedMinutes": 15,
+    "estimatedMinutes": 20,
     "prerequisites": [
       "Node.js 22+",
       "Python 3.11+",
@@ -31,8 +31,13 @@
   ],
   "edition": "community",
   "entrypoint": {
-    "type": "node",
-    "command": "node ../../scripts/state-local/sdk/verify.mjs public-works"
+    "type": "browser",
+    "command": "index.html",
+    "build": {
+      "command": "npm ci && npm run build",
+      "outputDir": "dist",
+      "publishedEntrypoint": "index.html"
+    }
   },
   "status": "active"
 }
