@@ -23,7 +23,7 @@ try {
     await page.setViewportSize({ width, height });
     for (const route of ['', 'switching/', 'sdk-explorer/']) {
       assert.equal((await page.goto(`${base}/state-local/${route}`)).status(), 200);
-      if (route === 'sdk-explorer/') await expect(page.locator('#sample-list button').first()).toBeVisible();
+      if (route === 'sdk-explorer/') await expect(page.locator('#list .item').first()).toBeVisible();
       for (const theme of ['light', 'dark']) {
         if (await page.locator('html').getAttribute('data-theme') !== theme) await page.locator('.theme-toggle').click();
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
@@ -33,36 +33,40 @@ try {
       }
     }
   }
-  await page.locator('#search').fill('connection.inspect');
-  await expect(page.locator('[data-sample="sdk-js:maplibre-quickstart"]')).toBeVisible();
-  await page.locator('#search').fill('no-such-api-unique');
-  await expect(page.locator('#sample-list button')).toHaveCount(0);
-  await expect(page.locator('#catalog-status')).toHaveText('0 matching samples');
-  await page.locator('#search').fill('');
-  await page.locator('#mode').selectOption('preview');
-  await expect(page.locator('#sample-list button')).toHaveCount(ids.length);
-  await page.locator('#tab-source').focus();
+  await page.locator('#q').fill('connection.inspect');
+  await expect(page.locator('[data-id="maplibre-quickstart"]')).toBeVisible();
+  await page.locator('#q').fill('no-such-api-unique');
+  await expect(page.locator('#list .item')).toHaveCount(0);
+  await expect(page.locator('#list .empty')).toBeVisible();
+  await page.locator('#q').fill('');
+  await page.locator('#flt [data-f=live]').click();
+  await expect(page.locator('#list .item')).toHaveCount(ids.length);
+  await page.locator('#tabSrc').focus();
   await page.keyboard.press('ArrowRight');
-  await expect(page.locator('#tab-readme')).toBeFocused();
-  await expect(page.locator('#readme')).toBeVisible();
+  await expect(page.locator('#tabMd')).toBeFocused();
+  await expect(page.locator('#md')).toBeVisible();
   for (const id of ids) {
-    await page.locator(`[data-sample="${id}"]`).click();
+    await page.locator(`[data-id="${id.split(':')[1]}"]`).click();
     assert.ok(previews[id].dataMode && previews[id].commit, `Missing provenance: ${id}`);
-    await expect(page.locator('#preview iframe')).toHaveCount(1);
+    await expect(page.locator('#pvPanel iframe')).toHaveCount(1);
     const response = await page.request.get(`${base}${previews[id].url}`);
     assert.equal(response.status(), 200, `Preview entrypoint: ${id}`);
     // Execution and rendering of the app itself are gated by the gallery's existing
     // app smoke suite. This check verifies Explorer wiring and disclosure.
-    await expect(page.locator('#sample-provenance')).toContainText(previews[id].commit);
+    await expect(page.locator('#datas')).toContainText(previews[id].commit);
   }
-  const catalog = JSON.parse(await readFile(path.join(root, 'state-local/sdk-explorer/catalog.json')));
-  catalog.samples[0].readme = '<table><tbody><tr><td>Table cell</td></tr></tbody></table><script>window.explorerXss=true</script><img src=x onerror="window.explorerXss=true"><a href="javascript:alert(1)">Bad link</a>';
-  await page.route('**/sdk-explorer/catalog.json', (route) => route.fulfill({ json: catalog }));
-  await page.goto(`${base}/state-local/sdk-explorer/#${catalog.samples[0].repo}:${catalog.samples[0].id}`);
-  await page.reload();
-  await page.locator('#tab-readme').click();
-  await expect(page.locator('#readme td')).toHaveText('Table cell');
-  await expect(page.locator('#readme script, #readme img, #readme a[href]')).toHaveCount(0);
+  const malicious = '<table><tbody><tr><td>Table cell</td></tr></tbody></table><script>window.explorerXss=true</script><img src=x onerror="window.explorerXss=true"><a href="javascript:alert(1)">Bad link</a>';
+  await page.route('**/state-local/sdk-explorer/', async (route) => {
+    const response = await route.fetch();
+    const html = await response.text();
+    const catalog = JSON.parse(html.match(/window.HD=(.*?);<\/script>/s)[1]);
+    catalog['13-sdk-samples'].samples[0].readme = malicious;
+    const json = JSON.stringify(catalog).replaceAll('</', '<\\/');
+    await route.fulfill({ response, body: html.replace(/window.HD=.*?;<\/script>/s, () => `window.HD=${json};</script>`) });
+  });
+  await page.goto(`${base}/state-local/sdk-explorer/#maplibre-featureserver-layer/md`);
+  await expect(page.locator('#md td')).toHaveText('Table cell');
+  await expect(page.locator('#md script, #md img, #md a[href^="javascript:"]')).toHaveCount(0);
   assert.equal(await page.evaluate(() => window.explorerXss), undefined);
   console.log(`State/local browser checks passed; ${ids.length} preview entrypoints admitted.`);
 } finally {
