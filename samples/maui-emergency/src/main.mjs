@@ -72,7 +72,7 @@ async function load() {
   try {
     records = await loadExercise(source);
     verifiedAt = Date.now();
-    const validation = records.some(({ properties }) => properties.validation_geometry === true);
+    const validation = records.some(({ properties }) => [true, 1].includes(properties.validation_geometry));
     document.querySelectorAll('[data-geometry-source]').forEach((node) => { node.textContent = validation
       ? 'Synthetic validation geometry; not county source locations.' : 'Geometry: Hawaii Statewide GIS Program, public domain.'; });
     showExercise({ fit: !preserveView });

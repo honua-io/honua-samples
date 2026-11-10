@@ -19,6 +19,10 @@ test.beforeAll(async ({}, info) => {
     changing: { prefix: 'maui-em-changing', allowAnonymous: true, fixture: fixture([exerciseFeature()]) },
     unsafe: { prefix: 'maui-em-unsafe', allowAnonymous: true, fixture: fixture([unsafe]) }
   } });
+  const changing = browser.bindings.changing;
+  await adminFetch(serverEnv(), { method: 'PUT',
+    apiPath: `/api/v1/admin/services/${changing.serviceName}/layers/${changing.layerId}/metadata`,
+    body: { editing: { update: true } } });
 });
 test.afterAll(async () => { await closeOperationsBrowser(browser); });
 
