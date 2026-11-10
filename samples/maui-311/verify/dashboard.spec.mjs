@@ -26,7 +26,7 @@ test.beforeAll(async ({}, info) => {
   await runCommand('node', ['scripts/state-local/sdk/verify.mjs', '311'], { cwd: repo, label: 'three published SDK contracts' });
   await runCommand('npm', ['run', 'build'], { cwd: sample, label: 'build dashboard' });
   const geojson = { type: 'FeatureCollection', features: Array.from({ length: 205 }, (_, index) => request(index)) };
-  binding = await seedFeatureService({ prefix: 'maui-311-ui', allowAnonymous: true, fixture: { geojson, count: 205 } });
+  binding = await seedFeatureService({ prefix: 'maui-311-ui', allowAnonymous: true, protocols: ['OgcFeatures'], fixture: { geojson, count: 205 } });
   const unlabelled = structuredClone(geojson);
   unlabelled.features.forEach(({ properties }) => { properties.is_demo = false; });
   unsafe = await seedFeatureService({ prefix: 'maui-311-unsafe', allowAnonymous: true, fixture: { geojson: unlabelled, count: 205 } });
@@ -106,6 +106,26 @@ test('SR-05: unlabelled exercise layer is rejected and retry restores a complete
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
   await expect(page.locator('#load-status')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('#result-count')).toContainText('205 matching');
+});
+
+test('SR-08: OGC feed is verified independently of filters and a failed check can be retried', async ({ page }) => {
+  await ready(page);
+  const items = `**/ogc/features/collections/${binding.layerId}/items*`;
+  await page.route(items, (route) => route.fulfill({ status: 503, body: 'Unavailable' }));
+  await page.getByRole('button', { name: 'Check OGC feed' }).click();
+  await expect(page.locator('#feed-status')).toContainText('Feed not verified');
+  await expect(page.locator('#feed-links a')).toHaveCount(0);
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
+  await page.unroute(items);
+  await page.getByLabel('Request status').selectOption('exercise_closed');
+  await expect(page.locator('#result-count')).toContainText('68 matching');
+  await page.getByRole('button', { name: 'Check OGC feed' }).click();
+  await expect(page.locator('#feed-status')).toContainText('Verified 205 exercise requests');
+  await expect(page.getByRole('link', { name: 'OGC API Features collection', exact: true })).toHaveAttribute('href', `${serverEnv().baseUrl}/ogc/features/collections/${binding.layerId}`);
+  await expect(page.locator('#feed-links a')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Refresh data' }).click();
+  await expect(page.locator('#feed-links a')).toHaveCount(0);
+  await expect(page.locator('#feed-status')).toContainText('has not been checked');
 });
 
 test('mobile and dark mode retain disclosure, controls and accessible request selection', async ({ page }, info) => {

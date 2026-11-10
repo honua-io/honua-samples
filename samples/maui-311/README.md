@@ -10,6 +10,14 @@ JavaScript SDK. It checks every page before showing totals and rejects missing d
 labels, inconsistent timelines, duplicate IDs and changing counts. CSV and GeoJSON
 exports retain the exercise labels and omit fields outside the documented contract.
 
+After loading, **Check OGC feed** verifies every page of the same layer's anonymous
+OGC API Features collection against the complete dashboard snapshot. Collection
+and paginated GeoJSON links appear only after counts, record values, geometry and
+exercise labels agree. Dashboard filters affect downloads; the OGC collection
+contains all requests. Refresh clears verification. A failed feed check can be
+retried without discarding the dashboard. Publish `OgcFeatures` alongside
+`FeatureServer` when configuring the layer.
+
 Build and run the repository gallery (shared fonts, theme and logos are gallery assets):
 
 ```sh
@@ -36,9 +44,9 @@ notes, reporter contacts or operational feeds are included. Districts are exerci
 areas, not council wards. The map draws request geometry on a plain background and
 makes no external basemap requests.
 
-The public OGC/Open311 feed, released Studio app, Console walkthrough and executed
-stock-client MCP question remain separate completion gates. The local dashboard
-does not claim those gates have passed.
+The shared public OGC deployment, released Studio app, Console walkthrough and
+executed stock-client MCP question remain separate completion gates. This sample
+does not expose an Open311 endpoint or claim those gates have passed.
 
 ## Published SDK queries
 
