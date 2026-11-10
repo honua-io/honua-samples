@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { test } from 'node:test';
+import { tmpdir } from 'node:os';
+import { validateStateLocalLinks } from '../state-local/build-site.mjs';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -21,4 +23,16 @@ test('demo component styles use tokens rather than literal colors', async () => 
     const css = (await readFile(path.join(root, file), 'utf8')).replace(/\/\*[\s\S]*?\*\//g, '');
     assert.doesNotMatch(css, /#[a-f0-9]{3,8}\b|\b(?:rgba?|hsla?)\s*\(/i, file);
   }
+});
+
+test('landing link validation rejects missing gallery detail pages', async () => {
+  const siteDir = await mkdtemp(path.join(tmpdir(), 'maui-links-'));
+  try {
+    await mkdir(path.join(siteDir, 'state-local'));
+    await writeFile(path.join(siteDir, 'state-local/index.html'), '<a href="../query/">Query</a>');
+    await assert.rejects(validateStateLocalLinks(siteDir), /does not resolve/);
+    await mkdir(path.join(siteDir, 'query'));
+    await writeFile(path.join(siteDir, 'query/index.html'), 'Query');
+    await validateStateLocalLinks(siteDir);
+  } finally { await rm(siteDir, { recursive: true, force: true }); }
 });

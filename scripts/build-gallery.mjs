@@ -84,7 +84,7 @@ import {
   movedEntries,
   publicSampleIds,
 } from "./lib/gallery-public-portfolio.mjs";
-import { buildStateLocalSite } from "./state-local/build-site.mjs";
+import { buildStateLocalSite, validateStateLocalLinks } from "./state-local/build-site.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
 import {
   dataOriginHost,
@@ -406,6 +406,7 @@ async function main() {
     );
   }
 
+  await validateStateLocalLinks(SITE_DIR);
   await assertNoMutableTrunkLinks(SITE_DIR);
 
   const pageCount =

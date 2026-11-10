@@ -469,7 +469,12 @@ test("SHELL-01: approved landing uses safe light/dark themes at desktop and mobi
 
 test("SHELL-02: property theme persists and embedded shell keeps its height", async ({ page }) => {
   await page.goto(appUrl());
+  await expect.poll(() => page.evaluate(() => window.sampleMap?.getLayer("background") !== undefined)).toBe(true);
+  const lightMap = await page.evaluate(() => window.sampleMap.getPaintProperty("background", "background-color"));
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  expect(await page.evaluate(() => window.sampleMap.getPaintProperty("background", "background-color"))).not.toEqual(lightMap);
+  const controlColor = await page.locator(".maplibregl-ctrl-group").evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(controlColor).toBe(await page.evaluate(() => { const element = document.createElement("div"); element.style.background = "var(--c-surface)"; document.body.append(element); const color = getComputedStyle(element).backgroundColor; element.remove(); return color; }));
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator(".logo-dark")).toBeVisible();

@@ -1,5 +1,5 @@
 // The standalone sample owns shared assets so clean sample exports remain buildable.
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export async function buildStateLocalSite({ repoRoot, siteDir }) {
@@ -15,5 +15,18 @@ export async function buildStateLocalSite({ repoRoot, siteDir }) {
   await writeFile(path.join(assets, 'shared.css'), shared.replace('../public/honua/', './'));
   for (const file of ['theme.js', 'geist-latin.woff2', 'OFL.txt', 'honua-lockup.svg', 'honua-lockup-on-dark.svg']) {
     await cp(path.join(sample, 'public/honua', file), path.join(assets, file));
+  }
+}
+
+// Validate after all gallery detail pages have been emitted.
+export async function validateStateLocalLinks(siteDir) {
+  const landing = path.join(siteDir, 'state-local/index.html');
+  const html = await readFile(landing, 'utf8');
+  for (const [, href] of html.matchAll(/href="([^"#][^"]*)"/g)) {
+    if (/^[a-z]+:/i.test(href)) continue;
+    const target = new URL(href, 'https://gallery.invalid/state-local/');
+    const relative = decodeURIComponent(target.pathname).replace(/^\//, '');
+    const file = path.join(siteDir, relative, target.pathname.endsWith('/') ? 'index.html' : '');
+    if (!(await stat(file).catch(() => null))?.isFile()) throw new Error(`Maui landing link does not resolve: ${href}`);
   }
 }

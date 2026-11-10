@@ -4,7 +4,7 @@
 .brand { display: flex; align-items: center; gap: 16px; color: var(--c-text); text-decoration: none; white-space: nowrap; }
 .brand span { padding-left: 16px; border-left: 1px solid var(--c-border); font-weight: var(--weight-medium); }
 .appbar nav { display: flex; gap: 24px; margin-left: auto; }
-.appbar nav a { color: var(--c-text-2); text-decoration: none; }
+.appbar nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--c-text-2); text-decoration: none; }
 .appbar nav a:hover { color: var(--c-link); text-decoration: underline; }
 .wrap { max-width: var(--content-max); margin: 0 auto; padding: 0 32px; }
 .hero { display: grid; grid-template-columns: 1.15fr 1fr; align-items: center; gap: 64px; padding: 72px 0; }
