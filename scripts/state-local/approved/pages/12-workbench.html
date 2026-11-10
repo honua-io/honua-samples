@@ -793,6 +793,7 @@
   document.getElementById("sdkBtn").addEventListener("click", (e) => { const on = document.body.classList.toggle("show-sdk"); e.currentTarget.setAttribute("aria-pressed", on); e.currentTarget.lastChild.textContent = on ? "Hide SDK controls" : "Show SDK controls"; });
   function restoreSharedView() {
     if (!location.hash.startsWith("#s=")) return;
+    const defaultState = structuredClone(S), defaultPlan = lastPlan, defaultProposal = proposal;
     try {
       if (location.hash.length > 60000) throw new Error("Oversized view");
       const h = JSON.parse(decodeURIComponent(location.hash.slice(3)));
@@ -825,7 +826,11 @@
       document.getElementById("tq").value = S.tq; setTimeInputs(); refresh(); renderNL();
       const restoreCamera = () => { set3d(h.is3d === true || (h.is3d === undefined && v.pitch > 0), false); map.jumpTo(v); };
       if (map.loaded()) restoreCamera(); else map.once("load", restoreCamera);
-    } catch { document.getElementById("shareLink").textContent = "This shared view is invalid. The default snapshot is shown."; }
+    } catch {
+      setLayer(defaultState.layer); Object.assign(S, defaultState); lastPlan = defaultPlan; proposal = defaultProposal;
+      document.getElementById("tq").value = S.tq; setTimeInputs(); refresh(); renderNL();
+      document.getElementById("shareLink").textContent = "This shared view is invalid. The default snapshot is shown.";
+    }
   }
   // wire date-aware attribute test and boot
   setLayer("parcels");
