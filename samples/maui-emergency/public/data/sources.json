@@ -6,7 +6,7 @@
       "sourceUrl": "https://geodata.hawaii.gov/arcgis/rest/services/Infrastructure/MapServer/7",
       "license": "public-domain",
       "licenseUrl": "https://planning.hawaii.gov/gis/download-gis-data-expanded/",
-      "attribution": "Hawaii Statewide GIS Program",
+      "attribution": "Hawaii Department of Education; Hawaii Statewide GIS Program",
       "inputSha256": "c6294898a86198371cd27d4264e60a3fe39e5f1d3c47903426f3da09d7dfdfd7",
       "sourceUpdatedAt": null,
       "retrievalDate": null,
@@ -16,24 +16,24 @@
       "sourceUrl": "https://geodata.hawaii.gov/arcgis/rest/services/Transportation/MapServer/5",
       "license": "public-domain",
       "licenseUrl": "https://planning.hawaii.gov/gis/download-gis-data-expanded/",
-      "attribution": "Hawaii Statewide GIS Program",
+      "attribution": "County of Maui Enterprise GIS Department; Hawaii Statewide GIS Program",
       "inputSha256": "c1028914600b7334e8571e3e99860679280e89c3e1392ddcdb4def932f0d9140",
       "sourceUpdatedAt": null,
       "retrievalDate": null,
       "note": "Approved Kahului/Wailuku mockup display snapshot; simplified geometry, display IDs are not source object IDs. Original retrieval date was not recorded."
     },
     {
-      "sourceUrl": "https://geodata.hawaii.gov/arcgis/rest/services/Hazards/MapServer/11",
+      "sourceUrl": "https://geodata.hawaii.gov/arcgis/rest/services/Hazards/MapServer/2",
       "license": "public-domain",
       "licenseUrl": "https://planning.hawaii.gov/gis/download-gis-data-expanded/",
-      "attribution": "Hawaii Statewide GIS Program",
+      "attribution": "County of Maui; Hawaii Statewide GIS Program",
       "inputSha256": "5d5be907351936f713f6d7bc61fb9a4f70d02d8ff0d6d609b700c0765fd6e9b6",
       "sourceUpdatedAt": null,
-      "retrievalDate": null,
+      "retrievalDate": "2026-11-10T08:28:22.163Z",
       "note": "Accepted county source snapshot; source receipt retained separately."
     }
   ],
-  "snapshotSha256": "46e7db5b1bc1374d53bf4f5141a9aff0c876d276ae3f56312c4c765e2fc8ae3c",
+  "snapshotSha256": "b4bfa2dadecf7053a36af38025a98ed74a271ed2daf9a9d60b7bb4a540de0354",
   "exerciseLicense": "CC0-1.0",
   "exerciseLicenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/legalcode",
   "exerciseRecipe": "Deterministic fictional records; repeated school/road anchors are not distinct facilities or observed activity."

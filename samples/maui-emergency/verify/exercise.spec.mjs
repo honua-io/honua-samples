@@ -196,6 +196,10 @@ test('published snapshot loads without server bindings and discloses dates', asy
   await page.goto(new URL('/maui-emergency/app/', browser.server.url).href);
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
   await expect(page.locator('#freshness')).toContainText('Not a live server check');
+  const receipt = await (await page.request.get(new URL('/maui-emergency/app/data/sources.json', browser.server.url).href)).json();
+  expect(receipt.sources[2].sourceUrl).toContain('Hazards/MapServer/2');
+  expect(receipt.sources[2].retrievalDate).toBe('2026-11-10T08:28:22.163Z');
+  expect(receipt.sources[0].attribution).toContain('Hawaii Department of Education');
   await expect(page.locator('#location-answer')).toContainText('Connected');
   await page.locator('#rows button').first().click();
   await expect(page.locator('#detail a')).toHaveAttribute('href', './data/sources.json');
