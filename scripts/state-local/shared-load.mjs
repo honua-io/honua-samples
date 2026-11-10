@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from "node:crypto";
 import { readFile, writeFile, stat, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,7 +6,7 @@ import { sha256 } from "../lib/checksum.mjs";
 import { adminFetch, serverEnv } from "../lib/admin-api.mjs";
 import { fetchSnapshot, readSnapshot } from "./snapshot.mjs";
 import { propertyLayers } from "./property-app.mjs";
-import { stageSnapshot, layersPath } from "./import.mjs";
+import { stageSnapshot, layersPath, stagingTableName, stagingServiceName } from "./import.mjs";
 import { saveDeployment, readDeployment, activateDeployment, verifyLayer } from "./deployment.mjs";
 import { ensureDepartments } from "./departments.mjs";
 
@@ -55,6 +56,41 @@ export async function prepare(directory) {
   return { planSha256: sha256(plan), ...JSON.parse(plan) };
 }
 
+export async function verifyStagedSource(layer, sourceUrl) {
+  const url = new URL(sourceUrl);
+  if (url.protocol !== "https:" || !url.pathname.split("/").includes(layer.cleanSha256)) {
+    throw new Error("Shared source URL must use an HTTPS content-addressed key");
+  }
+  const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(60_000) });
+  if (!response.ok || !response.body) throw new Error("Staged source unavailable");
+  const digest = createHash("sha256");
+  let bytes = 0;
+  for await (const chunk of response.body) {
+    bytes += chunk.length;
+    if (bytes > layer.bytes) throw new Error("Staged source exceeds reviewed size");
+    digest.update(chunk);
+  }
+  if (bytes !== layer.bytes || digest.digest("hex") !== layer.cleanSha256) {
+    throw new Error("Staged source checksum does not match reviewed snapshot");
+  }
+}
+
+async function stageMissing(env, options, planned, expectedSha256) {
+  const { name, directory, connection } = options;
+  if (!options.sourceUrl || new URL(options.sourceUrl).protocol !== "https:") {
+    throw new Error("Shared imports require a staged HTTPS source URL");
+  }
+  await verifyStagedSource(planned, options.sourceUrl);
+  options.runId = randomUUID().replaceAll("-", "");
+  // Persist before mutation so interrupted imports require reconciliation.
+  await writeFile(path.join(directory, `${name}.intent.json`), JSON.stringify({ name, connection,
+    baseUrl: env.baseUrl, expectedSha256, runId: options.runId,
+    tableName: stagingTableName(name, options.runId), serviceName: stagingServiceName(name, options.runId),
+    startedAt: new Date().toISOString() }), { flag: "wx", mode: 0o600 });
+  const staged = await stageSnapshot(env, options);
+  await saveDeployment(env, { staged, directory, connection });
+}
+
 export async function runSharedLoad(action, directory, expectedSha256, env) {
   if (!["stage", "activate", "rollback"].includes(action)) throw new Error("Unknown shared load action");
   const plan = await verifyPlan(directory, expectedSha256);
@@ -64,21 +100,26 @@ export async function runSharedLoad(action, directory, expectedSha256, env) {
   const matches = connections?.filter((connection) => connection.name === "demo-rds");
   if (matches?.length !== 1 || !matches[0].connectionId) throw new Error("Expected exactly one demo-rds managed import connection");
   const connection = matches[0].connectionId;
-  for (const { name } of plan.layers) {
+  if (action === "activate") {
+    for (const { name } of plan.layers) {
+      const receipt = await readDeployment(env, { name, directory });
+      if (receipt.connection !== connection) throw new Error("Managed import connection changed");
+      await verifyLayer(env, receipt);
+    }
+  }
+  for (const planned of plan.layers) {
+    const { name } = planned;
     const options = { name, directory, connection, sourceUrl: env.importSourceUrls?.[name] };
     const existing = await stat(path.join(directory, `${name}.deployment.json`)).catch(() => null);
-    if (!existing && action === "rollback") continue;
+    if (!existing && action === "rollback") {
+      if (await stat(path.join(directory, `${name}.intent.json`)).catch(() => null)) {
+        throw new Error("Intent without receipt: reconcile the interrupted stage in Console");
+      }
+      continue;
+    }
     if (!existing) {
       if (action !== "stage") throw new Error("Stage receipt missing; activation refused");
-      if (!options.sourceUrl || new URL(options.sourceUrl).protocol !== "https:") {
-        throw new Error("Shared imports require a staged HTTPS source URL");
-      }
-      // Persist before any mutation. An interrupted import requires Console reconciliation;
-      // a retry cannot silently create a second physical table.
-      await writeFile(path.join(directory, `${name}.intent.json`), JSON.stringify({ name, connection,
-        baseUrl: env.baseUrl, expectedSha256, startedAt: new Date().toISOString() }), { flag: "wx", mode: 0o600 });
-      const staged = await stageSnapshot(env, options);
-      await saveDeployment(env, { staged, directory, connection });
+      await stageMissing(env, options, planned, expectedSha256);
     }
     const receipt = await readDeployment(env, options);
     if (receipt.connection !== connection) throw new Error("Managed import connection changed");

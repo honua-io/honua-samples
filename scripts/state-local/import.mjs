@@ -92,7 +92,7 @@ export async function stageSnapshot(env, options) {
   const source = getSource(name);
   const { receipt, geojson } = await readSnapshot(name, directory);
   const folderId = await departmentFolder(env, source.department);
-  const runId = randomUUID().replaceAll("-", "");
+  const runId = options.runId ?? randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);
   const serviceName = stagingServiceName(name, runId);
   const uploaded = await uploadSnapshotTable(env, { tableName, geojson, sourceUrl: options.sourceUrl });

@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { loadSources, prepare, verifyPlan, runSharedLoad } from '../state-local/shared-load.mjs';
+import { loadSources, prepare, verifyPlan, runSharedLoad, verifyStagedSource } from '../state-local/shared-load.mjs';
 import { saveDeployment } from '../state-local/deployment.mjs';
 import { uploadSnapshotTable } from '../state-local/import.mjs';
 
@@ -55,10 +55,11 @@ test('URL imports use the import API and require physical table and exact count 
 test('interrupted shared stage retains intent and refuses to duplicate an import', async (t) => {
   const { directory, plan } = await prepared(t);
   const env = { baseUrl: 'https://server.test', adminApiKey: 'private-key',
-    importSourceUrls: Object.fromEntries(loadSources.map((name) => [name, `https://staging.test/${name}`])) };
+    importSourceUrls: Object.fromEntries(plan.layers.map(({name, cleanSha256}) => [name, `https://staging.test/${cleanSha256}/${name}.geojson`])) };
   let uploads = 0;
   globalThis.fetch = async (input) => {
     const url = new URL(input);
+    if (url.hostname === 'staging.test') return new Response(await readFile(path.join(directory, path.basename(url.pathname))));
     if (url.pathname.endsWith('/folders')) return json({ data: ['Planning', 'Public Works', 'Emergency Management', '311']
       .map((title) => ({ metadata: { title, id: title.toLowerCase().replaceAll(' ', '-') } })) });
     if (url.pathname.endsWith('/connections')) return json({ data: { items: [{ name: 'demo-rds', connectionId: 'managed' }] } });
@@ -68,6 +69,10 @@ test('interrupted shared stage retains intent and refuses to duplicate an import
   await assert.rejects(runSharedLoad('stage', directory, plan.planSha256, env), /interrupted/);
   const intent = JSON.parse(await readFile(path.join(directory, `${loadSources[0]}.intent.json`), 'utf8'));
   assert.equal(intent.expectedSha256, plan.planSha256);
+  assert.match(intent.runId, /^[a-f0-9]{32}$/);
+  assert.ok(intent.tableName.includes(intent.runId));
+  assert.ok(intent.serviceName.includes(intent.runId));
+  await assert.rejects(runSharedLoad('rollback', directory, plan.planSha256, env), /Intent without receipt/);
   assert.equal(JSON.stringify(intent).includes('private'), false);
   await assert.rejects(runSharedLoad('stage', directory, plan.planSha256, env), { code: 'EEXIST' });
   assert.equal(uploads, 1);
@@ -106,13 +111,14 @@ test('rollback disables only a verified owned layer and never imports or deletes
 test('successful shared stage reuses verified receipts and never repeats imports', async (t) => {
   const { directory, plan } = await prepared(t);
   const env = { baseUrl: 'https://server.test', adminApiKey: 'private-key',
-    importSourceUrls: Object.fromEntries(loadSources.map((name) => [name, `https://staging.test/${name}`])) };
+    importSourceUrls: Object.fromEntries(plan.layers.map(({name, cleanSha256}) => [name, `https://staging.test/${cleanSha256}/${name}.geojson`])) };
   const folders = ['Planning', 'Public Works', 'Emergency Management', '311']
     .map((title, index) => ({ metadata: { title, id: `folder-${index}` } }));
   const layers = [];
   let uploads = 0;
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
+    if (url.hostname === 'staging.test') return new Response(await readFile(path.join(directory, path.basename(url.pathname))));
     if (url.pathname.endsWith('/folders')) return json({ data: folders });
     if (url.pathname.endsWith('/connections')) return json({ data: [{ name: 'demo-rds', connectionId: 'managed' }] });
     if (url.pathname.endsWith('/upload-url')) {
@@ -138,4 +144,19 @@ test('successful shared stage reuses verified receipts and never repeats imports
   layers[0].table = 'unrelated_table';
   await assert.rejects(runSharedLoad('stage', directory, plan.planSha256, env), /no longer matches/);
   assert.equal(uploads, 9);
+});
+
+
+test('staged bytes must match the reviewed hash and size before import', async (t) => {
+  const { directory, plan } = await prepared(t);
+  const layer = plan.layers[0];
+  const bytes = await readFile(path.join(directory, `${layer.name}.geojson`));
+  const url = `https://staging.test/${layer.cleanSha256}/snapshot.geojson`;
+  globalThis.fetch = async () => new Response(bytes);
+  await verifyStagedSource(layer, url);
+  await assert.rejects(verifyStagedSource(layer, 'https://staging.test/mutable.geojson'), /content-addressed/);
+  globalThis.fetch = async () => new Response(Buffer.from(bytes.toString().replace('20.8', '20.9')));
+  await assert.rejects(verifyStagedSource(layer, url), /checksum/);
+  globalThis.fetch = async () => new Response(Buffer.concat([bytes, Buffer.from(' ')]));
+  await assert.rejects(verifyStagedSource(layer, url), /reviewed size/);
 });
