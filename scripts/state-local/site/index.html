@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Honua for Maui County</title>
+  <meta name="description" content="Connected state and local government journeys on real Maui open data: property, 311, public works and emergency preparedness.">
+  <link rel="canonical" href="https://demo.honua.io/">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("honua-theme")==="dark"?"dark":"light"}catch{document.documentElement.dataset.theme="light"}</script>
+  <link rel="stylesheet" href="./assets/tokens.css"><link rel="stylesheet" href="./assets/shared.css"><link rel="stylesheet" href="./assets/overview.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="appbar">
+    <a class="brand" href="https://demo.honua.io/"><img class="logo-light" src="./assets/honua-lockup.svg" alt="Honua" width="106" height="32"><img class="logo-dark" src="./assets/honua-lockup-on-dark.svg" alt="Honua" width="106" height="32"><span>for Maui County</span></a>
+    <nav aria-label="Demo navigation"><a href="#journeys">County journeys</a><a href="#platform">The platform</a><a href="#how-it-works">How it works</a></nav>
+    <button type="button" class="theme-toggle" aria-label="Switch to dark mode">Dark mode</button>
+  </header>
+  <main id="main" class="wrap">
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-copy"><p class="eyebrow">State &amp; local government · Maui, Hawaiʻi</p><h1 id="hero-heading">One geospatial platform for the whole county.</h1><p class="lede">Follow a parcel, a service request, a public asset and a preparedness exercise through one connected story, built on real Maui open data.</p><div class="actions"><a class="primary" href="#journeys">Explore the county journeys <span aria-hidden="true">↗</span></a><a href="#platform">See how it connects</a></div><p class="disclaimer">Independent public-data demonstration. Not affiliated with the County of Maui.</p></div>
+      <aside class="source-panel" aria-label="The connected county story"><div class="panel-head"><span class="eyebrow">One county. Shared context.</span><span class="badge">Maui</span></div><ol class="source-story"><li><span class="story-number">01</span><div><strong>Start with a place</strong><p>Parcels, zoning and the planning overlays around an address.</p></div></li><li><span class="story-number">02</span><div><strong>Understand what needs attention</strong><p>Service requests and public works assets in that community.</p></div></li><li><span class="story-number">03</span><div><strong>Prepare together</strong><p>Shared geography for shelters, hazards and response planning.</p></div></li></ol><p class="source-note">Source provenance stays with the data. Exercise records are labeled separately from public operational records.</p></aside>
+    </section>
+    <section class="band" id="journeys" aria-labelledby="journeys-heading">
+      <div class="section-heading"><div><p class="eyebrow">Built around the work</p><h2 id="journeys-heading">Four county journeys, one platform</h2></div><p>The complete journeys are being connected to released apps. Each will include the public map, Console data, an agent task and runnable SDK examples.</p></div>
+      <div class="journeys">
+        <article class="journey"><div class="card-top"><span class="eyebrow">01 · Planning</span><span class="badge">Coming soon</span></div><h3>Property and planning</h3><p>Find a parcel by address or TMK, compare land-use overlays and follow the county permit lookup.</p><p class="question">“What planning constraints affect this parcel?”</p><div class="support"><span>How it works</span><a href="../county-parcel-viewer/">Parcel viewer sample</a></div></article>
+        <article class="journey"><div class="card-top"><span class="eyebrow">02 · Community services</span><span class="badge">Coming soon</span></div><h3>311 operations</h3><p>Find requests by status and type, understand neighborhood demand and share an open-data feed.</p><p class="question">“Which requests still need attention?”</p><div class="support"><span>How it works</span><a href="../jobs/feature-query/">Open feature queries</a></div></article>
+        <article class="journey"><div class="card-top"><span class="eyebrow">03 · Public works</span><span class="badge">Coming soon</span></div><h3>Public works assets</h3><p>Inspect roads and infrastructure, review condition and connect an asset to its inspection or work order.</p><p class="question">“Which assets are due for inspection?”</p><div class="support"><span>How it works</span><a href="../jobs/feature-query/">Feature query sample</a></div></article>
+        <article class="journey"><div class="card-top"><span class="eyebrow">04 · Emergency management</span><span class="badge">Coming soon</span></div><h3>Emergency preparedness exercise</h3><p>Bring shelters, hazard zones and exercise closures into a shared, refreshing situational map.</p><p class="question">“Which exercise shelters are available nearby?”</p><div class="support"><span>How it works</span><a href="../county-parcel-viewer/">Map rendering sample</a></div></article>
+      </div>
+      <div class="workbench"><div><h3>Data analysis workbench</h3><p>Explore the same county data with linked maps, charts, filters and natural-language queries.</p></div><span class="badge">Coming soon</span></div>
+    </section>
+    <section class="band" id="platform" aria-labelledby="platform-heading"><div class="section-heading"><div><p class="eyebrow">The platform</p><h2 id="platform-heading">One source of truth, many ways to work</h2></div><p>Published layers connect public maps, departmental data views, agent tools and your own applications.</p></div><div class="platform-grid"><article><span class="eyebrow">Your data</span><h3>County context</h3><p>Planning, Public Works, Emergency Management and 311 folders, with source attribution and reproducible imports.</p></article><article><span class="eyebrow">Honua Server</span><h3>Open interfaces</h3><p>Feature services, OGC API Features and export formats make the same data available to different clients.</p></article><article><span class="eyebrow">Your tools</span><h3>One connected workflow</h3><p>Studio maps, Console, stock MCP clients and JavaScript, Python and .NET applications.</p></article></div></section>
+    <section class="band how" id="how-it-works" aria-labelledby="how-heading"><div><p class="eyebrow">Coming from other GIS servers?</p><h2 id="how-heading">Start with the clients you already use.</h2><p>Explore the existing protocol samples and published SDK examples while the county journeys come online.</p></div><a class="primary" href="../#catalog">Browse the sample catalog <span aria-hidden="true">↗</span></a></section>
+  </main>
+  <footer class="wrap">Real public geography. Clearly labeled exercises. <a href="https://github.com/honua-io/honua-samples/blob/332d138eccea746d6d209ae059f2ae9123c4ebe6/docs/state-local-data.md">Data sources and attribution</a><span>Public address: <a href="https://demo.honua.io/">demo.honua.io</a></span></footer>
+  <script type="module" src="./assets/theme.js"></script>
+</body>
+</html>

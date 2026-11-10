@@ -8,10 +8,8 @@
 // lookup is in flight, "pass" when the lookup finished without a failed
 // request, and "fail" when a request failed.
 
-import "@fontsource/public-sans/400.css";
-import "@fontsource/public-sans/700.css";
-import "@fontsource/source-serif-4/500.css";
-import "@fontsource/source-serif-4/700.css";
+import "./tokens.css";
+import "./shared.css";
 import "./styles.css";
 import { h, fill } from "./dom.js";
 import { planningPanel } from "./planning.js";

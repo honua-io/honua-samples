@@ -1,44 +1,38 @@
-// samples/county-parcel-viewer mirrors the gallery's color tokens by name and
-// value (design D14) instead of importing gallery.css, so the built app stays
-// self-contained. This test fails when a shared token drifts.
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { test } from 'node:test';
+import { tmpdir } from 'node:os';
+import { validateStateLocalLinks } from '../state-local/build-site.mjs';
+import { fileURLToPath } from 'node:url';
 
-import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const sample = path.join(root, 'samples/county-parcel-viewer');
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const GALLERY_CSS = path.join(REPO_ROOT, "scripts", "gallery-assets", "gallery.css");
-const VIEWER_CSS = path.join(REPO_ROOT, "samples", "county-parcel-viewer", "src", "styles.css");
-// The names design D14 requires the viewer to carry.
-const REQUIRED = ["--paper", "--raised", "--ink", "--muted", "--line", "--green", "--red", "--yellow", "--code"];
-
-/** Custom properties declared in the first `:root { ... }` block. */
-function rootTokens(css) {
-  const block = /:root\s*\{([^}]*)\}/u.exec(css.replace(/\/\*[\s\S]*?\*\//gu, ""));
-  assert.ok(block, "no :root block");
-  const tokens = new Map();
-  for (const match of block[1].matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/giu)) tokens.set(match[1], match[2].trim().toLowerCase());
-  return tokens;
-}
-
-test("county-parcel-viewer carries the gallery tokens D14 names", async () => {
-  const viewer = rootTokens(await readFile(VIEWER_CSS, "utf8"));
-  for (const name of REQUIRED) assert.ok(viewer.has(name), `${name} is missing from the viewer's :root`);
+test('approved shared tokens declare light and dark semantic colors with source provenance', async () => {
+  const tokens = await readFile(path.join(sample, 'src/tokens.css'), 'utf8');
+  assert.match(tokens, /Source: design-system\/tokens\.css @ [a-f0-9]{40}/);
+  assert.match(tokens, /:root\[data-theme="dark"\]/);
+  for (const name of ['c-bg', 'c-text', 'c-accent', 'map-land', 'map-water', 'map-select', 'hz-flood']) {
+    assert.ok([...tokens.matchAll(new RegExp(`--${name}:`, 'g'))].length >= 2, `${name} must cover both themes`);
+  }
 });
 
-test("every token the viewer shares with gallery.css has the gallery's value", async () => {
-  const gallery = rootTokens(await readFile(GALLERY_CSS, "utf8"));
-  const viewer = rootTokens(await readFile(VIEWER_CSS, "utf8"));
-  const shared = [...viewer.keys()].filter((name) => gallery.has(name));
-  assert.ok(shared.length >= REQUIRED.length);
-  for (const name of shared) assert.equal(viewer.get(name), gallery.get(name), `${name} drifted from scripts/gallery-assets/gallery.css`);
+test('demo component styles use tokens rather than literal colors', async () => {
+  for (const file of ['samples/county-parcel-viewer/src/styles.css', 'samples/county-parcel-viewer/src/shared.css', 'scripts/state-local/site/overview.css']) {
+    const css = (await readFile(path.join(root, file), 'utf8')).replace(/\/\*[\s\S]*?\*\//g, '');
+    assert.doesNotMatch(css, /#[a-f0-9]{3,8}\b|\b(?:rgba?|hsla?)\s*\(/i, file);
+  }
 });
 
-test("the drift check notices a changed value", () => {
-  const gallery = rootTokens(":root { --ink:#172622; --paper:#f4efdc; }");
-  const viewer = rootTokens(":root {\n  --ink: #172623;\n  --paper: #F4EFDC;\n}");
-  assert.equal(viewer.get("--paper"), gallery.get("--paper"));
-  assert.notEqual(viewer.get("--ink"), gallery.get("--ink"));
+test('landing link validation rejects missing gallery detail pages', async () => {
+  const siteDir = await mkdtemp(path.join(tmpdir(), 'maui-links-'));
+  try {
+    await mkdir(path.join(siteDir, 'state-local'));
+    await writeFile(path.join(siteDir, 'state-local/index.html'), '<a href="../query/">Query</a>');
+    await assert.rejects(validateStateLocalLinks(siteDir), /does not resolve/);
+    await mkdir(path.join(siteDir, 'query'));
+    await writeFile(path.join(siteDir, 'query/index.html'), 'Query');
+    await validateStateLocalLinks(siteDir);
+  } finally { await rm(siteDir, { recursive: true, force: true }); }
 });
