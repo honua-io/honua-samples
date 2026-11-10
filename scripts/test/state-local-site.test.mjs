@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -20,6 +20,11 @@ test('Explorer includes only admitted apps and preserves their build provenance'
       'sdk-js:verified': { url: '/sdk/verified/app/', dataMode: 'fixture', dataModeLabel: 'fixture mode', commit: 'sdk-revision' },
       'samples:owned': { url: '/owned/app/demo.html', dataMode: 'live', dataModeLabel: 'live mode', commit: 'sample-revision' },
     });
+    for (const route of ['property', '311', 'public-works']) {
+      const directory = path.join(siteDir, 'state-local', route);
+      await mkdir(directory, { recursive: true });
+      await writeFile(path.join(directory, 'index.html'), '<main>Published display demo</main>');
+    }
     await assert.rejects(validateStateLocalLinks(siteDir), /index.html: \.\.\/county-parcel-viewer\//);
     await writeFile(path.join(siteDir, 'state-local/index.html'), '<img src="missing.png">');
     await assert.rejects(validateStateLocalLinks(siteDir), /index.html: missing.png/);
