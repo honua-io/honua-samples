@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readPixels, serverEnv, settleMapCanvas } from '../../../scripts/browser-verification/harness.mjs';
 import { closeOperationsBrowser, prepareOperationsBrowser } from '../../../scripts/browser-verification/state-local.mjs';
 import { exerciseFeature } from './fixture.mjs';
+import { adminFetch } from '../../../scripts/lib/admin-api.mjs';
 
 let browser;
 const fixture = (features) => ({ geojson: { type: 'FeatureCollection', features }, count: features.length });
@@ -15,6 +16,7 @@ test.beforeAll(async ({}, info) => {
   browser = await prepareOperationsBrowser({ sampleUrl: new URL('..', import.meta.url), scenario: 'emergency', seeds: {
     shelter: { prefix: 'maui-em-shelters', allowAnonymous: true, fixture: fixture(shelters) },
     closure: { prefix: 'maui-em-closures', allowAnonymous: true, fixture: fixture(closures) },
+    changing: { prefix: 'maui-em-changing', allowAnonymous: true, fixture: fixture([exerciseFeature()]) },
     unsafe: { prefix: 'maui-em-unsafe', allowAnonymous: true, fixture: fixture([unsafe]) }
   } });
 });
@@ -31,8 +33,8 @@ function url(overrides = {}) {
   target.search = params;
   return target.href;
 }
-async function ready(page) {
-  await page.goto(url());
+async function ready(page, overrides) {
+  await page.goto(url(overrides));
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass', { timeout: 60_000 });
 }
 
@@ -67,15 +69,27 @@ test('EM-01 bounded slice: real-server map, fictional capacity, filters and keyb
   expect([...origins].sort()).toEqual([new URL(browser.server.url).origin, new URL(serverEnv().baseUrl).origin].sort());
 });
 
-test('EM-01 bounded slice: timer queries the server again, failed refresh hides records, recovery verifies them', async ({ page }) => {
-  await ready(page);
+test('EM-01 bounded slice: timer displays changed server data, failed refresh hides records, recovery verifies them', async ({ page }) => {
+  await page.clock.install();
+  await ready(page, { shelter: browser.bindings.changing });
+  await expect(page.locator('#metrics')).toContainText('20');
+  const layerUrl = browser.bindings.changing.layerUrl;
+  const response = await fetch(`${layerUrl}/query?where=1%3D1&outFields=*&returnGeometry=false&f=json`);
+  const data = await response.json();
+  expect(data.features).toHaveLength(1);
+  const attributes = data.features[0].attributes;
+  const objectIdField = data.objectIdFieldName ?? Object.keys(attributes).find((key) => key.toLowerCase() === 'objectid');
+  expect(objectIdField).toBeTruthy();
+  const edit = await adminFetch(serverEnv(), { method: 'POST', apiPath: `${new URL(layerUrl).pathname}/applyEdits`,
+    body: { updates: [{ attributes: { [objectIdField]: attributes[objectIdField], occupancy: 35 } }] } });
+  expect(edit.updateResults?.[0]?.success).toBe(true);
   const firstCheck = await page.locator('#freshness').getAttribute('data-verified-at');
   let queries = 0;
   page.on('request', (request) => { if (request.url().includes('/query?')) queries++; });
-  await page.clock.install();
   await page.clock.fastForward(60_001);
   await expect.poll(() => queries).toBeGreaterThanOrEqual(2);
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
+  await expect(page.locator('#metrics')).toContainText('35');
   await expect(page.locator('#freshness')).not.toHaveAttribute('data-verified-at', firstCheck);
   await page.route('**/query?**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Unavailable"}' }));
   await page.getByRole('button', { name: 'Refresh now', exact: true }).click();
@@ -85,7 +99,7 @@ test('EM-01 bounded slice: timer queries the server again, failed refresh hides 
   await page.unroute('**/query?**');
   await page.getByRole('button', { name: 'Refresh now', exact: true }).click();
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
-  await expect(page.locator('#rows tr')).toHaveCount(25);
+  await expect(page.locator('#rows tr')).toHaveCount(4);
 });
 
 test('EM-01 bounded slice: unsafe and unbound layers do not show a situational map', async ({ page }) => {
