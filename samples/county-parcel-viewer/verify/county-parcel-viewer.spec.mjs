@@ -150,7 +150,8 @@ test("SDK-08 3D renders real Overture buildings, retains the parcel and returns 
   expect(await page.evaluate(() => window.sampleMap.getPitch())).toBeCloseTo(55, 8);
   const lightBuildings = await page.evaluate(() => window.sampleMap.getPaintProperty("overture-buildings", "fill-extrusion-color"));
   await page.screenshot({ path: testInfo.outputPath("property-3d-light.png") });
-  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await page.getByRole("button", { name: "Dark mode" }).click();
+  await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => window.sampleMap.getPaintProperty("overture-buildings", "fill-extrusion-color"))).not.toEqual(lightBuildings);
   await page.screenshot({ path: testInfo.outputPath("property-3d-dark.png") });
   await page.setViewportSize({ width: 390, height: 844 });
