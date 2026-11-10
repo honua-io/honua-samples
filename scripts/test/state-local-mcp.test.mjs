@@ -33,8 +33,11 @@ test("every exercise question preserves provenance and requires complete paginat
 test("property binds both parcels and zoning and keeps permit lookup manual", () => {
   const result = buildMcpJourney("property", [deployment("maui-parcels", 3), deployment("maui-zoning")]);
   assert.deepEqual(result.sources.map((entry) => entry.source), ["maui-parcels", "maui-zoning"]);
-  assert.ok(result.prompt.includes("https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx"));
-  assert.ok(result.prompt.includes("https://mapps.mauicounty.gov/305/Searches-in-MAPPS"));
+  const permitUrls = result.prompt.match(/https?:\/\/[^\s]+/g).map((url) => url.replace(/[.,;]+$/, ""));
+  assert.deepEqual(permitUrls, [
+    "https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx",
+    "https://mapps.mauicounty.gov/305/Searches-in-MAPPS",
+  ]);
   assert.match(result.prompt, /13 digits without dashes, including CPR; the parcel layer has no CPR/);
   assert.match(result.prompt, /Never pad the TMK, add a CPR suffix, or construct a \?tmk= prefill URL/);
   assert.match(result.prompt, /Do not invent permits, CPR digits/);
