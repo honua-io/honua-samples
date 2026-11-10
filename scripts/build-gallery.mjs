@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { sampleAppPath } from './lib/sample-app-url.mjs';
 // Builds the static samples.honua.io gallery into site/ (honua-io/honua-samples#3).
 //
 // DECISION (owner, 2026-07-17, on #3): samples.honua.io is the single
@@ -343,6 +344,9 @@ async function main() {
       "utf8",
     );
   }
+
+  const emergencyCard = ownCards.find((card) => card.id === 'maui-emergency' && card.ownApp);
+  if (emergencyCard) await cp(path.join(SITE_DIR, 'maui-emergency/app'), path.join(SITE_DIR, 'state-local/emergency'), { recursive: true });
 
   for (const card of jobCards) {
     const dir = path.join(SITE_DIR, "jobs", card.id);
@@ -829,8 +833,7 @@ function renderEmbedPanel(card) {
       ? `<a href="https://github.com/${SDKJS_REPO}/commit/${commit}" target="_blank" rel="noopener noreferrer">${commit.slice(0, 12)}</a>`
       : escapeHtml(commit ?? "unknown commit");
   const modeLabel = DATA_MODE_LABELS[bundleSample.dataMode] ?? escapeHtml(bundleSample.dataMode ?? "unknown data mode");
-  const entrypoint = bundleSample.entrypoint ?? "index.html";
-  const appHref = entrypoint === "index.html" ? "app/" : `app/${entrypoint}`;
+  const appHref = sampleAppPath(bundleSample);
   return `
 <div class="embed-panel">
   <iframe src="${escapeAttr(appHref)}" title="${escapeAttr(card.title)} -- running sample" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
@@ -848,7 +851,7 @@ function renderOwnEmbedPanel(card) {
   const modeLabel = DATA_MODE_LABELS[app.dataMode] ?? escapeHtml(app.dataMode ?? "unknown data mode");
   const host = dataOriginHost(app);
   const against = host && (app.dataMode === "public-live" || app.dataMode === "live") ? ` against ${escapeHtml(host)}` : "";
-  const appHref = app.entrypoint === "index.html" ? "app/" : `app/${app.entrypoint}`;
+  const appHref = sampleAppPath(app);
   return `
 <div class="embed-panel" data-own-app="${escapeAttr(card.id)}">
   <iframe src="${escapeAttr(appHref)}" title="${escapeAttr(card.title)} -- running sample" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>

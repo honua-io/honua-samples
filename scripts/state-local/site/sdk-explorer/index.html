@@ -20,15 +20,16 @@
     <aside class="sample-browser" aria-label="Sample catalogue">
       <h1>SDK Explorer</h1><p>Real source, README and verified runnable builds. Data mode is shown for each preview.</p>
       <label for="search">Search samples or API names</label><input id="search" type="search" placeholder="e.g. MapLibre, query, sketch">
-      <label for="mode">Show</label><select id="mode"><option value="all">All samples</option><option value="preview">Six preview samples</option><option value="sdk-js">JavaScript SDK</option><option value="samples">Standalone samples</option></select>
+      <label for="mode">Show</label><select id="mode"><option value="all">All samples</option><option value="preview">Runnable previews</option><option value="sdk-js">JavaScript SDK</option><option value="samples">Standalone samples</option></select>
       <p id="catalog-status" role="status">Loading source catalogue…</p><nav id="sample-list" aria-label="Choose a sample"></nav>
     </aside>
+    <a class="skip" href="#sample-title">Skip sample list</a>
     <section class="sample-main" aria-labelledby="sample-title">
-      <header class="sample-heading"><p class="eyebrow" id="sample-path"></p><h2 id="sample-title">Choose a sample</h2><p id="sample-description"></p><p id="sample-provenance"></p></header>
+      <header class="sample-heading"><p class="eyebrow" id="sample-path"></p><h2 id="sample-title" tabindex="-1">Choose a sample</h2><p id="sample-description"></p><p id="sample-provenance"></p></header>
       <div class="sample-tabs" role="tablist" aria-label="Sample content"><button id="tab-preview" role="tab" aria-selected="true" aria-controls="preview">Preview</button><button id="tab-source" role="tab" aria-selected="false" aria-controls="source" tabindex="-1">Source</button><button id="tab-readme" role="tab" aria-selected="false" aria-controls="readme" tabindex="-1">README</button></div>
       <div id="preview" class="sample-panel" role="tabpanel" aria-labelledby="tab-preview"></div><div id="source" class="sample-panel" role="tabpanel" aria-labelledby="tab-source" hidden></div><div id="readme" class="sample-panel readme" role="tabpanel" aria-labelledby="tab-readme" hidden></div>
     </section>
-    <aside class="sample-tools" aria-label="Sample details"><h2>Try it</h2><p>The running sample owns its controls. Open it full screen to use the complete interface.</p><a id="open-preview" hidden target="_blank" rel="noopener noreferrer">Open full screen ↗</a><h3>Run locally</h3><pre id="run-command"></pre><button id="copy-command" type="button">Copy command</button><p id="copy-status" role="status"></p><a id="source-link" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a><h3>APIs in this sample</h3><ul id="api-list"></ul><p class="source-note" id="catalog-revision"></p></aside>
+    <aside class="sample-tools" aria-label="Sample details"><h2>Try it</h2><p>The running sample owns its controls. Open it full screen to use the complete interface.</p><a id="open-preview" hidden target="_blank" rel="noopener noreferrer">Open full screen ↗</a><h3>Run locally</h3><pre id="run-command" tabindex="0"></pre><button id="copy-command" type="button">Copy command</button><p id="copy-status" role="status"></p><a id="source-link" target="_blank" rel="noopener noreferrer">View source on GitHub ↗</a><h3>APIs in this sample</h3><ul id="api-list"></ul><p class="source-note" id="catalog-revision"></p></aside>
   </main>
   <script type="module" src="../assets/theme.js"></script><script type="module" src="./explorer.mjs"></script>
 </body></html>

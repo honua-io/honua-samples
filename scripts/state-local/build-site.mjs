@@ -1,6 +1,7 @@
 // The standalone sample owns shared assets so clean sample exports remain buildable.
 import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { sampleAppPath } from '../lib/sample-app-url.mjs';
 
 export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   const source = path.join(repoRoot, 'scripts/state-local/site');
@@ -11,12 +12,10 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   await cp(path.join(source, 'index.html'), path.join(output, 'index.html'));
   await cp(path.join(source, 'switching'), path.join(output, 'switching'), { recursive: true });
   await cp(path.join(source, 'sdk-explorer'), path.join(output, 'sdk-explorer'), { recursive: true });
-  const previews = Object.fromEntries(cards.filter((card) => card.bundleRunnable || card.ownApp).map((card) => {
+  const previews = Object.fromEntries(cards.filter((card) => card.bundleRunnable).map((card) => {
     const app = card.ownApp ?? card.bundleSample;
-    const entry = app?.entrypoint ?? 'index.html';
-    if (!/^[\w./-]+$/.test(entry) || entry.includes('..')) throw new Error(`Unsafe sample entrypoint: ${card.id}`);
-    return [`${card.origin === 'sdk-js' || card.bundleSample ? 'sdk-js' : 'samples'}:${card.id}`, {
-      url: `${card.detailPath}app/${entry === 'index.html' ? '' : entry}`,
+    return [`${card.sourceRepo === 'honua-sdk-js' ? 'sdk-js' : 'samples'}:${card.id}`, {
+      url: `${card.detailPath}${sampleAppPath(app)}`,
       dataMode: app.dataMode, commit: app.builtFrom?.commit,
     }];
   }));

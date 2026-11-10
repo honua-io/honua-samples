@@ -34,3 +34,6 @@
 @media(min-width:1101px) { .sample-browser { max-height:calc(100vh - 64px); overflow:auto; position:sticky; top:0; } }
 @media(max-width:1100px) { .explorer { grid-template-columns:260px minmax(0,1fr); } .sample-tools { grid-column:2; border-top:1px solid var(--c-border); } }
 @media(max-width:700px) { .explorer { display:flex; flex-direction:column; } .sample-browser { border-right:0; border-bottom:1px solid var(--c-border); } #sample-list { max-height:240px; overflow:auto; } .sample-tools { border-left:0; } .sample-panel iframe { height:560px; } }
+
+#readme table{border-collapse:collapse;width:100%;font-size:.875rem}#readme td,#readme th{border:1px solid var(--c-border);padding:.5rem;text-align:left}#readme{overflow-x:auto}
+@media(min-width:701px) and (max-width:1100px){#sample-list{max-height:65vh;overflow-y:auto}}

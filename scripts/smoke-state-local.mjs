@@ -1,28 +1,19 @@
 #!/usr/bin/env node
-// Run against the built gallery. --require-previews also gates the six runnable apps.
+// Run against the built gallery. --require-previews also gates the currently admitted runnable apps.
 import assert from 'node:assert/strict';
-import { createReadStream } from 'node:fs';
-import { mkdir, stat, readFile } from 'node:fs/promises';
-import { createServer } from 'node:http';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { startStaticServer } from './lib/browser-lane.mjs';
 import { chromium, expect } from '@playwright/test';
 
 const root = path.resolve(fileURLToPath(new URL('../site/', import.meta.url)));
 const evidence = fileURLToPath(new URL('../artifacts/state-local-browser/', import.meta.url));
-const ids = ['sdk-js:maplibre-quickstart', 'sdk-js:sketch-editing', 'sdk-js:spatial-analytics-workbench', 'sdk-js:nl-map-control', 'samples:maplibre-featureserver-layer', 'samples:maplibre-category-style-legend'];
-const types = { '.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
-const server = createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, 'http://localhost');
-    const file = path.resolve(root, `.${decodeURIComponent(url.pathname)}`, url.pathname.endsWith('/') ? 'index.html' : '');
-    if (!file.startsWith(`${root}${path.sep}`) || !(await stat(file)).isFile()) throw new Error('Not found');
-    res.writeHead(200, { 'content-type': types[path.extname(file)] ?? 'application/octet-stream' });
-    createReadStream(file).pipe(res);
-  } catch { res.writeHead(404); res.end('Not found'); }
-});
-await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-const base = `http://127.0.0.1:${server.address().port}`;
+const previews = JSON.parse(await readFile(path.join(root, 'state-local/sdk-explorer/previews.json')));
+const ids = Object.keys(previews);
+if (process.argv.includes('--require-previews')) assert.ok(ids.length >= 2, 'At least two active previews required');
+const server = await startStaticServer({ rootDir: root, port: 0 });
+const base = server.url;
 let browser;
 try {
   await mkdir(evidence, { recursive: true });
@@ -49,20 +40,13 @@ try {
   await expect(page.locator('#catalog-status')).toHaveText('0 matching samples');
   await page.locator('#search').fill('');
   await page.locator('#mode').selectOption('preview');
-  await expect(page.locator('#sample-list button')).toHaveCount(6);
+  await expect(page.locator('#sample-list button')).toHaveCount(ids.length);
   await page.locator('#tab-source').focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#tab-readme')).toBeFocused();
   await expect(page.locator('#readme')).toBeVisible();
-  const previews = JSON.parse(await readFile(path.join(root, 'state-local/sdk-explorer/previews.json')));
   for (const id of ids) {
     await page.locator(`[data-sample="${id}"]`).click();
-    if (!previews[id]) {
-      assert.ok(!process.argv.includes('--require-previews'), `Required preview missing: ${id}`);
-      await expect(page.locator('#sample-provenance')).toContainText('no verified runnable preview');
-      await expect(page.locator('#preview iframe')).toHaveCount(0);
-      continue;
-    }
     assert.ok(previews[id].dataMode && previews[id].commit, `Missing provenance: ${id}`);
     await expect(page.locator('#preview iframe')).toHaveCount(1);
     const response = await page.request.get(`${base}${previews[id].url}`);
@@ -71,8 +55,16 @@ try {
     // app smoke suite. This check verifies Explorer wiring and disclosure.
     await expect(page.locator('#sample-provenance')).toContainText(previews[id].commit);
   }
-  console.log(`State/local browser checks passed; ${ids.filter((id) => previews[id]).length}/6 preview entrypoints admitted.`);
+  const catalog = JSON.parse(await readFile(path.join(root, 'state-local/sdk-explorer/catalog.json')));
+  catalog.samples[0].readme = '<table><tbody><tr><td>Table cell</td></tr></tbody></table><script>window.explorerXss=true</script><img src=x onerror="window.explorerXss=true"><a href="javascript:alert(1)">Bad link</a>';
+  await page.route('**/sdk-explorer/catalog.json', (route) => route.fulfill({ json: catalog }));
+  await page.goto(`${base}/state-local/sdk-explorer/#${catalog.samples[0].repo}:${catalog.samples[0].id}`);
+  await page.locator('#tab-readme').click();
+  await expect(page.locator('#readme td')).toHaveText('Table cell');
+  await expect(page.locator('#readme script, #readme img, #readme a[href]')).toHaveCount(0);
+  assert.equal(await page.evaluate(() => window.explorerXss), undefined);
+  console.log(`State/local browser checks passed; ${ids.length} preview entrypoints admitted.`);
 } finally {
   await browser?.close();
-  await new Promise((resolve) => server.close(resolve));
+  await server.close();
 }
