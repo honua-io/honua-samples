@@ -80,6 +80,8 @@ function freshnessText() {
 async function load() {
   if (loading) return;
   loading = true;
+  context = undefined;
+  answer.textContent = 'Zone check unavailable while exercise resources are being verified.';
   clearTimeout(timer);
   refresh.disabled = true;
   const preserveView = records.length > 0;
@@ -89,7 +91,6 @@ async function load() {
   try {
     const snapshot = source.snapshot ? await loadSnapshot() : null;
     records = snapshot ? snapshot.records : await loadExercise(source);
-    context = undefined;
     try { context = snapshot ? snapshot.context : await loadContext(location.search); }
     catch (error) { answer.textContent = `Zone check unavailable: ${error.message}. Check the approved receipts and refresh.`; }
     if (context && !checkedPoint) answer.textContent = `Connected ${context.zones.length} tsunami zone features and ${context.roads.length} road features. Enter coordinates to inspect the geography.`;
@@ -104,7 +105,7 @@ async function load() {
     document.body.dataset.sampleStatus = 'pass';
   } catch (error) {
     records = [];
-    if (checkedPoint) document.querySelector('#location-answer').textContent = 'Exercise resources could not be verified. Refresh before checking again.';
+    answer.textContent = 'Exercise resources could not be verified. Refresh before checking again.';
     dashboard.hidden = true;
     status.textContent = `Could not verify the exercise. ${error.message}. Check the import receipts, then refresh.`;
     status.dataset.state = 'error';
