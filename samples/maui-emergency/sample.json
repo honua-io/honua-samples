@@ -1,7 +1,7 @@
 {
   "id": "maui-emergency",
   "title": "Maui emergency preparedness exercise",
-  "description": "Inspect clearly labelled fictional shelters and road closures on Maui geographic anchors, with anonymous SDK queries, filters and automatic server checks.",
+  "description": "Explore real Maui geography and clearly labelled fictional shelters and road closures in a static preparedness exercise. Optional anonymous SDK connections use approved layer receipts.",
   "contentKind": "walkthrough",
   "learning": {
     "goal": "connect-data",
@@ -14,8 +14,8 @@
       "A published Maui layer or a disposable local Honua Server"
     ]
   },
-  "dataMode": "local-integration",
-  "auth": "admin-api-key",
+  "dataMode": "fixture",
+  "auth": "none",
   "capabilities": [
     "import.file",
     "serve.geoservices-featureserver"

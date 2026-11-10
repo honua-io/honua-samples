@@ -7,11 +7,12 @@ import { exerciseFeature } from './fixture.mjs';
 test('emergency records reject unlabelled, misanchored and inconsistent exercise data', () => {
   const row = exerciseFeature().properties;
   assert.equal(emergencyRecord(row, 'exercise_shelter').asset_id, 'maui-public-schools:1');
+  assert.equal(emergencyRecord({ ...row, validation_geometry: false, geometry_source: 'https://planning.hawaii.gov/gis/download-gis-data-expanded/' }, 'exercise_shelter').asset_id, 'maui-public-schools:1');
   for (const change of [{ is_demo: false }, { exercise_only: false }, { anchor_source: 'other' },
     { anchor_feature_id: '' }, { asset_id: 'maui-public-schools:2' }, { record_type: 'actual_shelter' },
     { status: 'open' }, { occupancy: 101 }, { occupancy: -1 }, { occupancy: 1.5 }, { capacity: 0 },
     { closed_at: '2026-11-01T00:00:00.000Z' }, { due_at: '2026-10-29T00:00:00.000Z' },
-    { scenario_date: '2026-10-29' }, { opened_at: 'yesterday' }]) {
+    { scenario_date: '2026-10-29' }, { opened_at: 'yesterday' }, { validation_geometry: undefined }, { validation_geometry: false }]) {
     assert.throws(() => emergencyRecord({ ...row, ...change }, 'exercise_shelter'), JSON.stringify(change));
   }
 });

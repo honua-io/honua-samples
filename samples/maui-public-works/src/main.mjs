@@ -4,7 +4,7 @@ import { filterFeatures, STAGES } from './records.mjs';
 import { renderBoard, renderCrews, renderDetail, renderMetrics, renderRows } from './view.mjs';
 import { element } from '../../../shared/state-local/dom.mjs';
 import { createInventoryMap } from './map.mjs';
-import { updateFeatureMap } from '../../../shared/state-local/map.mjs';
+import { updateFeatureMap, fitFeatureMap } from '../../../shared/state-local/map.mjs';
 
 const form = document.querySelector('#filters');
 const status = document.querySelector('#load-status');
@@ -47,7 +47,7 @@ function renderInventory() {
   document.querySelector('#more').hidden = shown >= filtered.length;
   document.querySelector('#detail').replaceChildren(element('h2', 'Record details'),
     element('p', filtered.length ? 'Select a feature on the map or a record in the list.' : 'No records match. Clear filters to restore the inventory.'));
-  if (view) updateFeatureMap(view, filtered);
+  if (view) { updateFeatureMap(view, filtered); fitFeatureMap(view, filtered); }
 }
 
 async function load() {

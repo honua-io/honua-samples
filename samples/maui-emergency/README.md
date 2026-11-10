@@ -39,7 +39,7 @@ source-layer link and fictional occupancy. All map resources are local; no
 basemap tile service is required.
 
 This is a bounded, read-only slice. Released Studio apps, the Console journey,
-verified stock-client MCP execution, evacuation zones, routing, live alerts,
+verified stock-client MCP execution, routing, live alerts,
 private EOC roles and approved situational reports remain separate delivery gates.
 The page includes the realistic MCP question; displaying that question is not
 evidence that an agent executed it.
@@ -101,8 +101,9 @@ node scripts/state-local/sdk/verify.mjs emergency
 This command **writes synthetic test data** to the disposable server, then runs all
 three published SDKs anonymously. Never point it at the shared demo or a production
 server. CI checks the filter, returned feature IDs, geometry and exercise labels.
-Its `EM-01` test name identifies the SDK query portion only; it does
-not claim the full UI requirement passes. Dependencies must be installed as above;
+The bounded `EM-01` browser slice checks the rendered map, filters, fictional
+occupancy and keyboard detail selection. It does not claim the full released
+Studio/MCP journey passes. Dependencies must be installed as above;
 set `HONUA_SAMPLE_PYTHON` to the virtual environment's Python executable.
 
 [Import data and record provenance](../../docs/state-local-data.md).
@@ -133,7 +134,15 @@ School anchors are not designated shelters; all statuses and occupancy are ficti
   use historical disaster imagery. A missing data receipt is not an SDK defect.
 - SDK-06: terrain remains cut pending fresh source and deployment attestation;
   retired or unattested terrain endpoints are not used.
+- EM-02: special-needs and pets intake remain cut; the exercise does not collect
+  personal information or imply that any school offers these services.
 
 Public release remains gated on the shared deployment receipts and independent
 browser verification against the released server. A successful local fixture is
 not a public readiness claim.
+
+Imagery comparison and terrain previews are cut until bounded federal inputs have source URLs, licence statements, SHA-256 receipts and anonymous deployment bindings. The remaining work is tracked in [the source attestation issue](https://github.com/honua-io/honua-samples/issues/122).
+
+## Published static exercise
+
+The gallery opens a bundled snapshot without credentials. Real tsunami zone geography, school anchors and roads are separated from fictional shelter activation, occupancy and closure records. `public/data/sources.json` records source URLs, licences, input checksums and limitations. The approved school/road display inputs did not record their original retrieval dates; this snapshot makes no freshness claim. Nine school anchors produce nine fictional shelter records; these are not designated shelters. The tsunami import receipt is retained alongside the snapshot. Query parameters still connect approved live layer receipts for the SDK walkthrough; only that mode checks the server every 60 seconds.

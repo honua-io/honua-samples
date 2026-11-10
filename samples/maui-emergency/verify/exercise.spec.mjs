@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { readPixels, serverEnv, settleMapCanvas, uploadFixture } from '../../../scripts/browser-verification/harness.mjs';
+import { readPixels, serverEnv, settleMapCanvas, replaceFixture } from '../../../scripts/browser-verification/harness.mjs';
 import { closeOperationsBrowser, prepareOperationsBrowser } from '../../../scripts/browser-verification/state-local.mjs';
 import { exerciseFeature } from './fixture.mjs';
 
@@ -16,6 +16,8 @@ test.beforeAll(async ({}, info) => {
     shelter: { prefix: 'maui-em-shelters', allowAnonymous: true, fixture: fixture(shelters) },
     closure: { prefix: 'maui-em-closures', allowAnonymous: true, fixture: fixture(closures) },
     changing: { prefix: 'maui-em-changing', allowAnonymous: true, fixture: fixture([exerciseFeature()]) },
+    tsunami: { prefix: 'maui-em-zones', allowAnonymous: true, fixture: fixture([{ type: 'Feature', properties: { zone_type: 'Tsunami Evacuation Zone', validation_geometry: true }, geometry: { type: 'Polygon', coordinates: [[[-156.51,20.84],[-156.45,20.84],[-156.45,20.9],[-156.51,20.9],[-156.51,20.84]], [[-156.49,20.86],[-156.49,20.88],[-156.47,20.88],[-156.47,20.86],[-156.49,20.86]]] } }]) },
+    roads: { prefix: 'maui-em-roads', allowAnonymous: true, fixture: fixture([{ type: 'Feature', properties: { validation_geometry: true }, geometry: { type: 'LineString', coordinates: [[-156.51,20.86],[-156.45,20.86]] } }]) },
     unsafe: { prefix: 'maui-em-unsafe', allowAnonymous: true, fixture: fixture([unsafe]) }
   } });
 
@@ -26,7 +28,8 @@ function url(overrides = {}) {
   const target = new URL('/maui-emergency/app/', browser.server.url);
   const sources = { ...browser.bindings, ...overrides };
   const params = new URLSearchParams({ baseUrl: serverEnv().baseUrl });
-  for (const name of ['shelter', 'closure']) {
+  for (const name of ['shelter', 'closure', 'tsunami', 'roads']) {
+    if (!sources[name]) continue;
     params.set(`${name}Service`, sources[name].serviceName);
     params.set(`${name}Layer`, String(sources[name].layerId));
   }
@@ -86,7 +89,7 @@ test('EM-01 bounded slice: timer displays changed server data, failed refresh hi
   await expect(page.locator('#metrics')).toContainText('20');
   const updated = exerciseFeature();
   updated.properties.occupancy = 35;
-  await uploadFixture({ fixture: fixture([updated]), tableName: browser.bindings.changing.tableName, overwriteExisting: true });
+  await replaceFixture({ fixture: fixture([updated]), tableName: browser.bindings.changing.tableName });
   await page.locator('#rows').getByRole('button', { name: 'exercise_shelter-1', exact: true }).click();
   await expect(page.locator('#detail')).toBeFocused();
   const firstCheck = await page.locator('#freshness').getAttribute('data-verified-at');
@@ -120,7 +123,7 @@ test('EM-01 bounded slice: unsafe and unbound layers do not show a situational m
   await page.goto(url({ shelter: browser.bindings.unsafe }));
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'fail');
   await expect(page.locator('#dashboard')).toBeHidden();
-  await page.goto(new URL('/maui-emergency/app/', browser.server.url).href);
+  await page.goto(new URL('/maui-emergency/app/?baseUrl=' + encodeURIComponent(serverEnv().baseUrl), browser.server.url).href);
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'unconfigured');
   await expect(page.locator('#dashboard')).toBeHidden();
   await expect(page.locator('#load-status')).toContainText('receipts');
@@ -142,4 +145,58 @@ test('EM-01 bounded slice: desktop and mobile light/dark layouts keep selected d
   await expect(page.locator('#detail h2')).toBeInViewport();
   await expect(page.locator('#detail')).toContainText('not a designated shelter');
   await page.screenshot({ path: info.outputPath('emergency-mobile-selected.png') });
+});
+
+test('zone lookup uses real-server geometry for interior, hole, boundary and outside points', async ({ page, context }) => {
+  await ready(page);
+  await expect(page.locator('#location-answer')).toContainText('Connected');
+  for (const [coordinates, expected] of [['20.85, -156.5', 'intersects mapped regular'], ['20.87, -156.48', 'No intersection found'], ['20.84, -156.5', 'intersects mapped regular'], ['20.92, -156.52', 'No intersection found']]) {
+    await page.getByLabel('Latitude, longitude').fill(coordinates);
+    await page.getByRole('button', { name: 'Check location', exact: true }).click();
+    await expect(page.locator('#location-answer')).toContainText(expected);
+    await expect(page.locator('#location-answer')).toContainText('not a safety determination');
+    await expect(page.locator('#location-answer')).toContainText('no route or travel-time');
+  }
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 20.85, longitude: -156.5 });
+  await page.getByRole('button', { name: 'Use my location' }).click();
+  await expect(page.locator('#location-answer')).toContainText('intersects mapped regular');
+  await context.clearPermissions();
+  await page.reload();
+  await page.getByRole('button', { name: 'Use my location' }).click();
+  await expect(page.locator('#location-answer')).toContainText('Could not access');
+  await ready(page, { tsunami: null, roads: null });
+  await page.getByLabel('Latitude, longitude').fill('20.85, -156.5');
+  await page.getByRole('button', { name: 'Check location', exact: true }).click();
+  await expect(page.locator('#location-answer')).toContainText('Zone check unavailable');
+  await ready(page, { roads: null });
+  await expect(page.locator('#location-answer')).toContainText('Zone check unavailable');
+});
+
+test('theme changes repaint map background and preserve distinguishable operational colors', async ({ page }) => {
+  await ready(page);
+  const canvas = page.locator('#map canvas');
+  await settleMapCanvas(page);
+  const [light] = await readPixels(page, canvas, [[4,4]]);
+  await page.locator('.theme-toggle').click();
+  await expect.poll(async () => (await readPixels(page, canvas, [[4,4]]))[0].r).toBeLessThan(light.r / 2);
+  for (const anchor of ['maui-public-schools:30', 'exercise_closure-3']) {
+    await page.getByLabel('Find record or anchor').fill(anchor);
+    await expect(page.locator('#map-status')).toContainText('1 records mapped');
+    await settleMapCanvas(page);
+    const size = await canvas.boundingBox();
+    const [pixel] = await readPixels(page, canvas, [[Math.floor(size.width / 2), Math.floor(size.height / 2)]]);
+    if (anchor.startsWith('maui')) expect(pixel.g).toBeGreaterThan(pixel.r);
+    else expect(pixel.r).toBeGreaterThan(pixel.b);
+  }
+});
+
+
+test('published snapshot loads without server bindings and discloses dates', async ({ page }) => {
+  await page.goto(new URL('/maui-emergency/app/', browser.server.url).href);
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
+  await expect(page.locator('#freshness')).toContainText('Not a live server check');
+  await expect(page.locator('#location-answer')).toContainText('Connected');
+  await page.locator('#rows button').first().click();
+  await expect(page.locator('#detail a')).toHaveAttribute('href', './data/sources.json');
 });

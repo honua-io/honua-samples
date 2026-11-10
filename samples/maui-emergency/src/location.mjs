@@ -1,20 +1,15 @@
-// Group ArcGIS rings by containment so GeoJSON rendering and lookup agree.
+import { geoServicesToGeoJson } from '@honua/sdk-js/geometry';
+
 export function zoneGeometry(geometry) {
   if (geometry?.spatialReference?.wkid && ![4326, 4269].includes(geometry.spatialReference.wkid)) throw new Error('Zone geometry must be WGS84');
-  const rings = geometry?.rings;
+  const geojson = ['Polygon', 'MultiPolygon'].includes(geometry?.type);
+  const rings = geometry?.type === 'Polygon' ? geometry.coordinates : geometry?.type === 'MultiPolygon' ? geometry.coordinates.flat() : geometry?.rings;
   if (!Array.isArray(rings) || !rings.length || rings.some((ring) => !Array.isArray(ring) || ring.length < 4
     || ring.some((p) => !Array.isArray(p) || p.length < 2 || !Number.isFinite(p[0]) || !Number.isFinite(p[1]) || Math.abs(p[0]) > 180 || Math.abs(p[1]) > 90)
     || ring[0][0] !== ring.at(-1)[0] || ring[0][1] !== ring.at(-1)[1])) throw new Error('Invalid zone polygon');
-  const nodes = rings.map((ring) => ({ ring: ring.map((p) => p.slice(0, 2)), area: Math.abs(ring.reduce((sum, p, i) => i ? sum + ring[i - 1][0] * p[1] - p[0] * ring[i - 1][1] : sum, 0)) }));
-  if (nodes.some(({ area }) => area === 0)) throw new Error('Invalid zone polygon');
-  nodes.sort((a, b) => b.area - a.area);
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    node.parent = nodes.slice(0, i).filter((other) => containsPoint(node.ring[0], { type: 'Polygon', coordinates: [other.ring] })).at(-1);
-    node.depth = node.parent ? node.parent.depth + 1 : 0;
-  }
-  const polygons = nodes.filter((node) => node.depth % 2 === 0).map((outer) => [outer.ring, ...nodes.filter((node) => node.parent === outer && node.depth % 2 === 1).map((node) => node.ring)]);
-  return polygons.length === 1 ? { type: 'Polygon', coordinates: polygons[0] } : { type: 'MultiPolygon', coordinates: polygons };
+  const result = geojson ? geometry : geoServicesToGeoJson(geometry);
+  if (!['Polygon', 'MultiPolygon'].includes(result?.type)) throw new Error('Invalid zone polygon');
+  return result;
 }
 export function containsPoint([x, y], geometry) {
   if (geometry.type === 'MultiPolygon') return geometry.coordinates.some((coordinates) => containsPoint([x, y], { type: 'Polygon', coordinates }));

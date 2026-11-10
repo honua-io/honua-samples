@@ -104,12 +104,20 @@ export function outsidePoint(fixture, view) {
 }
 
 
-export async function uploadFixture({ fixture, tableName, overwriteExisting }) {
+export function uploadFixture(options) {
+  return importFixture(options);
+}
+
+export function replaceFixture(options) {
+  return importFixture({ ...options, importFields: { OverwriteExisting: 'true' } });
+}
+
+async function importFixture({ fixture, tableName, importFields = {} }) {
   const env = serverEnv();
   const form = new FormData();
   form.set("file", new Blob([JSON.stringify(fixture.geojson)], { type: "application/geo+json" }), "operations-areas.geojson");
   form.set("TableName", tableName);
-  if (overwriteExisting) form.set("OverwriteExisting", "true");
+  for (const [name, value] of Object.entries(importFields)) form.set(name, value);
   const upload = await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form });
   if (upload.featureCount !== fixture.count) {
     throw new Error(`import reported ${upload.featureCount} feature(s); the fixture has ${fixture.count}`);

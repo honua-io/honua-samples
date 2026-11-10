@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { zoneGeometry, containsPoint, parseLocation, nearestShelter } from '../src/location.mjs';
-const ring = [[0,0],[10,0],[10,10],[0,10],[0,0]];
+const ring = [[0,0],[0,10],[10,10],[10,0],[0,0]];
 test('zone lookup preserves holes, disjoint rings and boundary uncertainty', () => {
-  const polygon = zoneGeometry({ rings: [ring, [[2,2],[4,2],[4,4],[2,4],[2,2]], [[20,20],[21,20],[21,21],[20,21],[20,20]]] });
+  const polygon = zoneGeometry({ rings: [ring, [[2,2],[4,2],[4,4],[2,4],[2,2]], [[20,20],[20,21],[21,21],[21,20],[20,20]]] });
   assert.equal(polygon.type, 'MultiPolygon');
   assert.equal(polygon.coordinates.length, 2);
   assert.equal(polygon.coordinates[0].length, 2);
@@ -24,4 +24,13 @@ test('nearest exercise shelter excludes closed resources and handles no candidat
   const records = [feature('closed','exercise_closed',-156.47),feature('open','exercise_open',-156.48)];
   assert.equal(nearestShelter([-156.47,20.89], records).feature.id, 'open');
   assert.equal(nearestShelter([-156.47,20.89], []), undefined);
+});
+
+test('SDK converter preserves corner-touching shells and an island inside a hole', () => {
+  const polygon = zoneGeometry({ rings: [ring, [[10,10],[10,12],[12,12],[12,10],[10,10]]] });
+  assert.equal(polygon.type, 'MultiPolygon');
+  assert.equal(containsPoint([11,11], polygon), true);
+  const island = zoneGeometry({ rings: [ring, [[2,2],[8,2],[8,8],[2,8],[2,2]], [[3,3],[3,4],[4,4],[4,3],[3,3]]] });
+  assert.equal(containsPoint([2.5,2.5], island), false);
+  assert.equal(containsPoint([3.5,3.5], island), true);
 });

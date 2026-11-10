@@ -6,6 +6,9 @@ const ANCHORS = { exercise_shelter: 'maui-public-schools', exercise_closure: 'ma
 
 export function emergencyRecord(row, kind) {
   assertExerciseProvenance(row);
+  if (![true, 1].includes(row.validation_geometry) && row.geometry_source !== 'https://planning.hawaii.gov/gis/download-gis-data-expanded/') {
+    throw new Error('Exercise geometry needs explicit source provenance or a validation marker');
+  }
   const anchor = row.anchor_feature_id;
   if (row.record_type !== kind || !Object.hasOwn(ANCHORS, kind) || !Object.hasOwn(STAGES, row.status)
     || typeof row.record_id !== 'string' || !row.record_id.trim()

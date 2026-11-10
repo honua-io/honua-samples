@@ -1,0 +1,18 @@
+{
+  "source": "maui-demo-closures",
+  "dataset": "maui-demo-closures",
+  "department": "Emergency Management",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/legalcode",
+  "attribution": "Honua fictional exercise records; geometry from Hawaii Statewide GIS Program public-domain sources",
+  "outputCrs": "EPSG:4326",
+  "selection": {
+    "kind": "fictional exercise; deterministic cycling of accepted anchor features; geometry copied, not observed activity"
+  },
+  "recipeVersion": 3,
+  "anchorSource": "maui-roads",
+  "anchorSha256": "c1028914600b7334e8571e3e99860679280e89c3e1392ddcdb4def932f0d9140",
+  "accepted": 24,
+  "rejected": 0,
+  "cleanSha256": "de4777560a629d776aa4c678324801a508f2abfbffee70a3603786aab551dd55"
+}
