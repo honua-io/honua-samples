@@ -104,6 +104,20 @@ export function outsidePoint(fixture, view) {
 }
 
 
+export async function uploadFixture({ fixture, tableName, overwriteExisting }) {
+  const env = serverEnv();
+  const form = new FormData();
+  form.set("file", new Blob([JSON.stringify(fixture.geojson)], { type: "application/geo+json" }), "operations-areas.geojson");
+  form.set("TableName", tableName);
+  if (overwriteExisting) form.set("OverwriteExisting", "true");
+  const upload = await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form });
+  if (upload.featureCount !== fixture.count) {
+    throw new Error(`import reported ${upload.featureCount} feature(s); the fixture has ${fixture.count}`);
+  }
+
+  return upload;
+}
+
 /**
  * Imports the fixture into a fresh table and publishes it as a FeatureServer
  * service. Unique names keep every spec independent of run order and of
@@ -123,13 +137,7 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
   const tableName = `${prefix.replace(/-/g, "_")}_${suffix}`;
   const layerName = "operations-areas";
 
-  const form = new FormData();
-  form.set("file", new Blob([JSON.stringify(fixture.geojson)], { type: "application/geo+json" }), "operations-areas.geojson");
-  form.set("TableName", tableName);
-  const upload = await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form });
-  if (upload.featureCount !== fixture.count) {
-    throw new Error(`import reported ${upload.featureCount} feature(s); the fixture has ${fixture.count}`);
-  }
+  const upload = await uploadFixture({ fixture, tableName });
 
   const connectionName = process.env.HONUA_SAMPLE_CONNECTION ?? "local";
   await ensureConnection(env, connectionName);
@@ -157,7 +165,7 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
   const serviceUrl = `${env.baseUrl}/rest/services/${serviceName}/FeatureServer`;
   const layerUrl = `${serviceUrl}/${layerId}`;
   await waitForFeatureServer({ env, layerUrl, allowAnonymous, expectedCount: fixture.count });
-  return { serviceName, layerId, layerName, serviceUrl, layerUrl, allowAnonymous };
+  return { serviceName, layerId, layerName, serviceUrl, layerUrl, allowAnonymous, tableName };
 }
 
 /**

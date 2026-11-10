@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { readPixels, serverEnv, settleMapCanvas } from '../../../scripts/browser-verification/harness.mjs';
+import { readPixels, serverEnv, settleMapCanvas, uploadFixture } from '../../../scripts/browser-verification/harness.mjs';
 import { closeOperationsBrowser, prepareOperationsBrowser } from '../../../scripts/browser-verification/state-local.mjs';
 import { exerciseFeature } from './fixture.mjs';
-import { adminFetch } from '../../../scripts/lib/admin-api.mjs';
 
 let browser;
 const fixture = (features) => ({ geojson: { type: 'FeatureCollection', features }, count: features.length });
@@ -19,10 +18,7 @@ test.beforeAll(async ({}, info) => {
     changing: { prefix: 'maui-em-changing', allowAnonymous: true, fixture: fixture([exerciseFeature()]) },
     unsafe: { prefix: 'maui-em-unsafe', allowAnonymous: true, fixture: fixture([unsafe]) }
   } });
-  const changing = browser.bindings.changing;
-  await adminFetch(serverEnv(), { method: 'PUT',
-    apiPath: `/api/v1/admin/services/${changing.serviceName}/layers/${changing.layerId}/metadata`,
-    body: { editing: { update: true } } });
+
 });
 test.afterAll(async () => { await closeOperationsBrowser(browser); });
 
@@ -51,6 +47,8 @@ test('EM-01 bounded slice: real-server map, fictional capacity, filters and keyb
   await expect(page.locator('[data-geometry-source]').first()).toContainText('Synthetic validation geometry');
   const search = page.getByLabel('Find record or anchor');
   for (const [anchor, color] of [['maui-public-schools:30', 'teal'], ['exercise_closure-3', 'amber']]) {
+    await search.fill('');
+    await expect(page.locator('#map-status')).toContainText('33 records mapped');
     await search.fill(anchor);
     await expect(page.locator('#map-status')).toContainText('1 records mapped');
     await settleMapCanvas(page);
@@ -86,16 +84,9 @@ test('EM-01 bounded slice: timer displays changed server data, failed refresh hi
   await page.clock.install();
   await ready(page, { shelter: browser.bindings.changing });
   await expect(page.locator('#metrics')).toContainText('20');
-  const layerUrl = browser.bindings.changing.layerUrl;
-  const response = await fetch(`${layerUrl}/query?where=1%3D1&outFields=*&returnGeometry=false&f=json`);
-  const data = await response.json();
-  expect(data.features).toHaveLength(1);
-  const attributes = data.features[0].attributes;
-  const objectIdField = data.objectIdFieldName ?? Object.keys(attributes).find((key) => key.toLowerCase() === 'objectid');
-  expect(objectIdField).toBeTruthy();
-  const edit = await adminFetch(serverEnv(), { method: 'POST', apiPath: `${new URL(layerUrl).pathname}/applyEdits`,
-    body: { updates: [{ attributes: { [objectIdField]: attributes[objectIdField], occupancy: 35 } }] } });
-  expect(edit.updateResults?.[0]?.success, JSON.stringify(edit)).toBe(true);
+  const updated = exerciseFeature();
+  updated.properties.occupancy = 35;
+  await uploadFixture({ fixture: fixture([updated]), tableName: browser.bindings.changing.tableName, overwriteExisting: true });
   await page.locator('#rows').getByRole('button', { name: 'exercise_shelter-1', exact: true }).click();
   await expect(page.locator('#detail')).toBeFocused();
   const firstCheck = await page.locator('#freshness').getAttribute('data-verified-at');
@@ -108,6 +99,12 @@ test('EM-01 bounded slice: timer displays changed server data, failed refresh hi
   await expect(page.locator('#detail')).toBeFocused();
   await expect(page.locator('#detail')).toContainText('35');
   await expect(page.locator('#freshness')).not.toHaveAttribute('data-verified-at', firstCheck);
+  const row = page.locator('#rows').getByRole('button', { name: 'exercise_shelter-1', exact: true });
+  await row.focus();
+  await page.clock.fastForward(60_001);
+  await expect(row).toBeFocused();
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
+  await expect(row).toBeFocused();
   await page.route('**/query?**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Unavailable"}' }));
   await page.getByRole('button', { name: 'Refresh now', exact: true }).click();
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'fail');

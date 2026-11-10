@@ -14,14 +14,18 @@ export function renderMetrics(records) {
 }
 
 export function renderRows(records, select) {
-  document.querySelector('#rows').replaceChildren(...records.map((feature) => {
+  const rows = document.querySelector('#rows');
+  const focusedId = rows.contains(document.activeElement) ? document.activeElement.dataset.recordId : undefined;
+  rows.replaceChildren(...records.map((feature) => {
     const row = feature.properties;
     const record = cells(['', row.asset_id, STAGES[row.status], row.record_type === 'exercise_shelter' ? `${row.occupancy} / ${row.capacity} · DEMO DATA` : 'Not applicable']);
     const button = element('button', row.record_id, { type: 'button', class: 'request-link' });
+    button.dataset.recordId = row.record_id;
     button.addEventListener('click', () => select(feature));
     record.firstChild.append(button);
     return record;
   }));
+  if (focusedId) [...rows.querySelectorAll('button')].find((button) => button.dataset.recordId === focusedId)?.focus({ preventScroll: true });
 }
 
 export function renderDetail(feature, source) {
