@@ -323,7 +323,7 @@ async function main() {
   await mkdir(SITE_DIR, { recursive: true });
 
   await copyAssets();
-  await buildStateLocalSite({ repoRoot: REPO_ROOT, siteDir: SITE_DIR });
+  await buildStateLocalSite({ repoRoot: REPO_ROOT, siteDir: SITE_DIR, cards });
   const indexHtml = renderIndexPage({ contentSections, cards, keyByKey, generatedAt, sourceCommit, bundleNotice });
   assertNoDuplicateArticles(indexHtml);
   await writeFile(path.join(SITE_DIR, "index.html"), indexHtml, "utf8");
