@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the source catalog JSON for the SDK Explorer screen.
 
-Reads examples from origin/trunk of honua-sdk-js and honua-samples (run `git fetch` in both first), so a stale
+Reads examples from origin/trunk of honua-sdk-js, honua-samples and honua-server (run `git fetch` in all three first), so a stale
 checkout never leaks into the gallery. Hand-written fields: category, title, one-line description, API names and lifecycle status. Read from git: README (rendered to HTML), the main source file (trimmed) and package/sample metadata.
 
 Usage: python3 -I sdk_samples.py --root /path/to/workspace --output /path/to/catalog.json

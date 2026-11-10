@@ -2,7 +2,7 @@
 
 The landing, Switching and SDK Explorer pages use the county parcel sample's shared design tokens and theme preference. The gallery build copies these pages and checks their local links after emitting the sample pages.
 
-The Explorer catalogue is derived from the approved `sdk_samples.py` generator. Regenerate after fetching `origin/trunk` in both source repositories:
+The Explorer catalogue is derived from the approved `sdk_samples.py` generator. Regenerate after fetching `origin/trunk` in honua-sdk-js, honua-samples and honua-server:
 
 ```sh
 python3 -I scripts/state-local/sdk_samples.py --root /path/to/workspace --output scripts/state-local/site/sdk-explorer/catalog.json

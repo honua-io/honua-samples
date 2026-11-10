@@ -1,6 +1,6 @@
 import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import { createFeatureMap, updateFeatureMap } from '../../../shared/state-local/map.mjs';
+import { createFeatureMap, updateFeatureMap, fitFeatureMap } from '../../../shared/state-local/map.mjs';
 
 maplibregl.setWorkerUrl(workerUrl);
 const views = new WeakMap();
@@ -21,6 +21,7 @@ export function updateMap(map, records) {
   const view = views.get(map);
   const status = view.status;
   updateFeatureMap(view, records);
+  fitFeatureMap(view, records);
   const describe = () => { status.textContent = records.length
     ? `${records.length} exercise requests mapped. Select a road or point to inspect a request.` : 'No requests match these filters.'; };
   if (map.getSource('records')) map.once('idle', describe);
