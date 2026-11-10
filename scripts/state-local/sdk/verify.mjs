@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { adminFetch, serverEnv } from '../../lib/admin-api.mjs';
-import { ensureConnection } from '../../lib/sample-connection.mjs';
-import { layersPath, uploadSnapshotTable } from '../import.mjs';
+import { serverEnv } from '../../lib/admin-api.mjs';
+import { seedFeatureService } from '../../browser-verification/harness.mjs';
 
 const directory = fileURLToPath(new URL('.', import.meta.url));
 const scenarios = JSON.parse(await readFile(new URL('./scenarios.json', import.meta.url), 'utf8'));
@@ -19,33 +17,34 @@ if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(env.baseUrl).hostname)
 
 function fixture() {
   const kinds = { emergency: 'exercise_shelter', '311': 'service_request', 'public-works': 'work_order' };
-  return { type: 'FeatureCollection', features: ['exercise_open', 'exercise_closed', 'exercise_scheduled'].map((status, index) => ({
+  const collection = { type: 'FeatureCollection', features: ['exercise_open', 'exercise_closed', 'exercise_scheduled'].map((status, index) => ({
     type: 'Feature', geometry: { type: 'Point', coordinates: [-156.47 + index * 0.001, 20.88] },
     properties: { record_id: `sdk-${index + 1}`, record_type: kinds[name] ?? 'test_zoning',
       status, zone_code: index === 1 ? null : 'TEST_ONLY', data_origin: 'synthetic_demo',
       is_demo: true, exercise_only: true, display_label: 'DEMO DATA — synthetic SDK contract fixture' },
   })) };
+  const otherKind = structuredClone(collection.features[0]);
+  otherKind.properties.record_id = 'sdk-other-kind';
+  otherKind.properties.record_type = 'unrelated_record';
+  otherKind.properties.status = 'exercise_scheduled';
+  otherKind.properties.zone_code = null;
+  collection.features.push(otherKind);
+  return collection;
 }
 
-async function importFixture() {
-  const connection = process.env.HONUA_SAMPLE_CONNECTION ?? 'local';
-  await ensureConnection(env, connection);
-  const serviceName = `sdk-${name}-${randomUUID().replaceAll('-', '')}`;
-  const imported = await uploadSnapshotTable(env, { tableName: `sdk_${randomUUID().replaceAll('-', '')}`, geojson: fixture() });
-  const published = await adminFetch(env, { method: 'POST', apiPath: layersPath(connection), body: {
-    schema: imported.schema ?? 'honua_data', table: imported.physicalTableName,
-    layerName: 'DEMO DATA SDK contract fixture', serviceName, srid: 4326, enabled: true } });
-  assert.equal(published.data?.enabled, true, 'SDK fixture publication must confirm enablement');
-  assert.ok(Number.isSafeInteger(published.data.layerId), 'SDK fixture must return a layer ID');
-  await adminFetch(env, { method: 'PUT', apiPath: `/api/v1/admin/services/${serviceName}/access-policy`,
-    body: { allowAnonymous: true, allowAnonymousWrite: false } });
-  return { serviceName, layerId: published.data.layerId };
+async function importFixture(geojson) {
+  return seedFeatureService({ prefix: `sdk-${name}`, allowAnonymous: true,
+    fixture: { geojson, count: geojson.features.length } });
+}
+
+function sdkProcess(command, args, binding) {
+  return spawnSync(command, args, { cwd: directory, encoding: 'utf8', timeout: 120_000,
+    env: { ...process.env, HONUA_ADMIN_API_KEY: '', HONUA_ADMIN_PASSWORD: '',
+      HONUA_SERVICE_ID: binding.serviceName, HONUA_LAYER_ID: String(binding.layerId) } });
 }
 
 function runSdk(command, args, binding) {
-  const child = spawnSync(command, args, { cwd: directory, encoding: 'utf8', timeout: 120_000,
-    env: { ...process.env, HONUA_ADMIN_API_KEY: '', HONUA_ADMIN_PASSWORD: '',
-      HONUA_SERVICE_ID: binding.serviceName, HONUA_LAYER_ID: String(binding.layerId) } });
+  const child = sdkProcess(command, args, binding);
   assert.equal(child.status, 0, `${command} failed: ${child.stderr || child.stdout || child.error}`);
   const output = JSON.parse(child.stdout.trim().split('\n').at(-1));
   const expected = name === 'public-works' ? ['sdk-3'] : ['sdk-1', 'sdk-3'];
@@ -64,7 +63,26 @@ function runSdk(command, args, binding) {
   console.log(`PASS ${scenario.requirement} SDK portion: ${name}; ${command}; anonymous filter, geometry and DEMO DATA markers`);
 }
 
-const binding = await importFixture();
-runSdk(process.execPath, ['query.mjs', name], binding);
-runSdk(process.env.HONUA_SAMPLE_PYTHON ?? 'python3', ['query.py', name], binding);
-runSdk('dotnet', ['run', '--no-restore', '--project', 'StateLocal.csproj', '--', name], binding);
+const commands = [
+  [process.execPath, ['query.mjs', name]],
+  [process.env.HONUA_SAMPLE_PYTHON ?? 'python3', ['query.py', name]],
+  ['dotnet', ['run', '--no-restore', '--project', 'StateLocal.csproj', '--', name]],
+];
+const binding = await importFixture(fixture());
+for (const [command, args] of commands) runSdk(command, args, binding);
+if (scenario.exercise) {
+  const unlabelled = fixture();
+  for (const feature of unlabelled.features) {
+    delete feature.properties.data_origin;
+    delete feature.properties.is_demo;
+    delete feature.properties.exercise_only;
+    delete feature.properties.display_label;
+  }
+  const unsafeBinding = await importFixture(unlabelled);
+  for (const [command, args] of commands) {
+    const child = sdkProcess(command, args, unsafeBinding);
+    assert.notEqual(child.status, 0, `${command} must reject unlabelled exercise records`);
+    assert.match(child.stderr, /Exercise record is missing its DEMO DATA provenance/);
+    console.log(`PASS ${scenario.requirement} SDK portion: ${command}; unlabelled records rejected`);
+  }
+}

@@ -18,9 +18,10 @@ var result = await client.QueryAsync(service, layer, new FeatureServerQueryParam
     Where = scenario.GetProperty("where").GetString(), OutFields = "*", OutSR = 4326,
     ReturnGeometry = true, ResultRecordCount = 20 });
 var features = result.Features ?? throw new InvalidOperationException("Query omitted features");
+var isExercise = scenario.GetProperty("exercise").GetBoolean();
 foreach (var feature in features)
 {
-    if (!scenario.GetProperty("exercise").GetBoolean()) continue;
+    if (!isExercise) continue;
     var row = feature.Attributes;
     if (row is null || !row.TryGetValue("data_origin", out var origin) || origin.GetString() != "synthetic_demo"
         || !row.TryGetValue("is_demo", out var demo) || !IsAffirmative(demo)
