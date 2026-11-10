@@ -21,7 +21,8 @@
 // with three differences:
 //   - The build runs in a clean `git archive` export of samples/<id>/ at the
 //     source commit, including shared/state-local/ when present. The working
-//     tree (edited or not) never reaches the published bytes; the build's outputDir is what gets staged and digested.
+//     tree (edited or not) never reaches the published bytes;
+//     the build's outputDir is what gets staged and digested.
 //   - Output symlinks, special files, and paths escaping outputDir fail.
 //   - The data-origin scan reads committed app and shared source, not the
 //     bundle: a bundled SDK carries literal hosts it never contacts here.
