@@ -51,7 +51,7 @@ function pageBatches(source, ids) {
 
 function metadataFingerprint(metadata) {
   return JSON.stringify([metadata.extent?.spatialReference, metadata.fields, metadata.editingInfo ?? null,
-    metadata.name, metadata.copyrightText, ...(metadata.description ? [metadata.description] : [])]);
+    metadata.name, metadata.copyrightText, metadata.description ?? null]);
 }
 
 function verifyVintage(source, metadata) {

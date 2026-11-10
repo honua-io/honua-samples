@@ -7,6 +7,7 @@ import { sources } from '../state-local/sources.mjs';
 import { cleanRows } from '../state-local/clean.mjs';
 import { ensureDepartments, departments } from '../state-local/departments.mjs';
 import { fetchSnapshot, readSnapshot } from '../state-local/snapshot.mjs';
+import { readMauiSnapshot } from '../state-local/maui-snapshot.mjs';
 import { stagingServiceName, stagingTableName } from '../state-local/import.mjs';
 
 test('staging service names fit the server limit without truncating run identity', () => {
@@ -230,12 +231,15 @@ test('NBI snapshot preserves real ratings and vintage with an explicit Maui coun
   const snapshot = await readSnapshot('maui-bridges', output);
   assert.equal(receipt.dataVintage, '2025-06-20');
   assert.equal(receipt.selection.where, "county_code_003 = '009'");
+  assert.match(receipt.selection.kind, /^Attribute filter and/);
   assert.match(receipt.attribution, /Federal Highway Administration/);
   assert.match(receipt.metadataUrl, /bridges_nbi.html$/);
   const selections = requests.filter((url) => url.searchParams.has('returnIdsOnly'));
   assert.equal(selections.length, 2);
   assert.ok(selections.every((url) => url.searchParams.get('where') === "county_code_003 = '009'"));
   assert.deepEqual(snapshot.geojson.features[0].properties, bridge.properties);
+  await assert.rejects(readMauiSnapshot({ name: 'maui-bridges', directory: output,
+    source: { ...sources['maui-bridges'], vintageStatement: 'as of June 20, 2026' } }), /Source vintage changed/);
   const receiptFile = path.join(output, 'maui-bridges.receipt.json');
   for (const changed of [{ dataVintage: '2026-01-01' }, { selection: { ...receipt.selection, where: '1=1' } }]) {
     await writeFile(receiptFile, JSON.stringify({ ...receipt, ...changed }));
@@ -248,4 +252,20 @@ test('NBI refuses an unrecognized source vintage before downloading rows', async
   const requests = sourceFetch(t, { metadata: { ...metadata, description: 'NBI as of June 20, 2026' } });
   await assert.rejects(fetchSnapshot('maui-bridges', output), /Source vintage changed/);
   assert.ok(requests.every((url) => !url.pathname.endsWith('/query')));
+});
+
+test('NBI rejects a vintage change during download', async (t) => {
+  const output = await directory(t);
+  sourceFetch(t, { metadata: { ...metadata, description: 'NBI as of June 20, 2025' } });
+  const mockedFetch = globalThis.fetch;
+  let metadataRequests = 0;
+  globalThis.fetch = async (input) => {
+    if (new URL(input).searchParams.get('f') === 'json' && !new URL(input).pathname.endsWith('/query')) {
+      return response({ ...metadata, description: ++metadataRequests === 1
+        ? 'NBI as of June 20, 2025' : 'NBI as of June 20, 2026' });
+    }
+    return mockedFetch(input);
+  };
+  await assert.rejects(fetchSnapshot('maui-bridges', output), /changed during download/);
+  assert.equal(metadataRequests, 2);
 });
