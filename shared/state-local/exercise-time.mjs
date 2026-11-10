@@ -22,3 +22,7 @@ export function exerciseTimeline(row) {
   return { created, due, closed, asOf, opened_at: new Date(created).toISOString(),
     due_at: new Date(due).toISOString(), closed_at: closed === null ? null : new Date(closed).toISOString() };
 }
+
+export function displayUtc(value) {
+  return new Date(value).toISOString().replace('T', ' ').slice(0, 16);
+}

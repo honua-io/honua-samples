@@ -52,6 +52,12 @@ test('SR-01/02/03: real-server pagination, filters, metrics, timeline and labele
   await expect(page.locator('#trend tr')).toHaveCount(12);
   await page.getByLabel('Request status').selectOption('exercise_closed');
   await expect(page.locator('#result-count')).toContainText('68 matching');
+  await page.getByLabel('Find request or crew').fill('request-003');
+  await expect(page.locator('#map-status')).toContainText('1 exercise requests mapped');
+  await canvas.click({ position: { x: size.width / 2, y: size.height / 2 } });
+  await expect(page.locator('#detail')).toContainText('Demo crew 3 (fictional)');
+  await page.getByLabel('Find request or crew').fill('');
+  await expect(page.locator('#result-count')).toContainText('68 matching');
   await page.getByRole('button', { name: 'Inspect request-003', exact: true }).click();
   await expect(page.locator('#detail')).toContainText('Demo crew 3 (fictional)');
   await expect(page.locator('#detail time')).toHaveCount(3);

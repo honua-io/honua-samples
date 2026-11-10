@@ -3,7 +3,7 @@ import { STATUS_LABELS, TYPE_LABELS, summarize, weeklyTrend } from './records.mj
 import { cells, element } from '../../../shared/state-local/dom.mjs';
 export { element };
 const percent = (value) => value === null ? 'No closures' : `${Math.round(value * 100)}%`;
-const date = (value) => new Date(value).toISOString().replace('T', ' ').slice(0, 16);
+import { displayUtc } from '../../../shared/state-local/exercise-time.mjs';
 
 export function renderMetrics(records) {
   const totals = summarize(records);
@@ -29,7 +29,7 @@ export function renderAnalysis(records, asOf) {
 
 export function renderRows(records, onSelect) {
   document.querySelector('#rows').replaceChildren(...records.map(({ properties: row }) => {
-    const tr = cells(['', TYPE_LABELS[row.category], STATUS_LABELS[row.status], row.district, date(row.created), date(row.due)]);
+    const tr = cells(['', TYPE_LABELS[row.category], STATUS_LABELS[row.status], row.district, displayUtc(row.created), displayUtc(row.due)]);
     const button = element('button', row.record_id, { type: 'button', class: 'request-link', 'aria-label': `Inspect ${row.record_id}` });
     button.addEventListener('click', () => onSelect(row.record_id));
     tr.firstChild.append(button);
@@ -54,7 +54,7 @@ export function renderDetail(feature) {
   for (const [label, value] of [['Created', row.created], ['Due', row.due], ['Closed', row.closed]]) {
     if (value === null) continue;
     const item = element('li', label);
-    item.append(element('time', `${date(value)} UTC`, { datetime: new Date(value).toISOString() }));
+    item.append(element('time', `${displayUtc(value)} UTC`, { datetime: new Date(value).toISOString() }));
     timeline.append(item);
   }
   document.querySelector('#detail').replaceChildren(element('h2', row.record_id), element('p', 'DEMO DATA · fictional service request'),

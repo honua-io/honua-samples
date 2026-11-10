@@ -41,7 +41,7 @@ async function ready(page) {
 test('PW-01/02/03/04: real-server inventory, condition filters, board and exact asset joins', async ({ page }) => {
   const origins = new Set();
   page.on('request', (req) => { if (/^https?:/.test(req.url())) origins.add(new URL(req.url()).origin); });
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await ready(page);
   await expect(page.locator('#map-status')).toContainText('3 records mapped');
   const canvas = page.locator('#map canvas');
@@ -50,6 +50,8 @@ test('PW-01/02/03/04: real-server inventory, condition filters, board and exact 
     Math.floor(size.width * ((i % 10) + .5) / 10), Math.floor(size.height * (Math.floor(i / 10) + .5) / 10)])]);
   expect(pixels.some(({ r, g, b }) => (r > g * 1.2 && r > b * 1.2) || (g > r * 1.2 && g > b * 1.2))).toBe(true);
   await expect(page.locator('#rows tr')).toHaveCount(3);
+  await canvas.click({ position: { x: size.width / 2, y: size.height / 2 } });
+  await expect(page.locator('#detail h2')).toHaveText('fixture-2');
   await page.locator('#rows').getByRole('button', { name: 'fixture-3', exact: true }).click();
   await expect(page.locator('#detail')).toContainText('June 20, 2025');
   await expect(page.locator('#detail')).toContainText('not a current safety assessment');
@@ -93,7 +95,7 @@ test('PW-01: mobile dark and desktop light layouts keep records accessible', asy
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath('public-works-mobile-dark.png'), fullPage: true });
   await page.getByRole('button', { name: 'Switch to light mode' }).click();
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: info.outputPath('public-works-desktop-light.png'), fullPage: true });
 });
 

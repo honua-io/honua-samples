@@ -3,7 +3,7 @@ import { STAGES, associatedInspections } from './records.mjs';
 
 const CONDITIONS = { G: 'Good', F: 'Fair', P: 'Poor', exercise_good: 'Good (exercise)',
   exercise_fair: 'Fair (exercise)', exercise_poor: 'Poor (exercise)' };
-const date = (value) => new Date(value).toISOString().replace('T', ' ').slice(0, 16);
+import { displayUtc } from '../../../shared/state-local/exercise-time.mjs';
 export const conditionLabel = (row) => CONDITIONS[row.bridge_condition ?? row.condition];
 export const stageLabel = (row) => STAGES[row.status] ?? (row.status === 'exercise_open' ? 'Open' : 'Historical inventory');
 
@@ -43,7 +43,7 @@ export function renderBoard(orders, onSelect) {
     list.append(...matching.map((feature) => {
       const item = element('li');
       const row = feature.properties;
-      item.append(recordButton(feature, onSelect), element('p', row.crew), element('p', `Due ${date(row.due)} UTC`));
+      item.append(recordButton(feature, onSelect), element('p', row.crew), element('p', `Due ${displayUtc(row.due)} UTC`));
       return item;
     }));
     column.append(element('h3', `${label} · ${matching.length}`), list);
@@ -82,8 +82,8 @@ function exerciseDetails(feature, inventory, onSelect) {
   related.append(...matches.map((match) => { const item = element('li'); item.append(recordButton(match, onSelect)); return item; }));
   return [element('p', `DEMO DATA · fictional ${row.record_type.replaceAll('_', ' ')}`), detailList([
     ['Stage', stageLabel(row)], ['Condition', conditionLabel(row)], ['Assigned crew', row.crew],
-    ['Road anchor asset ID', row.asset_id], ['Opened (UTC)', date(row.created)], ['Due (UTC)', date(row.due)],
-    ['Closed (UTC)', row.closed === null ? 'Unclosed at exercise date' : date(row.closed)], ['Exercise date', row.scenario_date] ]),
+    ['Road anchor asset ID', row.asset_id], ['Opened (UTC)', displayUtc(row.created)], ['Due (UTC)', displayUtc(row.due)],
+    ['Closed (UTC)', row.closed === null ? 'Unclosed at exercise date' : displayUtc(row.closed)], ['Exercise date', row.scenario_date] ]),
   element('h3', 'Same road anchor'), related, element('p', matches.length ? 'These records share the exact asset ID; this is not a proximity match.' : 'No related records share this road anchor.')];
 }
 

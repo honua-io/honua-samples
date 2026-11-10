@@ -15,7 +15,7 @@ export function createFeatureMap(options) {
     map.addLayer({ id: 'record-points', type: 'circle', source: 'records', filter: ['==', ['geometry-type'], 'Point'],
       paint: { 'circle-color': color, 'circle-radius': 7, 'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff' } });
     for (const layer of ['record-lines', 'record-points']) {
-      map.on('click', layer, (event) => onSelect(event.features[0].id));
+      map.on('click', layer, (event) => onSelect(event.features[0].properties.record_id));
       map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
     }
