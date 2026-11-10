@@ -11,7 +11,10 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   const output = path.join(siteDir, 'state-local');
   const assets = path.join(output, 'assets');
   await mkdir(assets, { recursive: true });
-  await cp(path.join(source, 'index.html'), path.join(output, 'index.html'));
+  const landing = path.join(output, 'index.html');
+  if (!(await stat(landing).catch(() => null))?.isFile()) {
+    await cp(path.join(source, 'index.html'), landing);
+  }
   await mkdir(path.join(output, 'switching'), { recursive: true });
   await writeFile(path.join(output, 'switching/index.html'), await approvedPage({
     template: path.join(repoRoot, 'scripts/state-local/approved/09-switching.html'),
