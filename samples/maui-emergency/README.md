@@ -106,3 +106,34 @@ not claim the full UI requirement passes. Dependencies must be installed as abov
 set `HONUA_SAMPLE_PYTHON` to the virtual environment's Python executable.
 
 [Import data and record provenance](../../docs/state-local-data.md).
+
+
+## Geographic context and public exercise lookup
+
+Optional `tsunamiService`, `tsunamiLayer`, `roadsService`, and `roadsLayer`
+query parameters connect the Maui layers from approved deployment receipts.
+They are all-or-none; the exercise shelter and closure bindings are unchanged.
+No remote tiles, geocoder, routing service or paid service is added. Without
+verified zone data, the lookup explicitly reports that it cannot check a point.
+Coordinate input and browser geolocation are bounded to the Maui exercise area.
+Zone checks preserve polygon holes and count boundary points as intersections.
+Nearest-school distances are straight-line measurements, never travel times.
+School anchors are not designated shelters; all statuses and occupancy are fictional.
+
+## SDK coverage cuts
+
+- SDK-03: a 60-second server check is not a realtime stream. Realtime gauges
+  remain cut pending a deployment with advertised feature-stream support
+  (tracked in the SDK issue #2375).
+- SDK-04: no published isochrone API is available in the pinned SDK;
+  travel-time polygons remain cut (SDK issue #2374). No synthetic buffer
+  is presented as an isochrone.
+- SDK-05: imagery comparison remains cut until a public COG has a current,
+  attested source/licence and approved deployment binding. This page does not
+  use historical disaster imagery. A missing data receipt is not an SDK defect.
+- SDK-06: terrain remains cut pending fresh source and deployment attestation;
+  retired or unattested terrain endpoints are not used.
+
+Public release remains gated on the shared deployment receipts and independent
+browser verification against the released server. A successful local fixture is
+not a public readiness claim.

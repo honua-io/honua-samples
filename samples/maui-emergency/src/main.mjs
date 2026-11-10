@@ -1,5 +1,8 @@
 import './dashboard.css';
 import { bindings, loadExercise } from './source.mjs';
+import { loadContext } from './context.mjs';
+import { containsPoint, parseLocation, nearestShelter } from './location.mjs';
+import { showContext } from './map.mjs';
 import { filterRecords } from './records.mjs';
 import { renderDetail, renderMetrics, renderRows } from './view.mjs';
 import { element } from '../../../shared/state-local/dom.mjs';
@@ -21,6 +24,8 @@ let timer;
 let loading = false;
 let verifiedAt;
 let selectedId;
+let context;
+let checkedPoint;
 
 function select(feature) {
   selectedId = feature.id;
@@ -33,6 +38,15 @@ function select(feature) {
 function render(options = {}) {
   filtered = filterRecords(records, Object.fromEntries(new FormData(form)));
   renderRows(filtered.slice(0, shown), select);
+  document.querySelector('#shelter-list').replaceChildren(...filtered.filter(({ properties: p }) => p.record_type === 'exercise_shelter').map((feature) => {
+    const p = feature.properties;
+    const button = element('button', '', { type: 'button', class: 'shelter-item' });
+    button.append(element('strong', p.record_id), element('span', p.asset_id), element('span', `${p.status.replace('exercise_', '')} · ${p.occupancy} / ${p.capacity} fictional occupants`));
+    const meter = element('progress', '', { max: p.capacity, value: p.occupancy, 'aria-label': `${p.record_id} fictional occupancy` });
+    button.append(meter);
+    button.addEventListener('click', () => select(feature));
+    return button;
+  }));
   document.querySelector('#result-count').textContent = `${filtered.length} matching exercise records · showing ${Math.min(shown, filtered.length)}`;
   document.querySelector('#more').hidden = shown >= filtered.length;
   const selected = filtered.find((record) => record.id === selectedId);
@@ -51,6 +65,8 @@ function showExercise(options) {
   view?.map.resize();
   renderMetrics(records);
   render(options);
+  if (context && view) showContext(view, context);
+  if (checkedPoint) checkLocation(checkedPoint);
 }
 
 function freshnessText() {
@@ -81,6 +97,7 @@ async function load() {
     document.body.dataset.sampleStatus = 'pass';
   } catch (error) {
     records = [];
+    if (checkedPoint) document.querySelector('#location-answer').textContent = 'Exercise resources could not be verified. Refresh before checking again.';
     dashboard.hidden = true;
     status.textContent = `Could not verify the exercise. ${error.message}. Check the import receipts, then refresh.`;
     status.dataset.state = 'error';
@@ -98,6 +115,33 @@ form.addEventListener('input', () => { shown = 25; if (records.length) render();
 form.addEventListener('reset', () => setTimeout(() => { shown = 25; render(); }));
 document.querySelector('#more').addEventListener('click', () => { shown += 25; render(); });
 refresh.addEventListener('click', load);
+const answer = document.querySelector('#location-answer');
+function checkLocation(point) {
+  checkedPoint = point;
+  if (!context) { answer.textContent = 'Zone check unavailable: no verified tsunami layer is connected. Do not infer that a location is outside a zone.'; return; }
+  const matches = context.zones.filter(({ geometry }) => containsPoint(point, geometry));
+  const nearest = nearestShelter(point, records);
+  answer.textContent = `${matches.length ? 'This point intersects a mapped tsunami zone (including boundaries).' : 'No intersection found in the connected zone layer; this is not a safety determination.'} ${nearest ? `Nearest not-closed exercise school anchor: ${nearest.feature.id}, ${nearest.km.toFixed(1)} km straight-line distance. Fictional shelter; no route or travel-time estimate.` : 'No verified exercise shelter candidates.'} Follow current official guidance for actual emergencies.`;
+}
+document.querySelector('#location-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  try { checkLocation(parseLocation(document.querySelector('#coordinates').value)); }
+  catch (error) { answer.textContent = error.message; }
+});
+document.querySelector('#locate').addEventListener('click', () => {
+  if (!navigator.geolocation) { answer.textContent = 'Location access unavailable. Enter coordinates instead.'; return; }
+  answer.textContent = 'Waiting for location permission…';
+  navigator.geolocation.getCurrentPosition(({ coords }) => {
+    const value = `${coords.latitude}, ${coords.longitude}`;
+    document.querySelector('#coordinates').value = value;
+    try { checkLocation(parseLocation(value)); } catch (error) { answer.textContent = error.message; }
+  }, () => { answer.textContent = 'Could not access your location. Enter coordinates instead.'; }, { timeout: 10000, maximumAge: 0 });
+});
+try {
+  context = await loadContext(location.search);
+  if (context) answer.textContent = `Connected ${context.zones.length} tsunami zone features and ${context.roads.length} road features. Enter coordinates to inspect the geography.`;
+} catch (error) { answer.textContent = `Zone check unavailable: ${error.message}. Check the approved receipts and reload.`; }
+
 try {
   source = bindings(location.search);
   if (source) await load();
