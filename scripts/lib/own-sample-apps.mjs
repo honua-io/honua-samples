@@ -46,7 +46,7 @@ export const OWN_SAMPLE_SOURCE_REPO = "honua-samples";
 
 // Published-package CDNs the samples load pinned libraries from (README rule:
 // published packages only). They are libraries, not data origins.
-export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https://unpkg.com"]);
+export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https://unpkg.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"]);
 
 // Sites a sample only links to (attribution and the official flood map), never
 // fetches from (R13). They are not data origins. The browser verify lanes
