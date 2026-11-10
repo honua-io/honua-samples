@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>311 Operations · County of Maui</title>
+<meta name="description" content="311 service request operations dashboard for Kahului and Wailuku, built in Honua Studio.">
+{{HEAD}}
+<style>
+  .page { max-width: 1480px; margin: 0 auto; padding: 20px 24px 40px; }
+  .ph { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .ph h1 { font-size: 24px; }
+  .ph .sub { color: var(--c-text-2); margin-top: 4px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-left: auto; }
+  .sel { height: 32px; border: 1px solid var(--c-border); border-radius: var(--radius-md); background: var(--c-surface); padding: 0 28px 0 10px; font-size: 13px; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--c-text-3) 50%), linear-gradient(135deg, var(--c-text-3) 50%, transparent 50%); background-position: calc(100% - 14px) 14px, calc(100% - 10px) 14px; background-size: 4px 4px; background-repeat: no-repeat; }
+  .grid-a { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; margin-top: 16px; }
+  .grid-b { display: grid; grid-template-columns: 1.25fr 1fr 0.9fr; gap: 16px; margin-top: 16px; }
+  .grid-c { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; margin-top: 16px; align-items: start; }
+  .mapwrap { position: relative; height: 500px; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--c-rule); box-shadow: var(--shadow-panel); }
+  #map { position: absolute; inset: 0; }
+  .maptools { position: absolute; z-index: 5; top: 12px; left: 12px; display: flex; gap: 8px; align-items: center; }
+  .maptools .seg { background: var(--c-surface); box-shadow: var(--shadow-raised); }
+  .map-legend.lg { left: 12px; bottom: 28px; }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .brief .stat { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .brief ul { margin: 8px 0 0; padding: 0; list-style: none; }
+  .brief li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .brief li:first-child { border-top: 0; }
+  .route { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 10px; align-items: center; font-size: 13px; }
+  .route .n { font-variant-numeric: tabular-nums; text-align: right; color: var(--c-text-2); }
+  .route .bar { width: 64px; height: 6px; background: var(--c-surface-2); border-radius: 3px; overflow: hidden; }
+  .route .bar span { display: block; height: 100%; background: var(--viz-1); }
+  .legend-inline { display: flex; gap: 14px; font-size: 12px; color: var(--c-text-2); }
+  .legend-inline i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+  .qtbl tbody tr { cursor: pointer; }
+  .qtbl tbody tr:focus-visible td { background: var(--c-selected); }
+  .sla { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sla.late { color: var(--c-danger-ink); font-weight: 600; }
+  .sla.risk { color: var(--c-warn-ink); font-weight: 600; }
+  .tdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: 1px; }
+  .feed code { font-size: 12px; }
+  .hbar .fill { display: block; }
+  .grid-a > *, .grid-b > *, .grid-c > * { min-width: 0; }
+  .panel-h { flex-wrap: wrap; }
+  .mapwrap { height: auto; min-height: 500px; }
+  .drawer { width: min(520px, 100vw); }
+  .dsec { padding: 14px 0; border-top: 1px solid var(--c-rule); }
+  .dsec:first-child { border-top: 0; padding-top: 0; }
+  .dsec h3 { font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .photo { aspect-ratio: 4/3; border-radius: var(--radius-md); background: linear-gradient(160deg, var(--c-surface-3), var(--c-neutral) 60%, var(--c-text-3)); position: relative; overflow: hidden; }
+  .photo::after { content: ""; position: absolute; left: 10%; right: 10%; bottom: 18%; height: 22%; background: var(--c-text-2); border-radius: 2px; opacity: .85; }
+  .photo.b { background: linear-gradient(170deg, var(--c-info-line), var(--c-neutral) 55%, var(--c-text-3)); }
+  .photo.b::after { bottom: 10%; height: 30%; background: var(--c-border-strong); opacity: .7; border-radius: 40% 40% 0 0; }
+  .photo span { position: absolute; left: 6px; bottom: 4px; z-index: 1; font-size: 10.5px; color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .6); }
+  .clock { display: flex; align-items: center; gap: 12px; }
+  .clock .meter { flex: 1; height: 8px; }
+  .reply { background: var(--c-surface-2); border-radius: var(--radius-md); padding: 10px 12px; font-size: 13px; line-height: 1.55; }
+  .handoff { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .handoff .opt { border: 1px solid var(--c-rule); border-radius: var(--radius-md); padding: 10px; font-size: 13px; }
+  .handoff .opt b { display: block; font-size: 13px; margin-bottom: 2px; }
+  @media (max-width: 1200px) { .grid-a, .grid-c { grid-template-columns: 1fr; } .grid-b { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 760px) {
+    .page { padding: 16px 12px 32px; }
+    .grid-b { grid-template-columns: 1fr; }
+    .mapwrap { height: 380px; }
+    .filters { margin-left: 0; }
+    .qtbl .hide-m { display: none; }
+    #queue .panel-h .row { display: none; }
+    .map-legend.lg { display: none; }
+    .ph h1 { font-size: 21px; }
+    .handoff { grid-template-columns: 1fr; }
+    .tblwrap { overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to dashboard</a>
+{{ICONS}}
+<header class="appbar">
+  <a class="wordmark" href="index.html"><strong>County of Maui</strong><small>311 operations</small></a>
+  <nav class="appnav" aria-label="Dashboard">
+    <a href="#" aria-current="page">Overview</a><a href="#queue">Requests</a><a href="#">Crews</a><a href="#">Reports</a><a href="#feeds">Public feeds</a>
+  </nav>
+  <span class="spacer"></span>
+  <span class="env hide-sm"><span class="dot"></span>Snapshot · Nov 9, 2026</span>
+  <span class="faint hide-sm" style="font-size:12px">Honua snapshot dashboard</span>
+  <button class="iconbtn" aria-label="Notifications"><svg class="ico"><use href="#i-bell"/></svg></button>
+  <span class="avatar" aria-label="Signed in as Malia Kahale">MK</span>
+</header>
+<div class="demostrip" role="note">
+  <span class="display-snapshot">Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span class="tag-real">Real data</span> Streets, council districts, tsunami and flood zones, school exercise anchors
+  <span class="tag-demo">Demo data</span> 468 service requests on real streets, crews, assistant proposals
+  <span class="faint">· Monday, November 9, 2026 · synthetic reporters · anonymous exercise</span>
+</div>
+
+<main class="page" id="main">
+  <div class="ph">
+    <div>
+      <h1>311 operations</h1>
+      <p class="sub">Kahului and Wailuku · last 90 days · every request routed by location</p>
+    </div>
+    <div class="filters" role="group" aria-label="Filters">
+      <div class="seg" role="group" aria-label="Period"><button aria-pressed="false" data-days="7">7 days</button><button aria-pressed="false" data-days="30">30 days</button><button aria-pressed="true" data-days="90">90 days</button></div>
+      <label class="sr-only" for="fType">Request type</label>
+      <select class="sel" id="fType"><option value="">All types</option></select>
+      <label class="sr-only" for="fDist">Council district</label>
+      <select class="sel" id="fDist"><option value="">All districts</option></select>
+      <a class="btn" href="/state-local/data/approved/requests.csv" download><svg class="ico"><use href="#i-download"/></svg>Export</a>
+    </div>
+  </div>
+
+  <section class="kpis" style="--k:5" aria-label="Key figures" id="kpis"></section>
+
+  <div class="grid-a">
+    <section class="mapwrap" aria-label="Request map">
+      <div id="map"></div>
+      <div class="maptools">
+        <div class="seg" role="group" aria-label="Map style"><button aria-pressed="true" id="mHeat">Heat + open</button><button aria-pressed="false" id="mPts">Open only</button></div>
+      </div>
+      <div class="map-legend lg">
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-danger)"></span>Past due</div>
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-warn)"></span>Due within 48 h</div>
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-accent)"></span>Open, on time</div>
+        <div class="lg-row"><span class="lg-sw" style="background:linear-gradient(90deg,var(--c-warn-soft),var(--hz-tsux),var(--c-danger))"></span>All requests, density</div>
+        <div class="lg-row"><span class="lg-ln" style="border-color:var(--c-text-3);border-top-style:dashed"></span>Council district</div>
+      </div>
+    </section>
+
+    <div class="col">
+      <section class="ai-card brief" aria-labelledby="briefH">
+        <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 id="briefH" style="font-size:13px">Morning brief · SLA risk</h2><span class="faint" style="margin-left:auto;font-weight:400;font-size:12px">Demo answer</span></div>
+        <div class="ai-b" id="brief"></div>
+      </section>
+      <section class="panel" aria-labelledby="routeH">
+        <div class="panel-h"><h2 id="routeH">Routing</h2><span class="sub">open requests by department</span><span class="faint" style="margin-left:auto;font-size:12px">rules + location</span></div>
+        <div class="panel-b"><div class="route" id="route"></div>
+          <p class="faint" style="font-size:12px;margin-top:10px">Each request type routes to a department; council district, maintenance zone and nearest asset choose the crew.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="grid-b">
+    <section class="panel" aria-labelledby="trendH">
+      <div class="panel-h"><h2 id="trendH">Opened and closed</h2><span class="sub">per week, last 12 weeks</span>
+        <span class="legend-inline" style="margin-left:auto"><span><i style="border-color:var(--viz-3)"></i>Opened</span><span><i style="border-color:var(--viz-1)"></i>Closed</span></span></div>
+      <div class="panel-b"><svg class="chart" id="trend" viewBox="0 0 520 200" width="100%" role="img" aria-label="Weekly opened and closed requests"></svg></div>
+    </section>
+    <section class="panel" aria-labelledby="slaH">
+      <div class="panel-h"><h2 id="slaH">SLA met by type</h2><span class="sub">closed in period</span></div>
+      <div class="panel-b" id="sla"></div>
+    </section>
+    <section class="panel" aria-labelledby="distH">
+      <div class="panel-h"><h2 id="distH">By council district</h2><span class="sub">open · total</span></div>
+      <div class="panel-b" id="dist"></div>
+    </section>
+  </div>
+
+  <div class="grid-c">
+    <section class="panel" id="queue" aria-labelledby="qH">
+      <div class="panel-h"><h2 id="qH">Open queue</h2><span class="sub" id="qSub"></span>
+        <span style="margin-left:auto" class="row"><span class="chip info"><svg class="ico" style="width:13px;height:13px"><use href="#i-agent"/></svg>Triage proposals on new requests</span></span></div>
+      <div class="panel-b tblwrap">
+        <table class="tbl qtbl"><thead><tr><th>Request</th><th>Location</th><th class="hide-m">Department</th><th>Status</th><th class="r">SLA</th></tr></thead><tbody id="qBody"></tbody></table>
+      </div>
+    </section>
+
+    <div class="col">
+      <section class="panel feed" id="feeds" aria-labelledby="feedH">
+        <div class="panel-h"><h2 id="feedH">Public feeds</h2><span class="chip ok" style="margin-left:auto">Anonymous read</span></div>
+        <div class="panel-b">
+          <div class="endpoint"><span class="p">GeoJSON snapshot</span><code><a href="/state-local/data/approved/requests.geojson" download>requests.geojson</a></code></div>
+          <div class="endpoint"><span class="p">CSV snapshot</span><code><a href="/state-local/data/approved/requests.csv" download>requests.csv</a></code></div>
+          <div class="endpoint"><span class="p">OGC API Features</span><code>Live data coming · run the API sample</code></div>
+          <div class="endpoint"><span class="p">Open311 / GeoServices REST</span><code>Live data coming · no live endpoint here</code></div>
+          <p class="faint" style="font-size:12px;margin-top:8px">Snapshot downloads contain fictional requests labelled synthetic_demo, with no reporter contact data.</p>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="hoH">
+        <div class="panel-h"><h2 id="hoH">Hand-offs today</h2><span class="sub">systems of record</span></div>
+        <div class="panel-b">
+          <table class="tbl"><tbody>
+            <tr><td>Work orders<span class="id">Honua work orders · public works</span></td><td class="r num">14</td><td><span class="chip ok">Demo action</span></td></tr>
+            <tr><td>County CRM webhook<span class="id">POST /hooks/crm/requests</span></td><td class="r num">22</td><td><span class="chip ok">Demo action</span></td></tr>
+            <tr><td>Refuse routing system<span class="id">Environmental Management</span></td><td class="r num">6</td><td><span class="chip warn">1 retrying</span></td></tr>
+          </tbody></table>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Request detail" aria-hidden="true">
+  <div class="drawer-h">
+    <div class="grow">
+      <div class="kicker" id="dKick"></div>
+      <h2 id="dTitle" style="font-size:18px;margin-top:2px"></h2>
+      <div class="row wrap" style="margin-top:8px" id="dChips"></div>
+    </div>
+    <button class="iconbtn" id="dClose" aria-label="Close request detail"><svg class="ico"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="drawer-b" id="dBody"></div>
+</aside>
+
+{{DATA land,roads,contours,streams,waterbodies,tsunami,council,shelters,dfirm,demo.requests,demo.assets,demo.now}}
+{{MAPJS}}
+<script>
+(() => {
+  const NOW = new Date(HD.demo.now);
+  const H = 3600e3, D = 24 * H;
+  // Spread intake evenly over the period (the raw demo set is front-loaded); requests cited elsewhere keep their exact times.
+  const KEEP = new Set(["SR-26-18666", "SR-26-18369", "SR-26-18430", "SR-26-18257", "SR-26-18380"]);
+  const reqs = HD.demo.requests.map((r) => {
+    const t0 = new Date(r.created), a = (NOW - t0) / D;
+    const s = KEEP.has(r.id) ? 0 : 1, a2 = a + (90 * Math.pow(a / 90, 0.625) - a) * s, shift = (a2 - a) * D;
+    const o = { ...r, t0: new Date(t0 - shift), t1: r.closed ? new Date(new Date(r.closed) - shift) : null, tdue: new Date(new Date(r.due) - shift) };
+    const lateDays = (NOW - o.tdue) / D, n = +r.id.slice(-3);
+    if (o.status !== "Closed" && !KEEP.has(r.id) && (a2 > 24 || (lateDays > 2 && n % 3 !== 0))) { o.status = "Closed"; o.t1 = new Date(Math.min(+NOW - H, +o.t0 + r.sla * D * 0.85)); }
+    if (o.status === "New" && a2 > 1 && !KEEP.has(r.id)) o.status = "Assigned";
+    return o;
+  });
+  // A request that arrived seconds ago, 30 m from SR-26-18666: the dedup story (demo).
+  const twin = reqs.find((r) => r.id === "SR-26-18666");
+  const incoming = { ...twin, id: "SR-26-18708", status: "New", channel: "Maui 311 app", created: "2026-11-09T09:38", t0: new Date("2026-11-09T09:38"), tdue: new Date("2026-11-12T09:38"), due: "2026-11-12T09:38", note: "Water across the lane by the school, drain is full of sand. Kids walking in the road.", c: [twin.c[0] + 0.00026, twin.c[1] + 0.00008], addr: twin.addr.replace(/^\d+/, (n) => +n + 20), breach: false };
+  reqs.unshift(incoming);
+  const COUNCIL = Object.fromEntries(HD.council.features.map((f) => [f.properties.num, f.properties.name.replace(" Residency Area", "")]));
+  const TYPE_COLOR = { "Pothole": "var(--viz-3)", "Drainage / flooding": "var(--viz-1)", "Streetlight out": "var(--viz-2)", "Illegal dumping": "var(--viz-5)", "Abandoned vehicle": "var(--viz-8)", "Sidewalk damage": "var(--hz-slr)", "Tree / vegetation": "var(--viz-6)", "Graffiti": "var(--viz-7)", "Missed trash pickup": "var(--c-demo)", "Traffic signal": "var(--viz-4)" };
+  const TV = (v) => (typeof v === "string" && v.startsWith("--") ? HM.cssVar(v) : Array.isArray(v) ? v.map(TV) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, TV(x)])) : v);
+  function themed(map, layer, before) {
+    const spec = layer.paint; map.addLayer({ ...layer, paint: TV(spec) }, before);
+    map.on("honua:theme", () => Object.entries(spec).forEach(([k, v]) => map.setPaintProperty(layer.id, k, TV(v))));
+  }
+  const CREW = { "Public Works · Engineering": "Kahului Drainage · Crew 1", "Public Works · Highways": "Wailuku Baseyard · Crew 2", "Public Works · Traffic": "Traffic Ops · Signal tech", "Environmental Management": "Refuse · Route K3", "Parks & Recreation": "Parks · Central Maui crew", "Police · Wailuku District": "MPD · Wailuku patrol" };
+  const types = [...new Set(reqs.map((r) => r.type))];
+  document.getElementById("fType").insertAdjacentHTML("beforeend", types.map((t) => `<option>${t}</option>`).join(""));
+  document.getElementById("fDist").insertAdjacentHTML("beforeend", Object.entries(COUNCIL).map(([n, s]) => `<option value="${n}">District ${n} · ${s}</option>`).join(""));
+  const state = { days: 90, type: "", dist: "" };
+  const isOpen = (r) => r.status !== "Closed";
+  const fmtH = (h) => h < 48 ? `${Math.round(h)} h` : `${(h / 24).toFixed(1)} d`;
+  const median = (a) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  const dueIn = (r) => (r.tdue - NOW) / H;
+  const slaClass = (r) => dueIn(r) < 0 ? "late" : dueIn(r) < 48 ? "risk" : "";
+  const slaText = (r) => { const h = dueIn(r); return h < 0 ? `${fmtH(-h)} late` : `${fmtH(h)} left`; };
+  const ago = (t) => { const m = (NOW - t) / 6e4; return m < 60 ? `${Math.max(1, Math.round(m))} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+  function filtered() { return reqs.filter((r) => (NOW - r.t0) <= state.days * D && (!state.type || r.type === state.type) && (!state.dist || r.district == state.dist)); }
+  function base() { return reqs.filter((r) => (!state.type || r.type === state.type) && (!state.dist || r.district == state.dist)); }
+
+  function renderKpis(rs) {
+    const all = base(); const open = all.filter(isOpen);
+    const today = rs.filter((r) => (NOW - r.t0) < (NOW - new Date("2026-11-09T00:00")) ).length;
+    const closed = rs.filter((r) => r.t1);
+    const med = median(closed.map((r) => (r.t1 - r.t0) / H));
+    const met = closed.length ? closed.filter((r) => r.t1 <= r.tdue).length / closed.length : 0;
+    const late = open.filter((r) => dueIn(r) < 0).length;
+    document.getElementById("kpis").innerHTML = `
+      <div class="kpi lead"><div class="v">${open.length}</div><div class="l">Open requests</div><div class="d">${open.filter((r) => r.status === "New").length} new · ${open.filter((r) => r.status === "Assigned").length} assigned · ${open.filter((r) => r.status === "In progress").length} in progress</div></div>
+      <div class="kpi"><div class="v">${today}</div><div class="l">Received today</div><div class="d">${Math.round(rs.filter((r) => r.channel === "Maui 311 app").length / Math.max(1, rs.length) * 100)}% of requests arrive via the app</div></div>
+      <div class="kpi"><div class="v">${fmtH(med)}</div><div class="l">Median time to close</div><div class="d up-good">▼ 9% vs prior period</div></div>
+      <div class="kpi"><div class="v">${Math.round(met * 100)}%</div><div class="l">Closed within SLA</div><div class="d">target 85%</div></div>
+      <div class="kpi"><div class="v" style="color:var(--c-danger-ink)">${late}</div><div class="l">Past due, open</div><div class="d">${open.filter((r) => dueIn(r) >= 0 && dueIn(r) < 48).length} more due within 48 h</div></div>`;
+  }
+  function renderBrief() {
+    const open = reqs.filter(isOpen);
+    const wed = new Date("2026-11-11T23:59");
+    const risk = open.filter((r) => r.tdue >= NOW && r.tdue <= wed);
+    const late = open.filter((r) => r.tdue < NOW);
+    const byType = {}; [...risk, ...late].forEach((r) => (byType[r.type] = (byType[r.type] || 0) + 1));
+    const top = Object.entries(byType).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const drainD4 = [...risk, ...late].filter((r) => r.type === "Drainage / flooding" && r.district === 4).length;
+    document.getElementById("brief").innerHTML = `
+      <div class="row" style="align-items:baseline;gap:10px"><span class="stat">${risk.length + late.length}</span><span class="muted">open requests will be past SLA by Wednesday unless they move today: ${late.length} already late, ${risk.length} due by Wed 11:59 PM.</span></div>
+      <ul>${top.map(([t, n]) => `<li><span><span class="tdot" style="background:${TYPE_COLOR[t]}"></span>${t}</span><span class="num">${n}</span></li>`).join("")}</ul>
+      <p style="margin-top:10px">${drainD4} drainage requests in District 4 cluster near Kahului Elementary and Kaʻahumanu Ave. <button class="cite" data-fly="drain">311 · drainage · D4</button> <button class="cite" data-fly="crew">crews/kahului-drainage</button> Kahului Drainage Crew 1 has 5 open hours on Tuesday.</p>
+      <div class="row" style="margin-top:10px"><button class="btn sm primary" id="briefOpen">Show these ${risk.length + late.length}</button><button class="btn sm">Propose reassignment</button></div>
+      <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Read-only job</span><span><svg class="ico"><use href="#i-check"/></svg>Counts link to the list</span></div>`;
+    document.getElementById("briefOpen").onclick = () => { state.riskOnly = true; renderQueue(); document.getElementById("queue").scrollIntoView({ behavior: "smooth" }); };
+  }
+  function renderRoute(rs) {
+    const open = base().filter(isOpen); const by = {};
+    open.forEach((r) => (by[r.dept] = (by[r.dept] || 0) + 1));
+    const max = Math.max(1, ...Object.values(by));
+    document.getElementById("route").innerHTML = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([d, n]) => `<span>${d}</span><span class="bar"><span style="width:${(n / max) * 100}%"></span></span><span class="n">${n}</span>`).join("");
+  }
+  function renderTrend() {
+    const rs = base(); const weeks = 12; const end = new Date("2026-11-09T23:59");
+    const op = Array(weeks).fill(0), cl = Array(weeks).fill(0);
+    rs.forEach((r) => { const w = Math.floor((end - r.t0) / (7 * D)); if (w < weeks) op[weeks - 1 - w]++; if (r.t1) { const c = Math.floor((end - r.t1) / (7 * D)); if (c < weeks) cl[weeks - 1 - c]++; } });
+    const W = 520, Hh = 200, L = 30, B = 24, T = 10, R = 8, mx = Math.max(5, ...op, ...cl) * 1.15;
+    const x = (i) => L + (i * (W - L - R)) / (weeks - 1), y = (v) => T + (Hh - T - B) * (1 - v / mx);
+    let g = "";
+    for (let k = 0; k <= 4; k++) { const v = (mx / 4) * k; g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}</text>`; }
+    const lbl = []; for (let i = 0; i < weeks; i += 2) { const d = new Date(end - (weeks - 1 - i) * 7 * D); lbl.push(`<text x="${x(i)}" y="${Hh - 6}" text-anchor="middle">${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</text>`); }
+    const path = (a) => a.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    const area = `${path(op)}L${x(weeks - 1)},${y(0)}L${x(0)},${y(0)}Z`;
+    document.getElementById("trend").innerHTML = g + lbl.join("") +
+      `<path d="${area}" fill="var(--viz-3)" opacity=".07"/><path d="${path(op)}" fill="none" stroke="var(--viz-3)" stroke-width="2"/><path d="${path(cl)}" fill="none" stroke="var(--viz-1)" stroke-width="2"/>` +
+      op.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="2.5" fill="var(--viz-3)"><title>${v} opened</title></circle>`).join("") +
+      `<text x="${x(weeks - 1) - 2}" y="${y(op[weeks - 1]) - 8}" text-anchor="end" style="fill:var(--c-text);font-weight:600">${op[weeks - 1]} this week</text>`;
+  }
+  function renderSla(rs) {
+    const by = {}; rs.filter((r) => r.t1).forEach((r) => { const b = (by[r.type] = by[r.type] || [0, 0]); b[1]++; if (r.t1 <= r.tdue) b[0]++; });
+    document.getElementById("sla").innerHTML = Object.entries(by).sort((a, b) => b[1][1] - a[1][1]).slice(0, 8).map(([t, [m, n]]) => { const p = Math.round((m / n) * 100); return `<div class="hbar" style="grid-template-columns:minmax(110px,1fr) 1.3fr 40px"><span class="trunc">${t}</span><span class="track"><span class="fill" style="width:${p}%;background:${p < 75 ? "var(--c-warn)" : "var(--viz-1)"}"></span></span><span class="num r" style="text-align:right">${p}%</span></div>`; }).join("") + `<p class="faint" style="font-size:12px;margin-top:6px">Bars under 75% use the warning colour. SLA targets: drainage 3 d, potholes 5 d, signals 1 d.</p>`;
+  }
+  function renderDist() {
+    const rs = base(); const by = {};
+    rs.forEach((r) => { const b = (by[r.district] = by[r.district] || { o: 0, t: 0, recent: 0 }); b.t++; if (isOpen(r)) b.o++; });
+    const max = Math.max(...Object.values(by).map((b) => b.o));
+    document.getElementById("dist").innerHTML = Object.entries(by).sort((a, b) => b[1].o - a[1].o).map(([n, b]) => `<div style="padding:8px 0;border-top:1px solid var(--c-rule)"><div class="row"><b style="font-weight:600">District ${n}</b><span class="muted trunc">${COUNCIL[n] || ""}</span><span class="num" style="margin-left:auto"><b>${b.o}</b> <span class="faint">· ${b.t}</span></span></div><div class="meter" style="margin-top:6px"><span style="width:${(b.o / max) * 100}%;background:var(--viz-3)"></span></div></div>`).join("") + `<p class="faint" style="font-size:12px;margin-top:8px">Districts from the County of Maui council district layer. District 6 covers the airport edge of this view.</p>`;
+  }
+  function renderQueue() {
+    let open = base().filter(isOpen);
+    if (state.riskOnly) open = open.filter((r) => r.tdue <= new Date("2026-11-11T23:59"));
+    open.sort((a, b) => (a.id === incoming.id ? -1 : b.id === incoming.id ? 1 : a.tdue - b.tdue));
+    document.getElementById("qSub").innerHTML = state.riskOnly ? `${open.length} at SLA risk · <a href="#" id="clr">show all</a>` : `${open.length} open · most urgent first`;
+    const c = document.getElementById("clr"); if (c) c.onclick = (e) => { e.preventDefault(); state.riskOnly = false; renderQueue(); };
+    document.getElementById("qBody").innerHTML = open.slice(0, 12).map((r) => `<tr tabindex="0" data-id="${r.id}"><td><span class="tdot" style="background:${TYPE_COLOR[r.type]}"></span>${r.type}${r.id === incoming.id ? ' <span class="chip info" style="height:18px">Triage proposal</span>' : ""}<span class="id">${r.id} · ${ago(r.t0)}</span></td><td>${r.addr}<span class="id" style="font-family:var(--font-sans)">District ${r.district}${r.evac ? " · tsunami zone" : ""}${r.flood ? " · flood zone" : ""}</span></td><td class="hide-m">${r.dept}</td><td><span class="chip ${r.status === "New" ? "info" : r.status === "In progress" ? "accent" : ""}">${r.status}</span></td><td class="r"><span class="sla ${slaClass(r)}">${slaText(r)}</span></td></tr>`).join("");
+  }
+
+  // Map
+  let map;
+  function geo(rs, open) { return HM.points(rs, (r, i) => ({ id: i, rid: r.id, type: r.type, st: open ? (dueIn(r) < 0 ? 2 : dueIn(r) < 48 ? 1 : 0) : 0 })); }
+  function renderMap(rs) {
+    if (!map || !map.getSource("all")) return;
+    map.getSource("all").setData(geo(rs, false));
+    map.getSource("open").setData(geo(base().filter(isOpen), true));
+  }
+  map = HM.create(document.getElementById("map"), {
+    view: "core", padding: 10,
+    onload: (m) => {
+      HM.overlays(m, ["council"], "roads-casing");
+      m.addSource("all", { type: "geojson", data: geo(filtered(), false) });
+      m.addSource("open", { type: "geojson", data: geo(base().filter(isOpen), true) });
+      themed(m, { id: "heat", type: "heatmap", source: "all", paint: { "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 12, 14, 16, 34], "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 12, 0.7, 16, 1.4], "heatmap-opacity": 0.75, "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(0,0,0,0)", 0.2, "--c-warn-soft", 0.5, "--hz-tsux", 0.8, "--hz-tsu", 1, "--c-danger"] } });
+      themed(m, { id: "open-pts", type: "circle", source: "open", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 3.5, 16, 7], "circle-color": ["match", ["get", "st"], 2, "--c-danger", 1, "--c-warn", "--c-accent"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
+      themed(m, { id: "sel", type: "circle", source: "open", filter: ["==", ["get", "rid"], ""], paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "--map-select-line", "circle-stroke-width": 3 } });
+      m.on("click", "open-pts", (e) => openDrawer(e.features[0].properties.rid));
+      m.on("mouseenter", "open-pts", () => (m.getCanvas().style.cursor = "pointer"));
+      m.on("mouseleave", "open-pts", () => (m.getCanvas().style.cursor = ""));
+      HM.label(m, [-156.507, 20.8845], "District 3", "poi"); HM.label(m, [-156.468, 20.874], "District 4", "poi");
+    },
+  });
+  document.getElementById("mHeat").onclick = () => HM.toggle(map, ["heat"], true);
+  document.getElementById("mPts").onclick = () => HM.toggle(map, ["heat"], false);
+
+  // Drawer
+  const drawer = document.getElementById("drawer"), scrim = document.getElementById("scrim");
+  const m2 = (a, b) => Math.hypot((a[0] - b[0]) * 104000, (a[1] - b[1]) * 111000);
+  function openDrawer(id) {
+    const r = reqs.find((x) => x.id === id); if (!r) return;
+    const asset = HD.demo.assets.filter((a) => r.type === "Traffic signal" ? a.kind === "Traffic signal" : r.type === "Drainage / flooding" ? a.kind !== "Traffic signal" : true).reduce((best, a) => (m2(a.c, r.c) < m2(best.c, r.c) ? a : best));
+    const dupes = reqs.filter((x) => x !== r && isOpen(x) && x.type === r.type && m2(x.c, r.c) < 80 && Math.abs(x.t0 - r.t0) < 14 * D);
+    const dd = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) * 111000;
+    const shelter = HD.shelters.features.reduce((b, s) => (dd(s.geometry.coordinates, r.c) < dd(b.geometry.coordinates, r.c) ? s : b));
+    const sName = shelter.properties.name.replace("Maui Community College", "UH Maui College");
+    const total = (r.tdue - r.t0) / H, used = (NOW - r.t0) / H, pct = Math.min(100, (used / total) * 100);
+    document.getElementById("dKick").textContent = `${r.id} · ${r.channel} · ${ago(r.t0)}`;
+    document.getElementById("dTitle").textContent = `${r.type} · ${r.addr}`;
+    document.getElementById("dChips").innerHTML = `<span class="chip ${r.status === "New" ? "info" : "accent"}">${r.status}</span><span class="chip">${r.dept}</span>${r.evac ? '<span class="chip warn">Tsunami evacuation zone</span>' : ""}${r.flood ? '<span class="chip info">Flood zone</span>' : ""}<span class="tag-demo">Demo data</span>`;
+    const isNew = r.id === incoming.id;
+    document.getElementById("dBody").innerHTML = `
+      ${isNew || dupes.length ? `<section class="dsec"><div class="ai-card"><div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg>Demo answer · triage proposal<span class="chip warn" style="margin-left:auto">Waiting for dispatcher</span></div><div class="ai-b">
+        <ul class="tl" style="margin-top:6px">
+          <li class="ai"><b>Possible duplicate</b> of ${dupes.map((d) => `<button class="cite" data-sel="${d.id}">${d.id}</button>`).join(" ") || "none"}: same type, ${dupes.length ? Math.round(m2(dupes[0].c, r.c)) : 0} m away, opened ${dupes.length ? ago(dupes[0].t0) : ""}. Merge and notify both reporters.</li>
+          <li class="ai"><b>Route to</b> Public Works · Engineering → ${CREW[r.dept]}. Nearest asset is inlet <button class="cite" data-asset="1">assets/${asset.id}</button>, condition ${asset.cond}/5, last cleaned ${new Date(asset.insp).toLocaleDateString("en-US", { month: "short", year: "numeric" })}.</li>
+          <li class="ai"><b>Priority P2</b>: inside the tsunami evacuation zone <button class="cite">tsunami/1</button>, ${Math.round(dd(shelter.geometry.coordinates, r.c) / 10) * 10} m from the ${sName} school exercise anchor <button class="cite">shelters/${sName.toLowerCase().replace(/ /g, "-")}</button>, on a walking route to school.</li>
+        </ul>
+        <div class="row" style="margin-top:4px"><button class="btn sm primary" id="acc">Accept all</button><button class="btn sm">Edit</button><button class="btn sm ghost">Dismiss</button></div>
+        <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Nothing changes until you accept</span><span><svg class="ico"><use href="#i-check"/></svg>Logged with your name</span></div>
+      </div></div></section>` : ""}
+      <section class="dsec"><h3><svg class="ico faint"><use href="#i-clock"/></svg>SLA · ${r.sla} days</h3>
+        <div class="clock"><div class="meter"><span style="width:${pct}%;background:${pct >= 100 ? "var(--c-danger)" : pct > 70 ? "var(--c-warn)" : "var(--c-ok)"}"></span></div><span class="sla ${slaClass(r)}">${slaText(r)}</span></div>
+        <p class="faint" style="font-size:12px;margin-top:6px">Due ${r.tdue.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</p></section>
+      <section class="dsec"><h3><svg class="ico faint"><use href="#i-pin"/></svg>Location facts <span class="faint" style="font-weight:400;margin-left:auto;font-size:12px">resolved in 84 ms</span></h3>
+        <dl class="dl">
+          <dt>Council district</dt><dd>${r.district} · ${COUNCIL[r.district] || ""}</dd>
+          <dt>Maintenance zone</dt><dd>${r.district === 3 ? "Wailuku W-1" : "Kahului K-2"} <span class="tag-demo">demo</span></dd>
+          <dt>Street</dt><dd>${r.street}, county road</dd>
+          <dt>Nearest asset</dt><dd>${asset.kind} ${asset.id}, ${Math.round(m2(asset.c, r.c))} m</dd>
+          <dt>Crew</dt><dd>${CREW[r.dept]}</dd>
+          <dt>Hazard zones</dt><dd>${r.evac ? "Tsunami evacuation zone" : "Outside tsunami zone"} · ${r.flood ? "FEMA flood zone" : "Flood zone X"}</dd>
+        </dl></section>
+      <section class="dsec"><h3><svg class="ico faint"><use href="#i-camera"/></svg>Report</h3>
+        <p>"${r.note}"</p>
+        <div class="photos" style="margin-top:10px"><div class="photo"><span>Photo 1 · reporter</span></div><div class="photo b"><span>Photo 2 · reporter</span></div><div class="photo"><span>Street view</span></div></div>
+        <div class="row" style="margin-top:10px;font-size:13px"><svg class="ico faint"><use href="#i-lock"/></svg><span class="muted">Synthetic reporter · no personal data</span></div></section>
+      <section class="dsec"><h3><svg class="ico" style="color:var(--c-ai)"><use href="#i-message"/></svg>Update for the resident</h3>
+        <div class="reply">Aloha, thank you for reporting the blocked drain on ${r.street.replace(/ (Avenue|Street|Road)$/, (m) => m)}. We've matched it to an open report from the same spot and sent it to the Kahului drainage crew. They plan to clean the inlet on <b>Tuesday, November 10</b>. We'll message you when the work is done. Reference ${r.id}.</div>
+        <p style="margin-top:6px;font-size:12px" class="faint">Draft from <button class="cite">${r.id}</button> <button class="cite">crews/kahului-drainage/2026-11-10</button> · plain language, grade 6</p>
+        <div class="row" style="margin-top:8px"><button class="btn sm primary">Approve and send</button><button class="btn sm">Edit</button><span class="faint" style="font-size:12px">Sends by app notification and SMS</span></div></section>
+      <section class="dsec"><h3><svg class="ico faint"><use href="#i-route"/></svg>Hand off</h3>
+        <div class="handoff">
+          <div class="opt"><b>Create work order</b><span class="muted">Honua work orders, linked to ${asset.id}</span><div style="margin-top:8px"><button class="btn sm">Create</button></div></div>
+          <div class="opt"><b>Send to county CRM</b><span class="muted">Webhook with district, asset and crew</span><div style="margin-top:8px"><span class="chip ok"><svg class="ico" style="width:12px;height:12px"><use href="#i-check"/></svg>Preview only · no webhook sent</span></div></div>
+        </div></section>
+      <section class="dsec"><h3><svg class="ico faint"><use href="#i-history"/></svg>Timeline</h3>
+        <ul class="tl">
+          <li><b>Received</b> via ${r.channel}<time>${r.t0.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time></li>
+          <li class="ok"><b>Location resolved</b> district ${r.district}, ${asset.id}, crew<time>+84 ms</time></li>
+          <li class="ok"><b>Sent to county CRM</b> webhook 202<time>+1 s</time></li>
+          <li class="ai"><b>Triage proposal</b> by Honua agent<time>+3 s</time></li>
+        </ul></section>`;
+    drawer.dataset.open = "true"; drawer.setAttribute("aria-hidden", "false"); scrim.dataset.open = "true";
+    document.getElementById("dClose").focus();
+    if (map && map.getLayer("sel")) { map.setFilter("sel", ["==", ["get", "rid"], r.id]); map.easeTo({ center: r.c, zoom: Math.max(map.getZoom(), 15), duration: 600 }); }
+    document.querySelectorAll("#dBody [data-sel]").forEach((b) => (b.onclick = () => openDrawer(b.dataset.sel)));
+    const acc = document.getElementById("acc"); if (acc) acc.onclick = () => { acc.closest(".ai-card").querySelector(".chip").className = "chip ok"; acc.closest(".ai-card").querySelector(".chip").textContent = "Accepted by M. Kahale"; };
+  }
+  function closeDrawer() { drawer.dataset.open = "false"; drawer.setAttribute("aria-hidden", "true"); scrim.dataset.open = "false"; }
+  document.getElementById("dClose").onclick = closeDrawer; scrim.onclick = closeDrawer;
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+  document.getElementById("qBody").addEventListener("click", (e) => { const tr = e.target.closest("tr"); if (tr) openDrawer(tr.dataset.id); });
+  document.getElementById("qBody").addEventListener("keydown", (e) => { const tr = e.target.closest("tr"); if (tr && e.key === "Enter") openDrawer(tr.dataset.id); });
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-fly]"); if (b && map) map.fitBounds([[-156.481, 20.873], [-156.462, 20.888]], { duration: 700 }); });
+
+  function render() { const rs = filtered(); renderKpis(rs); renderRoute(rs); renderTrend(); renderSla(rs); renderDist(); renderQueue(); renderMap(rs); }
+  document.querySelectorAll("[data-days]").forEach((b) => b.addEventListener("click", () => { state.days = +b.dataset.days; render(); }));
+  document.getElementById("fType").onchange = (e) => { state.type = e.target.value; render(); };
+  document.getElementById("fDist").onchange = (e) => { state.dist = e.target.value; render(); };
+  renderBrief(); render();
+  if (location.hash === "#triage") setTimeout(() => openDrawer(incoming.id), 400);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Public Works Assets · County of Maui</title>
+<meta name="description" content="Storm drain, culvert, signal and bridge assets with inspections, work orders, crew dispatch and an agent-proposed weekly plan, shown in a public snapshot preview.">
+{{HEAD}}
+<style>
+  :root { --cond-1: #b3261e; --cond-2: #d9480f; --cond-3: #b08900; --cond-4: #5c940d; --cond-5: #2b8a3e; --cond-text: #ffffff; --x-bridge: #343c39; --x-signal-ring: #171c1a; }
+  :root[data-theme="dark"] { --cond-1: #f07167; --cond-2: #f08c5a; --cond-3: #e0b84a; --cond-4: #9bd15a; --cond-5: #4cc38a; --cond-text: #08131a; --x-bridge: #c6d6d4; --x-signal-ring: #e6efee; }
+  .pw-main { max-width: 1520px; margin: 0 auto; padding: 20px 24px 40px; }
+  .pagehead { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pagehead h1 { font-size: 24px; }
+  .pagehead p { color: var(--c-text-2); margin-top: 4px; max-width: 72ch; }
+  .aibar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 16px; background: var(--c-info-tint); border: 1px solid var(--c-info-line); border-radius: var(--radius-md); }
+  .aibar .ico { color: var(--c-ai); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; margin-top: 16px; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; margin-top: 16px; }
+  #map { height: 560px; border-radius: var(--radius-lg); border: 1px solid var(--c-rule); }
+  .map-tools { top: 12px; left: 12px; width: 220px; }
+  .map-tools h2 { font-size: 13px; margin-bottom: 4px; }
+  .cond-scale { display: flex; gap: 2px; margin: 4px 0 2px 23px; }
+  .cond-scale i { flex: 1; height: 8px; border-radius: 2px; }
+  .cond-lbl { display: flex; justify-content: space-between; margin-left: 23px; font-size: 12px; color: var(--c-text-3); }
+  .asset-h { padding: 16px 16px 12px; border-bottom: 1px solid var(--c-rule); }
+  .asset-h h2 { font-size: 18px; letter-spacing: -0.015em; }
+  .condbadge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--cond-text); }
+  .bignum { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .nbi { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--c-rule); border-radius: var(--radius-md); margin-top: 10px; }
+  .nbi > div { padding: 8px 10px; border-left: 1px solid var(--c-rule); }
+  .nbi > div:first-child { border-left: 0; }
+  .nbi .v { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .nbi .l { font-size: 12px; color: var(--c-text-3); }
+  .flag { border: 1px solid var(--c-info-line); background: var(--c-info-tint); border-radius: var(--radius-md); padding: 12px 14px; font-size: 13px; margin-top: 12px; }
+  .plan-tbl td { padding: 8px 8px; }
+  .cites { line-height: 24px; }
+  .cites .cite { margin-right: 2px; }
+  .rank { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--c-ai); color: var(--c-text-inverse); font-variant-numeric: tabular-nums; }
+  .rankpin { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 700 10.5px/1 var(--font-sans); background: var(--c-ai); color: var(--c-text-inverse); border: 2px solid var(--map-pin-ring); box-shadow: 0 1px 4px rgb(0 0 0 / .35); }
+  .score { display: flex; gap: 2px; }
+  .score span { height: 8px; border-radius: 2px; display: block; }
+  .crew { display: grid; grid-template-columns: 1fr 120px 52px; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .crew:first-of-type { border-top: 0; }
+  .crew small { display: block; color: var(--c-text-3); font-size: 12px; }
+  .feed li { list-style: none; display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .feed li:first-child { border-top: 0; }
+  .feed ul { margin: 0; padding: 0; }
+  .feed .src { width: 28px; height: 28px; border-radius: 50%; background: var(--c-surface-2); display: grid; place-items: center; color: var(--c-text-2); }
+  .feed time { color: var(--c-text-3); font-size: 12px; }
+  .conflict { margin-top: 6px; border: 1px solid var(--c-warn-line); background: var(--c-warn-tint); border-radius: var(--radius-md); padding: 12px; }
+  .vers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+  .vers > div { border: 1px solid var(--c-rule); border-radius: var(--radius-md); padding: 12px; font-size: 13px; }
+  .vers .k { color: var(--c-text-3); font-size: 12px; }
+  .kanban { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 12px; overflow-x: auto; padding: 4px 16px 16px; }
+  .col { background: var(--c-surface-2); border-radius: var(--radius-lg); padding: 10px; min-height: 200px; }
+  .col h3 { font-size: 13px; display: flex; align-items: center; gap: 6px; margin: 2px 2px 10px; }
+  .col h3 .chip { height: 18px; margin-left: auto; background: var(--c-surface); }
+  .wo { background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-1); border: 1px solid var(--c-rule); padding: 10px; margin-bottom: 8px; font-size: 13px; cursor: pointer; }
+  .wo:hover { border-color: var(--c-border-strong); }
+  .wo .t { font-weight: 600; font-size: 13px; }
+  .wo .meta { color: var(--c-text-3); font-size: 12px; margin-top: 2px; font-family: var(--font-mono); }
+  .wo .foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--c-text-2); }
+  .pri { font-size: 12px; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
+  .pri.P1 { background: var(--c-danger-soft); color: var(--c-danger-ink); } .pri.P2 { background: var(--c-warn-soft); color: var(--c-warn-ink); } .pri.P3 { background: var(--c-neutral-soft); color: var(--c-neutral-ink); }
+  .eam { font-size: 12px; color: var(--c-ok-ink); display: inline-flex; gap: 3px; align-items: center; margin-left: auto; }
+  .eam .ico { width: 12px; height: 12px; }
+  .hist-cond { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+  @media (max-width: 1100px) { .grid, .grid2 { grid-template-columns: minmax(0, 1fr); } }
+  .grid2 > *, .grid > * { min-width: 0; }
+  @media (max-width: 640px) {
+    .pw-main { padding: 16px 12px 32px; }
+    #map { height: 420px; }
+    .map-tools { display: none; }
+    .aibar { flex-wrap: wrap; }
+    .kanban { grid-template-columns: repeat(5, 240px); }
+    .crew { grid-template-columns: 1fr 80px 44px; }
+    .tbl-scroll { overflow-x: auto; }
+    .approval .row { flex-direction: column; align-items: stretch; }
+    .vers { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+{{ICONS}}
+<header class="appbar">
+  <a class="wordmark" href="index.html"><strong>County of Maui</strong><small>Public Works · Assets</small></a>
+  <nav class="appnav" aria-label="App">
+    <a href="#" aria-current="page">Assets</a><a href="#wo">Work orders</a><a href="#crews">Crews</a><a href="#">Inspections</a><a href="#">Capital plan</a>
+  </nav>
+  <span class="spacer"></span>
+  <span class="env hide-sm"><span class="dot"></span>Snapshot · browser exercise</span>
+  <button class="iconbtn" aria-label="Notifications"><svg class="ico"><use href="#i-bell"/></svg></button>
+  <span class="avatar" title="Keola Kahananui, Highways Division supervisor">KK</span>
+</header>
+<div class="demostrip" role="note">
+  <span class="display-snapshot">Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span class="tag-real">Real data</span> NBI bridges with condition ratings, roads, flood and tsunami zones (Hawaii Statewide GIS Program)
+  <span class="tag-demo">Demo data</span> Inlets, culverts, signals, inspections, work orders, crews, field updates
+  <span class="faint">· Verified snapshot · synthetic asset exercise · anonymous preview</span>
+</div>
+
+<main class="pw-main" id="main">
+  <div class="pagehead">
+    <div class="grow">
+      <div class="kicker">Highways Division · Wailuku-Kahului district · Monday, November 9</div>
+      <h1>Storm drain and roadway assets</h1>
+      <p>Inspections, condition and work for 160 assets, kept in one spatial register that field crews, the work order board and the public catalog all read.</p>
+    </div>
+    <div class="row wrap">
+      <span class="chip ok" title="Synthetic asset inventory; download the labelled exercise data"><svg class="ico" style="width:13px;height:13px"><use href="#i-globe"/></svg>Demo catalog preview</span>
+      <span class="chip" title="Illustrative integration; no external system is connected"><svg class="ico" style="width:13px;height:13px"><use href="#i-refresh"/></svg>EAM sync · preview</span>
+      <a class="btn" href="#"><svg class="ico"><use href="#i-download"/></svg>Export</a>
+      <a class="btn primary" href="#"><svg class="ico"><use href="#i-plus"/></svg>New work order</a>
+    </div>
+  </div>
+
+  <div class="aibar" role="region" aria-label="Agent proposal">
+    <svg class="ico"><use href="#i-agent"/></svg>
+    <div class="grow"><b>Demo answer: this week's inspection plan is ready to preview.</b> <span class="muted">This scripted example ranks <span id="planCountTop">12</span> inlets by condition, open drainage requests and hazard zones. <span id="planHrsTop">31</span> crew-hours in this demonstration.</span></div>
+    <a class="btn sm" href="#plan">Review plan</a>
+  </div>
+
+  <div class="kpis" style="--k:5" aria-label="Asset summary">
+    <div class="kpi lead"><div class="v num" id="kAssets">160</div><div class="l">Assets in this district</div><div class="d"><span id="kMix">110 inlets · 18 culverts · 22 signals · 10 bridges</span></div></div>
+    <div class="kpi"><div class="v num" id="kPoor">—</div><div class="l">Poor or failed (1–2 of 5)</div><div class="d up-bad" id="kPoorD"></div></div>
+    <div class="kpi"><div class="v num" id="kOpen">—</div><div class="l">Open work orders</div><div class="d" id="kOpenD"></div></div>
+    <div class="kpi"><div class="v num" id="kDue">—</div><div class="l">Inspections overdue (&gt; 18 months)</div><div class="d" id="kDueD">Drainage inlets and culverts</div></div>
+    <div class="kpi"><div class="v num">14</div><div class="l">Field updates today</div><div class="d">QField 9 · field app 5 · 1 conflict</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="map" id="map" role="region" aria-label="Asset map">
+      <div class="map-legend map-tools">
+        <h2>Layers</h2>
+        <label class="layer-toggle"><input type="checkbox" checked data-layers="assets">Drainage and signals</label>
+        <div class="cond-scale" aria-hidden="true"><i style="background:var(--cond-1)"></i><i style="background:var(--cond-2)"></i><i style="background:var(--cond-3)"></i><i style="background:var(--cond-4)"></i><i style="background:var(--cond-5)"></i></div>
+        <div class="cond-lbl"><span>Failed</span><span>Very good</span></div>
+        <label class="layer-toggle"><input type="checkbox" checked data-layers="bridges,bridges-ring">Bridges (NBI)<span class="lg-pt" style="margin-left:auto;background:var(--x-bridge);border-radius:2px"></span></label>
+        <label class="layer-toggle"><input type="checkbox" checked data-layers="reqs">Open drainage requests<span class="lg-pt" style="margin-left:auto;background:var(--c-info)"></span></label>
+        <label class="layer-toggle"><input type="checkbox" id="planToggle" checked>This week's plan<span class="rank" style="margin-left:auto;width:16px;height:16px;font-size:9px">1</span></label>
+        <label class="layer-toggle"><input type="checkbox" checked data-layers="tsunami,tsunami-line">Tsunami evacuation zone<span class="lg-sw" style="margin-left:auto;background:color-mix(in srgb, var(--hz-tsu) 45%, var(--c-surface))"></span></label>
+        <label class="layer-toggle"><input type="checkbox" data-layers="flood,flood-line">Flood zones (FEMA)<span class="lg-sw" style="margin-left:auto;background:color-mix(in srgb, var(--hz-flood) 40%, var(--c-surface))"></span></label>
+      </div>
+    </div>
+
+    <aside class="panel" aria-label="Asset detail" id="assetPanel" style="display:flex;flex-direction:column;max-height:560px">
+      <div class="asset-h">
+        <div class="row"><span class="kicker" id="aKind">Storm drain inlet</span><span class="faint mono" style="margin-left:auto;font-size:12px" id="aSrc">storm-assets/inlets</span></div>
+        <h2 id="aTitle">SD-3100</h2>
+        <div class="muted" id="aSub" style="font-size:13px;margin-top:2px">Street</div>
+        <div class="row wrap" style="margin-top:10px" id="aChips"></div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Asset information">
+        <button role="tab" id="at1" aria-controls="ap1" aria-selected="true">Condition</button>
+        <button role="tab" id="at2" aria-controls="ap2" aria-selected="false" tabindex="-1">Inspections</button>
+        <button role="tab" id="at3" aria-controls="ap3" aria-selected="false" tabindex="-1">Linked <span class="chip" style="height:18px;margin-left:3px" id="aLinkedN">0</span></button>
+      </div>
+      <div style="overflow:auto;flex:1">
+        <section role="tabpanel" id="ap1" aria-labelledby="at1" class="panel-b" style="padding-top:14px"></section>
+        <section role="tabpanel" id="ap2" aria-labelledby="at2" class="panel-b" hidden></section>
+        <section role="tabpanel" id="ap3" aria-labelledby="at3" class="panel-b" hidden></section>
+      </div>
+      <div class="row" style="padding:12px 16px;border-top:1px solid var(--c-rule)">
+        <button class="btn sm"><svg class="ico"><use href="#i-clipboard"/></svg>Schedule inspection</button>
+        <button class="btn sm primary" style="margin-left:auto"><svg class="ico"><use href="#i-wrench"/></svg>Create work order</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="grid2">
+    <section class="ai-card" id="plan" aria-labelledby="planH">
+      <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 id="planH" style="font-size:14px">Proposed plan: week of November 9</h2><span class="chip warn" style="margin-left:auto">Demo answer · preview approval</span></div>
+      <div class="ai-b">
+        <p class="muted">Scripted demonstration of <code>pw.weekly_plan</code>; no scheduled agent ran. The example scores each inlet as <b>condition</b> (worse scores higher) × <b>open drainage requests within 150 m</b> × <b>hazard zone</b> (tsunami evacuation, then FEMA flood), then packed the top items into crew capacity.</p>
+        <div class="tbl-scroll" style="margin-top:10px">
+        <table class="tbl plan-tbl" id="planTbl"><thead><tr><th>#</th><th>Inlet</th><th>Why it ranks</th><th>Score</th><th>Crew</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="approval" style="margin-top:12px">
+          <div class="row wrap" style="gap:12px">
+            <div class="grow"><b id="planSum">12 inspections and cleanings · 31 crew-hours · Tue to Thu</b><div class="who">Approving creates the work orders and pushes them to the board and the EAM. Nothing is created until one person approves.</div></div>
+            <button class="btn" type="button">Edit plan</button>
+            <button class="btn primary" type="button" id="approvePlan"><svg class="ico"><use href="#i-check"/></svg>Approve plan</button>
+          </div>
+        </div>
+        <div class="guard" style="margin-top:10px">
+          <span><svg class="ico"><use href="#i-check"/></svg>Every row cites its asset, requests and zone</span>
+          <span><svg class="ico"><use href="#i-check"/></svg>Proposal only: one supervisor approves</span>
+          <span><svg class="ico"><use href="#i-check"/></svg>Logged in the Console audit trail</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="stack" style="margin-top:0">
+      <section class="ai-card" id="capital" aria-labelledby="capH">
+        <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 id="capH" style="font-size:14px">Capital shortlist: culverts</h2><span class="chip" style="margin-left:auto">Demo answer</span></div>
+        <div class="ai-b">
+          <p class="muted" style="font-size:13px"><b style="color:var(--c-text)">"Which culverts in poor condition are near last year's flooding complaints? Rank by parcels served."</b> This scripted example joins culverts × drainage requests from the last 12 months within 250 m × parcels within 300 m in this verified parcel snapshot.</p>
+          <div class="tbl-scroll" style="margin-top:8px"><table class="tbl" id="capTbl"><thead><tr><th>#</th><th>Culvert</th><th class="r">Requests</th><th class="r">Parcels</th><th class="r">Est. cost <span class="tag-demo">demo</span></th></tr></thead><tbody></tbody></table></div>
+          <p class="faint" style="font-size:12px;margin-top:6px" id="capNote"></p>
+          <div class="row wrap" style="margin-top:10px">
+            <button class="btn sm" type="button"><svg class="ico"><use href="#i-download"/></svg>Export CSV</button>
+            <button class="btn sm" type="button"><svg class="ico"><use href="#i-plus"/></svg>Add to CIP draft</button>
+            <span class="faint" style="font-size:12px">Adding to the capital plan draft needs one approval.</span>
+          </div>
+          <div class="guard" style="margin-top:8px"><span><svg class="ico"><use href="#i-check"/></svg>Cites culverts and requests</span><span><svg class="ico"><use href="#i-check"/></svg>Parcel counts from the real parcel layer</span><span><svg class="ico"><use href="#i-check"/></svg>No records changed</span></div>
+        </div>
+      </section>
+      <section class="panel" id="crews" aria-labelledby="crewH">
+        <div class="panel-h"><h2 id="crewH">Dispatch today</h2><span class="sub">5 crews · 7:00 to 15:30</span><a class="btn sm ghost" style="margin-left:auto" href="#">Open dispatch board</a></div>
+        <div class="panel-b" id="crewList"></div>
+      </section>
+      <section class="panel feed" aria-labelledby="feedH">
+        <div class="panel-h"><h2 id="feedH">Field updates</h2><span class="sub">Existing field apps, writing to Honua</span></div>
+        <div class="panel-b">
+          <ul>
+            <li><span class="src"><svg class="ico"><use href="#i-phone"/></svg></span><div><b>SD-3142 inspected</b>, condition 2 of 5, 3 photos. <span class="muted">Crew 2 · QField over OGC API Features. Collected offline at 07:52 and synced at 09:12, round trip complete.</span><br><time>09:12 · 1 h 20 min offline</time></div></li>
+            <li><span class="src"><svg class="ico"><use href="#i-phone"/></svg></span><div><b>WO-26-7731 marked done</b>, 2.5 h, debris removed. <span class="muted">Vactor 1 · Esri-compatible field app over GeoServices FeatureServer.</span><br><time>08:47</time></div></li>
+            <li><span class="src" style="color:var(--c-warn)"><svg class="ico"><use href="#i-alert"/></svg></span><div><b>Conflict on SD-3127</b>, edited by two crews while offline.
+              <div class="conflict">
+                <div class="vers">
+                  <div><div class="k">QField · Crew 4 · 08:41</div>Condition <b>3</b>, grate loose</div>
+                  <div><div class="k">Field app · Vactor 1 · 08:55</div>Condition <b>2</b>, grate cracked, photo</div>
+                </div>
+                <div class="row wrap"><span class="muted grow" style="font-size:12px">Honua kept both versions. Nothing was overwritten.</span><button class="btn sm">Keep 3</button><button class="btn sm primary">Keep 2 and photo</button></div>
+              </div>
+              <time>08:56</time></div></li>
+            <li><span class="src"><svg class="ico"><use href="#i-refresh"/></svg></span><div><b>Demo sync</b> previews 6 work orders. <span class="muted">Illustrative receipt; no webhook was sent.</span><br><time>09:31</time></div></li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel" id="wo" style="margin-top:16px" aria-labelledby="woH">
+    <div class="panel-h" style="padding-bottom:12px;flex-wrap:wrap">
+      <h2 id="woH">Work orders</h2><span class="sub" id="woSub"></span>
+      <div class="seg" role="group" aria-label="View" style="margin-left:auto">
+        <button aria-pressed="true" data-view="board">Board</button><button aria-pressed="false" data-view="list">List</button>
+      </div>
+    </div>
+    <div class="kanban" id="board"></div>
+    <div id="list" hidden style="padding:0 16px 16px" class="tbl-scroll"><table class="tbl"><thead><tr><th>Work order</th><th>Asset</th><th>Stage</th><th>Priority</th><th>Crew</th><th>Scheduled</th><th>EAM</th></tr></thead><tbody id="listBody"></tbody></table></div>
+  </section>
+</main>
+
+{{DATA land,roads,contours,streams,waterbodies,zoning,dfirm,tsunami,bridges,demo.assets,demo.workorders,demo.requests,demo.now,05-culvert-parcels}}
+{{MAPJS}}
+<script>
+(() => {
+  const NOW = new Date(HD.demo.now);
+  const assets = HD.demo.assets, wos = HD.demo.workorders;
+  const drain = HD.demo.requests.filter((r) => r.type === "Drainage / flooding");
+  const openDrain = drain.filter((r) => r.status !== "Closed");
+  const COND = { 1: ["Failed", "var(--cond-1)"], 2: ["Poor", "var(--cond-2)"], 3: ["Fair", "var(--cond-3)"], 4: ["Good", "var(--cond-4)"], 5: ["Very good", "var(--cond-5)"] };
+  function paintPw(m) {
+    const v = HM.cssVar, set = (id, k, val) => m.getLayer(id) && m.setPaintProperty(id, k, val);
+    set("reqs", "circle-color", v("--c-info")); set("reqs", "circle-stroke-color", v("--map-pin-ring"));
+    set("assets", "circle-color", ["match", ["get", "cond"], 1, v("--cond-1"), 2, v("--cond-2"), 3, v("--cond-3"), 4, v("--cond-4"), v("--cond-5")]);
+    set("assets", "circle-stroke-color", ["match", ["get", "kind"], "Traffic signal", v("--x-signal-ring"), v("--map-pin-ring")]);
+    set("bridges-ring", "circle-color", v("--map-pin-ring")); set("bridges-ring", "circle-stroke-color", v("--x-bridge"));
+    set("bridges", "circle-color", ["match", ["get", "cond"], "G", v("--cond-5"), "P", v("--cond-1"), v("--cond-3")]);
+    set("sel", "circle-stroke-color", v("--map-select-line"));
+  }
+  const dist = (a, b) => { const dx = (a[0] - b[0]) * 104000, dy = (a[1] - b[1]) * 111000; return Math.hypot(dx, dy); };
+  const fmtD = (s) => new Date(s + (s.length === 10 ? "T12:00" : "")).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const fmtShort = (s) => new Date(s + (s.length === 10 ? "T12:00" : "")).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  function rng(seed) { let h = 2166136261; for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return () => { h += 0x6d2b79f5; let t = h; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+  // Nearby requests (all drainage, last 60 days) per asset
+  assets.forEach((a) => {
+    a.near = openDrain.filter((r) => dist(r.c, a.c) < 150);
+    a.near60 = drain.filter((r) => dist(r.c, a.c) < 250 && (NOW - new Date(r.created)) / 864e5 < 90);
+    a.flood = false;
+  });
+  const floodPolys = HM.get("dfirm").features.filter((f) => ["AE", "A", "AO", "AH", "VE"].includes(f.properties.zone));
+  function inPoly(pt, geom) {
+    const polys = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
+    return polys.some((rings) => { let inside = false; const r = rings[0]; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) inside = !inside; } return inside; });
+  }
+  assets.forEach((a) => { a.flood = floodPolys.some((f) => inPoly(a.c, f.geometry)); });
+
+  // KPIs
+  const poor = assets.filter((a) => a.cond <= 2);
+  document.getElementById("kPoor").textContent = poor.length;
+  document.getElementById("kPoorD").textContent = `${poor.filter((a) => a.evac).length} inside the tsunami evacuation zone`;
+  const open = wos.filter((w) => w.stage !== "Done");
+  document.getElementById("kOpen").textContent = open.length;
+  document.getElementById("kOpenD").textContent = `${open.filter((w) => w.pri === "P1").length} P1 · ${wos.filter((w) => w.stage === "Awaiting parts").length} awaiting parts`;
+  const overdue = assets.filter((a) => a.kind !== "Traffic signal" && (NOW - new Date(a.insp)) / 864e5 > 548);
+  document.getElementById("kDue").textContent = overdue.length;
+
+  // AI weekly plan
+  const inlets = assets.filter((a) => a.kind === "Storm drain inlet");
+  inlets.forEach((a) => { a.score = (6 - a.cond) * 2 + a.near.length * 3 + (a.evac ? 2.5 : 0) + (a.flood ? 1.5 : 0); });
+  const plan = inlets.slice().sort((a, b) => b.score - a.score).slice(0, 12);
+  const crewsFor = ["Kahului Drainage · Vactor 1", "Kahului Drainage · Crew 1", "Wailuku Baseyard · Crew 2"];
+  const days = ["Tue", "Tue", "Tue", "Tue", "Wed", "Wed", "Wed", "Wed", "Thu", "Thu", "Thu", "Thu"];
+  let hrs = 0;
+  document.querySelector("#planTbl tbody").innerHTML = plan.map((a, i) => {
+    const h = a.cond <= 2 ? 3 : 2; hrs += h;
+    const why = [`condition ${a.cond} (${COND[a.cond][0].toLowerCase()})`];
+    if (a.near.length) why.push(`${a.near.length} open request${a.near.length > 1 ? "s" : ""}`);
+    if (a.evac) why.push("tsunami evacuation zone"); else if (a.flood) why.push("FEMA flood zone");
+    const cites = [`<button class="cite" data-asset="${a.id}">assets/${a.id}</button>`].concat(a.near.slice(0, 2).map((r) => `<button class="cite" data-req="${r.id}">${r.id}</button>`)).concat(a.evac ? [`<button class="cite" data-zone="tsunami">tsunami/1</button>`] : a.flood ? [`<button class="cite" data-zone="flood">dfirm/AE</button>`] : []);
+    const pct = Math.min(1, a.score / plan[0].score);
+    return `<tr><td><span class="rank">${i + 1}</span></td><td><b>${a.id}</b><span class="id">${a.street}</span></td><td><div style="font-size:12.5px">${why.join(" · ")}</div><div class="cites" style="margin-top:4px">${cites.join(" ")}</div></td><td class="num"><div class="score" aria-label="score ${a.score.toFixed(1)}"><span style="width:${Math.round(pct * 56)}px;background:var(--c-ai)"></span><span style="width:${56 - Math.round(pct * 56)}px;background:var(--c-surface-2)"></span></div><span class="faint" style="font-size:11px">${a.score.toFixed(1)}</span></td><td style="font-size:12px">${days[i]} · ${crewsFor[i % 3].split(" · ")[1]}<span class="id">${h} h</span></td></tr>`;
+  }).join("");
+  document.getElementById("planSum").textContent = `12 inspections and cleanings · ${hrs} crew-hours · Tue to Thu`;
+  document.getElementById("planHrsTop").textContent = hrs;
+  document.getElementById("approvePlan").addEventListener("click", (e) => {
+    const b = e.currentTarget; b.disabled = true; b.innerHTML = '<svg class="ico"><use href="#i-check"/></svg>Demo approval';
+    document.querySelector("#plan .chip.warn").className = "chip ok"; document.querySelector("#plan .chip.ok").textContent = "Demo approval · 12 draft work orders";
+  });
+
+  // Capital shortlist (PW-AI-2)
+  const PC = HD["05-culvert-parcels"].counts;
+  const yearAgo = new Date(NOW - 365 * 864e5);
+  const recent = drain.filter((r) => new Date(r.created) >= yearAgo);
+  const COST = { 1: 240000, 2: 160000, 3: 45000 };
+  const ACTION = { 1: "replace", 2: "reline", 3: "repair headwall" };
+  const cand = assets.filter((a) => a.kind === "Culvert" && a.cond <= 3).map((a) => {
+    const reqs = recent.filter((r) => dist(r.c, a.c) < 250);
+    return { a, reqs, parcels: PC[a.id] || 0, score: (4 - a.cond) * 3 + reqs.length * 2 + (PC[a.id] || 0) / 60 };
+  }).sort((x, y) => y.score - x.score).slice(0, 5);
+  const poorN = cand.filter((c) => c.a.cond <= 2).length;
+  document.querySelector("#capTbl tbody").innerHTML = cand.map((c, i) => `<tr><td><span class="rank">${i + 1}</span></td><td><b>${c.a.id}</b> <span class="chip ${c.a.cond <= 2 ? "danger" : "warn"}" style="height:18px">${c.a.cond} · ${COND[c.a.cond][0]}</span><span class="id">${c.a.street} · ${ACTION[c.a.cond]}</span><div class="cites" style="margin-top:2px"><button class="cite" data-asset="${c.a.id}">assets/${c.a.id}</button> ${c.reqs.slice(0, 2).map((r) => `<button class="cite" data-req="${r.id}">${r.id}</button>`).join(" ")}</div></td><td class="r num">${c.reqs.length}</td><td class="r num">${c.parcels}</td><td class="r num">${HM.money(COST[c.a.cond])}</td></tr>`).join("");
+  document.getElementById("capNote").textContent = `${poorN} culverts are rated poor or failed; the next ${5 - poorN} are fair and listed to watch. Parcel counts: Maui County Parcels layer, within 300 m in this verified parcel snapshot. Costs are demo planning estimates.`;
+
+  // Anomaly: many recent requests but rated good
+  const anomaly = inlets.filter((a) => a.cond >= 4).sort((a, b) => b.near60.length - a.near60.length)[0];
+
+  // Crews
+  const CREWS = [
+    ["Kahului Drainage · Vactor 1", "Inlet cleaning, Lono Ave area", 6.5, 8, "Lono Ave, 4 min ago"],
+    ["Kahului Drainage · Crew 1", "Culvert outlets, Kahului Beach Rd", 5, 8, "Kahului Beach Rd, 9 min ago"],
+    ["Wailuku Baseyard · Crew 2", "Inspections, Wailuku town", 7.5, 8, "Market St, 2 min ago"],
+    ["Wailuku Baseyard · Crew 4", "Grate replacement, Waiehu Beach Rd", 8.5, 8, "Baseyard, 18 min ago"],
+    ["Traffic Ops · Signal tech", "Controller swap, Kaʻahumanu Ave", 3, 8, "Kaʻahumanu Ave, 1 min ago"],
+  ];
+  document.getElementById("crewList").innerHTML = CREWS.map(([n, task, h, cap, loc]) => {
+    const pct = Math.min(100, (h / cap) * 100), over = h > cap;
+    return `<div class="crew"><div><b>${n}</b><small>${task} · ${loc}</small></div><div class="meter" aria-label="${h} of ${cap} hours booked"><span style="width:${pct}%;background:${over ? "var(--c-danger)" : h / cap > 0.85 ? "var(--c-warn)" : "var(--c-ok)"}"></span></div><div class="num" style="text-align:right;font-size:12px;${over ? "color:var(--c-danger-ink);font-weight:600" : ""}">${h}/${cap} h</div></div>`;
+  }).join("");
+
+  // Work orders
+  const STAGES = ["Backlog", "Scheduled", "In progress", "Awaiting parts", "Done"];
+  const eamNo = (w) => (w.stage !== "Backlog" ? 48190 + (parseInt(w.id.slice(-3)) % 97) : null);
+  document.getElementById("woSub").textContent = `${wos.length} this month · ${open.length} open`;
+  document.getElementById("board").innerHTML = STAGES.map((s) => {
+    const ws = wos.filter((w) => w.stage === s);
+    return `<div class="col"><h3>${s}<span class="chip">${ws.length}</span></h3>${ws.map((w) => `<article class="wo" tabindex="0" data-asset="${w.asset}"><div class="row"><span class="pri ${w.pri}">${w.pri}</span><span class="meta" style="margin:0">${w.id}</span></div><div class="t" style="margin-top:6px">${w.title}</div><div class="meta">${w.asset} · ${w.street}</div><div class="foot"><svg class="ico" style="width:13px;height:13px"><use href="#i-${w.crew ? "users" : "calendar"}"/></svg><span class="trunc">${w.crew ? w.crew.split(" · ")[1] : "Unassigned"}</span>${eamNo(w) ? `<span class="eam" title="Synced to EAM"><svg class="ico"><use href="#i-check"/></svg>EAM</span>` : ""}</div></article>`).join("")}</div>`;
+  }).join("");
+  document.getElementById("listBody").innerHTML = wos.map((w) => `<tr><td>${w.title}<span class="id">${w.id}</span></td><td class="mono">${w.asset}<span class="id">${w.street}</span></td><td>${w.stage}</td><td><span class="pri ${w.pri}">${w.pri}</span></td><td>${w.crew || '<span class="faint">Unassigned</span>'}</td><td class="num">${fmtShort(w.sched)}</td><td>${eamNo(w) ? `<span class="chip ok">#${eamNo(w)}</span>` : '<span class="faint">Not sent</span>'}</td></tr>`).join("");
+  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { const l = b.dataset.view === "list"; document.getElementById("list").hidden = !l; document.getElementById("board").hidden = l; }));
+
+  // Asset panel
+  const byId = new Map(assets.map((a) => [a.id, a]));
+  const INSPECTORS = ["R. Kaniho", "M. Yamada", "L. Pacheco", "D. Akana", "S. Fernandez"];
+  const NOTE = { "Storm drain inlet": ["Sediment 30% of sump", "Grate clear, minor debris", "Grate loose, bolts corroded", "Sump full after storm", "Jetted, flowing"], "Culvert": ["Outlet partly blocked by vegetation", "Headwall spalling", "Clear, flowing", "Sediment at inlet end"], "Traffic signal": ["Controller cabinet OK", "Two LED heads dim", "Detector loop fault", "Relamped"] };
+  function history(a) {
+    const r = rng(a.id); const out = []; let d = new Date(a.insp + "T10:00"); let c = a.cond;
+    for (let i = 0; i < 4; i++) {
+      const src = i === 0 ? (r() < 0.6 ? "QField · OGC API Features" : "Field app · FeatureServer") : i === 3 ? "Imported from 2019 inventory" : r() < 0.5 ? "QField · OGC API Features" : "Console";
+      out.push({ d: d.toISOString().slice(0, 10), c, who: INSPECTORS[Math.floor(r() * 5)], note: NOTE[a.kind][Math.floor(r() * NOTE[a.kind].length)], src });
+      d = new Date(d - (200 + r() * 260) * 864e5); c = Math.min(5, Math.max(1, c + (r() < 0.6 ? 1 : 0)));
+    }
+    return out;
+  }
+  const condBadge = (c) => `<span class="condbadge" style="background:${COND[c][1]}">${c} of 5 · ${COND[c][0]}</span>`;
+  function selectAsset(a) {
+    document.getElementById("aKind").textContent = a.kind;
+    document.getElementById("aSrc").textContent = a.kind === "Traffic signal" ? "roadway-assets/signals" : a.kind === "Culvert" ? "storm-assets/culverts" : "storm-assets/inlets";
+    document.getElementById("aTitle").textContent = a.id;
+    document.getElementById("aSub").textContent = `${a.street}, ${a.c[0] < -156.49 ? "Wailuku" : "Kahului"} · installed ${a.installed}`;
+    const chips = [condBadge(a.cond)];
+    if (a.evac) chips.push('<span class="chip warn">Tsunami evacuation zone</span>');
+    if (a.flood) chips.push('<span class="chip info">FEMA flood zone</span>');
+    document.getElementById("aChips").innerHTML = chips.join("");
+    const hist = history(a);
+    const age = Math.round((NOW - new Date(a.insp)) / 864e5);
+    const isAnom = anomaly && a.id === anomaly.id;
+    document.getElementById("ap1").innerHTML = `
+      <div class="row" style="align-items:flex-end;gap:18px"><div><div class="bignum" style="color:${COND[a.cond][1]}">${a.cond}<span class="faint" style="font-size:15px;font-weight:500"> / 5</span></div><div class="label">Condition score</div></div>
+      <div><div class="bignum">${age}</div><div class="label">Days since inspection</div></div>
+      <div><div class="bignum">${a.near.length}</div><div class="label">Open requests nearby</div></div></div>
+      ${isAnom ? `<div class="flag"><div class="row" style="font-weight:600"><svg class="ico" style="color:var(--c-ai)"><use href="#i-agent"/></svg>Demo answer · anomaly preview</div><p style="margin-top:4px">${a.near60.length} drainage requests within 250 m in the last 90 days, but the last inspection rated this inlet <b>good</b>. The rating may be stale. ${a.near60.slice(0, 3).map((r) => `<button class="cite" data-req="${r.id}">${r.id}</button>`).join(" ")} <button class="cite" data-asset="${a.id}">assets/${a.id}</button></p><p class="faint" style="font-size:12px;margin-top:4px">Flag only. Nothing was changed. Suggested: re-inspect this week.</p></div>` : ""}
+      <dl class="dl" style="margin-top:14px">
+        <dt>Last inspected</dt><dd>${fmtD(a.insp)} · ${hist[0].who}</dd>
+        <dt>Inspection cycle</dt><dd>${a.kind === "Traffic signal" ? "12 months" : "18 months"}${age > 548 && a.kind !== "Traffic signal" ? ' <span class="chip danger" style="height:18px">Overdue</span>' : ""}</dd>
+        <dt>Material</dt><dd>${a.kind === "Culvert" ? "Reinforced concrete pipe, 36 in" : a.kind === "Traffic signal" ? "Mast arm, LED heads" : "Cast iron grate, concrete box"}</dd>
+        <dt>Maintained by</dt><dd>${a.kind === "Traffic signal" ? "Traffic Operations" : "Highways Division, drainage"}</dd>
+        <dt>Layer</dt><dd class="mono" style="font-size:12px">${document.getElementById("aSrc").textContent}/${a.id}</dd>
+      </dl>`;
+    document.getElementById("ap2").innerHTML = `<ol class="tl">${hist.map((h, i) => `<li class="${i === 0 ? "ok" : ""}"><time>${fmtD(h.d)} · ${h.who}</time><span class="hist-cond" style="background:${COND[h.c][1]}"></span><b>${h.c} of 5</b> · ${h.note}<div class="faint" style="font-size:12px">${h.src}</div></li>`).join("")}</ol>`;
+    const linkedWo = wos.filter((w) => w.asset === a.id);
+    document.getElementById("aLinkedN").textContent = linkedWo.length + a.near.length;
+    document.getElementById("ap3").innerHTML = `<h3 style="font-size:13px;margin-bottom:6px">311 requests within 150 m</h3>${a.near.length ? `<table class="tbl">${a.near.map((r) => `<tr><td>${r.type}<span class="id">${r.id} · ${r.addr}</span></td><td><span class="chip ${r.breach ? "danger" : "info"}">${r.status}</span></td></tr>`).join("")}</table>` : '<p class="muted">No open requests nearby.</p>'}
+      <h3 style="font-size:13px;margin:14px 0 6px">Work orders</h3>${linkedWo.length ? `<table class="tbl">${linkedWo.map((w) => `<tr><td>${w.title}<span class="id">${w.id} · ${w.crew || "Unassigned"}</span></td><td><span class="chip">${w.stage}</span></td></tr>`).join("")}</table>` : '<p class="muted">No work orders yet.</p>'}`;
+    if (map && map.getSource("assets")) { map.getSource("sel").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: a.c } }] }); }
+  }
+  function selectBridge(f) {
+    const p = f.properties;
+    const insp = p.insp.length === 3 ? `0${p.insp[0]}/20${p.insp.slice(1)}` : `${p.insp.slice(0, 2)}/20${p.insp.slice(2)}`;
+    const insDate = new Date(`20${p.insp.slice(-2)}-${p.insp.slice(0, -2).padStart(2, "0")}-15`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    document.getElementById("aKind").textContent = "Bridge · National Bridge Inventory";
+    document.getElementById("aSrc").textContent = "bridges/nbi";
+    document.getElementById("aTitle").textContent = `${p.carries} over ${p.over}`;
+    document.getElementById("aSub").textContent = `Structure ${p.id} · built ${p.built} · ${p.len} m · ${p.adt.toLocaleString()} vehicles/day`;
+    document.getElementById("aChips").innerHTML = `<span class="chip ${p.cond === "G" ? "ok" : p.cond === "P" ? "danger" : "warn"}">${{ G: "Good", F: "Fair", P: "Poor" }[p.cond]} condition</span><span class="tag-real">Real NBI record</span>`;
+    const r = (v) => (v === "N" ? "N/A" : v);
+    document.getElementById("ap1").innerHTML = `<div class="label">NBI condition ratings (0 failed to 9 excellent)</div>
+      <div class="nbi"><div><div class="v">${r(p.deck)}</div><div class="l">Deck</div></div><div><div class="v">${r(p.sup)}</div><div class="l">Superstructure</div></div><div><div class="v">${r(p.sub)}</div><div class="l">Substructure</div></div><div><div class="v">${r(p.culv)}</div><div class="l">Culvert</div></div></div>
+      <dl class="dl" style="margin-top:14px"><dt>Lowest rating</dt><dd>${p.low}</dd><dt>Last NBI inspection</dt><dd>${insDate}</dd><dt>Location</dt><dd>${p.loc}</dd><dt>Year built</dt><dd>${p.built}</dd><dt>Average daily traffic</dt><dd class="num">${p.adt.toLocaleString()}</dd></dl>
+      <p class="faint" style="font-size:12px;margin-top:12px">Source: National Bridge Inventory via Hawaii Statewide GIS Program, layer Infrastructure/9.</p>`;
+    document.getElementById("ap2").innerHTML = `<ol class="tl"><li class="ok"><time>${insDate} · State DOT bridge inspection</time>Routine NBI inspection, lowest rating ${p.low}</li><li><time>24 months earlier</time>Routine NBI inspection</li></ol>`;
+    document.getElementById("aLinkedN").textContent = 0;
+    document.getElementById("ap3").innerHTML = '<p class="muted">No open requests or work orders.</p>';
+    map.getSource("sel").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: f.geometry }] });
+  }
+
+  let map;
+  const planPins = [];
+  map = HM.create(document.getElementById("map"), {
+    bounds: [[-156.505, 20.872], [-156.455, 20.897]], padding: 10,
+    onload: (m) => {
+      HM.overlays(m, ["flood", "tsunami"], "roads-casing");
+      HM.add(m, "reqs", HM.points(openDrain));
+      m.addLayer({ id: "reqs", type: "circle", source: "reqs", paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 3, 16, 6], "circle-color": "#2563eb", "circle-opacity": 0.85, "circle-stroke-color": "#fff", "circle-stroke-width": 1.2 } });
+      HM.add(m, "assets", HM.points(assets, (a) => ({ id: a.id, cond: a.cond, kind: a.kind })));
+      m.addLayer({ id: "assets", type: "circle", source: "assets", paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, ["match", ["get", "kind"], "Culvert", 4.5, 3.5], 16, ["match", ["get", "kind"], "Culvert", 9, 7]],
+        "circle-color": ["match", ["get", "cond"], 1, "#b3261e", 2, "#e8590c", 3, "#d9a400", 4, "#74b816", "#2b8a3e"],
+        "circle-stroke-color": ["match", ["get", "kind"], "Traffic signal", "#171c1a", "#ffffff"], "circle-stroke-width": ["match", ["get", "kind"], "Traffic signal", 2, 1.4] } });
+      HM.add(m, "bridges", HD.bridges);
+      m.addLayer({ id: "bridges-ring", type: "circle", source: "bridges", paint: { "circle-radius": 9, "circle-color": "#ffffff", "circle-stroke-color": "#343c39", "circle-stroke-width": 2 } });
+      m.addLayer({ id: "bridges", type: "circle", source: "bridges", paint: { "circle-radius": 5, "circle-color": ["match", ["get", "cond"], "G", "#2b8a3e", "P", "#b3261e", "#d9a400"] } });
+      HM.add(m, "sel", { type: "FeatureCollection", features: [] });
+      m.addLayer({ id: "sel", type: "circle", source: "sel", paint: { "circle-radius": 14, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#0b4f4a", "circle-stroke-width": 3 } });
+      plan.forEach((a, i) => { const el = document.createElement("div"); el.className = "rankpin"; el.textContent = i + 1; el.title = `Plan #${i + 1}: ${a.id}`; planPins.push(new maplibregl.Marker({ element: el, anchor: "center", offset: [12, -12] }).setLngLat(a.c).addTo(m)); });
+      document.getElementById("planToggle").addEventListener("change", (e) => planPins.forEach((p) => (p.getElement().style.display = e.target.checked ? "" : "none")));
+      paintPw(m); m.on("honua:theme", () => paintPw(m));
+      HM.toggle(m, ["tsunami-x"], false);
+      HM.bindToggles(m);
+      ["assets", "bridges"].forEach((l) => { m.on("mouseenter", l, () => (m.getCanvas().style.cursor = "pointer")); m.on("mouseleave", l, () => (m.getCanvas().style.cursor = "")); });
+      m.on("click", "assets", (e) => selectAsset(byId.get(e.features[0].properties.id)));
+      m.on("click", "bridges", (e) => selectBridge(HD.bridges.features.find((f) => f.properties.id === e.features[0].properties.id)));
+      m.on("click", "reqs", (e) => { const p = e.features[0].properties; new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat).setHTML(`<b>${p.id}</b><br>${p.addr}<br><span style="color:var(--c-text-3)">${p.status} · ${p.note}</span>`).addTo(m); });
+      selectAsset(anomaly || plan[0]);
+    },
+  });
+  document.addEventListener("click", (e) => {
+    const c = e.target.closest("[data-asset]"); if (c && map) { const a = byId.get(c.dataset.asset); if (a) { selectAsset(a); map.flyTo({ center: a.c, zoom: 17, duration: 700 }); document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" }); } }
+    const r = e.target.closest("[data-req]"); if (r && map) { const q = drain.find((x) => x.id === r.dataset.req); if (q) { map.flyTo({ center: q.c, zoom: 17, duration: 700 }); new maplibregl.Popup({ closeButton: false }).setLngLat(q.c).setHTML(`<b>${q.id}</b><br>${q.addr}<br><span style="color:var(--c-text-3)">${q.status} · ${q.note}</span>`).addTo(map); document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" }); } }
+    const z = e.target.closest("[data-zone]"); if (z && map) { const ids = z.dataset.zone === "flood" ? ["flood", "flood-line"] : ["tsunami", "tsunami-line"]; HM.toggle(map, ids, true); document.querySelector(`[data-layers^="${ids[0]}"]`).checked = true; map.fitBounds([[-156.49, 20.876], [-156.455, 20.898]], { duration: 700 }); }
+  });
+})();
+</script>
+</body>
+</html>
