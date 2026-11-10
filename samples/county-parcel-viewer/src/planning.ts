@@ -30,6 +30,7 @@ interface Context {
 const DISTRICTS: Readonly<Record<string, string>> = { U: "Urban", A: "Agricultural", C: "Conservation", R: "Rural" };
 
 function evidenceLink(url: string, id: unknown, idField = ""): HTMLElement {
+  if (url.endsWith(".geojson")) return h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, "Source snapshot (GeoJSON)");
   const featureId = typeof id === "number" && Number.isSafeInteger(id) && id >= 0 ? id
     : typeof id === "string" && /^\d+$/u.test(id) ? id : null;
   if (featureId === null || !/^[a-zA-Z_][a-zA-Z0-9_]*$/u.test(idField)) return h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, "Layer reference");

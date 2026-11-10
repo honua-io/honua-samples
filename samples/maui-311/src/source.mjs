@@ -1,3 +1,4 @@
+import { displaySnapshot, snapshotFeatures } from '../../../shared/state-local/display-snapshot.mjs';
 import { HonuaClient } from '@honua/sdk-js';
 import { validateRecord } from './records.mjs';
 import { collectFeatures } from '../../../shared/state-local/features.mjs';
@@ -11,6 +12,9 @@ export function requestFeature(feature) {
 }
 
 export async function loadRequests(binding) {
+  if (displaySnapshot) return (await snapshotFeatures('maui-demo-requests')).map((feature) => ({
+    ...feature, properties: validateRecord(feature.properties),
+  }));
   return collectRequests(new HonuaClient({ baseUrl: binding.baseUrl }), binding);
 }
 

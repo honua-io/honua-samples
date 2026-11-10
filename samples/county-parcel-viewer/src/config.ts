@@ -1,3 +1,4 @@
+export const DISPLAY_SNAPSHOT = import.meta.env.VITE_STATE_LOCAL_SNAPSHOT === "1";
 // Where the viewer reads its data. Every default is on the one Honua server
 // (demo.honua.io); URL parameters point the same app at another server or at
 // a county's own layers (design R9, R20):
@@ -41,6 +42,7 @@ function trimSlash(value: string): string {
 }
 
 export function readConfig(params: URLSearchParams): ViewerConfig {
+  if (DISPLAY_SNAPSHOT) return displayConfig();
   const baseUrl = trimSlash(params.get("baseUrl") || DEFAULT_BASE_URL);
   const tiles = params.get("parcelTilesUrl");
   const buildings = params.get("buildingsUrl");
@@ -55,4 +57,13 @@ export function readConfig(params: URLSearchParams): ViewerConfig {
     geocoderLocator: "World",
     planning: Object.fromEntries(PLANNING_PARAMS.map((key) => [key, params.get(key) ? trimSlash(params.get(key)!) : null])) as ViewerConfig["planning"],
   };
+}
+
+function displayConfig(): ViewerConfig {
+  const snapshot = (name: string) => new URL(`../data/${name}.geojson`, location.href).href;
+  const names = ["maui-state-land-use", "maui-special-management-area", "maui-island-plan-growth-boundaries",
+    "maui-island-plan-growth-areas", "maui-tsunami-zones", "maui-sea-level-rise"];
+  return { baseUrl: location.origin, parcelsUrl: snapshot("maui-parcels"), zoningUrl: snapshot("maui-zoning"),
+    floodUrl: snapshot("maui-flood-hazard"), parcelTilesUrl: null, buildingsUrl: null, basemapUrl: null,
+    geocoderLocator: "World", planning: Object.fromEntries(PLANNING_PARAMS.map((key, index) => [key, snapshot(names[index])])) as ViewerConfig["planning"] };
 }
