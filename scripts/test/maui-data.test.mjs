@@ -223,7 +223,8 @@ test('NBI snapshot preserves real ratings and vintage with an explicit Maui coun
     structure_number_008: 'TEST-BRIDGE', deck_cond_058: '7', superstructure_cond_059: '6',
     substructure_cond_060: '5', culvert_cond_062: 'N', bridge_condition: 'F', date_of_inspect_090: '624' },
     geometry: { type: 'Point', coordinates: [-156.5, 20.8] } };
-  const requests = sourceFetch(t, { selection: { objectIds: [1] },
+  const requests = sourceFetch(t, { metadata: { ...metadata, description: 'NBI as of June 20, 2025' },
+    selection: { objectIds: [1] },
     page: { type: 'FeatureCollection', features: [bridge] } });
   const receipt = await fetchSnapshot('maui-bridges', output);
   const snapshot = await readSnapshot('maui-bridges', output);
@@ -231,12 +232,20 @@ test('NBI snapshot preserves real ratings and vintage with an explicit Maui coun
   assert.equal(receipt.selection.where, "county_code_003 = '009'");
   assert.match(receipt.attribution, /Federal Highway Administration/);
   assert.match(receipt.metadataUrl, /bridges_nbi.html$/);
-  assert.ok(requests.filter((url) => url.searchParams.has('returnIdsOnly'))
-    .every((url) => url.searchParams.get('where') === "county_code_003 = '009'"));
+  const selections = requests.filter((url) => url.searchParams.has('returnIdsOnly'));
+  assert.equal(selections.length, 2);
+  assert.ok(selections.every((url) => url.searchParams.get('where') === "county_code_003 = '009'"));
   assert.deepEqual(snapshot.geojson.features[0].properties, bridge.properties);
   const receiptFile = path.join(output, 'maui-bridges.receipt.json');
   for (const changed of [{ dataVintage: '2026-01-01' }, { selection: { ...receipt.selection, where: '1=1' } }]) {
     await writeFile(receiptFile, JSON.stringify({ ...receipt, ...changed }));
     await assert.rejects(readSnapshot('maui-bridges', output), /provenance mismatch/);
   }
+});
+
+test('NBI refuses an unrecognized source vintage before downloading rows', async (t) => {
+  const output = await directory(t);
+  const requests = sourceFetch(t, { metadata: { ...metadata, description: 'NBI as of June 20, 2026' } });
+  await assert.rejects(fetchSnapshot('maui-bridges', output), /Source vintage changed/);
+  assert.ok(requests.every((url) => !url.pathname.endsWith('/query')));
 });

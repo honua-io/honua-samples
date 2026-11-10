@@ -51,7 +51,13 @@ function pageBatches(source, ids) {
 
 function metadataFingerprint(metadata) {
   return JSON.stringify([metadata.extent?.spatialReference, metadata.fields, metadata.editingInfo ?? null,
-    metadata.name, metadata.copyrightText]);
+    metadata.name, metadata.copyrightText, ...(metadata.description ? [metadata.description] : [])]);
+}
+
+function verifyVintage(source, metadata) {
+  if (source.vintageStatement && !metadata.description?.includes(source.vintageStatement)) {
+    throw new Error('Source vintage changed; review before downloading');
+  }
 }
 
 function provenance(source) {
@@ -61,7 +67,7 @@ function provenance(source) {
     outputCrs: 'EPSG:4326', coverageBounds: source.bounds,
     displayGeometry: { ...source.displayGeometry, warning: 'Display geometry generalized in output degrees (approximately two metres); not legal boundaries or survey measurements' },
     datumTransformation: 'No explicit datum transformation requested; server default NAD83 to WGS84 may differ by approximately one metre',
-    selection: { kind: 'Maui Nui envelope intersection; whole features; not a county boundary clip',
+    selection: { kind: `${source.where ? 'Attribute filter and ' : ''}Maui Nui envelope intersection; whole features; not a county boundary clip`,
       bounds: source.bounds, ...(source.where ? { where: source.where } : {}), completeDataset: false, pageSize } };
 }
 
@@ -88,6 +94,7 @@ export async function fetchMauiSnapshot(options) {
   const { name, directory, source } = options;
   const metadata = await json(`${source.url}?f=json`);
   nativeSpatialReference(metadata);
+  verifyVintage(source, metadata);
   const policy = await download(source.licenseUrl);
   if (!policy.toString().includes(policyStatement)) throw new Error('Source public-domain terms changed; review before downloading');
   const summary = await download(source.metadataUrl);
@@ -129,6 +136,7 @@ export async function readMauiSnapshot(options) {
   const rows = JSON.parse(files.raw);
   const ids = rows.map((row) => Number(row[':id']));
   nativeSpatialReference(metadata);
+  verifyVintage(source, metadata);
   if (!Array.isArray(receipt.selectedIds) || ids.some((id) => !Number.isSafeInteger(id))
     || new Set(ids).size !== ids.length || JSON.stringify(ids) !== JSON.stringify(receipt.selectedIds)
     || rows.length > maximumFeatures || receipt.downloaded !== rows.length

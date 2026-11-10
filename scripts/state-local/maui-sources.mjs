@@ -48,6 +48,7 @@ export const mauiSources = {
       'features_desc_006a', 'year_built_027', 'deck_cond_058', 'superstructure_cond_059',
       'substructure_cond_060', 'culvert_cond_062', 'date_of_inspect_090', 'bridge_condition'],
     where: "county_code_003 = '009'", dataVintage: '2025-06-20',
+    vintageStatement: 'as of June 20, 2025',
     metadataUrl: metadata('bridges_nbi.html'),
     attribution: `Federal Highway Administration; Bureau of Transportation Statistics (distributor); ${state}`,
   }),
