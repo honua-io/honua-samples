@@ -43,6 +43,15 @@ export const mauiSources = {
     fields: ['objectid', 'fullname', 'roadclass', 'centerlineid', 'maintby', 'town_name'],
     metadataUrl: metadata('roads_mau.pdf'), attribution: `County of Maui Enterprise GIS Department; ${state}`,
   }),
+  'maui-bridges': source('Infrastructure/MapServer/9', 'Public Works', {
+    fields: ['objectid', 'structure_number_008', 'county_code_003', 'facility_carried_007',
+      'features_desc_006a', 'year_built_027', 'deck_cond_058', 'superstructure_cond_059',
+      'substructure_cond_060', 'culvert_cond_062', 'date_of_inspect_090', 'bridge_condition'],
+    where: "county_code_003 = '009'", dataVintage: '2025-06-20',
+    vintageStatement: 'as of June 20, 2025',
+    metadataUrl: metadata('bridges_nbi.html'),
+    attribution: `Federal Highway Administration; Bureau of Transportation Statistics (distributor); ${state}`,
+  }),
   'maui-flood-hazard': source('Hazards/MapServer/4', 'Emergency Management', {
     fields: ['objectid', 'dfirm_id', 'fld_zone', 'zone_subty', 'sfha_tf', 'source_cit', 'static_bfe', 'v_datum', 'depth', 'len_unit'],
     metadataUrl: metadata('s_fld_haz_ar_state.pdf'), attribution: `Federal Emergency Management Agency; ${state}`,
