@@ -36,6 +36,6 @@ export function bindFeed(binding) {
     records = snapshot;
     links.replaceChildren();
     button.disabled = !snapshot.length;
-    status.textContent = 'The OGC feed has not been checked against this dashboard snapshot.';
+    status.textContent = snapshot.length ? 'The OGC feed has not been checked against this dashboard snapshot.' : 'Load the dashboard before checking its OGC feed.';
   };
 }

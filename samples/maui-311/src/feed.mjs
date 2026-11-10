@@ -6,7 +6,9 @@ export function collectionUrl(binding) {
 }
 
 function snapshot(records) {
-  return exportGeojson([...records].sort((a, b) => a.id.localeCompare(b.id))).features;
+  return exportGeojson([...records].sort((a, b) => a.id.localeCompare(b.id))).features.map((feature) => ({
+    ...feature, properties: { ...feature.properties, is_demo: true, exercise_only: true },
+  }));
 }
 
 export async function verifyFeed(options) {
@@ -21,7 +23,7 @@ export async function verifyFeed(options) {
       || page.numberReturned !== page.features.length
       || (page.numberMatched != null && page.numberMatched !== records.length)) throw new Error('OGC feed count does not match the dashboard');
     features.push(...page.features.map((feature) => requestFeature({ geometry: feature.geometry,
-      attributes: feature.properties?.properties ?? feature.properties })));
+      attributes: feature.properties })));
     if (features.length > records.length) throw new Error('OGC feed contains additional records');
   } while (page.features.length);
   if (JSON.stringify(snapshot(features)) !== JSON.stringify(snapshot(records))) throw new Error('OGC feed records differ from the dashboard. Refresh data and retry');

@@ -39,11 +39,26 @@ test('OGC verification rejects truncated, duplicate, altered and unlabelled feed
   }
 });
 
-test('OGC verification accepts nested imported attributes and omitted total counts', async () => {
+test('OGC verification normalizes validated protocol booleans and ignores the original import copy', async () => {
   await verifyFeed({ binding, records, getJson: async (url) => {
     const page = feedPage(url);
     page.numberMatched = null;
-    page.features.forEach((feature) => { feature.properties = { properties: feature.properties }; });
+    page.features.forEach((feature) => {
+      feature.properties.properties = { ...feature.properties, category: 'outdated' };
+      feature.properties.is_demo = 1;
+      feature.properties.exercise_only = 1;
+    });
     return page;
   } });
+});
+
+test('OGC verification rejects an unlabelled current record even when its import copy was labelled', async () => {
+  await assert.rejects(verifyFeed({ binding, records, getJson: async (url) => {
+    const page = feedPage(url);
+    page.features.forEach((feature) => {
+      feature.properties.properties = { ...feature.properties };
+      feature.properties.is_demo = false;
+    });
+    return page;
+  } }));
 });
