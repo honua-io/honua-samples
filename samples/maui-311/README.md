@@ -1,4 +1,46 @@
-# Maui 311 exercise: published SDK queries
+# Maui 311 exercise dashboard
+
+Browse fictional requests on real Maui road geometry. Status, type, fictional district
+and request/crew search filter the map, metrics, 12-week event counts and exports together.
+Select a request to inspect its timeline and assigned exercise crew. Metrics use the
+recorded scenario date; they do not imply current county activity.
+
+The dashboard reads an anonymously published exercise layer through the published
+JavaScript SDK. It checks every page before showing totals and rejects missing demo
+labels, inconsistent timelines, duplicate IDs and changing counts. CSV and GeoJSON
+exports retain the exercise labels and omit fields outside the documented contract.
+
+Build and run the repository gallery (shared fonts, theme and logos are gallery assets):
+
+```sh
+npm ci
+node scripts/build-gallery.mjs --check
+npm ci --prefix samples/maui-311
+npm run build --prefix samples/maui-311
+mkdir -p site/maui-311/app
+cp -R samples/maui-311/dist/. site/maui-311/app/
+python3 -m http.server 3000 --directory site
+```
+
+Open `/maui-311/app/?service=YOUR_SERVICE&layer=0` on that local server. The default
+API is `https://demo.honua.io`; a disposable local API can be selected with
+`&baseUrl=http://localhost:8080`. Use the service and layer from the import receipt.
+This explicit local staging step is needed while the full journey remains withheld
+from the public portfolio. No API key belongs in the URL or browser. Without a binding the page shows an honest
+unconfigured state. See [the import recipe](../../docs/state-local-data.md) to create
+an exercise layer; the public deployment is not activated by this sample.
+
+**DEMO DATA:** requests, districts and crews are fictional. Geometry is real public
+data, credited in the recipe. This app is not a county reporting service. No photos,
+notes, reporter contacts or operational feeds are included. Districts are exercise
+areas, not council wards. The map draws request geometry on a plain background and
+makes no external basemap requests.
+
+The public OGC/Open311 feed, released Studio app, Console walkthrough and executed
+stock-client MCP question remain separate completion gates. The local dashboard
+does not claim those gates have passed.
+
+## Published SDK queries
 
 Query `maui-demo-requests` with the same filter in JavaScript, Python and .NET.
 These examples are one bounded, read-only query, not the complete Studio/MCP demo.
@@ -47,3 +89,20 @@ not claim the full UI requirement passes. Dependencies must be installed as abov
 set `HONUA_SAMPLE_PYTHON` to the virtual environment's Python executable.
 
 [Import data and record provenance](../../docs/state-local-data.md).
+
+## Dashboard verification
+
+Install the SDK dependencies above, start the disposable PostGIS-only server from
+`docker/compose.yml`, then run:
+
+```sh
+HONUA_BASE_URL=http://localhost:8080 \
+HONUA_ADMIN_API_KEY=your-local-admin-key \
+HONUA_SAMPLE_PYTHON="$PWD/artifacts/state-local/venv/bin/python" \
+npx playwright test samples/maui-311/verify/dashboard.spec.mjs
+```
+
+This imports test-only requests through Honua's import flow. It checks pagination
+beyond one server page, computed totals, filters, request selection, labeled exports,
+rejection of unsafe data, retry, mobile layout and theme switching. The same check
+runs in the capability-keyed samples CI. The test also runs the three SDK contracts.

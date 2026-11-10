@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("honua-theme")==="dark"?"dark":"light"}catch{document.documentElement.dataset.theme="light"}</script>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark"><title>Maui 311 exercise · Honua</title>
+  <link rel="stylesheet" href="/state-local/assets/tokens.css">
+  <link rel="stylesheet" href="/state-local/assets/shared.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to requests</a>
+  <header class="topbar">
+    <a class="brand" href="../../state-local/" aria-label="Honua state and local demos"><img class="logo-light" src="/state-local/assets/honua-lockup.svg" alt="Honua" width="94" height="24"><img class="logo-dark" src="/state-local/assets/honua-lockup-on-dark.svg" alt="Honua" width="94" height="24"></a>
+    <span class="app-name">Maui · 311 exercise</span>
+    <nav aria-label="Dashboard"><a href="#main">Overview</a><a href="#requests">Requests</a><a href="#feeds">Public feeds</a></nav>
+    <button type="button" class="theme-toggle" aria-label="Switch to dark mode">Dark mode</button>
+  </header>
+  <div class="disclosure"><strong>DEMO DATA</strong> Fictional requests, crews and districts on real Maui road geometry. No operational use. No reporter details.</div>
+  <main id="main">
+    <div class="heading"><div><h1>311 operations</h1><p id="scenario">Connect an approved exercise layer to explore its requests.</p></div><button id="refresh" type="button" disabled>Refresh data</button></div>
+    <p id="load-status" role="status">No layer connected. Open this page with the service and layer from the approved deployment receipt.</p>
+    <div id="dashboard" hidden>
+      <form id="filters" class="filters" aria-label="Filter requests">
+        <label>Request status<select name="status"><option value="">All statuses</option><option value="exercise_open">Open</option><option value="exercise_in_progress">In progress</option><option value="exercise_closed">Closed</option></select></label>
+        <label>Request type<select name="category"><option value="">All types</option><option value="drainage">Drainage</option><option value="road_surface">Road surface</option><option value="accessibility">Accessibility</option></select></label>
+        <label>Exercise district<select name="district"><option value="">All fictional districts</option><option>Demo district 1 (fictional)</option><option>Demo district 2 (fictional)</option><option>Demo district 3 (fictional)</option></select></label>
+        <label>Find request or crew<input name="search" type="search" placeholder="Request ID or crew" autocomplete="off"></label>
+        <button type="reset">Clear filters</button>
+      </form>
+      <dl id="metrics" class="metrics" aria-label="Filtered exercise metrics"></dl>
+      <div class="workspace"><section class="map-panel" aria-label="Request map"><div id="map" role="region" aria-label="Map of fictional requests on Maui road geometry"></div><p class="map-note">Open: amber · In progress: blue · Closed: green. No basemap tiles are requested. Road segments are real geometry; requests and district assignments are fictional. Select a mapped request or use the table.</p><p id="map-status" role="status"></p></section>
+        <aside id="detail" aria-label="Request details"><h2>Request details</h2><p>Select a request on the map or in the list to inspect its exercise timeline and crew.</p></aside></div>
+      <div class="analysis"><section><h2>Opened and closed</h2><p>12 weeks ending at the exercise date · current filters</p><div class="table-scroll"><table><caption class="sr-only">Weekly request counts</caption><thead><tr><th>Week beginning (UTC)</th><th>Opened</th><th>Closed</th></tr></thead><tbody id="trend"></tbody></table></div></section>
+        <section><h2>Closure performance by type</h2><p>Closed on or before the record’s due time · current filters</p><div class="table-scroll"><table><caption class="sr-only">Exercise SLA by type</caption><thead><tr><th>Type</th><th>Closed</th><th>Within SLA</th></tr></thead><tbody id="sla"></tbody></table></div></section></div>
+      <section id="requests"><div class="section-heading"><div><h2>Requests</h2><p id="result-count" role="status"></p></div><div class="exports"><button type="button" id="csv">Download CSV</button><button type="button" id="geojson">Download GeoJSON</button></div></div><div class="table-scroll"><table><caption class="sr-only">Filtered exercise requests</caption><thead><tr><th>Request</th><th>Type</th><th>Status</th><th>Fictional district</th><th>Created (UTC)</th><th>Due (UTC)</th></tr></thead><tbody id="rows"></tbody></table></div><button type="button" id="more" hidden>Show more requests</button></section>
+    </div>
+    <section id="feeds" class="feeds"><h2>Public data and the agent task</h2><p>Question for a stock MCP client: “Which open exercise requests are overdue in Demo district 1? Cite their record IDs and due times.” Confirm every answer against the request list.</p><p id="source-link"></p><p>CSV and GeoJSON downloads contain the current filtered snapshot, including its DEMO DATA labels. This dashboard does not yet bind an OGC API Features collection or expose an Open311 endpoint.</p><p><a href="../">Run the published JavaScript, Python and .NET examples</a></p><p>Geometry: Hawaii Statewide GIS Program, public domain. Exercise records: Honua, CC0. Fictional districts are not county council boundaries.</p></section>
+  </main>
+  <script src="/state-local/assets/theme.js"></script>
+  <script type="module" src="/src/main.mjs"></script>
+</body>
+</html>

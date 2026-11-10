@@ -1,0 +1,129 @@
+import { cp, mkdtemp, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { expect, test } from '@playwright/test';
+import { BROWSER_ORIGIN_PORT, readPixels, runCommand, seedFeatureService, serverEnv } from '../../../scripts/browser-verification/harness.mjs';
+import { startStaticServer } from '../../../scripts/lib/browser-lane.mjs';
+import { buildStateLocalSite } from '../../../scripts/state-local/build-site.mjs';
+import { request } from './fixture.mjs';
+
+const sample = fileURLToPath(new URL('..', import.meta.url));
+const repo = path.resolve(sample, '../..');
+let root;
+let server;
+let binding;
+let unsafe;
+
+test.beforeAll(async ({}, info) => {
+  info.setTimeout(600_000);
+  const env = serverEnv();
+  if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(env.baseUrl).hostname)) throw new Error('Browser fixture imports require a disposable localhost server');
+  if (!await stat(path.join(sample, 'node_modules/.bin/vite')).catch(() => null)) {
+    await runCommand('npm', ['ci', '--no-audit', '--no-fund'], { cwd: sample, label: 'install dashboard' });
+  }
+  await runCommand('npm', ['test'], { cwd: sample, label: 'dashboard unit tests' });
+  await runCommand('node', ['scripts/state-local/sdk/verify.mjs', '311'], { cwd: repo, label: 'three published SDK contracts' });
+  await runCommand('npm', ['run', 'build'], { cwd: sample, label: 'build dashboard' });
+  const geojson = { type: 'FeatureCollection', features: Array.from({ length: 205 }, (_, index) => request(index)) };
+  binding = await seedFeatureService({ prefix: 'maui-311-ui', allowAnonymous: true, fixture: { geojson, count: 205 } });
+  const unlabelled = structuredClone(geojson);
+  unlabelled.features.forEach(({ properties }) => { properties.is_demo = false; });
+  unsafe = await seedFeatureService({ prefix: 'maui-311-unsafe', allowAnonymous: true, fixture: { geojson: unlabelled, count: 205 } });
+  root = await mkdtemp(path.join(tmpdir(), 'maui-311-'));
+  await cp(path.join(sample, 'dist'), path.join(root, 'maui-311/app'), { recursive: true });
+  await buildStateLocalSite({ repoRoot: repo, siteDir: root });
+  server = await startStaticServer({ rootDir: root, port: BROWSER_ORIGIN_PORT });
+});
+
+test.afterAll(async () => {
+  await server?.close();
+  if (root) await rm(root, { recursive: true, force: true });
+});
+
+function url(source = binding) {
+  const target = new URL('/maui-311/app/', server.url);
+  target.search = new URLSearchParams({ baseUrl: serverEnv().baseUrl, service: source.serviceName, layer: String(source.layerId) });
+  return target.href;
+}
+
+async function ready(page) {
+  await page.goto(url());
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass', { timeout: 60_000 });
+}
+
+test('SR-01/02/03: real-server pagination, filters, metrics, timeline and labeled exports agree', async ({ page }) => {
+  const requests = [];
+  page.on('request', (req) => { if (/^https?:/.test(req.url())) requests.push(new URL(req.url()).origin); });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await ready(page);
+  await expect(page.locator('#load-status')).toContainText('205 exercise requests');
+  await expect(page.locator('#map-status')).toContainText('205 exercise requests mapped');
+  const canvas = page.locator('#map canvas');
+  const size = await canvas.boundingBox();
+  const points = Array.from({ length: 100 }, (_, i) => [Math.floor(size.width * ((i % 10) + .5) / 10), Math.floor(size.height * (Math.floor(i / 10) + .5) / 10)]);
+  const pixels = await readPixels(page, canvas, points);
+  expect(pixels.some(({ r, g, b }) => (r > g * 1.2 && r > b * 1.2) || (b > r * 1.2 && b > g * 1.2) || (g > r * 1.2 && g > b * 1.2))).toBe(true);
+  await expect(page.locator('#metrics')).toContainText('137');
+  await expect(page.locator('#metrics')).toContainText('100%');
+  await expect(page.locator('#scenario')).toContainText('2026-11-03');
+  await expect(page.locator('#trend tr')).toHaveCount(12);
+  await page.getByLabel('Request status').selectOption('exercise_closed');
+  await expect(page.locator('#result-count')).toContainText('68 matching');
+  await page.getByRole('button', { name: 'Inspect request-003', exact: true }).click();
+  await expect(page.locator('#detail')).toContainText('Demo crew 3 (fictional)');
+  await expect(page.locator('#detail time')).toHaveCount(3);
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download GeoJSON' }).click();
+  const download = await downloaded;
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const exported = JSON.parse(Buffer.concat(chunks).toString());
+  expect(exported.features).toHaveLength(68);
+  expect(exported.features.every(({ properties }) => properties.display_label.includes('DEMO DATA'))).toBe(true);
+  await page.getByLabel('Find request or crew').fill('nonexistent');
+  await expect(page.locator('#result-count')).toContainText('0 matching');
+  await expect(page.locator('#geojson')).toBeDisabled();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(page.locator('#result-count')).toContainText('205 matching');
+  await page.getByRole('button', { name: 'Show more requests' }).click();
+  await expect(page.locator('#rows tr')).toHaveCount(50);
+  expect([...new Set(requests)].sort()).toEqual([new URL(server.url).origin, new URL(serverEnv().baseUrl).origin].sort());
+});
+
+test('SR-05: unlabelled exercise layer is rejected and retry restores a complete snapshot', async ({ page }) => {
+  await page.goto(url(unsafe));
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'fail');
+  await expect(page.locator('#load-status')).toContainText('DEMO DATA provenance');
+  await expect(page.locator('#dashboard')).toBeHidden();
+  const queries = `**/rest/services/${binding.serviceName}/FeatureServer/${binding.layerId}/query*`;
+  await page.route(queries, (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 503, message: 'Fixture outage' } }) }));
+  await page.goto(url());
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'fail');
+  await page.unroute(queries);
+  await page.getByRole('button', { name: 'Refresh data' }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
+  await expect(page.locator('#load-status')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#result-count')).toContainText('205 matching');
+});
+
+test('mobile and dark mode retain disclosure, controls and accessible request selection', async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await ready(page);
+  await expect(page.locator('.disclosure')).toBeVisible();
+  await page.getByRole('button', { name: /dark mode/i }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('311-mobile-dark.png'), fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole('button', { name: /light mode/i }).click();
+  await page.screenshot({ path: info.outputPath('311-desktop-light.png'), fullPage: true });
+});
+
+test('unconfigured app makes no claim that a county service is connected', async ({ page }) => {
+  await page.goto(new URL('/maui-311/app/', server.url).href);
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'unconfigured');
+  await expect(page.locator('#load-status')).toContainText('No layer connected');
+  await expect(page.locator('#dashboard')).toBeHidden();
+});
