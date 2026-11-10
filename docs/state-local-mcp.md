@@ -39,8 +39,12 @@ administrative proxy or add a write credential. Use the emitted public departmen
 source references; internal receipt service names may differ. Inspect schema
 before querying. For totals, finish pagination or report an incomplete result.
 If the client lacks a spatial join or required field, report that gap. For the
-property question, permits remain a manual county MAPPS lookup; no permit records
-or CPR suffixes are invented. For exercise questions, answers and exports retain
+property question, permits remain a manual lookup using the verified
+[County search](https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx) and
+[County guidance](https://mapps.mauicounty.gov/305/Searches-in-MAPPS). The form needs
+13 digits including CPR, which the parcel layer lacks. Use county records to obtain
+the full identifier; never pad the parcel TMK or invent a prefill URL, permit record
+or CPR suffix. For exercise questions, answers and exports retain
 DEMO DATA and all synthetic provenance fields.
 
 ## Recording the agent moment
