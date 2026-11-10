@@ -20,7 +20,7 @@ function servicePath(serviceName) {
   return `/api/v1/admin/services/${encodeURIComponent(serviceName)}`;
 }
 
-async function verifyLayer(env, receipt) {
+export async function verifyLayer(env, receipt) {
   const layers = await listLayers(env, receipt.connection, receipt.serviceName);
   const matches = layers.filter((layer) => layer.layerId === receipt.layerId);
   const layer = matches.length === 1 ? matches[0] : null;

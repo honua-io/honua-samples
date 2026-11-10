@@ -63,6 +63,9 @@ test('Maui pagination preserves all selected IDs, explicit reprojection and attr
   const pages = requests.filter((url) => url.searchParams.has('objectIds'));
   assert.deepEqual(pages.map((url) => url.searchParams.get('objectIds').split(',').length), [100, 1]);
   assert.ok(pages.every((url) => url.searchParams.get('outSR') === '4326'));
+  assert.ok(pages.every((url) => url.searchParams.get('maxAllowableOffset') === '0.00002' && url.searchParams.get('geometryPrecision') === '6'));
+  assert.equal(receipt.displayGeometry.maxAllowableOffset, 0.00002);
+  assert.match(receipt.displayGeometry.warning, /not legal boundaries/);
 });
 
 test('Maui rejects changed terms and unknown native CRS before accepting a snapshot', async (t) => {
@@ -115,7 +118,7 @@ test('Maui checksum and query provenance are verified before any server import',
   const file = path.join(output, 'maui-roads.receipt.json');
   const original = JSON.parse(await readFile(file, 'utf8'));
   for (const changed of [{ requests: ['https://example.test/unrelated'] }, { department: 'wrong' },
-    { outputCrs: 'EPSG:3857' }, { selectedIds: [1] }, { retrievedAt: 'invalid' }]) {
+    { outputCrs: 'EPSG:3857' }, { displayGeometry: {} }, { selectedIds: [1] }, { retrievedAt: 'invalid' }]) {
     await writeFile(file, JSON.stringify({ ...original, ...changed }));
     await assert.rejects(readSnapshot('maui-roads', output), /provenance mismatch/);
   }
