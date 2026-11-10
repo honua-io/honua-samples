@@ -15,3 +15,15 @@ export function sourceBinding(search) {
   return { baseUrl: url.origin, serviceId, layerId: Number(layer) };
 }
 
+export function namedBindings(search, names) {
+  const params = new URLSearchParams(search);
+  const entries = names.map((name) => [name, sourceBinding(new URLSearchParams({
+    baseUrl: params.get('baseUrl') ?? 'https://demo.honua.io',
+    ...(params.has(`${name}Service`) ? { service: params.get(`${name}Service`) } : {}),
+    ...(params.has(`${name}Layer`) ? { layer: params.get(`${name}Layer`) } : {})
+  }))]);
+  if (entries.every(([, binding]) => !binding)) return null;
+  if (entries.some(([, binding]) => !binding)) throw new Error(`Connect all layers from approved import receipts: ${names.join(', ')}`);
+  return Object.fromEntries(entries);
+}
+

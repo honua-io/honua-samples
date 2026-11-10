@@ -1,0 +1,5 @@
+@import 'maplibre-gl/dist/maplibre-gl.css';
+@import '../../../shared/state-local/operations.css';
+#freshness { font-size: 13px; font-variant-numeric: tabular-nums; }
+#records { margin-top: 32px; }
+@media (max-width: 640px) { nav { gap: 20px; flex-wrap: wrap; }.app-name { max-width: 160px; } }
