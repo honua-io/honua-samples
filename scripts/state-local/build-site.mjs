@@ -1,6 +1,7 @@
 // The standalone sample owns shared assets so clean sample exports remain buildable.
 import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { approvedPage } from '../../shared/state-local/approved-page.mjs';
 
 export async function buildStateLocalSite({ repoRoot, siteDir }) {
   const source = path.join(repoRoot, 'scripts/state-local/site');
@@ -8,7 +9,15 @@ export async function buildStateLocalSite({ repoRoot, siteDir }) {
   const output = path.join(siteDir, 'state-local');
   const assets = path.join(output, 'assets');
   await mkdir(assets, { recursive: true });
-  await cp(path.join(source, 'index.html'), path.join(output, 'index.html'));
+  const landing = path.join(output, 'index.html');
+  if (!(await stat(landing).catch(() => null))?.isFile()) {
+    await cp(path.join(source, 'index.html'), landing);
+  }
+  await mkdir(path.join(output, 'switching'), { recursive: true });
+  await writeFile(path.join(output, 'switching/index.html'), await approvedPage({
+    template: path.join(repoRoot, 'scripts/state-local/approved/09-switching.html'),
+    assets: path.join(repoRoot, 'samples/maui-emergency/approved/src'), data: {},
+  }));
   await cp(path.join(source, 'overview.css'), path.join(assets, 'overview.css'));
   await cp(path.join(sample, 'src/tokens.css'), path.join(assets, 'tokens.css'));
   const shared = await readFile(path.join(sample, 'src/shared.css'), 'utf8');
@@ -20,13 +29,14 @@ export async function buildStateLocalSite({ repoRoot, siteDir }) {
 
 // Validate after all gallery detail pages have been emitted.
 export async function validateStateLocalLinks(siteDir) {
-  const landing = path.join(siteDir, 'state-local/index.html');
-  const html = await readFile(landing, 'utf8');
-  for (const [, href] of html.matchAll(/href="([^"#][^"]*)"/g)) {
-    if (/^[a-z]+:/i.test(href)) continue;
-    const target = new URL(href, 'https://gallery.invalid/state-local/');
-    const relative = decodeURIComponent(target.pathname).replace(/^\//, '');
-    const file = path.join(siteDir, relative, target.pathname.endsWith('/') ? 'index.html' : '');
-    if (!(await stat(file).catch(() => null))?.isFile()) throw new Error(`Maui landing link does not resolve: ${href}`);
+  for (const page of ['index.html', 'switching/index.html']) {
+    const html = (await readFile(path.join(siteDir, 'state-local', page), 'utf8')).replace(/(<script\b[^>]*>)[\s\S]*?<\/script>/gi, '$1</script>');
+    for (const [, href] of html.matchAll(/(?:href|src)="([^"#][^"]*)"/g)) {
+      if (/^[a-z]+:/i.test(href)) continue;
+      const target = new URL(href, `https://gallery.invalid/state-local/${page}`);
+      const relative = decodeURIComponent(target.pathname).replace(/^\//, '');
+      const file = path.join(siteDir, relative, target.pathname.endsWith('/') ? 'index.html' : '');
+      if (!(await stat(file).catch(() => null))?.isFile()) throw new Error(`State/local link does not resolve: ${page}: ${href}`);
+    }
   }
 }
