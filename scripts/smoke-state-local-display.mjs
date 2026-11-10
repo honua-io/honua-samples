@@ -66,6 +66,37 @@ try {
   await expect(page.locator('#shareUrl')).toContainText('tmk=237004006');
   assert.deepEqual(errors, []);
   console.log('PASS Property mobile: parcel card, map and share sheet');
+
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`${server.url}/state-local/property/?tmk=234039007`);
+  await expect(page.locator('#pTitle')).toContainText('3-4-039:007');
+  for (const tab of ['t0', 't1', 't2', 't3', 't4']) {
+    await page.locator(`#${tab}`).click();
+    await expect(page.locator(`#${tab}`)).toHaveAttribute('aria-selected', 'true');
+  }
+  await page.locator('#t3').click();
+  await expect(page.locator('#hazFlood')).toHaveText('Mapped flood zone X');
+  await expect(page.locator('#hazTsunami')).toContainText('Outside');
+  await expect(page.locator('#hazValue')).toHaveText('$138,300');
+  await page.click('#shareBtn');
+  await page.click('#copyShare');
+  await expect(page.locator('#copyShare')).toHaveText('Copied');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${server.url}/state-local/property/mobile/?tmk=234039007`);
+  await expect(page.locator('#tmk')).toContainText('3-4-039:007');
+  await page.locator('details.plain summary').click();
+  await expect(page.locator('#floodQuestion')).toContainText('zone X');
+  await expect(page.locator('#floodGuidance')).toContainText('outside');
+  await page.click('#shareBtn');
+  await page.click('#copyShare');
+  await expect(page.locator('#copyShare')).toHaveText('Copied');
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('denied'); } } }));
+  await page.click('#copyShare');
+  await expect(page.locator('#copyShare')).toHaveText('Select link above to copy');
+  assert.deepEqual(errors, []);
+  console.log('PASS Property regressions: clickable tabs, selected-parcel hazards and clipboard success/failure');
+
 } finally {
   await context.close();
   await browser.close();
