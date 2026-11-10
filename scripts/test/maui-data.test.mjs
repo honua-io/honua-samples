@@ -39,7 +39,8 @@ function sourceFetch(t, overrides = {}) {
     if (url.pathname.endsWith('/query')) {
       if (url.searchParams.has('returnIdsOnly')) return response(overrides.selection ?? { objectIds: Array.from({ length: 101 }, (_, i) => i + 1) });
       const ids = url.searchParams.get('objectIds').split(',').map(Number);
-      return response(overrides.page ?? { type: 'FeatureCollection', features: ids.map(feature) });
+      const page = typeof overrides.page === 'function' ? overrides.page(url) : overrides.page;
+      return response(page ?? { type: 'FeatureCollection', features: ids.map(feature) });
     }
     if (url.searchParams.get('f') === 'json') return response(overrides.metadata ?? metadata);
     if (url.pathname.endsWith('.pdf')) return new Response('source summary');
@@ -64,27 +65,30 @@ test('Maui pagination preserves all selected IDs, explicit reprojection and attr
   const pages = requests.filter((url) => url.searchParams.has('objectIds'));
   assert.deepEqual(pages.map((url) => url.searchParams.get('objectIds').split(',').length), [100, 1]);
   assert.ok(pages.every((url) => url.searchParams.get('outSR') === '4326'));
-  assert.ok(pages.every((url) => url.searchParams.get('maxAllowableOffset') === '0.00002' && !url.searchParams.has('geometryPrecision')));
+  assert.ok(pages.every((url) => url.searchParams.get('maxAllowableOffset') === '0.00002'
+    && url.searchParams.get('geometryPrecision') === '15'));
   assert.equal(receipt.displayGeometry.maxAllowableOffset, 0.00002);
   assert.match(receipt.displayGeometry.warning, /not legal boundaries/);
 });
 
-test('Maui zoning retains narrow polygon coordinates without decimal quantization', async (t) => {
+test('Maui zoning retains narrow polygon coordinates despite upstream simplification rounding', async (t) => {
   const output = await directory(t);
   const coordinates = [[-156.32934949752473, 20.821258123441],
     [-156.32935570852428, 20.821258234709205], [-156.3293516922591, 20.821257931040343],
     [-156.32934949752473, 20.821258123441]];
   const requests = sourceFetch(t, { selection: { objectIds: [3255] },
-    page: { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { objectid: 3255 },
-      geometry: { type: 'Polygon', coordinates: [coordinates] } }] } });
+    page: (url) => {
+      const precision = Number(url.searchParams.get('geometryPrecision') ?? 6);
+      const ring = coordinates.map((point) => point.map((ordinate) => Number(ordinate.toFixed(precision))));
+      return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { objectid: 3255 },
+        geometry: { type: 'Polygon', coordinates: [ring] } }] };
+    } });
   await fetchSnapshot('maui-zoning', output);
   const snapshot = await readSnapshot('maui-zoning', output);
   const ring = snapshot.geojson.features[0].geometry.coordinates[0];
   assert.deepEqual(ring, coordinates);
-  const [a, b, c] = ring;
-  assert.notEqual((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]), 0);
   assert.ok(requests.filter((url) => url.searchParams.has('objectIds'))
-    .every((url) => !url.searchParams.has('geometryPrecision')));
+    .every((url) => url.searchParams.get('geometryPrecision') === '15'));
 });
 
 test('Maui rejects changed terms and unknown native CRS before accepting a snapshot', async (t) => {

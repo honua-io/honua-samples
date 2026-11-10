@@ -6,7 +6,7 @@ const licenseUrl = 'https://planning.hawaii.gov/gis/download-gis-data-expanded/'
 function source(endpoint, department, details) {
   return { id: endpoint, url: `${portal}${endpoint}`, department,
     license: 'public-domain', licenseUrl, bounds: mauiBounds, geometryBounds: hawaiiBounds,
-    geometry: { field: 'the_geom' }, displayGeometry: { maxAllowableOffset: 0.00002 }, ...details };
+    geometry: { field: 'the_geom' }, displayGeometry: { maxAllowableOffset: 0.00002, geometryPrecision: 15 }, ...details };
 }
 const metadata = (file) => `https://files.hawaii.gov/dbedt/op/gis/data/${file}`;
 const state = 'Hawaii Statewide GIS Program';
