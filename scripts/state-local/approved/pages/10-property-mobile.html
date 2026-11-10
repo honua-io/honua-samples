@@ -130,6 +130,7 @@
           <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>One citation per layer</span><span><svg class="ico"><use href="#i-check"/></svg>Read-only</span><span><svg class="ico"><use href="#i-info"/></svg>Not legal advice; confirm with Planning</span></div>
         </div>
       </div>
+      <p id="aiUnavailable" class="muted" hidden>Demo answer is available for the featured parcel only. Review this parcel’s mapped layers below and consult Planning.</p>
       <details class="plain">
         <summary><svg class="ico" style="color:var(--hz-flood)"><use href="#i-drop"/></svg><span id="floodQuestion"></span><svg class="ico faint"><use href="#i-chev-d"/></svg></summary>
         <p id="floodGuidance"></p>
@@ -167,11 +168,7 @@
 <script>
 (() => {
   const FEAT = 27904;
-  const TV = (v) => (typeof v === "string" && v.startsWith("--") ? HM.cssVar(v) : Array.isArray(v) ? v.map(TV) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, TV(x)])) : v);
-  function themed(map, layer, before) {
-    const spec = layer.paint; map.addLayer({ ...layer, paint: TV(spec) }, before);
-    map.on("honua:theme", () => Object.entries(spec).forEach(([k, v]) => map.setPaintProperty(layer.id, k, TV(v))));
-  }
+
   const ZN = HD.zone_names, CPN = HD.cp_names;
   const parcels = HM.get("parcels");
   const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
@@ -228,7 +225,8 @@
       `${ok}<span>Review the <b>3.2 ft sea-level-rise</b> exposure overlay. ${cite("slr32/1", "slr")}</span>`,
       `${info}<span>Shoreline setback not checked: source pending.</span>`,
     ].map((s) => `<li>${s}</li>`).join("");
-    document.getElementById("ai").style.opacity = 1;
+    document.getElementById("ai").hidden = id !== FEAT;
+    document.getElementById("aiUnavailable").hidden = id === FEAT;
     if (map && map.getSource("parcels")) { if (sel != null) map.setFeatureState({ source: "parcels", id: sel }, { sel: false }); sel = id; map.setFeatureState({ source: "parcels", id }, { sel: true }); map.setFilter("parcels-sel", ["==", ["get", "id"], id]); }
   }
   let sel = null, map = null;
@@ -237,8 +235,8 @@
     onload: (m) => {
       HM.overlays(m, ["zoning", "slr", "flood", "tsunami", "parcels"], "roads-casing");
       HM.add(m, "sma", HD.sma);
-      themed(m, { id: "sma", type: "fill", source: "sma", paint: { "fill-color": "--hz-slr", "fill-opacity": 0.12 } }, "roads-casing");
-      themed(m, { id: "sma-line", type: "line", source: "sma", paint: { "line-color": "--hz-slr", "line-width": 1.5, "line-dasharray": [2, 2] } });
+      HM.themed(m, { id: "sma", type: "fill", source: "sma", paint: { "fill-color": "--hz-slr", "fill-opacity": 0.12 } }, "roads-casing");
+      HM.themed(m, { id: "sma-line", type: "line", source: "sma", paint: { "line-color": "--hz-slr", "line-width": 1.5, "line-dasharray": [2, 2] } });
       HM.bindToggles(m);
       const sh = HD.shelters.features.find((s) => s.properties.name.startsWith("Kahului Elementary"));
       if (sh) { const el = document.createElement("div"); el.className = "mappin shelter"; el.innerHTML = '<svg class="ico"><use href="#i-home"/></svg>'; el.title = "School exercise anchor: Kahului Elementary"; new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(sh.geometry.coordinates).addTo(m); }

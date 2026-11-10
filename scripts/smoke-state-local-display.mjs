@@ -31,7 +31,12 @@ try {
   assert.equal(csv.status(), 200);
   assert.match(await csv.text(), /synthetic_demo/);
   const geojson = await context.request.get(`${server.url}/state-local/data/approved/requests.geojson`);
-  assert.equal((await geojson.json()).features.length, 468);
+  assert.equal((await geojson.json()).features.length, 469);
+  const exported = (await (await context.request.get(`${server.url}/state-local/data/approved/requests.geojson`)).json()).features;
+  const embedded = await page.evaluate(() => HD.demo.requests);
+  assert.deepEqual(exported.map(({ properties, geometry }) => ({ ...properties, c: geometry.coordinates })), embedded);
+  assert.ok(embedded.some(({ id }) => id === 'SR-26-18708'));
+  assert.match(await csv.text(), /SR-26-18708/);
   assert.deepEqual(errors, []);
   console.log('PASS 311: filters, labelled detail, downloadable GeoJSON and CSV');
 
@@ -86,6 +91,8 @@ try {
   await page.goto(`${server.url}/state-local/property/mobile/?tmk=234039007`);
   await expect(page.locator('#tmk')).toContainText('3-4-039:007');
   await page.locator('details.plain summary').click();
+  await expect(page.locator('#ai')).toBeHidden();
+  await expect(page.locator('#aiUnavailable')).toBeVisible();
   await expect(page.locator('#floodQuestion')).toContainText('zone X');
   await expect(page.locator('#floodGuidance')).toContainText('outside');
   await page.click('#shareBtn');

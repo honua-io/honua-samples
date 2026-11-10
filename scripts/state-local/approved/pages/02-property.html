@@ -256,11 +256,7 @@
 <script>
 (() => {
   const FEAT = 27904;
-  const TV = (v) => (typeof v === "string" && v.startsWith("--") ? HM.cssVar(v) : Array.isArray(v) ? v.map(TV) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, TV(x)])) : v);
-  function themed(map, layer, before) {
-    const spec = layer.paint; map.addLayer({ ...layer, paint: TV(spec) }, before);
-    map.on("honua:theme", () => Object.entries(spec).forEach(([k, v]) => map.setPaintProperty(layer.id, k, TV(v))));
-  }
+
   const parcels = HM.get("parcels");
   const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
   const ZN = HD.zone_names;
@@ -330,12 +326,12 @@
     onload: (m) => {
       HM.overlays(m, ["zoning", "slr", "flood", "tsunami", "parcels"], "roads-casing");
       HM.add(m, "slud", HD.slud); HM.add(m, "sma", HD.sma); HM.add(m, "mip", HD.mip_growth); HM.add(m, "cplan", "cplan");
-      themed(m, { id: "slud-line", type: "line", source: "slud", paint: { "line-color": "--viz-5", "line-width": 2, "line-opacity": 0.85 } });
-      themed(m, { id: "slud-lbl", type: "fill", source: "slud", paint: { "fill-color": ["match", ["get", "lud"], "U", "--viz-5", "A", "--viz-6", "C", "--viz-1", "R", "--viz-2", "--viz-8"], "fill-opacity": 0.12 } }, "roads-casing");
-      themed(m, { id: "sma-line", type: "line", source: "sma", paint: { "line-color": "--hz-slr", "line-width": 2.2, "line-dasharray": [2, 1.5] } });
-      themed(m, { id: "cplan-line", type: "line", source: "cplan", paint: { "line-color": "--viz-8", "line-width": 1, "line-opacity": 0.9 } });
-      themed(m, { id: "mip-line", type: "line", source: "mip", paint: { "line-color": "--c-ok", "line-width": 2.4 } });
-      themed(m, { id: "mm-line", type: "line", source: "parcels", filter: ["==", ["get", "mm"], 1], paint: { "line-color": "--c-danger", "line-width": 2 } });
+      HM.themed(m, { id: "slud-line", type: "line", source: "slud", paint: { "line-color": "--viz-5", "line-width": 2, "line-opacity": 0.85 } });
+      HM.themed(m, { id: "slud-lbl", type: "fill", source: "slud", paint: { "fill-color": ["match", ["get", "lud"], "U", "--viz-5", "A", "--viz-6", "C", "--viz-1", "R", "--viz-2", "--viz-8"], "fill-opacity": 0.12 } }, "roads-casing");
+      HM.themed(m, { id: "sma-line", type: "line", source: "sma", paint: { "line-color": "--hz-slr", "line-width": 2.2, "line-dasharray": [2, 1.5] } });
+      HM.themed(m, { id: "cplan-line", type: "line", source: "cplan", paint: { "line-color": "--viz-8", "line-width": 1, "line-opacity": 0.9 } });
+      HM.themed(m, { id: "mip-line", type: "line", source: "mip", paint: { "line-color": "--c-ok", "line-width": 2.4 } });
+      HM.themed(m, { id: "mm-line", type: "line", source: "parcels", filter: ["==", ["get", "mm"], 1], paint: { "line-color": "--c-danger", "line-width": 2 } });
       HM.bindToggles(m);
       const sh = HD.shelters.features.find((s) => s.properties.name.startsWith("Kahului Elementary"));
       if (sh) { const el = document.createElement("div"); el.className = "mappin shelter"; el.innerHTML = '<svg class="ico"><use href="#i-home"/></svg>'; el.title = "School exercise anchor: Kahului Elementary"; new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(sh.geometry.coordinates).addTo(m); HM.label(m, [sh.geometry.coordinates[0], sh.geometry.coordinates[1] - 0.00045], "Kahului Elementary · exercise anchor", "poi"); }
