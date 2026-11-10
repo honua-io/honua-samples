@@ -1,5 +1,9 @@
 import * as maplibregl from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
 import { positions } from './source.mjs';
+
+maplibregl.setWorkerUrl(workerUrl);
 
 export function mapUnavailable() {
   document.querySelector('#map-status').textContent = 'Map unavailable. The request list and downloads remain available.';
