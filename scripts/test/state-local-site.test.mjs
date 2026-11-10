@@ -47,3 +47,26 @@ test('link validation ignores inline source examples while checking actual marku
     await assert.rejects(validateStateLocalLinks(siteDir), /missing-page.html/);
   } finally { await rm(siteDir, { recursive: true, force: true }); }
 });
+
+test('gallery preserves the separately built landing and checks Switching links', async () => {
+  const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-site-'));
+  try {
+    await mkdir(path.join(siteDir, 'state-local'), { recursive: true });
+    await writeFile(path.join(siteDir, 'state-local/index.html'), '<main>Approved landing</main>');
+    await buildStateLocalSite({ repoRoot, siteDir });
+    assert.equal(await readFile(path.join(siteDir, 'state-local/index.html'), 'utf8'), '<main>Approved landing</main>');
+    const switching = await readFile(path.join(siteDir, 'state-local/switching/index.html'), 'utf8');
+    assert.match(switching, /including QField/);
+    assert.match(switching, /Collect field app are in development/);
+    await assert.rejects(validateStateLocalLinks(siteDir), /switching\/index.html:/);
+    for (const route of ['property', '311', 'emergency', 'public-works']) {
+      await mkdir(path.join(siteDir, 'state-local', route), { recursive: true });
+      await writeFile(path.join(siteDir, 'state-local', route, 'index.html'), '<main>Published journey</main>');
+    }
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="source-only.html">`;</script><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script src="missing.js"></script>');
+    await assert.rejects(validateStateLocalLinks(siteDir), /switching\/index.html: missing.js/);
+  } finally { await rm(siteDir, { recursive: true, force: true }); }
+});
