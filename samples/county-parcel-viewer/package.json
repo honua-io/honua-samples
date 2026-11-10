@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@honua/sdk-js": "0.2.10",
+    "@honua/sdk-js": "0.3.2",
     "@turf/area": "7.4.0",
     "@turf/bbox": "7.4.0",
     "@turf/boolean-contains": "7.4.0",

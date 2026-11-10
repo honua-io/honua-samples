@@ -17,6 +17,8 @@ import * as maplibregl from "maplibre-gl";
 import { FetchSource, PMTiles, Protocol, type RangeResponse, type Source } from "pmtiles";
 
 import type { ViewerConfig } from "./config.js";
+import { installBuildingControl } from "./buildings.js";
+import { token, reducedMotion } from "./dom.js";
 import { isAbort, logRequest, settle } from "./request-log.js";
 
 /** Below this zoom a click would pick a parcel too small to see, so it only hints. */
@@ -64,12 +66,6 @@ function pmtilesArchive(archiveUrl: string): PMTiles {
   protocol.add(archive);
   return archive;
 }
-
-function token(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export interface ParcelMap {
   readonly map: maplibregl.Map;
@@ -186,6 +182,7 @@ function watchTheme(map: maplibregl.Map): void {
       ["basemap-earth", "fill-color", "--map-land"], ["basemap-water", "fill-color", "--map-water"],
       ["basemap-roads", "line-color", "--map-road"], ["parcel-outlines", "line-color", "--map-parcel"],
       ["parcel-selected-fill", "fill-color", "--map-select"], ["parcel-selected-line", "line-color", "--map-select-line"],
+      ["overture-buildings", "fill-extrusion-color", "--map-select"],
       ["flood-fill", "fill-color", "--hz-flood"], ["flood-line", "line-color", "--hz-flood"],
     ] as const;
     for (const [layer, paint, color] of paints) if (map.getLayer(layer)) map.setPaintProperty(layer, paint, token(color));
@@ -234,6 +231,7 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
       map.addLayer({ id: "flood-fill", type: FILL_LAYER, source: "flood", paint: { "fill-color": token("--hz-flood"), "fill-opacity": 0.18 } }, underOutline);
       map.addLayer({ id: "flood-line", type: "line", source: "flood", paint: { "line-color": token("--hz-flood"), "line-opacity": 0.6, "line-width": 1, "line-dasharray": [3, 2] } }, underOutline);
       events.onBasemap(await addBasemap(map, config));
+      installBuildingControl(map, { archiveUrl: config.buildingsUrl, archiveFor: pmtilesArchive });
       resolve();
     });
   });
