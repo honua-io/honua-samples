@@ -53,9 +53,9 @@ test('EM-01 bounded slice: real-server map, fictional capacity, filters and keyb
   await expect(page.locator('#rows tr')).toHaveCount(25);
   await page.getByRole('button', { name: 'Show more records' }).click();
   await expect(page.locator('#rows tr')).toHaveCount(33);
-  await page.getByLabel('Resource', { exact: true }).selectOption('exercise_closure');
+  await page.getByRole('combobox', { name: /^Resource/ }).selectOption('exercise_closure');
   await expect(page.locator('#rows tr')).toHaveCount(3);
-  await page.getByLabel('Exercise status', { exact: true }).selectOption('exercise_open');
+  await page.getByRole('combobox', { name: /^Exercise status/ }).selectOption('exercise_open');
   await expect(page.locator('#rows tr')).toHaveCount(1);
   const record = page.locator('#rows').getByRole('button', { name: 'exercise_closure-1', exact: true });
   await record.focus();
