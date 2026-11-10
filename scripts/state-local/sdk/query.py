@@ -23,7 +23,7 @@ features = []
 for feature in result.features:
     row = dict(feature.properties)
     if scenario["exercise"] and (row.get("data_origin") != "synthetic_demo"
-        or row.get("is_demo") is not True or row.get("exercise_only") is not True
+        or row.get("is_demo") not in (True, 1) or row.get("exercise_only") not in (True, 1)
         or "DEMO DATA" not in str(row.get("display_label", ""))):
         raise ValueError("Exercise record is missing its DEMO DATA provenance")
     features.append({"attributes": row, "geometry": feature.geometry})

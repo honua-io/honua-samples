@@ -56,8 +56,8 @@ function runSdk(command, args, binding) {
   assert.equal(output.source, `${env.baseUrl}/rest/services/${binding.serviceName}/FeatureServer/${binding.layerId}`);
   for (const feature of output.features) {
     assert.equal(feature.attributes.data_origin, 'synthetic_demo');
-    assert.equal(feature.attributes.is_demo, true);
-    assert.equal(feature.attributes.exercise_only, true);
+    assert.ok([true, 1].includes(feature.attributes.is_demo), 'is_demo must remain affirmative');
+    assert.ok([true, 1].includes(feature.attributes.exercise_only), 'exercise_only must remain affirmative');
     assert.match(feature.attributes.display_label, /DEMO DATA/);
     assert.ok(feature.geometry, 'SDK portion: query must return geometry');
   }

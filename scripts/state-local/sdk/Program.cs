@@ -23,11 +23,14 @@ foreach (var feature in features)
     if (!scenario.GetProperty("exercise").GetBoolean()) continue;
     var row = feature.Attributes;
     if (row is null || !row.TryGetValue("data_origin", out var origin) || origin.GetString() != "synthetic_demo"
-        || !row.TryGetValue("is_demo", out var demo) || demo.ValueKind != JsonValueKind.True
-        || !row.TryGetValue("exercise_only", out var exercise) || exercise.ValueKind != JsonValueKind.True
+        || !row.TryGetValue("is_demo", out var demo) || !IsAffirmative(demo)
+        || !row.TryGetValue("exercise_only", out var exercise) || !IsAffirmative(exercise)
         || !row.TryGetValue("display_label", out var label) || label.GetString()?.Contains("DEMO DATA") != true)
         throw new InvalidOperationException("Exercise record is missing its DEMO DATA provenance");
 }
 Console.WriteLine(JsonSerializer.Serialize(new { source = $"{baseUrl}/rest/services/{Uri.EscapeDataString(service)}/FeatureServer/{layer}",
     scenario = args[0], limit = 20, completeDataset = false, features = features },
     new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+
+static bool IsAffirmative(JsonElement value) => value.ValueKind == JsonValueKind.True
+    || (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) && number == 1);

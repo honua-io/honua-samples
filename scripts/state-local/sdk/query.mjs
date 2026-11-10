@@ -16,8 +16,8 @@ const result = await client.queryFeatures({ serviceId, layerId, where: scenario.
 if (!Array.isArray(result.features)) throw new Error('Query omitted features');
 for (const feature of result.features) {
   const row = feature.attributes;
-  if (scenario.exercise && (row?.data_origin !== 'synthetic_demo' || row.is_demo !== true
-    || row.exercise_only !== true || !row.display_label?.includes('DEMO DATA'))) {
+  if (scenario.exercise && (row?.data_origin !== 'synthetic_demo' || ![true, 1].includes(row.is_demo)
+    || ![true, 1].includes(row.exercise_only) || !row.display_label?.includes('DEMO DATA'))) {
     throw new Error('Exercise record is missing its DEMO DATA provenance');
   }
 }
