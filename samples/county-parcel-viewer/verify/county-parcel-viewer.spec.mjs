@@ -497,6 +497,7 @@ test("SHELL-03: gallery frame fits the property shell at desktop and mobile widt
     const frame = page.frameLocator("iframe");
     await expect(frame.locator("body")).toBeVisible();
     expect(await page.locator("iframe").evaluate((element) => element.clientHeight)).toBeGreaterThanOrEqual(920);
+    expect(await frame.locator("html").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
     if (width > 720) {
       expect(await frame.locator("html").evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
     }

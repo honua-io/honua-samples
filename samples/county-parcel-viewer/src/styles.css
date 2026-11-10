@@ -15,7 +15,7 @@ body {
 .bar .brand span { color: var(--c-text-2); font-weight: 500; }
 .fullscreen { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 700; }
 .tag { padding: 2px 8px; border: 1px solid var(--c-border); border-radius: 2px; color: var(--c-text-2); font-size: 13px; white-space: nowrap; }
-.bar-actions { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+.bar-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 
 .search { display: block; padding: 14px 24px; border-bottom: 1px solid var(--c-border); background: var(--c-surface); }
 .search label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 700; }
