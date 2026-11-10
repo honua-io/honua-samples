@@ -892,9 +892,7 @@ function renderIndexPage({ contentSections, cards, keyByKey, generatedAt, source
   const bodyHtml = `
 <section class="intro">
   <div class="intro-copy">
-    <p class="eyebrow">State and local government</p>
-    <p><a class="button primary" href="./state-local/">Honua for Maui County — explore the county journeys ↗</a></p>
-    <p class="eyebrow">Supporting code catalog / ${cards.length} maintained entries</p>
+    <p class="eyebrow">State and local government</p><p><a class="button primary" href="./state-local/">Honua for Maui County — explore the county journeys ↗</a></p><p class="eyebrow">Supporting code catalog / ${cards.length} maintained entries</p>
     <h1>Make the first request. See the exact result.</h1>
     <p>Small, reproducible examples across Honua Server and the JavaScript SDK. Run a verified browser build when one exists, then inspect the source and evidence.</p>
     <div class="intro-actions"><a class="button primary" href="#examples">Start with examples</a><a class="button" href="#catalog">Search all content</a></div>

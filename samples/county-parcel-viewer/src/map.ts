@@ -25,6 +25,11 @@ const OUTLINE_MIN_ZOOM = 12;
 const PARCEL_TILES_MIN_ZOOM = 10;
 const PARCEL_SOURCE_LAYER = "layer";
 const MAUI_VIEW = { center: [-156.33, 20.8] as [number, number], zoom: 8.6 };
+const BASEMAP_SOURCE = "basemap";
+const FILL_LAYER = "fill";
+const WATER_LAYER = "water";
+const ROAD_WIDTH: maplibregl.ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 10, 0.5, 16, 4];
+const PARCEL_WIDTH: maplibregl.ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 12, 0.4, 16, 1.2, 19, 2];
 
 /** A PMTiles source that records each byte range it reads. */
 class LoggedSource implements Source {
@@ -118,15 +123,15 @@ async function addBasemap(map: maplibregl.Map, config: ViewerConfig): Promise<st
     map.addSource("basemap", { type: "vector", url: `pmtiles://${config.basemapUrl}` });
     // Under every data layer.
     const before = map.getStyle().layers.find((layer) => layer.id !== "background")?.id;
-    map.addLayer({ id: "basemap-earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": token("--map-land") } }, before);
-    map.addLayer({ id: "basemap-water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": token("--map-water") } }, before);
+    map.addLayer({ id: "basemap-earth", type: FILL_LAYER, source: BASEMAP_SOURCE, "source-layer": "earth", paint: { "fill-color": token("--map-land") } }, before);
+    map.addLayer({ id: "basemap-water", type: FILL_LAYER, source: BASEMAP_SOURCE, "source-layer": WATER_LAYER, paint: { "fill-color": token("--map-water") } }, before);
     map.addLayer(
       {
         id: "basemap-roads",
         type: "line",
-        source: "basemap",
+        source: BASEMAP_SOURCE,
         "source-layer": "roads",
-        paint: { "line-color": token("--map-road"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 16, 4] },
+        paint: { "line-color": token("--map-road"), "line-width": ROAD_WIDTH },
       },
       before,
     );
@@ -154,11 +159,11 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
     source: "parcels",
     "source-layer": PARCEL_SOURCE_LAYER,
     minzoom: OUTLINE_MIN_ZOOM,
-    paint: { "line-color": token("--map-parcel"), "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 16, 1.2, 19, 2] },
+    paint: { "line-color": token("--map-parcel"), "line-width": PARCEL_WIDTH },
   });
   map.addLayer({
     id: "parcel-selected-fill",
-    type: "fill",
+    type: FILL_LAYER,
     source: "parcels",
     "source-layer": PARCEL_SOURCE_LAYER,
     filter: ["==", ["get", "tmk_txt"], ""],
@@ -174,15 +179,7 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
   });
 }
 
-export function createParcelMap(container: HTMLElement, config: ViewerConfig, events: MapEvents): ParcelMap {
-  const map = new maplibregl.Map({
-    container,
-    style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": token("--map-land") } }] },
-    center: MAUI_VIEW.center,
-    zoom: MAUI_VIEW.zoom,
-    attributionControl: { compact: true, customAttribution: "Basemap © OpenStreetMap contributors (Protomaps) · Parcels, zoning: County of Maui · Flood zones: FEMA" },
-    cooperativeGestures: false,
-  });
+function watchTheme(map: maplibregl.Map): void {
   const restyle = () => {
     const paints = [
       ["background", "background-color", map.getLayer("basemap-water") ? "--map-water" : "--map-land"],
@@ -195,6 +192,18 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
   };
   document.addEventListener("honua:theme", restyle);
   map.on("remove", () => document.removeEventListener("honua:theme", restyle));
+}
+
+export function createParcelMap(container: HTMLElement, config: ViewerConfig, events: MapEvents): ParcelMap {
+  const map = new maplibregl.Map({
+    container,
+    style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": token("--map-land") } }] },
+    center: MAUI_VIEW.center,
+    zoom: MAUI_VIEW.zoom,
+    attributionControl: { compact: true, customAttribution: "Basemap © OpenStreetMap contributors (Protomaps) · Parcels, zoning: County of Maui · Flood zones: FEMA" },
+    cooperativeGestures: false,
+  });
+  watchTheme(map);
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   // On a phone the expanded credit line covers a third of the 38vh map; it
   // starts collapsed there behind MapLibre's (i) button.
@@ -222,7 +231,7 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
       // Flood zones sit over the selected parcel's fill and under its outline.
       const underOutline = map.getLayer("parcel-selected-line") ? "parcel-selected-line" : undefined;
       map.addSource("flood", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({ id: "flood-fill", type: "fill", source: "flood", paint: { "fill-color": token("--hz-flood"), "fill-opacity": 0.18 } }, underOutline);
+      map.addLayer({ id: "flood-fill", type: FILL_LAYER, source: "flood", paint: { "fill-color": token("--hz-flood"), "fill-opacity": 0.18 } }, underOutline);
       map.addLayer({ id: "flood-line", type: "line", source: "flood", paint: { "line-color": token("--hz-flood"), "line-opacity": 0.6, "line-width": 1, "line-dasharray": [3, 2] } }, underOutline);
       events.onBasemap(await addBasemap(map, config));
       resolve();
