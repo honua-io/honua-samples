@@ -376,7 +376,7 @@
     $("#sMeta").innerHTML = `${s.live ? `<span class="chip accent">Live preview</span>` : `<span class="chip">Source and readme</span>`}${st}${s.langs.map((l) => `<span class="chip">${esc(l)}</span>`).join("")}<span class="path">${esc(s.path)}</span>`;
     const g = $("#sMeta").querySelector("[data-goto]"); if (g) g.addEventListener("click", () => select(g.dataset.goto));
     $("#ghLink").href = s.url;
-    const sb = $("#sbLink"); sb.style.display = s.playground ? "" : "none"; sb.href = `https://stackblitz.com/github/honua-io/honua-sdk-js/tree/trunk/playgrounds/${s.id}`;
+    const sb = $("#sbLink"); sb.style.display = s.playground ? "" : "none"; sb.href = s.url.replace("https://github.com/", "https://stackblitz.com/github/");
     renderRight();
     renderPreview();
     renderSource();
