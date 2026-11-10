@@ -20,14 +20,14 @@
 // A built sample (entrypoint.build, e.g. a Vite app) follows the same rules
 // with three differences:
 //   - The build runs in a clean `git archive` export of samples/<id>/ at the
-//     source commit, so the working tree (edited or not) never reaches the
-//     published bytes; the build's outputDir is what gets staged and digested.
+//     source commit, including shared/state-local/ when present. The working
+//     tree (edited or not) never reaches the published bytes;
+//     the build's outputDir is what gets staged and digested.
 //   - Output symlinks, special files, and paths escaping outputDir fail.
-//   - The data-origin scan reads the app's own committed source (index.html
-//     and src/, TypeScript included), not the bundle: a bundled SDK carries
-//     literal hosts it never contacts for this app.
-//   builtFrom records the build command, outputDir, and the package-lock.json
-//   sha256 beside the commit.
+//   - The data-origin scan reads committed app and shared source, not the
+//     bundle: a bundled SDK carries literal hosts it never contacts here.
+//   builtFrom records the build command, outputDir, package-lock.json hash,
+//   and shared-source hashes beside the commit.
 // A sample that fails any rule is reported with a reason; the gallery then
 // shows the honest no-bundle panel and --check / the browser smoke go red.
 
@@ -37,6 +37,8 @@ import { execFileSync } from "node:child_process";
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
+const SHARED_SOURCE_PATH = "shared/state-local";
 
 export const OWN_APP_MANIFEST_FORMAT = "honua.samples.own-app.v1";
 export const OWN_APP_MANIFEST_NAME = "app.manifest.v1.json";
@@ -209,7 +211,7 @@ async function collectCommittedFiles({ repoRoot, dirName, manifest, sourceCommit
 }
 
 // Built sample: export samples/<id>/ at the source commit into a temp
-// directory, scan its own source, run the build there, and collect outputDir.
+// directory with shared sources, scan both, build, and collect outputDir.
 async function collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit }) {
   const [buildError] = appBuildErrors(manifest.entrypoint);
   if (buildError) throw new Error(buildError);
@@ -222,7 +224,8 @@ async function collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit }) 
   try {
     let archive;
     try {
-      archive = git(repoRoot, ["archive", "--format=tar", sourceCommit, "--", `${sampleRepoPath}/`], "buffer");
+      const sharedPath = git(repoRoot, ["ls-tree", "-d", "--name-only", sourceCommit, "--", SHARED_SOURCE_PATH]).trim();
+      archive = git(repoRoot, ["archive", "--format=tar", sourceCommit, "--", `${sampleRepoPath}/`, ...(sharedPath ? [sharedPath] : [])], "buffer");
     } catch (error) {
       throw new Error(`cannot export ${sampleRepoPath}/ at ${at}: ${firstLine(error)}`);
     }
@@ -241,6 +244,9 @@ async function collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit }) 
     else if (srcStat) throw new Error(`${sampleRepoPath}/src is not a directory`);
     const scanned = sources.filter((f) => BUILT_SOURCE_PATTERN.test(f.path));
     if (scanned.length === 0) throw new Error(`${sampleRepoPath}/ has no committed index.html or src/ source at ${at}`);
+
+    const shared = await committedSharedSources(exportRoot);
+    scanned.push(...shared.filter((file) => BUILT_SOURCE_PATTERN.test(file.path)));
 
     try {
       execFileSync("/bin/sh", ["-c", command], { cwd: sampleDir, encoding: "utf8", timeout: BUILD_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
@@ -264,6 +270,7 @@ async function collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit }) 
       builtFrom: {
         commit: sourceCommit,
         path: sampleRepoPath,
+        ...(shared.length ? { sharedFiles: shared.map(({ path, bytes }) => ({ path, sha256: sha256(bytes) })) } : {}),
         build: { command, outputDir, lockfile: "package-lock.json", lockfileSha256: sha256(lockfile) },
       },
       sourceText: scanned.map((f) => f.bytes.toString("utf8")).join("\n"),
@@ -271,6 +278,14 @@ async function collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit }) 
   } finally {
     await rm(exportRoot, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+async function committedSharedSources(exportRoot) {
+  const relative = SHARED_SOURCE_PATH;
+  const stat = await lstat(path.join(exportRoot, relative)).catch(() => null);
+  if (!stat) return [];
+  if (!stat.isDirectory()) throw new Error(`${relative} is not a directory`);
+  return (await collectTree(exportRoot, relative, "")).sort((a, b) => a.path.localeCompare(b.path));
 }
 
 async function readRegularFile(root, relative, missingMessage) {
