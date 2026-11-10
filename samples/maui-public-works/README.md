@@ -76,3 +76,28 @@ FHWA also publishes a [2026 inventory](https://www.fhwa.dot.gov/bridge/nbi/nbi_d
 with a different schema. This sample uses the state's explicitly licensed 2025 distribution;
 it makes no claim to contain the latest ratings. Inlets, traffic signals and hydrants remain
 unverified source gaps. Fictional work orders and inspections remain clearly labelled exercises.
+
+## Browser inventory and maintenance board
+
+Build the app with `npm ci --prefix samples/maui-public-works` and
+`npm run build --prefix samples/maui-public-works`. Serve its `dist/` directory with
+an HTTP server. Supply the activated service names and numeric layer IDs in the URL:
+
+```text
+?baseUrl=http://localhost:8080&bridgeService=BRIDGES&bridgeLayer=1&orderService=ORDERS&orderLayer=2&inspectionService=INSPECTIONS&inspectionLayer=3
+```
+
+Only the approved public demo origin or disposable localhost is accepted. No API key
+belongs in this URL. Bridge imports must carry the verified `Data vintage 2025-06-20`
+metadata written by the current pipeline. The app fetches complete, ordered snapshots,
+checks counts and identifiers, and rejects mismatched exercise dates or provenance.
+An unsuccessful refresh hides the previous inventory until a successful retry.
+
+The map filters by dataset, condition, stage and record or crew text. The five-column
+board shows every fictional order; crew counts show assignments, not capacity or
+live locations. Selecting an order links inspections only by its exact road asset key.
+Real bridges have no fabricated association with those road exercises.
+
+Offline field editing/sync, DCAT catalogue publication, EAM integration and agent
+writes are not connected in this view. The complete demo remains unreleased until
+those flows and the Studio/Console/MCP journey pass their acceptance checks.

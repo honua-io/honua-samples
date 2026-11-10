@@ -1,3 +1,4 @@
+import { exerciseTimeline } from '../../../shared/state-local/exercise-time.mjs';
 import { assertExerciseProvenance } from './exercise-provenance.mjs';
 
 export const STATUS_LABELS = {
@@ -9,17 +10,6 @@ export const TYPE_LABELS = {
 const DAY_MS = 86_400_000;
 const CSV_FIELDS = ['record_id', 'category', 'status', 'district', 'crew', 'opened_at', 'due_at',
   'closed_at', 'scenario_date', 'data_origin', 'is_demo', 'exercise_only', 'display_label'];
-
-function timestamp(value, field) {
-  if (typeof value === 'number') {
-    if (!Number.isSafeInteger(value) || Math.abs(value) > 8.64e15) throw new Error(`Exercise record has an invalid ${field}`);
-    return value;
-  }
-  const parsed = Date.parse(value);
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
-    || !Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== value.slice(0, 10)) throw new Error(`Exercise record has an invalid ${field}`);
-  return parsed;
-}
 
 function contractFields(row) {
   return Object.fromEntries(CSV_FIELDS.map((field) => [field, row[field]]));
@@ -33,17 +23,7 @@ export function validateRecord(attributes) {
     || !/^Demo crew [1-4] \(fictional\)$/.test(row.crew)) {
     throw new Error('Exercise record does not match the 311 exercise contract');
   }
-  const created = timestamp(row.opened_at, 'creation time');
-  const due = timestamp(row.due_at, 'due time');
-  const closed = row.closed_at == null ? null : timestamp(row.closed_at, 'closure time');
-  if (due < created || (closed !== null && closed < created)
-    || (row.status === 'exercise_closed') !== (closed !== null)) throw new Error('Exercise record has an inconsistent timeline');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(row.scenario_date ?? '')) throw new Error('Exercise record is missing its scenario date');
-  const asOf = timestamp(`${row.scenario_date}T23:59:59.999Z`, 'scenario date');
-  if (created > asOf || (closed !== null && closed > asOf)) throw new Error('Exercise record extends beyond its scenario date');
-  return { ...contractFields(row),
-    opened_at: new Date(created).toISOString(), due_at: new Date(due).toISOString(),
-    closed_at: closed === null ? null : new Date(closed).toISOString(), created, due, closed, asOf };
+  return { ...contractFields(row), ...exerciseTimeline(row) };
 }
 
 export function selectRecords(records, filters) {

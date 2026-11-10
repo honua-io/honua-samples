@@ -105,7 +105,7 @@ export async function stageSnapshot(env, options) {
         : source.license === "CC0_10" ? "CC0-1.0" : source.license ?? undefined,
       licenseUrl: source.licenseUrl, attribution: source.attribution,
       sourceUrl: source.url ?? `https://data.nola.gov/d/${source.id}`,
-      description: `${receipt.selection.kind}; ${receipt.accepted} accepted, ${receipt.rejected} rejected. SHA-256 ${receipt.cleanSha256}`,
+      description: `${receipt.dataVintage ? `Data vintage ${receipt.dataVintage}. ` : ""}${receipt.selection.kind}; ${receipt.accepted} accepted, ${receipt.rejected} rejected. SHA-256 ${receipt.cleanSha256}`,
     },
   });
   const layer = await publishedLayer(env, { response: published, connection, serviceName });

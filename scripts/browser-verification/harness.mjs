@@ -115,7 +115,7 @@ export function outsidePoint(fixture, view) {
  *
  * @param {{ prefix: string, allowAnonymous: boolean, protocols?: string[], fixture?: {geojson: object, count: number} }} opts
  */
-export async function seedFeatureService({ prefix, allowAnonymous, protocols = [], fixture: suppliedFixture }) {
+export async function seedFeatureService({ prefix, allowAnonymous, protocols = [], fixture: suppliedFixture, description }) {
   const env = serverEnv();
   const fixture = suppliedFixture ?? await loadFixture();
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -137,6 +137,7 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
     schema: upload.schema ?? "honua_data",
     table: upload.physicalTableName,
     layerName,
+    ...(description ? { description } : {}),
     srid: 4326,
     serviceName,
     enabled: true,

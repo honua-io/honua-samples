@@ -8,7 +8,7 @@ import { cleanRows } from '../state-local/clean.mjs';
 import { ensureDepartments, departments } from '../state-local/departments.mjs';
 import { fetchSnapshot, readSnapshot } from '../state-local/snapshot.mjs';
 import { readMauiSnapshot } from '../state-local/maui-snapshot.mjs';
-import { stagingServiceName, stagingTableName } from '../state-local/import.mjs';
+import { stageSnapshot, stagingServiceName, stagingTableName } from '../state-local/import.mjs';
 
 test('staging service names fit the server limit without truncating run identity', () => {
   const runId = 'f'.repeat(32);
@@ -240,6 +240,16 @@ test('NBI snapshot preserves real ratings and vintage with an explicit Maui coun
   assert.deepEqual(snapshot.geojson.features[0].properties, bridge.properties);
   await assert.rejects(readMauiSnapshot({ name: 'maui-bridges', directory: output,
     source: { ...sources['maui-bridges'], vintageStatement: 'as of June 20, 2026' } }), /Source vintage changed/);
+  let published;
+  globalThis.fetch = async (url, options) => {
+    if (url.endsWith('/folders')) return new Response(JSON.stringify({ data: [{ metadata: { id: 'works-folder', title: 'Public Works' } }] }), { headers: { ETag: '"version-1"' } });
+    if (url.endsWith('/import/upload')) return response({ featureCount: 1, physicalTableName: 'nbi_fixture', schema: 'honua_data' });
+    published = JSON.parse(options.body);
+    return response({ success: true, data: { layerId: 7, enabled: false } });
+  };
+  await stageSnapshot({ baseUrl: 'https://server.test', adminApiKey: 'test-key' },
+    { name: 'maui-bridges', directory: output, connection: 'managed' });
+  assert.match(published.description, /Data vintage 2025-06-20/);
   const receiptFile = path.join(output, 'maui-bridges.receipt.json');
   for (const changed of [{ dataVintage: '2026-01-01' }, { selection: { ...receipt.selection, where: '1=1' } }]) {
     await writeFile(receiptFile, JSON.stringify({ ...receipt, ...changed }));

@@ -1,11 +1,7 @@
 import { STATUS_LABELS, TYPE_LABELS, summarize, weeklyTrend } from './records.mjs';
 
-export function element(tag, text, attributes = {}) {
-  const node = document.createElement(tag);
-  if (text !== null) node.textContent = text;
-  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
-  return node;
-}
+import { cells, element } from '../../../shared/state-local/dom.mjs';
+export { element };
 const percent = (value) => value === null ? 'No closures' : `${Math.round(value * 100)}%`;
 const date = (value) => new Date(value).toISOString().replace('T', ' ').slice(0, 16);
 
@@ -21,11 +17,6 @@ export function renderMetrics(records) {
   }));
 }
 
-function cells(values) {
-  const tr = element('tr', null);
-  tr.append(...values.map((value) => element('td', value)));
-  return tr;
-}
 
 export function renderAnalysis(records, asOf) {
   const trend = asOf === null ? [] : weeklyTrend(records, asOf);

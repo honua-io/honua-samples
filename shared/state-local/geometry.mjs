@@ -6,7 +6,7 @@ function geojsonGeometry(geometry) {
     return { type: 'Point', coordinates: [geometry.x, geometry.y] };
   }
   if (geometry?.paths?.length && geometry.paths.every((path) => Array.isArray(path) && path.length >= 2)) return { type: 'MultiLineString', coordinates: geometry.paths };
-  throw new Error('Exercise request needs a road line or point geometry in WGS84');
+  throw new Error('Feature needs a line or point geometry in WGS84');
 }
 
 export function positions(geometry) {
@@ -16,7 +16,7 @@ export function positions(geometry) {
 export function wgs84Geometry(value) {
   const geometry = geojsonGeometry(value);
   if (positions(geometry).some(([x, y]) => !Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 180 || Math.abs(y) > 90)) {
-    throw new Error('Exercise geometry is outside WGS84 bounds');
+    throw new Error('Feature geometry is outside WGS84 bounds');
   }
   return geometry;
 }
