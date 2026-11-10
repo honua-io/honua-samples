@@ -1,3 +1,4 @@
+import { DISPLAY_SNAPSHOT } from "./config.js";
 // The map: MapLibre GL JS with every tile read from the one Honua server.
 //   - basemap: the server's Protomaps archive (maui-basemap), or a plain
 //     background when it is unavailable. No SDK or third-party default basemap.
@@ -139,6 +140,13 @@ async function addBasemap(map: maplibregl.Map, config: ViewerConfig): Promise<st
 }
 
 function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
+  if (DISPLAY_SNAPSHOT) map.addSource("parcels", { type: "geojson", data: config.parcelsUrl });
+  else addParcelTileSource(map, config);
+  if (!map.getSource("parcels")) return;
+  addParcelLayers(map);
+}
+
+function addParcelTileSource(map: maplibregl.Map, config: ViewerConfig): void {
   if (!config.parcelTilesUrl) return;
   const descriptor = registerPmtilesSource({
     directArchiveUrl: config.parcelTilesUrl,
@@ -149,11 +157,15 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
   });
   pmtilesArchive(descriptor.archiveUrl);
   map.addSource("parcels", { ...descriptor.maplibreSource } as maplibregl.VectorSourceSpecification);
+}
+
+function addParcelLayers(map: maplibregl.Map): void {
+  const sourceLayer = DISPLAY_SNAPSHOT ? {} : { "source-layer": PARCEL_SOURCE_LAYER };
   map.addLayer({
     id: "parcel-outlines",
     type: "line",
     source: "parcels",
-    "source-layer": PARCEL_SOURCE_LAYER,
+    ...sourceLayer,
     minzoom: OUTLINE_MIN_ZOOM,
     paint: { "line-color": token("--map-parcel"), "line-width": PARCEL_WIDTH },
   });
@@ -161,7 +173,7 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
     id: "parcel-selected-fill",
     type: FILL_LAYER,
     source: "parcels",
-    "source-layer": PARCEL_SOURCE_LAYER,
+    ...sourceLayer,
     filter: ["==", ["get", "tmk_txt"], ""],
     paint: { "fill-color": token("--map-select"), "fill-opacity": 0.45 },
   });
@@ -169,7 +181,7 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
     id: "parcel-selected-line",
     type: "line",
     source: "parcels",
-    "source-layer": PARCEL_SOURCE_LAYER,
+    ...sourceLayer,
     filter: ["==", ["get", "tmk_txt"], ""],
     paint: { "line-color": token("--map-select-line"), "line-width": 3 },
   });

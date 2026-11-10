@@ -1,3 +1,4 @@
+import { displaySnapshot } from '../../../shared/state-local/display-snapshot.mjs';
 import './dashboard.css';
 import { loadRequests, sourceBinding } from './source.mjs';
 import { exportCsv, exportGeojson, selectRecords } from './records.mjs';
@@ -86,8 +87,12 @@ document.querySelector('#csv').addEventListener('click', () => download('csv'));
 document.querySelector('#geojson').addEventListener('click', () => download('geojson'));
 refresh.addEventListener('click', refreshData);
 try {
-  binding = sourceBinding(location.search);
-  if (binding) {
+  binding = displaySnapshot ? null : sourceBinding(location.search);
+  if (displaySnapshot) {
+    setFeedRecords = () => {};
+    document.querySelector('#feed-status').textContent = 'Live data coming. GeoJSON and CSV downloads above use this display snapshot.';
+    await refreshData();
+  } else if (binding) {
     setFeedRecords = bindFeed(binding);
     const endpoint = new URL(`/rest/services/${binding.serviceId}/FeatureServer/${binding.layerId}`, binding.baseUrl);
     document.querySelector('#source-link').append(element('a', 'Inspect the connected FeatureServer layer', { href: endpoint.href }));
