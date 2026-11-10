@@ -3,6 +3,7 @@ import { bbox } from '@turf/bbox';
 import type { Feature, Polygon, MultiPolygon } from 'geojson';
 import type { Parcel } from './data.js';
 import type { OverlapCandidate } from './overlap.js';
+import { readSnapshotFeatures } from '../../../shared/state-local/display-snapshot.mjs';
 
 type Area = Feature<Polygon | MultiPolygon>;
 const cache = new Map<string, Promise<Area[]>>();
@@ -11,12 +12,7 @@ async function features(url: string, signal: AbortSignal): Promise<Area[]> {
   signal.throwIfAborted();
   let pending = cache.get(url);
   if (!pending) {
-    pending = fetch(url).then(async (response) => {
-      if (!response.ok) throw new Error(`Snapshot HTTP ${response.status}`);
-      const collection = await response.json();
-      if (collection.type !== 'FeatureCollection' || !Array.isArray(collection.features)) throw new Error('Invalid polygon snapshot');
-      return collection.features;
-    });
+    pending = readSnapshotFeatures<Area>(url);
     cache.set(url, pending);
     pending.catch(() => cache.delete(url));
   }
