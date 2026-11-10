@@ -165,7 +165,7 @@ writeFileSync('dist/shared.txt', marker);
   }
 });
 
-test("shared source origins are checked before a built sample runs", async () => {
+test("shared sources count toward a built sample data origin", async () => {
   const { root, commit } = await fixtureRepo({
     "shared/state-local/module.mjs": 'fetch("https://other.example.org/x");',
   });
