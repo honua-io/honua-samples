@@ -13,7 +13,7 @@ export function requestFeature(feature) {
 
 export async function loadRequests(binding) {
   if (displaySnapshot) return (await snapshotFeatures('maui-demo-requests')).map((feature) => ({
-    ...feature, properties: validateRecord(feature.properties),
+    ...feature, geometry: wgs84Geometry(feature.geometry), properties: validateRecord(feature.properties),
   }));
   return collectRequests(new HonuaClient({ baseUrl: binding.baseUrl }), binding);
 }

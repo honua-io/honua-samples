@@ -1,4 +1,4 @@
-import { cp, mkdir, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { readMauiSnapshot } from './maui-snapshot.mjs';
@@ -20,9 +20,16 @@ for (const name of ['maui-bridges', ...exerciseNames]) {
   if (!await stat(path.join(staging, `${name}.receipt.json`)).catch(() => null)) await fetchSnapshot(name, staging);
 }
 const manifest = { schemaVersion: 1, crs: 'EPSG:4326', layers: {} };
+async function planningSnapshot(name) {
+  const receipt = JSON.parse(await readFile(path.join(planning, `${name}.receipt.json`), 'utf8'));
+  const precision = receipt.displayGeometry?.geometryPrecision;
+  if (![6, 15].includes(precision)) throw new Error('Unsupported planning display precision');
+  const source = getSource(name);
+  return readMauiSnapshot({ name, directory: planning,
+    source: { ...source, displayGeometry: { ...source.displayGeometry, geometryPrecision: precision } } });
+}
 for (const name of [...planningNames, 'maui-bridges', ...exerciseNames]) {
-  const { receipt, geojson } = await (planningNames.includes(name) ? readMauiSnapshot({ name, directory: planning,
-    source: { ...getSource(name), displayGeometry: { ...getSource(name).displayGeometry, geometryPrecision: 15 } } }) : readSnapshot(name, staging));
+  const { receipt, geojson } = await (planningNames.includes(name) ? planningSnapshot(name) : readSnapshot(name, staging));
   const data = JSON.stringify(geojson);
   const source = getSource(name);
   manifest.layers[name] = { sha256: sha256(data), count: geojson.features.length,

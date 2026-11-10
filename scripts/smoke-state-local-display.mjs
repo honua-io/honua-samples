@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { chromium } from '@playwright/test';
+import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
 const server = await startStaticServer({ rootDir: path.resolve('site'), port: 0 });
@@ -21,6 +21,7 @@ async function open(route) {
 
 try {
   await open('311');
+  await expect(page.locator('#map-status')).toContainText('468 exercise requests mapped', { timeout: 30_000 });
   assert.match(await page.locator('#result-count').textContent(), /468 matching/);
   await page.selectOption('[name=status]', 'exercise_open');
   assert.doesNotMatch(await page.locator('#result-count').textContent(), /468 matching/);
@@ -35,10 +36,12 @@ try {
   await open('public-works');
   assert.match(await page.locator('#bridge-provenance').textContent(), /REAL DATA/);
   await page.selectOption('[name=dataset]', 'orders');
+  await expect(page.locator('#map-status')).toContainText('34 records mapped', { timeout: 30_000 });
   assert.match(await page.locator('#result-count').textContent(), /34 matching/);
   await page.locator('#rows button').first().click();
   assert.match(await page.locator('#detail').textContent(), /DEMO DATA/);
   await page.selectOption('[name=dataset]', 'inspections');
+  await expect(page.locator('#map-status')).toContainText('24 records mapped', { timeout: 30_000 });
   assert.match(await page.locator('#result-count').textContent(), /24 matching/);
   assert.deepEqual(errors, []);
   console.log('PASS Public Works: real bridges, work orders, inspections and details');

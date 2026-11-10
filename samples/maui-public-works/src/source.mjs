@@ -42,7 +42,7 @@ async function readBridges(binding) {
 async function displayInventory() {
   const normalize = async (name, validator) => (await snapshotFeatures(name)).map((feature) => {
     const properties = validator(feature.properties);
-    return { ...feature, id: properties.record_id, properties };
+    return { ...feature, id: properties.record_id, properties, geometry: wgs84Geometry(feature.geometry) };
   });
   const [orders, inspections, bridges] = await Promise.all([
     normalize('maui-demo-work-orders', exerciseRecord), normalize('maui-demo-inspections', exerciseRecord),
