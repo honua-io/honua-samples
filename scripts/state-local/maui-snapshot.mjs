@@ -39,7 +39,7 @@ function nativeSpatialReference(metadata) {
 
 function pageUrl(source, batch) {
   return queryUrl(source, { f: "geojson", objectIds: batch.join(","),
-    outFields: source.fields.join(","), returnGeometry: true, outSR: 4326 });
+    outFields: source.fields.join(","), returnGeometry: true, outSR: 4326, ...source.displayGeometry });
 }
 
 function pageBatches(source, ids) {
@@ -58,6 +58,7 @@ function provenance(source) {
   return { dataset: source.id, department: source.department, license: source.license,
     licenseUrl: source.licenseUrl, metadataUrl: source.metadataUrl, sourceUrl: source.url,
     attribution: source.attribution, outputCrs: 'EPSG:4326', coverageBounds: source.bounds,
+    displayGeometry: { ...source.displayGeometry, warning: 'Display geometry generalized in output degrees (approximately two metres); not legal boundaries or survey measurements' },
     datumTransformation: 'No explicit datum transformation requested; server default NAD83 to WGS84 may differ by approximately one metre',
     selection: { kind: 'Maui Nui envelope intersection; whole features; not a county boundary clip',
       bounds: source.bounds, completeDataset: false, pageSize } };

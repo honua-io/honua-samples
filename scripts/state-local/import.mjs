@@ -67,15 +67,23 @@ async function departmentFolder(env, department) {
 }
 
 export async function uploadSnapshotTable(env, snapshot) {
-  const form = new FormData();
-  form.set("file", new Blob([JSON.stringify(snapshot.geojson)], { type: "application/geo+json" }), "snapshot.geojson");
-  form.set("TableName", snapshot.tableName);
-  const uploaded = await completedUpload(env,
-    await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form }));
+  const request = snapshot.sourceUrl ? {
+    apiPath: "/api/v1/admin/import/upload-url",
+    body: { sourceUrl: snapshot.sourceUrl, fileName: "snapshot.geojson", tableName: snapshot.tableName,
+      overwriteExisting: false, sourceSrid: 4326, targetSrid: 4326 },
+  } : { apiPath: "/api/v1/admin/import/upload", body: snapshotForm(snapshot) };
+  const uploaded = await completedUpload(env, await adminFetch(env, { method: "POST", ...request }));
   if (uploaded?.featureCount !== snapshot.geojson.features.length || !uploaded.physicalTableName) {
     throw new Error("Import did not confirm the snapshot table and feature count");
   }
   return uploaded;
+}
+
+function snapshotForm(snapshot) {
+  const form = new FormData();
+  form.set("file", new Blob([JSON.stringify(snapshot.geojson)], { type: "application/geo+json" }), "snapshot.geojson");
+  form.set("TableName", snapshot.tableName);
+  return form;
 }
 
 export async function stageSnapshot(env, options) {
@@ -84,10 +92,10 @@ export async function stageSnapshot(env, options) {
   const source = getSource(name);
   const { receipt, geojson } = await readSnapshot(name, directory);
   const folderId = await departmentFolder(env, source.department);
-  const runId = randomUUID().replaceAll("-", "");
+  const runId = options.runId ?? randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);
   const serviceName = stagingServiceName(name, runId);
-  const uploaded = await uploadSnapshotTable(env, { tableName, geojson });
+  const uploaded = await uploadSnapshotTable(env, { tableName, geojson, sourceUrl: options.sourceUrl });
   const published = await adminFetch(env, {
     method: "POST", apiPath: layersPath(connection),
     body: {

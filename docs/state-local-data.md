@@ -184,3 +184,39 @@ node --test scripts/test/state-local-data.test.mjs scripts/test/maui-data.test.m
 Unit tests cover pagination, CRS, minimisation, corrupt receipts, changed sources,
 fictional labels and deterministic counts. Candidate-server import checks are
 separate; none of these checks establishes a released demo or an agent eval pass.
+
+## Bounded shared load
+
+The shared loader prepares the nine property layers as display geometry in EPSG:4326
+with a 0.00002-degree simplification tolerance and six decimal places. These layers
+are for public display, not legal boundary measurement. No source raster is loaded.
+
+```sh
+node scripts/state-local/shared-load.mjs prepare artifacts/shared-load
+node scripts/state-local/shared-load.mjs stage artifacts/shared-load REVIEWED_PLAN_SHA256
+node scripts/state-local/shared-load.mjs activate artifacts/shared-load REVIEWED_PLAN_SHA256
+node scripts/state-local/shared-load.mjs rollback artifacts/shared-load REVIEWED_PLAN_SHA256
+```
+
+`prepare` prints the plan SHA-256, row counts, checksums and conservative storage
+reservation. Keep this artifact and review it before any authenticated action.
+The reservation is an admission estimate; operators must monitor actual storage
+and connections throughout the load. The loader requires one existing `demo-rds`
+managed connection and creates no database connection or infrastructure.
+
+For `stage`, set `HONUA_SAMPLE_IMPORT_URLS_FILE` to a temporary JSON object mapping
+each source name to a short-lived HTTPS download URL. Each URL path must contain
+that source's complete clean SHA-256 as a path segment. The loader downloads and
+checks its exact size and digest before asking Honua's URL import API to ingest
+it. Use immutable content-addressed objects; keep URLs valid for the import and
+expire them promptly. Import job history may retain these URLs, so never use
+permanent bearer URLs. The URL map is a credential: do not retain it in artifacts.
+
+Stages are disabled. Retained deployment receipts bind the server, managed
+connection, physical table, folder, source checksum, service and public path.
+A retry reuses verified receipts. An intent without a deployment receipt stops
+retries and rollback for that layer: inspect Console and reconcile the named
+physical table and service first. Never retry from a fresh artifact directory.
+Activation first checks every layer receipt, then enables anonymous reads and
+verifies public metadata. Rollback disables only verified owned layers; it does
+not delete tables or alter unrelated publications. Keep failed-run artifacts too.
