@@ -133,6 +133,8 @@ test('SR-02/SR-03: 468 fictional requests cover twelve weeks with labels, joins 
   assert.equal(snapshot.geojson.features.length, 468);
   assert.equal(new Set(snapshot.geojson.features.map(({ properties }) => properties.created_at)).size, 84);
   for (const { properties } of snapshot.geojson.features) {
+    assert.ok(Date.parse(properties.created_at) <= Date.parse(`${properties.scenario_date}T23:59:59.999Z`));
+    if (properties.closed_at) assert.ok(Date.parse(properties.closed_at) <= Date.parse(`${properties.scenario_date}T23:59:59.999Z`));
     assert.equal(properties.is_demo, true);
     assert.equal(properties.exercise_only, true);
     assert.equal(properties.data_origin, 'synthetic_demo');

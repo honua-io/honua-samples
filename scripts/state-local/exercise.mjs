@@ -44,7 +44,7 @@ function exerciseFeature(source, feature, index) {
       anchor_source: source.anchor, anchor_feature_id: String(feature.id),
       asset_id: `${source.anchor}:${feature.id}`, district: `Demo district ${1 + index % 3} (fictional)`,
       category: ['drainage', 'road_surface', 'accessibility'][index % 3],
-      scenario_date: '2026-11-01', ...details(source, index),
+      scenario_date: '2026-11-03', ...details(source, index),
     } };
 }
 
@@ -61,7 +61,7 @@ function provenance(options, built) {
   return { source: name, dataset: name, department: source.department, license: source.license,
     licenseUrl: source.licenseUrl, attribution: source.attribution, outputCrs: 'EPSG:4326',
     selection: { kind: 'fictional exercise; deterministic cycling of accepted anchor features; geometry copied, not observed activity' },
-    recipeVersion: 2, anchorSource: source.anchor, anchorSha256: built.anchorHash,
+    recipeVersion: 3, anchorSource: source.anchor, anchorSha256: built.anchorHash,
     accepted: built.geojson.features.length, rejected: 0, cleanSha256: sha256(JSON.stringify(built.geojson)) };
 }
 

@@ -1,7 +1,7 @@
 {
   "id": "maui-311",
-  "title": "Maui 311 exercise SDK queries",
-  "description": "Run the published JavaScript, Python and .NET SDKs against one anonymous Honua layer. CI imports a small synthetic contract fixture into a real PostGIS-only server; the full Maui app is a separate journey.",
+  "title": "Maui 311 exercise dashboard",
+  "description": "Explore fictional service requests on real Maui road geometry with filters, request timelines, scenario-date metrics and labeled CSV/GeoJSON exports. CI imports a small fixture into a real PostGIS-only server and checks all three published SDKs.",
   "contentKind": "walkthrough",
   "learning": {
     "goal": "connect-data",
@@ -31,8 +31,13 @@
   ],
   "edition": "community",
   "entrypoint": {
-    "type": "node",
-    "command": "node ../../scripts/state-local/sdk/verify.mjs 311"
+    "type": "browser",
+    "command": "index.html",
+    "build": {
+      "command": "npm ci && npm run build",
+      "outputDir": "dist",
+      "publishedEntrypoint": "index.html"
+    }
   },
   "status": "active"
 }
