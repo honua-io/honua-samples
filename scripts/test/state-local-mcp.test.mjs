@@ -33,7 +33,8 @@ test("every exercise question preserves provenance and requires complete paginat
 test("property binds both parcels and zoning and keeps permit lookup manual", () => {
   const result = buildMcpJourney("property", [deployment("maui-parcels", 3), deployment("maui-zoning")]);
   assert.deepEqual(result.sources.map((entry) => entry.source), ["maui-parcels", "maui-zoning"]);
-  assert.match(result.prompt, /MAPPS manually/);
+  assert.match(result.prompt, /MAPPS instructions.*manually/);
+  assert.match(result.prompt, /unverified TMK formatting as a gap/);
   assert.match(result.prompt, /Do not invent permits, CPR digits/);
   assert.match(result.prompt, /spatial join.*unavailable.*report the gap/);
 });
