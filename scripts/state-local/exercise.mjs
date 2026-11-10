@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { mauiSources } from './maui-sources.mjs';
 import { sha256 } from '../lib/checksum.mjs';
 
 const recipes = {
@@ -12,7 +13,7 @@ const recipes = {
 export const exerciseSources = Object.fromEntries(Object.entries(recipes).map(([name, recipe]) => [name, {
   ...recipe, id: name, synthetic: true, license: 'CC0-1.0',
   fields: ['record_id', 'data_origin', 'is_demo', 'display_label', 'record_type', 'status',
-    'exercise_only', 'operational_use', 'anchor_source', 'anchor_feature_id', 'asset_id', 'district', 'category', 'scenario_date', 'opened_at', 'due_at', 'closed_at', 'sla_hours', 'crew', 'condition', 'capacity', 'occupancy', 'case_url'],
+    'exercise_only', 'operational_use', 'geometry_source', 'anchor_source', 'anchor_feature_id', 'asset_id', 'district', 'category', 'scenario_date', 'opened_at', 'due_at', 'closed_at', 'sla_hours', 'crew', 'condition', 'capacity', 'occupancy', 'case_url'],
   url: 'https://github.com/honua-io/honua-samples/blob/trunk/docs/state-local-data.md',
   licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/legalcode',
   attribution: 'Honua fictional exercise records; geometry from Hawaii Statewide GIS Program public-domain sources',
@@ -41,6 +42,7 @@ function exerciseFeature(source, feature, index) {
     properties: { record_id: id, data_origin: 'synthetic_demo', is_demo: true,
       display_label: 'DEMO DATA — fictional exercise record', record_type: source.kind,
       exercise_only: true, operational_use: 'None. Not a real request, work order, closure or designated shelter.',
+      geometry_source: mauiSources[source.anchor].licenseUrl,
       anchor_source: source.anchor, anchor_feature_id: String(feature.id),
       asset_id: `${source.anchor}:${feature.id}`, district: `Demo district ${1 + index % 3} (fictional)`,
       category: ['drainage', 'road_surface', 'accessibility'][index % 3],
@@ -61,7 +63,7 @@ function provenance(options, built) {
   return { source: name, dataset: name, department: source.department, license: source.license,
     licenseUrl: source.licenseUrl, attribution: source.attribution, outputCrs: 'EPSG:4326',
     selection: { kind: 'fictional exercise; deterministic cycling of accepted anchor features; geometry copied, not observed activity' },
-    recipeVersion: 3, anchorSource: source.anchor, anchorSha256: built.anchorHash,
+    recipeVersion: 4, anchorSource: source.anchor, anchorSha256: built.anchorHash,
     accepted: built.geojson.features.length, rejected: 0, cleanSha256: sha256(JSON.stringify(built.geojson)) };
 }
 

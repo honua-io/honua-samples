@@ -1,21 +1,13 @@
 import { displaySnapshot, snapshotFeatures } from '../../../shared/state-local/display-snapshot.mjs';
 import { HonuaClient } from '@honua/sdk-js';
-import { sourceBinding } from '../../../shared/state-local/binding.mjs';
+import { namedBindings } from '../../../shared/state-local/binding.mjs';
 import { collectFeatures } from '../../../shared/state-local/features.mjs';
 import { wgs84Geometry } from '../../../shared/state-local/geometry.mjs';
 import { bridgeRecord, exerciseRecord } from './records.mjs';
 
 export function bindings(search) {
-  const params = new URLSearchParams(search);
-  const read = (prefix) => sourceBinding(new URLSearchParams({ baseUrl: params.get('baseUrl') ?? 'https://demo.honua.io',
-    ...(params.has(`${prefix}Service`) ? { service: params.get(`${prefix}Service`) } : {}),
-    ...(params.has(`${prefix}Layer`) ? { layer: params.get(`${prefix}Layer`) } : {}) }));
-  const orders = read('order');
-  const inspections = read('inspection');
-  const bridges = read('bridge');
-  if (![orders, inspections, bridges].some(Boolean)) return null;
-  if (![orders, inspections, bridges].every(Boolean)) throw new Error('Connect all three layers from the approved import receipts: orders, inspections and bridges');
-  return { orders, inspections, bridges };
+  const layers = namedBindings(search, ['order', 'inspection', 'bridge']);
+  return layers ? { orders: layers.order, inspections: layers.inspection, bridges: layers.bridge } : null;
 }
 
 async function readExercise(binding, kind) {

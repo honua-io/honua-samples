@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Situation Map · Maui Emergency Management</title>
+<meta name="description" content="Tsunami and flood preparedness exercise: common operating picture for the EOC and the public, built in Honua Studio and running on county hardware.">
+{{HEAD}}
+<style>
+  :root { --x-banner-bg: #fff4e6; --x-banner-line: #f5c89a; --x-banner-text: #5c2c06; --x-banner-strong: #3d1d04; --x-banner-meta: #7a3a0a; --x-ex: #c2410c; --x-ex-text: #ffffff;
+    --x-contra: #d97706; --x-rr: #7c3aed; --x-stage: #343c39; --x-stage-text: #ffffff; --x-road-casing: #ffffff; }
+  :root[data-theme="dark"] { --x-banner-bg: #2a1a0e; --x-banner-line: #5a3a20; --x-banner-text: #f6c9a6; --x-banner-strong: #ffe3cc; --x-banner-meta: #e8b08a; --x-ex: #e0692e; --x-ex-text: #08131a;
+    --x-contra: #e8a03c; --x-rr: #a78bfa; --x-stage: #c6d6d4; --x-stage-text: #08131a; --x-road-casing: #08131a; }
+  body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
+  .xbanner { display: flex; align-items: center; gap: 12px; padding: 9px 16px; background: var(--x-banner-bg); border-bottom: 1px solid var(--x-banner-line); color: var(--x-banner-text); font-size: 13px; }
+  .xbanner .ex { flex: none; font-weight: 700; letter-spacing: .08em; font-size: 12px; color: var(--x-ex-text); background: var(--x-ex); padding: 3px 8px; border-radius: 4px; }
+  .xbanner b { color: var(--x-banner-strong); }
+  .xbanner .ico { color: var(--x-ex); }
+  .xbanner .t { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--x-banner-meta); }
+  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 340px minmax(0, 1fr) 410px; }
+  .col { position: relative; min-height: 0; overflow-y: auto; background: var(--c-surface); }
+  .col.l { border-right: 1px solid var(--c-border); }
+  .col.r { border-left: 1px solid var(--c-border); background: var(--c-bg); }
+  .sec { padding: 14px 16px; border-bottom: 1px solid var(--c-rule); }
+  .sec:last-child { border-bottom: 0; }
+  .sec-h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .sec-h h2 { font-size: 13px; font-weight: 600; }
+  .sec-h .aside { margin-left: auto; font-size: 12px; color: var(--c-text-3); }
+  .shel { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 9px 0; border-top: 1px solid var(--c-rule); font-size: 13px; cursor: pointer; }
+  .shel:first-of-type { border-top: 0; }
+  .shel:hover .nm { color: var(--c-link); }
+  .shel .nm { font-weight: 500; }
+  .shel .meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; font-size: 12px; color: var(--c-text-3); }
+  .shel .meta > * { white-space: nowrap; }
+  .shel .meter { grid-column: 1 / -1; margin-top: 4px; }
+  .shel .pct { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--c-text-2); text-align: right; }
+  .flag { display: inline-flex; align-items: center; gap: 3px; }
+  .flag .ico { width: 12px; height: 12px; }
+  .road { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .road:first-of-type { border-top: 0; }
+  .road i { width: 14px; height: 4px; border-radius: 2px; display: block; }
+  .road small { display: block; color: var(--c-text-3); font-size: 12px; }
+  .feed { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 7px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .feed:first-of-type { border-top: 0; }
+  .feed small { color: var(--c-text-3); font-size: 12px; grid-column: 1; }
+  .feed .age { font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; color: var(--c-ok-ink); }
+  .feed .age.stale { color: var(--c-warn-ink); }
+  .sitrep { font-size: 13px; }
+  .sitrep ol { margin: 6px 0 0; padding-left: 18px; }
+  .sitrep li { margin: 0 0 7px; line-height: 1.5; }
+  .sitrep li b { font-weight: 600; }
+  .ai-card + .ai-card, .ai-card + .approval, .approval + .ai-card { margin-top: 12px; }
+  .r .ai-card, .r .approval { box-shadow: var(--shadow-panel); }
+  .doc-h { display: flex; align-items: baseline; gap: 8px; padding: 0 14px; font-size: 12px; color: var(--c-text-3); }
+  .actions { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .lang { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .notice-text { background: var(--c-surface-2); border-radius: var(--radius-md); padding: 10px 12px; font-size: 13px; line-height: 1.55; }
+  .statusbar { display: flex; align-items: center; gap: 18px; padding: 0 16px; height: 34px; background: var(--c-surface); border-top: 1px solid var(--c-border); font-size: 12px; color: var(--c-text-2); white-space: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .statusbar > span { display: inline-flex; align-items: center; gap: 6px; }
+  .statusbar .ico { width: 14px; height: 14px; }
+  .statusbar b { color: var(--c-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .legend { right: 12px; bottom: 30px; width: 330px; padding: 8px 12px; }
+  .legend .sym { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
+  .legend .lg-row { padding: 1px 0; }
+  .legend summary { font-size: 13px; font-weight: 600; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
+  .legend summary::-webkit-details-marker { display: none; }
+  .legend details[open] summary { margin-bottom: 4px; }
+  .legend .toggles { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
+  .legend h2 { font-size: 13px; margin-bottom: 4px; }
+  .legend .layer-toggle { font-size: 12px; padding: 3px 0; }
+  .legend .lg-row { font-size: 12px; }
+  .maplabel.side { text-align: left; }
+  .legend .grp { border-top: 1px solid var(--c-rule); margin-top: 6px; padding-top: 6px; }
+  .lg-sq { width: 11px; height: 11px; border-radius: 2px; flex: none; transform: rotate(45deg); border: 1.5px solid var(--map-pin-ring); box-shadow: 0 0 0 1px rgb(0 0 0 / .3); }
+  .viewtag { position: absolute; top: 12px; left: 12px; z-index: 5; display: flex; gap: 8px; align-items: center; background: var(--c-surface); padding: 6px 10px; border-radius: var(--radius-md); box-shadow: var(--shadow-raised); font-size: 12px; }
+  .stage { width: 22px; height: 22px; border-radius: 4px; background: var(--x-stage); color: var(--x-stage-text); display: grid; place-items: center; font: 700 10px/1 var(--font-sans); border: 2px solid var(--map-pin-ring); box-shadow: 0 1px 4px rgb(0 0 0 / .35); }
+  .rr { width: 14px; height: 14px; transform: rotate(45deg); background: var(--x-rr); border: 2px solid var(--map-pin-ring); box-shadow: 0 1px 4px rgb(0 0 0 / .35); cursor: pointer; }
+  .rr.crit { background: var(--c-danger); }
+  .steps { list-style: none; padding: 0; margin: 0; counter-reset: s; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .steps li:first-child { border-top: 0; }
+  .steps li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; background: var(--c-surface-2); display: grid; place-items: center; font-weight: 600; font-size: 12px; }
+  body[data-view="public"] .eoc-only { display: none !important; }
+  body[data-view="eoc"] .public-only { display: none !important; }
+  .maplibregl-popup-content h4 { font-size: 13px; margin-bottom: 2px; }
+  @media (max-width: 1240px) {
+    body { height: auto; overflow: auto; }
+    .layout { grid-template-columns: 1fr; }
+    #map { height: 64vh; order: -1; }
+    .col.r { border-left: 0; }
+    .statusbar { position: sticky; bottom: 0; }
+  }
+  @media (max-width: 640px) { .maplabel.poi { display: none; } .xbanner { flex-wrap: wrap; } .xbanner .t { margin-left: 0; } .legend { display: none; } }
+</style>
+</head>
+<body data-view="eoc">
+<a class="skip-link" href="#main">Skip to situation details</a>
+{{ICONS}}
+<h1 class="sr-only" style="font-size:22px">Exercise situation map for Kahului and Wailuku</h1>
+<header class="appbar">
+  <a class="wordmark" href="../"><strong>County of Maui · demo</strong><small>Emergency management · Situation map</small></a>
+  <nav class="appnav" aria-label="App"><a href="#" aria-current="page">Map</a><a href="#" class="eoc-only">Resource requests</a><a href="#" class="eoc-only">Log</a><a href="mobile.html">Public mobile</a></nav>
+  <span class="spacer"></span>
+  <div class="seg" role="group" aria-label="View">
+    <button type="button" aria-pressed="false" data-view="public"><span class="row" style="gap:6px"><svg class="ico"><use href="#i-globe"/></svg>Public view</span></button>
+    <button type="button" aria-pressed="true" data-view="eoc"><span class="row" style="gap:6px"><svg class="ico"><use href="#i-lock"/></svg>EOC view</span></button>
+  </div>
+  <span class="avatar eoc-only hide-sm" title="Signed in: Planning section chief">PC</span>
+</header>
+<div class="xbanner" role="alert">
+  <span class="ex">EXERCISE</span>
+  <svg class="ico"><use href="#i-waves"/></svg>
+  <span><b>Exercise Kai Ikaika 2026: simulated tsunami warning for Maui County coasts.</b> This is a fictional preparedness exercise, not a county alert. No action is needed.</span>
+  <span class="t">Issued 08:52 HST · simulated first wave 12:10 HST</span>
+</div>
+<div class="demostrip" role="note">
+  <span class="tag-real">Real data</span> Tsunami zones, FEMA flood zones, sea-level rise, facilities, roads (Hawaii Statewide GIS Program), school locations (exercise shelters, not designated sites)
+  <span class="tag-demo">Exercise data</span> Warning, occupancy, road status, requests, feed readings, drafts
+</div>
+
+<div class="layout">
+  <aside class="col l" aria-label="Shelters, roads and feeds">
+    <section class="sec" aria-labelledby="shH">
+      <div class="sec-h"><svg class="ico" style="color:var(--c-ok)"><use href="#i-home"/></svg><h2 id="shH">Shelters</h2><span class="aside" id="shSum"></span></div>
+      <div id="shelterList"></div>
+      <p class="faint" style="font-size:12px;margin-top:8px">School locations are real; all shelter designations, capacity and occupancy are <span class="tag-demo">exercise</span> records. <a href="data/sources.json">Sources and licences</a>.</p>
+    </section>
+    <section class="sec" aria-labelledby="rdH">
+      <div class="sec-h"><svg class="ico"><use href="#i-route"/></svg><h2 id="rdH">Road status</h2><span class="aside"><span class="tag-demo">exercise</span></span></div>
+      <div id="roadList"></div>
+    </section>
+    <section class="sec eoc-only" aria-labelledby="fdH">
+      <div class="sec-h"><svg class="ico"><use href="#i-activity"/></svg><h2 id="fdH">Simulated feeds</h2><span class="aside">age since last reading</span></div>
+      <div class="feed"><span>NWS alerts · Maui zones</span><span class="age" data-age="18"></span><small>Tsunami Warning (simulated) · via NOAA Weather Wire satellite</small></div>
+      <div class="feed"><span>Pacific Tsunami Warning Center</span><span class="age" data-age="42"></span><small>Message 7 of exercise series · satellite relay</small></div>
+      <div class="feed"><span>NOAA tide gauge Kahului 1615680</span><span class="age" data-age="61"></span><small>+0.42 ft above predicted · state radio network</small></div>
+      <div class="feed"><span>USGS stream gauge Iao Stream 16604500</span><span class="age stale" data-age="846"></span><small>38 ft³/s, normal · backfills when the uplink returns</small></div>
+      <div class="feed"><span>EOC board · resource requests</span><span class="age" data-age="9"></span><small>Fictional resource board · 5 open</small></div>
+    </section>
+    <section class="sec" aria-labelledby="pfH">
+      <div class="sec-h"><svg class="ico"><use href="#i-code"/></svg><h2 id="pfH">Planned public feeds</h2><span class="aside">coming soon</span></div>
+      <div class="endpoint"><span class="p" style="min-width:120px">Evacuation zones</span><code>/ogc/collections/evacuation-zones/items</code></div>
+      <div class="endpoint"><span class="p" style="min-width:120px">Open shelters</span><code>/ogc/collections/shelters-open/items</code></div>
+      <div class="endpoint"><span class="p" style="min-width:120px">Road status</span><code>/ogc/collections/road-status/items</code></div>
+      <div class="endpoint"><span class="p" style="min-width:120px">All, GeoJSON</span><code>/feeds/maui-emergency.geojson</code></div>
+      <div class="endpoint"><span class="p" style="min-width:120px">Alerts (CAP 1.2)</span><code>/feeds/alerts.cap.xml</code></div>
+      <p class="faint" style="font-size:12px;margin-top:8px">Illustrative endpoint shapes only; feed publication is coming soon. No live feeds are connected.</p>
+    </section>
+  </aside>
+
+  <div class="map" id="map" role="region" aria-label="Situation map">
+    <div class="map-legend legend" aria-label="Legend">
+      <details open><summary><svg class="ico"><use href="#i-layers"/></svg>Legend and layers</summary><div class="toggles">
+      <label class="layer-toggle"><input type="checkbox" checked data-layers="tsunami,tsunami-line">Evacuation zone<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-tsu) 45%, var(--c-surface));margin-left:auto"></span></label>
+      <label class="layer-toggle"><input type="checkbox" disabled data-layers="tsunami-x">Extreme zone · not in snapshot<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-tsux) 35%, var(--c-surface));margin-left:auto"></span></label>
+      <label class="layer-toggle"><input type="checkbox" data-layers="flood,flood-line">FEMA flood<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-flood) 40%, var(--c-surface));margin-left:auto"></span></label>
+      <label class="layer-toggle"><input type="checkbox" data-layers="slr">Sea level +3.2 ft<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-slr) 40%, var(--c-surface));margin-left:auto"></span></label></div>
+      <div class="grp sym">
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-ok)"></span>Shelter open</div>
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-warn)"></span>Shelter 75%+ full</div>
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-neutral)"></span>Shelter closed</div>
+        <div class="lg-row"><span class="lg-ln" style="border-color:var(--c-danger)"></span>Road closed</div>
+        <div class="lg-row"><span class="lg-ln" style="border-color:var(--x-contra)"></span>Contraflow inland</div>
+        <div class="lg-row"><span class="lg-ln" style="border-color:var(--c-ok)"></span>Evacuation route</div>
+      </div>
+      <div class="grp sym eoc-only">
+        <div class="lg-row"><span class="lg-sq" style="background:var(--x-rr)"></span>Resource request</div>
+        <div class="lg-row"><span class="stage" style="width:14px;height:14px;font-size:0;border-width:1.5px"></span>Staging area</div>
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-danger);border-radius:3px"></span>Fire, police, hospital</div>
+      </div>
+    </details>
+</div>
+  </div>
+
+  <aside class="col r" id="main" aria-label="Situation reports and public information">
+    <!-- EOC view -->
+    <section class="sec eoc-only" style="border-bottom:0;padding-bottom:4px">
+      <div class="ai-card" aria-label="Demo answer">
+        <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 style="font-size:15px">Situation report 3 · 1000 HST</h2><span class="chip warn" style="margin-left:auto">Waiting for approval</span></div>
+        <div class="doc-h" style="padding-top:4px">Demo answer · drafted by the planning agent at 09:41 from exercise snapshots · you are the approver</div>
+        <div class="ai-b sitrep" id="sitrep"></div>
+        <div style="padding:0 14px 14px">
+          <div class="guard"><span><svg class="ico"><use href="#i-check"/></svg>Demo citations link to snapshot context</span><span><svg class="ico"><use href="#i-check"/></svg>Static exercise; no county host connected</span><span><svg class="ico"><use href="#i-check"/></svg>Simulated approval; nothing is published</span></div>
+          <div class="actions"><button class="btn primary" type="button" id="approveSitrep"><svg class="ico"><use href="#i-check"/></svg>Simulate approval</button><button class="btn" disabled title="Coming soon" type="button"><svg class="ico"><use href="#i-edit"/></svg>Edit</button><button class="btn ghost" disabled title="Coming soon" type="button">Regenerate</button><span class="faint" style="font-size:12px;margin-left:auto">Illustrative workflow; time savings unmeasured</span></div>
+        </div>
+      </div>
+
+      <div class="ai-card" aria-label="Demo answer">
+        <div class="ai-h"><svg class="ico"><use href="#i-message"/></svg><h2 style="font-size:15px">Demo answer · public notice</h2><span class="chip warn" style="margin-left:auto">Needs approval</span></div>
+        <div class="ai-b">
+          <div class="notice-text" id="noticeText"><b>EXERCISE.</b> This is a practice tsunami warning for Maui County. If this were real: leave the orange zone on the map now. Go inland or to higher ground, on foot if you can. Fictional exercise shelters near Kahului and Wailuku: Maui High, Baldwin High, Lihikai Elementary, Iao Intermediate. School sites are fictional exercise shelters; consult official county information for real designated sites. Kahului Beach Road and Hobron Avenue are closed. Bring medicine, water and pet supplies.</div>
+          <p class="faint" style="font-size:12px;margin-top:6px">Demo answer · scripted practice notice · not approved county information <button class="cite" data-cite="sitrep">sitrep/3</button></p>
+          <div style="margin-top:8px">
+            <div class="lang"><svg class="ico faint"><use href="#i-globe"/></svg>English<span class="chip ok" style="margin-left:auto">Draft ready</span></div>
+            <div class="lang"><svg class="ico faint"><use href="#i-globe"/></svg>ʻŌlelo Hawaiʻi<span class="chip" style="margin-left:auto">Translation coming soon</span></div>
+            <div class="lang"><svg class="ico faint"><use href="#i-globe"/></svg>Ilocano, Tagalog<span class="chip" style="margin-left:auto">Review coming soon</span></div>
+          </div>
+          <div class="actions"><button class="btn primary" disabled type="button"><svg class="ico"><use href="#i-send"/></svg>Publishing coming soon</button><span class="faint" style="font-size:12px">Coming soon · no alert or feed is published</span></div>
+        </div>
+      </div>
+
+      <div class="approval" style="margin-top:12px">
+        <div class="row"><svg class="ico" style="color:var(--c-warn)"><use href="#i-agent"/></svg><b style="font-size:13px">Exercise proposal: compare available shelter capacity</b></div>
+        <p style="font-size:13px;margin-top:6px" id="balanceText"></p>
+        <div class="who" style="margin-top:6px">Demo answer · proposed by the shelter agent · 09:38 · one approval needed (Mass care lead)</div>
+        <div class="actions" style="margin-top:10px"><button class="btn primary sm" disabled title="Coming soon" type="button">Approve</button><button class="btn sm" disabled title="Coming soon" type="button">Decline</button><button class="btn ghost sm" type="button" data-cite="balance">Show on map</button></div>
+      </div>
+
+      <div class="ai-card" aria-label="Demo answer">
+        <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 style="font-size:15px">Demo answer · planning agent</h2></div>
+        <div class="ai-b">
+          <p style="margin-bottom:8px"><span class="faint">You asked</span> <b>Which critical facilities are inside the evacuation zone?</b></p>
+          <div class="toolcall"><b>spatial_join</b><span class="grow trunc">facilities × evacuation-zones</span><span class="ok" id="tcCount"></span></div>
+          <div id="exposure" style="margin-top:10px"></div>
+        </div>
+      </div>
+      <p class="faint" style="font-size:12px;margin:12px 2px 14px">Demo answers are scripted from snapshots. Agent calls, county deployment and an approval audit log are coming soon.</p>
+    </section>
+
+    <!-- Public view -->
+    <section class="sec public-only" aria-labelledby="todoH">
+      <div class="sec-h"><h2 id="todoH" style="font-size:15px">What to do in a tsunami warning</h2></div>
+      <ol class="steps">
+        <li><span><b>Check the map.</b> Orange is the evacuation zone. If you are in it, leave now.</span></li>
+        <li><span><b>Go inland or uphill</b>, on foot if you can. Stay out until the all-clear.</span></li>
+        <li><span><b>Go to an open shelter</b> if you have nowhere else to go. Bring medicine, water, ID and pet supplies.</span></li>
+        <li><span><b>Avoid closed roads.</b> Kahului Beach Road and Hobron Avenue are closed.</span></li>
+      </ol>
+    </section>
+    <section class="sec public-only" aria-labelledby="pnH">
+      <div class="sec-h"><svg class="ico" style="color:var(--c-ok)"><use href="#i-check-circle"/></svg><h2 id="pnH">Latest notice · Demo answer</h2><span class="aside">09:46 HST · simulated approval</span></div>
+      <div class="notice-text">This is a practice tsunami warning for Maui County. If this were real: leave the orange zone on the map now and go inland or to higher ground. School sites are fictional exercise shelters; consult official county information for real designated sites.</div>
+      <p class="faint" style="font-size:12px;margin-top:8px">Translation and review are coming soon.</p>
+    </section>
+    <section class="sec public-only" aria-labelledby="amiH">
+      <div class="sec-h"><svg class="ico"><use href="#i-pin"/></svg><h2 id="amiH">Am I in the zone?</h2></div>
+      <div class="field"><svg class="ico faint"><use href="#i-search"/></svg><input aria-label="Sample address" readonly value="Kahului Harbor, Kaʻahumanu Ave"></div>
+      <div class="notice warn" style="margin-top:10px"><svg class="ico"><use href="#i-waves"/></svg><div><b>Sample location checked against snapshot zones.</b> Nearest exercise shelter: <span id="pubNearest"></span>.</div></div>
+      <a class="btn" style="margin-top:10px" href="mobile.html"><svg class="ico"><use href="#i-phone"/></svg>Open the mobile map</a>
+    </section>
+    <section class="sec public-only">
+      <div class="sec-h"><svg class="ico"><use href="#i-bell"/></svg><h2>Get alerts</h2></div>
+      <p class="muted" style="font-size:13px">Alert subscriptions and public-feed publication are coming soon. Offline persistence and live alert subscriptions are coming soon.</p>
+    </section>
+  </aside>
+</div>
+
+<footer class="statusbar" aria-label="System status">
+  <span><span class="dot"></span><b>Simulated county deployment</b> exercise only</span>
+  <span class="eoc-only"><svg class="ico" style="color:var(--c-warn)"><use href="#i-wifi-off"/></svg>Simulated uplink outage <b id="down">00:14:00</b> · feeds via satellite relay</span>
+  <span><svg class="ico"><use href="#i-refresh"/></svg>Simulated mirror sync <b>09:26</b> · 3 changes queued</span>
+  <span><svg class="ico"><use href="#i-chart"/></svg>Demo metrics <b>18,400</b> requests/min · 97% from cache · p95 <b>84 ms</b></span>
+  <span class="faint">Honua Server 2026.1 · Studio app v7</span>
+</footer>
+
+{{DATA land,roads,contours,streams,waterbodies,dfirm,tsunami,slr32,shelters,fire,police,hospitals,schools}}
+{{MAPJS}}
+<script>
+(() => {
+  const SH = HD.exerciseShelters;
+  const shelters = HD.shelters.features.map((f) => ({ ...f.properties, ...SH[f.properties.name], c: f.geometry.coordinates }));
+  const open = shelters.filter((s) => s.st === "open");
+  const totCap = open.reduce((a, s) => a + s.cap, 0), totOcc = open.reduce((a, s) => a + s.occ, 0);
+  const pct = (s) => Math.round((s.occ / s.cap) * 100);
+  const fmt = (n) => n.toLocaleString("en-US");
+
+  const ROADS = [
+    { name: "Kahului Beach Road", st: "closed", label: "Closed", why: "Inside evacuation zone · harbor to Waiehu Beach Rd" },
+    { name: "Hobron Avenue", st: "closed", label: "Closed", why: "Inside evacuation zone · harbor access" },
+    { name: "Wharf Street", st: "closed", label: "Closed", why: "Harbor · police checkpoint" },
+    { name: "Waiehu Beach Road", st: "contra", label: "Contraflow", why: "Both lanes inland toward Wailuku" },
+    { name: "Kaahumanu Avenue", st: "route", label: "Evacuation route", why: "Mauka-bound priority, signals on flash" },
+    { name: "Lower Main Street", st: "route", label: "Open, heavy", why: "15-minute delays at Waiehu Beach Rd" },
+  ];
+  const RC = {};
+  function themeColors() {
+    const v = HM.cssVar; Object.assign(RC, { closed: v("--c-danger"), contra: v("--x-contra"), route: v("--c-ok") });
+    return { ring: v("--map-pin-ring"), casing: v("--x-road-casing"), danger: v("--c-danger"), neutral: v("--c-neutral"), warn: v("--c-warn"), ok: v("--c-ok") };
+  }
+  function paintEm(m) {
+    const T = themeColors(); const set = (id, k, val) => m.getLayer(id) && m.setPaintProperty(id, k, val);
+    const st = ["match", ["get", "st"], "closed", T.neutral, "full", T.warn, T.ok];
+    set("road-status-casing", "line-color", T.casing); set("road-closed-dash", "line-color", T.casing);
+    set("road-status", "line-color", ["match", ["get", "name"], ...ROADS.flatMap((r) => [r.name, RC[r.st]]), T.neutral]);
+    set("facilities", "circle-color", T.danger); set("facilities", "circle-stroke-color", T.ring);
+    set("shelters-halo", "circle-color", st); set("shelters", "circle-color", st); set("shelters", "circle-stroke-color", T.ring);
+  }
+  themeColors();
+
+  // Point in polygon for the exposure answer (real points × real zones)
+  function inRing(p, r) { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > p[1]) !== (yj > p[1]) && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) c = !c; } return c; }
+  function inPoly(p, g) { const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates; return polys.some((rings) => inRing(p, rings[0]) && !rings.slice(1).some((h) => inRing(p, h))); }
+  const zone = (code) => HD.tsunami.features.filter((f) => f.properties.code === code);
+  const inZone = (c, code) => zone(code).some((f) => inPoly(c, f.geometry));
+  const facilities = [
+    ...HD.shelters.features.map((f) => ({ kind: "Shelter", name: SH[f.properties.name].label, id: "shelters/" + SH[f.properties.name].fid, c: f.geometry.coordinates })),
+    ...HD.fire.features.map((f, i) => ({ kind: "Fire station", name: f.properties.name.replace(/^(\w+) \((E\d+)\)$/, "$1 Fire Station ($2)"), id: "fire/" + [96, 97][i], c: f.geometry.coordinates })),
+    ...HD.police.features.map((f) => ({ kind: "Police", name: f.properties.name, id: "police/6", c: f.geometry.coordinates })),
+    ...HD.hospitals.features.map((f) => ({ kind: "Hospital", name: f.properties.name, id: "hospitals/16", c: f.geometry.coordinates })),
+    ...HD.schools.features.filter((f) => !HD.shelters.features.some((s) => s.geometry.coordinates.join() === f.geometry.coordinates.join())).map((f) => ({ kind: "School", name: f.properties.name, id: "schools/" + f.properties.name.toLowerCase().replace(/\s+/g, "-"), c: f.geometry.coordinates })),
+  ];
+  const uniq = (a) => a.filter((f, i) => a.findIndex((g) => g.name === f.name) === i);
+  const inEvac = uniq(facilities.filter((f) => inZone(f.c, 1)));
+  const inExtreme = uniq(facilities.filter((f) => !inZone(f.c, 1) && inZone(f.c, 2)));
+  document.getElementById("tcCount").textContent = `${facilities.length} checked · snapshot`;
+  const cite = (id, key) => `<button class="cite" data-cite="${key || "fly"}" data-id="${id}">${id}</button>`;
+
+  document.getElementById("exposure").innerHTML =
+    `<p><b>${inEvac.length} facilities are inside the evacuation zone</b> ${zone(2).length ? `and ${inExtreme.length} more are inside the extreme zone only.` : "The extreme zone is not included in this snapshot."} I checked ${facilities.length} facilities against the zone polygons.</p>
+     <table class="tbl" style="margin-top:6px"><tbody>
+     ${inEvac.map((f) => `<tr><td><span class="chip warn" style="height:20px">Evacuation</span></td><td>${f.name}<span class="id">${f.kind}</span></td><td class="r">${cite(f.id)}</td></tr>`).join("")}
+     ${inExtreme.map((f) => `<tr><td><span class="chip" style="height:20px">Extreme</span></td><td>${f.name}<span class="id">${f.kind}</span></td><td class="r">${cite(f.id)}</td></tr>`).join("")}
+     </tbody></table>
+     <p class="muted" style="margin-top:8px">Demo answer: facility exposure is a snapshot intersection, not an evacuation order. Resource movements are fictional. ${cite("hospitals/16")}.</p>`;
+
+  const baldwin = shelters.find((s) => s.label === "Baldwin High"), mauiHigh = shelters.find((s) => s.label === "Maui High");
+  document.getElementById("balanceText").innerHTML = `Baldwin High is at <b>${pct(baldwin)}%</b> (${fmt(baldwin.occ)} of ${fmt(baldwin.cap)}) and a fictional exercise shelter. Maui High has <b>${fmt(mauiHigh.cap - mauiHigh.occ)}</b> spaces free and the highlighted road statuses are fictional exercise records. ${cite("shelters/" + baldwin.fid, "baldwin")} ${cite("shelters/" + mauiHigh.fid, "mauihigh")} ${cite("road-status/kaahumanu", "roads")}`;
+
+  document.getElementById("sitrep").innerHTML = `<ol>
+    <li><b>Situation.</b> Simulated tsunami warning in effect since 08:52 HST; simulated first wave 12:10 HST. ${cite("nws/HIZ016-exercise", "feeds")} ${cite("ptwc/msg-7", "feeds")} Demo tide gauge reads +0.42 ft above predicted. ${cite("noaa/1615680", "feeds")}</li>
+    <li><b>Evacuation.</b> Exercise zones are highlighted; no real warning is active on this page. Parcel exposure has not been verified in this exercise. ${cite("tsunami/zone-1", "zone")} ${cite("query/parcels-in-zone", "zone")}</li>
+    <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.length ? inExtreme.map((f) => f.name).join(", ") + " are in the extreme zone only." : "Extreme-zone exposure is unavailable in this snapshot."} ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
+    <li><b>Shelters.</b> ${open.length} of ${shelters.length} open; ${fmt(totOcc)} of ${fmt(totCap)} spaces used (${Math.round((totOcc / totCap) * 100)}%). Baldwin High at ${pct(baldwin)}%. ${cite("shelters/*", "shelters")} ${cite("shelters/" + baldwin.fid, "baldwin")}</li>
+    <li><b>Roads.</b> Fictional scenario: 3 closed roads; Waiehu Beach Rd in contraflow. ${cite("road-status/*", "roads")}</li>
+    <li><b>Resources.</b> 5 open requests, 1 critical: 150 kW generator for Baldwin High. ${cite("eoc-board/RR-114", "rr")}</li>
+    <li><b>Systems.</b> Simulated deployment and outage; no county system connection.</li>
+  </ol>`;
+
+  function renderShelters() {
+    const pub = document.body.dataset.view === "public";
+    document.getElementById("shSum").textContent = pub ? `${open.length} open` : `${fmt(totOcc)} / ${fmt(totCap)} · ${Math.round((totOcc / totCap) * 100)}%`;
+    document.getElementById("shelterList").innerHTML = shelters.slice().sort((a, b) => (a.st === "closed") - (b.st === "closed") || pct(b) - pct(a)).map((s) => {
+      const p = s.st === "closed" ? 0 : pct(s);
+      const color = s.st === "closed" ? "var(--c-neutral)" : p > 75 ? "var(--c-warn)" : "var(--c-ok)";
+      const right = s.st === "closed" ? `<span class="chip">Closed</span>` : pub ? `<span class="chip ${p > 75 ? "warn" : "ok"}">${p > 75 ? "Filling" : "Space available"}</span>` : `<span class="pct">${fmt(s.occ)} / ${fmt(s.cap)}<br><span class="faint">${p}%</span></span>`;
+      return `<div class="shel" role="button" tabindex="0" data-c="${s.c}"><span class="nm">${s.label}</span>${right}
+        <span class="meta">${s.addr}${s.pets ? ` · <span class="flag"><svg class="ico"><use href="#i-check"/></svg>Pets</span>` : ""}${s.sn ? ` · <span class="flag"><svg class="ico"><use href="#i-check"/></svg>Special needs</span>` : ""}${!s.real && !pub && s.st === "open" ? ` · <span class="tag-demo">exercise capacity</span>` : ""}</span>
+        ${s.st === "open" ? `<div class="meter"><span style="width:${p}%;background:${color}"></span></div>` : `<span class="meta">${s.note}</span>`}
+        ${s.note && s.st === "open" ? `<span class="meta">${s.note}</span>` : ""}</div>`;
+    }).join("");
+  }
+  document.getElementById("roadList").innerHTML = ROADS.map((r) => `<div class="road"><i style="background:${RC[r.st]}"></i><span>${r.name.replace("Avenue", "Ave").replace("Road", "Rd").replace("Street", "St")}<small>${r.why}</small></span><span class="chip ${r.st === "closed" ? "danger" : r.st === "contra" ? "warn" : "ok"}">${r.label}</span></div>`).join("");
+
+  // nearest open shelter for the public sample place (Kahului Harbor area)
+  const sample = [-156.47016, 20.88951];
+  const dist = (a, b) => { const k = Math.cos((a[1] * Math.PI) / 180); return Math.hypot((a[0] - b[0]) * 111320 * k, (a[1] - b[1]) * 110540); };
+  const near = open.slice().sort((a, b) => dist(sample, a.c) - dist(sample, b.c))[0];
+  document.getElementById("pubNearest").textContent = `${near.label}, ${(dist(sample, near.c) / 1000).toFixed(1)} km`;
+
+  const RR = [
+    { id: "RR-114", what: "Generator, 150 kW", where: "Baldwin High shelter", pri: "Critical", c: [-156.4893, 20.8921] },
+    { id: "RR-117", what: "Cots ×300", where: "Maui High shelter", pri: "High", c: [-156.4724, 20.8752] },
+    { id: "RR-118", what: "Traffic control, 4 officers", where: "Waiehu Beach Rd at Lower Main St", pri: "High", c: [-156.4935, 20.8985] },
+    { id: "RR-120", what: "Paratransit vans ×2", where: "Kahului senior housing, Kaʻahumanu Ave", pri: "High", c: [-156.4655, 20.8895] },
+    { id: "RR-121", what: "Potable water, 2,000 gal", where: "Iao Intermediate shelter", pri: "Medium", c: [-156.4995, 20.8857] },
+  ];
+  const STAGE = [{ name: "War Memorial Complex", c: [-156.4873, 20.8929] }, { name: "Maui High lot", c: [-156.4712, 20.8731] }];
+
+  const eocMarkers = [];
+  function sideLabel(m, ll, text, anchor, offset) { const d = document.createElement("div"); d.className = "maplabel poi side"; d.textContent = text; return new maplibregl.Marker({ element: d, anchor, offset }).setLngLat(ll).addTo(m); }
+  let map;
+  map = HM.create(document.getElementById("map"), {
+    bounds: [[-156.515, 20.866], [-156.447, 20.906]], padding: 10, roadLabels: false,
+    attr: "Data: Hawaii Statewide GIS Program, Hawaii Statewide GIS Program · exercise data · served by Honua",
+    onload: (m) => {
+      HM.overlays(m, ["slr", "flood", "tsunami"], "roads-casing");
+      m.addLayer({ id: "road-status-casing", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5, 16, 11] } });
+      m.addLayer({ id: "road-status", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "name"], ...ROADS.flatMap((r) => [r.name, RC[r.st]]), "#999"], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 16, 7] } });
+      m.addLayer({ id: "road-closed-dash", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.filter((r) => r.st === "closed").map((r) => r.name)]], paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 1, 16, 2.5], "line-dasharray": [1.5, 1.5] } });
+      const fac = { type: "FeatureCollection", features: [...HD.fire.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Fire station" } })), ...HD.police.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Police" } })), ...HD.hospitals.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Hospital" } }))] };
+      m.addSource("facilities", { type: "geojson", data: fac });
+      m.addLayer({ id: "facilities", type: "circle", source: "facilities", paint: { "circle-radius": 5.5, "circle-color": "#b3261e", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
+      fac.features.forEach((f) => { const l = sideLabel(m, f.geometry.coordinates, f.properties.name.replace("Maui Memorial Medical Center", "Maui Memorial").replace(" Police Station", " police"), /E1/.test(f.properties.name) ? "right" : f.properties.k === "Police" ? "top" : "left", /E1/.test(f.properties.name) ? [-9, 0] : f.properties.k === "Police" ? [0, 8] : [9, 0]); eocMarkers.push(l); });
+      const shp = HM.points(shelters, (s) => ({ name: s.label, st: s.st === "closed" ? "closed" : pct(s) > 75 ? "full" : "open" }));
+      m.addSource("shelters", { type: "geojson", data: shp });
+      m.addLayer({ id: "shelters-halo", type: "circle", source: "shelters", paint: { "circle-radius": 13, "circle-color": ["match", ["get", "st"], "closed", "#67736e", "full", "#b45f06", "#15803d"], "circle-opacity": 0.18 } });
+      m.addLayer({ id: "shelters", type: "circle", source: "shelters", paint: { "circle-radius": 7.5, "circle-color": ["match", ["get", "st"], "closed", "#67736e", "full", "#b45f06", "#15803d"], "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 } });
+      shelters.forEach((s) => sideLabel(m, s.c, s.label, "top", [0, 10]));
+      HM.label(m, [-156.4705, 20.8935], "Kahului Harbor", "water");
+      RR.forEach((r) => { const el = document.createElement("div"); el.className = "rr" + (r.pri === "Critical" ? " crit" : ""); el.title = `${r.id} · ${r.what}`; const mk = new maplibregl.Marker({ element: el }).setLngLat(r.c).setPopup(new maplibregl.Popup({ offset: 12 }).setHTML(`<h3 style="font-size:14px">${r.id} · ${r.what}</h3><div class="muted">${r.where}</div><div style="margin-top:4px"><span class="chip ${r.pri === "Critical" ? "danger" : "warn"}">${r.pri}</span> <span class="faint" style="font-size:12px">Fictional exercise request</span></div>`)).addTo(m); eocMarkers.push(mk); });
+      STAGE.forEach((s) => { const el = document.createElement("div"); el.className = "stage"; el.textContent = "S"; el.title = "Staging area: " + s.name; eocMarkers.push(new maplibregl.Marker({ element: el }).setLngLat(s.c).addTo(m)); });
+      paintEm(m); m.on("honua:theme", () => paintEm(m));
+      HM.bindToggles(m);
+      m.on("click", "shelters", (e) => { const s = shelters.find((x) => x.label === e.features[0].properties.name); new maplibregl.Popup({ offset: 10 }).setLngLat(s.c).setHTML(`<h3 style="font-size:14px">${s.label}</h3><div class="muted">${s.addr}</div><div style="margin-top:4px">${s.st === "closed" ? s.note : `${fmt(s.occ)} of ${fmt(s.cap)} spaces used (${pct(s)}%)`}</div>`).addTo(m); });
+      m.on("mouseenter", "shelters", () => (m.getCanvas().style.cursor = "pointer")); m.on("mouseleave", "shelters", () => (m.getCanvas().style.cursor = ""));
+      setView(document.body.dataset.view);
+    },
+  });
+
+  function setView(v) {
+    document.body.dataset.view = v;
+    document.querySelectorAll(".seg [data-view]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === v));
+    renderShelters(); bindShelters();
+    if (!map || !map.getLayer("facilities")) return;
+    HM.toggle(map, ["facilities"], v === "eoc");
+    eocMarkers.forEach((mk) => (mk.getElement().style.display = v === "eoc" ? "" : "none"));
+  }
+  document.querySelectorAll(".seg [data-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
+  function bindShelters() {
+    document.querySelectorAll(".shel").forEach((el) => { const go = () => map && map.flyTo({ center: el.dataset.c.split(",").map(Number), zoom: 16, duration: 700 }); el.addEventListener("click", go); el.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), go())); });
+  }
+  renderShelters(); bindShelters();
+
+  const fly = (c, z) => map && map.flyTo({ center: c, zoom: z || 16, duration: 700 });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-cite]"); if (!b || !map) return;
+    const k = b.dataset.cite, id = b.dataset.id;
+    if (k === "fly") { const f = facilities.find((x) => x.id === id); if (f) fly(f.c); }
+    else if (k === "baldwin") fly(baldwin.c); else if (k === "mauihigh") fly(mauiHigh.c);
+    else if (k === "balance") map.fitBounds([[-156.494, 20.871], [-156.469, 20.894]], { padding: 40, duration: 700 });
+    else if (k === "rr") fly(RR[0].c, 16.5);
+    else if (k === "zone") map.fitBounds([[-156.505, 20.876], [-156.447, 20.906]], { duration: 700 });
+    else if (k === "roads") map.fitBounds([[-156.5, 20.884], [-156.46, 20.904]], { duration: 700 });
+    else if (k === "shelters") map.fitBounds([[-156.51, 20.869], [-156.465, 20.895]], { duration: 700 });
+  });
+  document.getElementById("approveSitrep").addEventListener("click", (e) => { const c = e.target.closest(".ai-card"); c.querySelector(".chip").className = "chip ok"; c.querySelector(".chip").style.marginLeft = "auto"; c.querySelector(".chip").textContent = "Demo approval · no publication"; e.target.closest("button").disabled = true; });
+
+  // ticking ages and outage clock
+  const ages = [...document.querySelectorAll("[data-age]")];
+  let t = 0; const down0 = 14 * 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  const tick = () => {
+    ages.forEach((el) => { const a = +el.dataset.age + t; el.textContent = a < 120 ? `${a} s` : `${Math.floor(a / 60)} min`; });
+    const d = down0 + t; document.getElementById("down").textContent = `00:${pad(Math.floor(d / 60))}:${pad(d % 60)}`; t++;
+  };
+  tick(); setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
