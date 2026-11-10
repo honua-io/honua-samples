@@ -391,6 +391,15 @@ export function projectToMapPixel([lng, lat], view, size) {
   return [Math.round(size.width / 2 + (px - cx)), Math.round(size.height / 2 + (py - cy))];
 }
 
+export async function settleMapCanvas(page) {
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('#map canvas');
+    return canvas && Math.abs(canvas.width / devicePixelRatio - canvas.clientWidth) < 1
+      && Math.abs(canvas.height / devicePixelRatio - canvas.clientHeight) < 1;
+  });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
 /** Screenshots `locator` and returns the RGB value at each CSS-pixel point. */
 export async function readPixels(page, locator, points) {
   const png = await locator.screenshot({ animations: "disabled" });

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { readPixels, serverEnv } from '../../../scripts/browser-verification/harness.mjs';
+import { readPixels, serverEnv, settleMapCanvas } from '../../../scripts/browser-verification/harness.mjs';
 import { closeOperationsBrowser, prepareOperationsBrowser } from '../../../scripts/browser-verification/state-local.mjs';
 import { bridgeFeature, exerciseFeature } from './fixture.mjs';
 
@@ -93,9 +93,11 @@ test('PW-01: mobile dark and desktop light layouts keep records accessible', asy
   await ready(page);
   await page.getByRole('button', { name: 'Switch to dark mode' }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await settleMapCanvas(page);
   await page.screenshot({ path: info.outputPath('public-works-mobile-dark.png'), fullPage: true });
   await page.getByRole('button', { name: 'Switch to light mode' }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
+  await settleMapCanvas(page);
   await page.screenshot({ path: info.outputPath('public-works-desktop-light.png'), fullPage: true });
 });
 

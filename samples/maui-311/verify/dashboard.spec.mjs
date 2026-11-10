@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { readPixels, serverEnv } from '../../../scripts/browser-verification/harness.mjs';
+import { readPixels, serverEnv, settleMapCanvas } from '../../../scripts/browser-verification/harness.mjs';
 import { closeOperationsBrowser, prepareOperationsBrowser } from '../../../scripts/browser-verification/state-local.mjs';
 import { request } from './fixture.mjs';
 
@@ -123,9 +123,11 @@ test('mobile and dark mode retain disclosure, controls and accessible request se
   await page.getByRole('button', { name: /dark mode/i }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await settleMapCanvas(page);
   await page.screenshot({ path: info.outputPath('311-mobile-dark.png'), fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('button', { name: /light mode/i }).click();
+  await settleMapCanvas(page);
   await page.screenshot({ path: info.outputPath('311-desktop-light.png'), fullPage: true });
 });
 
