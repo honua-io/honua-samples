@@ -22,7 +22,7 @@ function queryUrl(source, parameters) {
 
 async function selectedIds(source) {
   const response = await json(queryUrl(source, {
-    f: 'json', where: '1=1', returnIdsOnly: true, geometry: source.bounds.join(','),
+    f: 'json', where: source.where ?? '1=1', returnIdsOnly: true, geometry: source.bounds.join(','),
     geometryType: 'esriGeometryEnvelope', inSR: 4326, spatialRel: 'esriSpatialRelIntersects',
   }));
   const ids = response.objectIds;
@@ -57,11 +57,12 @@ function metadataFingerprint(metadata) {
 function provenance(source) {
   return { dataset: source.id, department: source.department, license: source.license,
     licenseUrl: source.licenseUrl, metadataUrl: source.metadataUrl, sourceUrl: source.url,
-    attribution: source.attribution, outputCrs: 'EPSG:4326', coverageBounds: source.bounds,
+    attribution: source.attribution, ...(source.dataVintage ? { dataVintage: source.dataVintage } : {}),
+    outputCrs: 'EPSG:4326', coverageBounds: source.bounds,
     displayGeometry: { ...source.displayGeometry, warning: 'Display geometry generalized in output degrees (approximately two metres); not legal boundaries or survey measurements' },
     datumTransformation: 'No explicit datum transformation requested; server default NAD83 to WGS84 may differ by approximately one metre',
     selection: { kind: 'Maui Nui envelope intersection; whole features; not a county boundary clip',
-      bounds: source.bounds, completeDataset: false, pageSize } };
+      bounds: source.bounds, ...(source.where ? { where: source.where } : {}), completeDataset: false, pageSize } };
 }
 
 async function downloadRows(source, ids) {

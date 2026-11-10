@@ -167,7 +167,6 @@ test('PRM-04: fictional permit records are unavailable', async (t) => {
   await assert.rejects(fetchSnapshot('maui-demo-permits', await directory(t)), /Unknown source/);
 });
 
-
 test('all source identifiers retain full run identity within publication and PostgreSQL limits', () => {
   const runId = 'f'.repeat(32);
   const readableNames = new Set();
@@ -216,4 +215,28 @@ test('department creation refuses an unversioned listing before writing', async 
   });
   await assert.rejects(ensureDepartments({ baseUrl: 'https://example.test', adminApiKey: 'test' }), /concurrency ETag/);
   assert.deepEqual(methods, ['GET']);
+});
+
+test('NBI snapshot preserves real ratings and vintage with an explicit Maui county selection', async (t) => {
+  const output = await directory(t);
+  const bridge = { type: 'Feature', properties: { objectid: 1, county_code_003: '009',
+    structure_number_008: 'TEST-BRIDGE', deck_cond_058: '7', superstructure_cond_059: '6',
+    substructure_cond_060: '5', culvert_cond_062: 'N', bridge_condition: 'F', date_of_inspect_090: '624' },
+    geometry: { type: 'Point', coordinates: [-156.5, 20.8] } };
+  const requests = sourceFetch(t, { selection: { objectIds: [1] },
+    page: { type: 'FeatureCollection', features: [bridge] } });
+  const receipt = await fetchSnapshot('maui-bridges', output);
+  const snapshot = await readSnapshot('maui-bridges', output);
+  assert.equal(receipt.dataVintage, '2025-06-20');
+  assert.equal(receipt.selection.where, "county_code_003 = '009'");
+  assert.match(receipt.attribution, /Federal Highway Administration/);
+  assert.match(receipt.metadataUrl, /bridges_nbi.html$/);
+  assert.ok(requests.filter((url) => url.searchParams.has('returnIdsOnly'))
+    .every((url) => url.searchParams.get('where') === "county_code_003 = '009'"));
+  assert.deepEqual(snapshot.geojson.features[0].properties, bridge.properties);
+  const receiptFile = path.join(output, 'maui-bridges.receipt.json');
+  for (const changed of [{ dataVintage: '2026-01-01' }, { selection: { ...receipt.selection, where: '1=1' } }]) {
+    await writeFile(receiptFile, JSON.stringify({ ...receipt, ...changed }));
+    await assert.rejects(readSnapshot('maui-bridges', output), /provenance mismatch/);
+  }
 });
