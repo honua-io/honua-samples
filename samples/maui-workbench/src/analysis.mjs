@@ -112,7 +112,7 @@ async function refreshAnalysis(presentation) {
     const [result, chart, table] = await Promise.all([queryAnalysisMap(next, { signal }),
       queryStatusChart(next, { signal }), next.table.setFilters(next.registry.snapshot)]);
     if (current !== revision) return;
-    if (!['ready', 'partial'].includes(table.state)) throw new Error('The feature table could not complete this query. Clear filters and retry.');
+    if (!['ready', 'partial'].includes(table.state) || !['ready', 'partial'].includes(next.table.snapshot.state)) throw new Error('The feature table could not complete this query. Clear filters and retry.');
     element('feature-table').table = next.table;
     map.update(result.collection);
     if (presentation) {
@@ -162,6 +162,10 @@ function describeFilters() {
 }
 
 function showError(error) {
+  revision += 1;
+  active?.abort();
+  exportSnapshot = undefined;
+  setControlsState('busy');
   element('feature-table').table = undefined;
   map.update({ type: 'FeatureCollection', features: [] });
   status.textContent = `Could not finish the query: ${error.message} Clear filters or reconnect to retry.`;

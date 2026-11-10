@@ -27,7 +27,7 @@ function filtered(params) {
     && (!box || (point.x >= box.xmin && point.x <= box.xmax && point.y >= box.ymin && point.y <= box.ymax)));
 }
 async function mockServer(page) {
-  const control = { fail: false, queries: [] };
+  const control = { fail: false, queries: [], holdMap: false, corruptTable: false };
   await page.route('https://demo.honua.io/rest/services/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -55,8 +55,16 @@ async function mockServer(page) {
     } else {
       const offset = Number(params.get('resultOffset') ?? 0);
       const limit = Number(params.get('resultRecordCount') ?? 1000);
+      if (control.holdMap && limit === 1000) {
+        control.held = true;
+        await new Promise((resolve) => { control.releaseMap = resolve; });
+      }
+      const projection = params.get('outFields')?.split(',');
+      const features = matching.slice(offset, offset + limit).map((feature) => ({ ...feature, attributes: Object.fromEntries(
+        Object.entries(feature.attributes).filter(([field]) => !projection || projection.includes('*') || projection.includes(field))) }));
+      if (control.corruptTable && limit === 100) for (const feature of features) delete feature.attributes.data_origin;
       await route.fulfill({ json: { objectIdFieldName: 'objectid', geometryType: 'esriGeometryPoint', spatialReference: { wkid: 4326 },
-        count: matching.length, features: matching.slice(offset, offset + limit), exceededTransferLimit: offset + limit < matching.length } });
+        count: matching.length, features, exceededTransferLimit: offset + limit < matching.length } });
     }
   });
   return control;
@@ -350,4 +358,26 @@ test('an unsupported CQL2 preview refreshes results and invalidates a cached exp
   await expect(page.locator('#cql2-preview')).toHaveText('TRUE');
   await expect(page.locator('#map-status')).toHaveText('3 matching records mapped.');
   expect(errors).toEqual([]);
+});
+
+
+test('a delayed refresh cannot reattach a table after provenance failure', async ({ page }) => {
+  const control = await mockServer(page);
+  await page.goto(`${site.url}analysis.html${parameters}`);
+  await expect(page.locator('#connection-status')).toContainText('311 service requests connected');
+  // Keep a map refresh pending while a subsequent table request fails validation.
+  control.holdMap = true;
+  await page.locator('#clear').click();
+  await expect.poll(() => control.held).toBe(true);
+  await expect.poll(() => page.evaluate(() => document.getElementById('feature-table').table?.snapshot.state)).toBe('ready');
+  control.corruptTable = true;
+  await page.evaluate(async () => {
+    await document.getElementById('feature-table').table.setColumnVisibility('district', false);
+  });
+  await expect(page.locator('#connection-status')).toContainText('Could not finish the query');
+  control.releaseMap();
+  await expect(page.locator('#map-status')).toHaveText('No completed map result. Retry before using these records.');
+  await expect(page.locator('#export-csv')).toBeDisabled();
+  await expect(page.locator('#share')).toBeDisabled();
+  expect(await page.evaluate(() => document.getElementById('feature-table').table)).toBeUndefined();
 });

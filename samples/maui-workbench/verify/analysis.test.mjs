@@ -103,3 +103,18 @@ test('every table page validates exercise provenance before returning rows', asy
   await assert.rejects(pages.next(), /DEMO DATA provenance/);
   assert.equal(checked, 4);
 });
+
+
+test('hidden provenance remains in query and streaming projections', async () => {
+  const attributes = { objectid: 7, data_origin: 'synthetic_demo', is_demo: true,
+    exercise_only: true, display_label: 'DEMO DATA — fictional request' };
+  const project = ({ outFields }) => ({ features: [{ attributes: Object.fromEntries(
+    Object.entries(attributes).filter(([field]) => !outFields || outFields.includes('*') || outFields.includes(field))) }] });
+  const source = { query: async (request) => project(request), async *stream(request) { yield project(request); } };
+  const guarded = validatedAnalysisSource(source, catalogs.requests.validateRecord, catalogs.requests.provenanceFields);
+  const request = { outFields: ['objectid'] };
+  assert.deepEqual((await guarded.query(request)).features[0].attributes, attributes);
+  assert.deepEqual((await guarded.stream(request).next()).value.features[0].attributes, attributes);
+  assert.deepEqual(request.outFields, ['objectid']);
+  assert.deepEqual((await guarded.query({ outFields: ['*'] })).features[0].attributes, attributes);
+});
