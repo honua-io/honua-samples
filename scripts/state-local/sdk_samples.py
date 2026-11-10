@@ -5,7 +5,7 @@ Reads examples from origin/trunk of honua-sdk-js, honua-samples and honua-server
 checkout never leaks into the gallery. Hand-written fields: category, title, one-line description, API names and lifecycle status. Read from git: README (rendered to HTML), the main source file (trimmed) and package/sample metadata.
 
 Usage: python3 -I sdk_samples.py --root /path/to/workspace --output /path/to/catalog.json
-The workspace folder must hold both repositories with freshly fetched origin/trunk refs.
+The workspace folder must hold all three repositories with freshly fetched origin/trunk refs.
 """
 import argparse, html, json, os, re, subprocess
 
