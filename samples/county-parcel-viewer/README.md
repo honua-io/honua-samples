@@ -9,7 +9,7 @@ its number (TMK on Maui), by street address or by clicking it on the map, and se
 - its assessor record link, acreage, and the fields the county data does not carry (land use, owner);
 - a link to that parcel you can copy and share.
 
-It is a Vite app built on the published Honua JavaScript SDK (`@honua/sdk-js@0.2.10`, pinned in
+It is a Vite app built on the published Honua JavaScript SDK (`@honua/sdk-js@0.3.2`, pinned in
 `package-lock.json`), running on public Maui County demo data. It is not affiliated with the County of Maui.
 
 | | |
@@ -18,7 +18,7 @@ It is a Vite app built on the published Honua JavaScript SDK (`@honua/sdk-js@0.2
 | Level | Intermediate |
 | Time | About 20 minutes |
 | Prerequisites | Node.js 22.12 or later, a modern web browser, internet access |
-| Libraries | `@honua/sdk-js` 0.2.10, `maplibre-gl` 6.4.1, `pmtiles` 4.5.0, `@fontsource` Public Sans 5.3.0 and Source Serif 4 5.3.1 |
+| Libraries | `@honua/sdk-js` 0.3.2, `maplibre-gl` 6.4.1, `pmtiles` 4.5.0, `@fontsource` Public Sans 5.3.0 and Source Serif 4 5.3.1 |
 
 ## Run
 

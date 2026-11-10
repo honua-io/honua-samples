@@ -9,7 +9,7 @@ import {
   HonuaGeocodingClient,
   QueryBuilder,
   connect,
-  esriGeometryToGeoJSON,
+  geoServicesGeometryToGeoJSON,
   point,
   polygon,
 } from "@honua/sdk-js/honua";
@@ -76,7 +76,7 @@ export function layer(url: string): Promise<LayerHandle> {
 function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unknown }): Parcel {
   const attributes = feature.attributes;
   const esri = feature.geometry as { rings?: number[][][] } | null | undefined;
-  const geometry = esriGeometryToGeoJSON(esri as Record<string, unknown> | null);
+  const geometry = geoServicesGeometryToGeoJSON(esri as Record<string, unknown> | null);
   if (!esri?.rings?.length || !geometry) throw new Error("The parcel layer returned a parcel without a polygon.");
   const tmk = attributes["tmk_txt"];
   if (typeof tmk !== "string" || !tmk.trim()) throw new Error("The parcel has no source TMK; County permit lookup is unavailable.");
@@ -165,7 +165,7 @@ export async function candidatesFor(
       .signal(options.signal)
       .run();
     for (const feature of response.features ?? []) {
-      const geometry = esriGeometryToGeoJSON(feature.geometry ?? null);
+      const geometry = geoServicesGeometryToGeoJSON(feature.geometry ?? null);
       const code = feature.attributes[options.code];
       if (!geometry || code === null || code === undefined || code === "") throw new Error("Layer returned an incomplete polygon; applicability is unknown.");
       const label = options.label ? feature.attributes[options.label] : undefined;
