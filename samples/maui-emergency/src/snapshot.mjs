@@ -3,7 +3,7 @@ import { wgs84Geometry } from '../../../shared/state-local/geometry.mjs';
 import { zoneGeometry } from './location.mjs';
 
 export async function loadSnapshot() {
-  const response = await fetch('./data/snapshot.json');
+  const response = await fetch('./data/exercise-data.json');
   if (!response.ok) throw new Error('Snapshot is unavailable');
   const data = await response.json();
   if (data.format !== 'honua.emergency.snapshot.v1' || !data.records?.length || !data.context?.zones?.length) throw new Error('Invalid exercise snapshot');

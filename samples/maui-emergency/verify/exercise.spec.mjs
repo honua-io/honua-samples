@@ -108,15 +108,23 @@ test('EM-01 bounded slice: timer displays changed server data, failed refresh hi
   await expect(row).toBeFocused();
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
   await expect(row).toBeFocused();
+  await page.locator('#coordinates').fill('20.85, -156.5');
+  await page.locator('#location-form').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('#location-answer')).toContainText('This point intersects');
   await page.route('**/query?**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Unavailable"}' }));
   await page.getByRole('button', { name: 'Refresh now', exact: true }).click();
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'fail');
   await expect(page.locator('#dashboard')).toBeHidden();
+  await page.locator('#location-form').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('#location-answer')).toContainText('Zone check unavailable');
+  await expect(page.locator('#location-answer')).not.toContainText('This point intersects');
   await expect(page.locator('#freshness')).toContainText('do not establish source freshness');
   await page.unroute('**/query?**');
   await page.getByRole('button', { name: 'Refresh now', exact: true }).click();
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
   await expect(page.locator('#rows tr')).toHaveCount(4);
+  await page.locator('#location-form').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('#location-answer')).toContainText('This point intersects');
 });
 
 test('EM-01 bounded slice: unsafe and unbound layers do not show a situational map', async ({ page }) => {

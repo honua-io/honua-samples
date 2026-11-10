@@ -6,7 +6,7 @@ import { mauiSources } from './maui-sources.mjs';
 import { sha256 } from '../lib/checksum.mjs';
 import { exerciseSources, generateExercise } from './exercise.mjs';
 const [schoolsPath, roadsPath, zonesPath, receiptPath, output] = process.argv.slice(2);
-if (!output) throw new Error('Usage: emergency-snapshot.mjs schools.geojson roads.cjson zones.geojson tsunami.receipt.json output');
+if (!output) throw new Error('Usage: emergency-snapshot.mjs schools.geojson roads.cjson zones.geojson tsunami-source.json output');
 const raw = await Promise.all([schoolsPath, roadsPath, zonesPath].map((file) => readFile(file, 'utf8')));
 const [schools, compact, zones] = raw.map(JSON.parse);
 function line(values) {
@@ -43,12 +43,12 @@ for (const [name, geojson, receipt] of [['maui-demo-shelters', schools, receipts
   }
 }
 } finally { await rm(scratch, { recursive: true, force: true }); }
-await writeFile(path.join(output, 'tsunami.receipt.json'), JSON.stringify(zoneReceipt, null, 2));
+await writeFile(path.join(output, 'tsunami-source.json'), JSON.stringify(zoneReceipt, null, 2));
 const acceptedZones = zones.features.filter(({ properties: p }) => ['Tsunami Evacuation Zone', 'Extreme Tsunami Evacuation Zone'].includes(p.zone_type))
   .map((feature) => ({ ...feature, properties: { ...feature.properties, zone_kind: feature.properties.zone_type.startsWith('Extreme') ? 'extreme' : 'regular' } }));
 if (!acceptedZones.length || !roads.features.length || !schools.features.length) throw new Error('Snapshot inputs must be nonempty');
 const snapshot = { format: 'honua.emergency.snapshot.v1', mode: 'static exercise', records, context: { zones: acceptedZones, roads: roads.features }, sources: receipts };
-await writeFile(path.join(output, 'snapshot.json'), JSON.stringify(snapshot));
+await writeFile(path.join(output, 'exercise-data.json'), JSON.stringify(snapshot));
 await writeFile(path.join(output, 'sources.json'), JSON.stringify({ ...snapshot, records: undefined, context: undefined,
   snapshotSha256: sha256(JSON.stringify(snapshot)), exerciseLicense: 'CC0-1.0',
   exerciseLicenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/legalcode',
