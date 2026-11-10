@@ -330,6 +330,12 @@
       "id": "maui-public-works",
       "disposition": "internal-qualification",
       "reason": "Published SDK query contract only; the complete Studio application and MCP journey must qualify before public gallery promotion."
+    },
+    {
+      "sourceRepo": "honua-samples",
+      "id": "maui-workbench",
+      "disposition": "internal-qualification",
+      "reason": "Linked analysis and numeric depth qualification; public promotion requires the complete approved Workbench journey and shared deployment."
     }
   ]
 }

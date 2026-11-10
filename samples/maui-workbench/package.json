@@ -1,0 +1,21 @@
+{
+  "name": "honua-maui-workbench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "test": "node --test verify/*.test.mjs"
+  },
+  "dependencies": {
+    "@honua/sdk-js": "0.3.2",
+    "@honua/app-platform": "0.3.2",
+    "maplibre-gl": "6.4.1",
+    "geotiff": "3.0.5",
+    "terra-draw": "1.32.0",
+    "terra-draw-maplibre-gl-adapter": "1.4.1",
+    "pmtiles": "4.4.1"
+  },
+  "devDependencies": {
+    "vite": "8.2.4"
+  }
+}

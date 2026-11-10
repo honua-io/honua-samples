@@ -6,12 +6,16 @@ import { BROWSER_ORIGIN_PORT, runCommand, seedFeatureService, serverEnv } from '
 import { startStaticServer } from '../lib/browser-lane.mjs';
 import { buildStateLocalSite } from '../state-local/build-site.mjs';
 
-async function buildSample(sample, scenario) {
+export async function ensureOperationsDependencies(sample) {
   if (!await stat(path.join(sample, 'node_modules/.bin/vite')).catch(() => null)) {
     await runCommand('npm', ['ci', '--no-audit', '--no-fund'], { cwd: sample, label: 'install operations app' });
   }
+}
+
+async function buildSample(sample, scenario) {
+  await ensureOperationsDependencies(sample);
   await runCommand('npm', ['test'], { cwd: sample, label: 'operations unit tests' });
-  await runCommand('node', ['scripts/state-local/sdk/verify.mjs', scenario], { cwd: path.resolve(sample, '../..'), label: 'three published SDK contracts' });
+  if (scenario) await runCommand('node', ['scripts/state-local/sdk/verify.mjs', scenario], { cwd: path.resolve(sample, '../..'), label: 'three published SDK contracts' });
   await runCommand('npm', ['run', 'build'], { cwd: sample, label: 'build operations app' });
 }
 
