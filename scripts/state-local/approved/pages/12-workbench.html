@@ -267,7 +267,7 @@
       </div>
       <div class="count"><b id="nShown">0</b> <span class="muted" id="nOf"></span></div>
       <div class="maphint" id="hint" role="status"><span id="hintText"></span><button class="btn sm" type="button" id="hintDone">Done</button><button class="btn sm ghost" type="button" id="hintCancel">Cancel</button></div>
-      <div class="note3d" id="note3d"><b>3D view.</b> 200 real Overture footprints at Kahului Harbor, extruded by <code>render_height</code>. Parcels extruded by assessed building value. Heights are footprint attributes; parcel extrusion is a value visualization, not physical height. Terrain is not embedded in this preview.</div>
+      <div class="note3d" id="note3d"><b>3D view.</b> Parcel extrusions compare assessed values. These columns do not represent building heights.</div>
     </div>
     <section class="tablepanel" aria-labelledby="tH" id="wbTable">
       <div class="tp-h">
@@ -336,7 +336,7 @@
       cols: [["tmk", "TMK", "mono"], ["zoning", "Zoning"], ["zgroup", "Zone group"], ["flood", "Flood"], ["lud", "State land use"], ["sma", "SMA"], ["tsu", "Tsunami"], ["cplan", "Community plan"], ["land", "Land value", "money"], ["bldg", "Building value", "money"], ["acres", "Acres", "num"]],
       cat: ["zgroup", "zoning", "flood", "lud", "sma", "tsu", "cplan"], num: ["land", "bldg", "acres"], time: null,
       charts: [{ t: "bar", f: "zgroup" }, { t: "hist", f: "land" }, { t: "scatter", f: "land", g: "bldg" }] },
-    requests: { name: "311 service requests", meta: "468 · demo data", get color() { return HM.cssVar("--viz-2"); }, rows: REQS, idField: "id", sum: "requests", demo: true,
+    requests: { name: "311 service requests", meta: `${REQS.length} · demo data`, get color() { return HM.cssVar("--viz-2"); }, rows: REQS, idField: "id", sum: "requests", demo: true,
       cols: [["data_origin", "Data origin"], ["disclaimer", "Disclaimer"], ["id", "Request", "mono"], ["type", "Type"], ["status", "Status"], ["dept", "Department"], ["district", "District"], ["hazard", "Hazard zone"], ["sla", "SLA"], ["created", "Opened", "date"]],
       cat: ["type", "status", "dept", "district", "hazard", "sla"], num: [], time: "created",
       charts: [{ t: "time", f: "created" }, { t: "bar", f: "type" }, { t: "bar", f: "hazard" }] },
@@ -566,12 +566,12 @@
   document.getElementById("hintCancel").addEventListener("click", () => setMode("select"));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && mode !== "select") setMode("select"); });
   // 2D / 3D
-  function set3d(on) {
+  function set3d(on, animate = true) {
     document.getElementById("v2d").setAttribute("aria-pressed", !on); document.getElementById("v3d").setAttribute("aria-pressed", on);
     HM.toggle(map, ["p3d"], on && S.layer === "parcels"); HM.toggle(map, ["pf-hit"], !on && S.layer === "parcels");
     document.getElementById("note3d").dataset.on = on;
     map.dragRotate[on ? "enable" : "disable"]();
-    map.easeTo(on ? { pitch: 58, bearing: -28, center: [-156.4705, 20.8905], zoom: 15.7, duration: 900 } : { pitch: 0, bearing: 0, duration: 700 });
+    if (animate) map.easeTo(on ? { pitch: 58, bearing: -28, center: [-156.4705, 20.8905], zoom: 15.7, duration: 900 } : { pitch: 0, bearing: 0, duration: 700 });
   }
   document.getElementById("v2d").addEventListener("click", () => set3d(false));
   document.getElementById("v3d").addEventListener("click", () => set3d(true));
@@ -778,7 +778,7 @@
   document.getElementById("expGj").addEventListener("click", () => { const L = LAYERS[S.layer], rows = filtered(); const byId = new Map(parcelsFC.features.map((f) => [f.properties.id, f.geometry])); download(`maui-${S.layer}.geojson`, JSON.stringify({ type: "FeatureCollection", features: rows.map((r) => { const { c, _i, ...props } = r; return { type: "Feature", properties: props, geometry: S.layer === "parcels" ? byId.get(r.id) : { type: "Point", coordinates: c } }; }) }), "application/geo+json"); });
   function openShare() {
     const view = { center: map.getCenter().toArray(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
-    const state = { ...snap(), view, sort: S.sort, tq: S.tq, selOnly: S.selOnly }; delete state.plan; delete state.prop;
+    const state = { ...snap(), view, sort: S.sort, tq: S.tq, selOnly: S.selOnly, is3d: document.getElementById("v3d").getAttribute("aria-pressed") === "true" }; delete state.plan; delete state.prop;
     const url = new URL(location.href); url.hash = "s=" + encodeURIComponent(JSON.stringify(state));
     document.getElementById("shareLink").textContent = url.href;
     document.getElementById("embedCode").textContent = `<iframe src="${url.href.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" width="100%" height="640" title="Maui analysis"></iframe>`;
@@ -798,24 +798,33 @@
       const h = JSON.parse(decodeURIComponent(location.hash.slice(3)));
       if (!Object.hasOwn(LAYERS, h.layer)) throw new Error("Unknown layer");
       const L = LAYERS[h.layer], fields = L.cols.map(([field]) => field);
-      const safeValue = (v) => typeof v === "number" ? Number.isFinite(v) : typeof v === "string" && v.length < 300 && !/[<>&"`]/.test(v);
-      const validClause = (a) => a && fields.includes(a.f) && ["=", "≠", ">", "<", "≥", "in", "not in", "between", "between-date", "contains"].includes(a.op) && (Array.isArray(a.v) ? a.v.length < 200 && a.v.every(safeValue) : safeValue(a.v));
+      const safeValue = (v) => typeof v === "number" ? Number.isFinite(v) : typeof v === "string" && v.length < 300 && !/[<>"`]/.test(v);
+      const validClause = (a) => {
+        if (!a || !fields.includes(a.f)) return false;
+        if (["in", "not in"].includes(a.op)) return Array.isArray(a.v) && a.v.length > 0 && a.v.length < 200 && a.v.every((v) => typeof v === "string" && safeValue(v));
+        if (a.op === "between") return L.num.includes(a.f) && Array.isArray(a.v) && a.v.length === 2 && a.v.every(Number.isFinite) && a.v[0] <= a.v[1];
+        if (a.op === "between-date") return a.f === L.time && Array.isArray(a.v) && a.v.length === 2 && a.v.every((v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) && a.v[0] <= a.v[1];
+        return ["=", "≠", ">", "<", "≥", "contains"].includes(a.op) && safeValue(a.v);
+      };
+      const validChart = (c) => c && (c.t === "bar" ? L.cat.includes(c.f) : c.t === "time" ? c.f === L.time && L.time !== null : c.t === "hist" ? L.num.includes(c.f) : c.t === "scatter" && L.num.includes(c.f) && L.num.includes(c.g));
       const validPoint = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite) && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90;
       if (!Array.isArray(h.attr) || h.attr.length > 30 || !h.attr.every(validClause)) throw new Error("Invalid filters");
       if (!h.chartF || Object.keys(h.chartF).length > 30 || !Object.entries(h.chartF).every(([k, a]) => /^(bar|hist|scatter|time):[a-z_]+$/.test(k) && validClause(a))) throw new Error("Invalid chart filters");
-      if (!Array.isArray(h.charts) || h.charts.length > 15 || !h.charts.every((c) => ["bar", "hist", "scatter", "time"].includes(c.t) && fields.includes(c.f) && (!c.g || fields.includes(c.g)))) throw new Error("Invalid charts");
-      if (h.spatial && (!Array.isArray(h.spatial) || h.spatial.length > 1000 || !h.spatial.every(validPoint))) throw new Error("Invalid geometry");
+      if (!Array.isArray(h.charts) || h.charts.length > 15 || !h.charts.every(validChart)) throw new Error("Invalid charts");
+      if (h.spatial && (!Array.isArray(h.spatial) || h.spatial.length < 3 || h.spatial.length > 1000 || !h.spatial.every(validPoint))) throw new Error("Invalid geometry");
       if (h.time && (!Array.isArray(h.time) || h.time.length !== 2 || !h.time.every((t) => /^\d{4}-\d{2}-\d{2}$/.test(t)))) throw new Error("Invalid date range");
       if (!Array.isArray(h.sel) || h.sel.length > 5000 || !h.sel.every(safeValue)) throw new Error("Invalid selection");
       if (h.sort && (!Array.isArray(h.sort) || h.sort.length !== 2 || !fields.includes(h.sort[0]) || ![-1, 1].includes(h.sort[1]))) throw new Error("Invalid sort");
       if (h.tq && !safeValue(h.tq)) throw new Error("Invalid search");
       const v = h.view;
       if (!v || !validPoint(v.center) || ![v.zoom, v.pitch, v.bearing].every(Number.isFinite) || v.zoom < 0 || v.zoom > 22 || v.pitch < 0 || v.pitch > 85) throw new Error("Invalid map view");
+      if (h.is3d !== undefined && typeof h.is3d !== "boolean") throw new Error("Invalid view mode");
       setLayer(h.layer);
       Object.assign(S, { attr: h.attr, chartF: h.chartF, spatial: h.spatial, time: h.time, charts: h.charts.map(({ t, f, g }) => ({ t, f, ...(g ? { g } : {}) })), sel: new Set(h.sel), tq: h.tq || "", sort: h.sort || null, selOnly: h.selOnly === true });
       lastPlan = null; proposal = null; document.getElementById("nlqOut").hidden = true;
       document.getElementById("tq").value = S.tq; setTimeInputs(); refresh(); renderNL();
-      if (map.loaded()) map.jumpTo(v); else map.once("load", () => map.jumpTo(v));
+      const restoreCamera = () => { set3d(h.is3d === true || (h.is3d === undefined && v.pitch > 0), false); map.jumpTo(v); };
+      if (map.loaded()) restoreCamera(); else map.once("load", restoreCamera);
     } catch { document.getElementById("shareLink").textContent = "This shared view is invalid. The default snapshot is shown."; }
   }
   // wire date-aware attribute test and boot

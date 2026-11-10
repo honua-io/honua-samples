@@ -15,6 +15,7 @@ try {
   await expect(page.locator('[data-map-ready="true"]')).toHaveCount(5, { timeout: 30000 });
   await page.goto(`${server.url}/state-local/workbench/`);
   await expect(page.locator('#nShown')).not.toBeEmpty();
+  const defaultCount = await page.locator('#nShown').textContent();
   await page.locator('[data-l="requests"]').click();
   await page.locator('.chart .bar').first().click();
   await page.locator('#dt th[data-sort="type"]').click();
@@ -37,6 +38,24 @@ try {
   const exported = JSON.parse(Buffer.concat(chunks).toString());
   assert.equal(exported.features.length, Number(count.replaceAll(',', '')));
   assert.ok(exported.features.every((f) => f.properties.data_origin === 'synthetic_demo' && f.properties.disclaimer.includes('DEMO DATA')));
+  const shared = JSON.parse(decodeURIComponent(new URL(link).hash.slice(3)));
+  const visitState = async (state) => {
+    await page.goto(`${server.url}/state-local/`);
+    await page.goto(`${server.url}/state-local/workbench/#s=${encodeURIComponent(JSON.stringify(state))}`);
+  };
+  await visitState({ ...shared, attr: [{ f: 'dept', op: '=', v: 'Parks & Recreation' }], chartF: {} });
+  await expect(page.locator('#nShown')).toHaveText('51');
+  await page.locator('[data-l="parcels"]').click();
+  await page.locator('#shareBtn').click();
+  const parcels = JSON.parse(decodeURIComponent(new URL(await page.locator('#shareLink').textContent()).hash.slice(3)));
+  for (const invalid of [{ attr: [{ f: 'zgroup', op: 'in', v: 1 }] }, { spatial: [] }, { charts: [{ t: 'time', f: 'land' }] }]) {
+    await visitState({ ...parcels, ...invalid });
+    await expect(page.locator('#nShown')).toHaveText(defaultCount);
+    await expect(page.locator('#shareLink')).toContainText('invalid');
+  }
+  await visitState({ ...parcels, is3d: true, view: { ...parcels.view, pitch: 58 } });
+  await expect(page.locator('#v3d')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#note3d')).toContainText('do not represent building heights');
   const malicious = encodeURIComponent(JSON.stringify({ layer: '<img src=x onerror=alert(1)>' }));
   await page.goto(`${server.url}/state-local/`);
   await page.goto(`${server.url}/state-local/workbench/#s=${malicious}`);
