@@ -41,6 +41,8 @@ test('link validation ignores inline source examples while checking actual marku
       await writeFile(path.join(dir, 'index.html'), '<script>const example = `<a href="missing-source.html">`;</script><a href="#main">Main</a>');
     }
     await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/index.html'), '<script src="missing.js"></script>');
+    await assert.rejects(validateStateLocalLinks(siteDir), /missing.js/);
     await writeFile(path.join(siteDir, 'state-local/index.html'), '<a href="missing-page.html">Missing</a>');
     await assert.rejects(validateStateLocalLinks(siteDir), /missing-page.html/);
   } finally { await rm(siteDir, { recursive: true, force: true }); }
