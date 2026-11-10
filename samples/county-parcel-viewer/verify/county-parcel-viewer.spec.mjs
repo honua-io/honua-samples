@@ -54,6 +54,8 @@ test.beforeAll(async ({}, testInfo) => {
   await cp(path.join(SAMPLE_DIR, "dist"), path.join(siteRoot, ...APP_PATH.split("/").filter(Boolean)), { recursive: true });
   await buildStateLocalSite({ repoRoot: path.resolve(SAMPLE_DIR, "../.."), siteDir: siteRoot });
   await writeFile(path.join(siteRoot, "embed.html"), `<!doctype html><title>Embedded demo</title><iframe title="Maui property demo" src="/county-parcel-viewer/app/" style="width:100%;border:0" onload="this.style.height=this.contentDocument.body.scrollHeight+'px'"></iframe>`);
+  await cp(path.resolve(SAMPLE_DIR, "../../scripts/gallery-assets/gallery.css"), path.join(siteRoot, "gallery.css"));
+  await writeFile(path.join(siteRoot, "gallery-embed.html"), `<!doctype html><title>Gallery embed</title><link rel="stylesheet" href="/gallery.css"><div class="embed-panel" data-own-app="county-parcel-viewer"><iframe title="Maui property demo" src="/county-parcel-viewer/app/"></iframe></div>`);
   server = await startStaticServer({ rootDir: siteRoot, port: BROWSER_ORIGIN_PORT });
 });
 
@@ -485,4 +487,18 @@ test("SHELL-02: property theme persists and embedded shell keeps its height", as
   expect(await page.locator("iframe").evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(920);
   await frame.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(frame.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+
+test("SHELL-03: gallery frame fits the property shell at desktop and mobile widths", async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(new URL("/gallery-embed.html", server.url).href);
+    const frame = page.frameLocator("iframe");
+    await expect(frame.locator("body")).toBeVisible();
+    expect(await page.locator("iframe").evaluate((element) => element.clientHeight)).toBeGreaterThanOrEqual(920);
+    if (width > 720) {
+      expect(await frame.locator("html").evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
+    }
+  }
 });

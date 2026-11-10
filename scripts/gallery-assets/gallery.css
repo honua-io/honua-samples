@@ -225,3 +225,6 @@ main>h1 { max-width:900px; margin:20px 0; font-size:clamp(42px,6vw,76px); font-w
 .job-ai { border-color:var(--green); }
 .ai-grid { grid-template-columns:repeat(2,1fr); }
 @media (max-width:800px) { .server-facts,.console-facts,.evidence-grid,.ai-grid,.inspector-grid,.semantic-grid { grid-template-columns:1fr; }.server-facts div:not(:first-child),.console-facts div+div { border-top:1px solid var(--line); border-left:0; }.server-protocol>header,.language-reference { align-items:flex-start; flex-direction:column; }.server-protocol>header>code { max-width:100%; text-align:left; }.server-boundary,.semantic-assertion { grid-template-columns:1fr; } }
+
+/* The property shell keeps a 920px minimum in content-sized frames. */
+.embed-panel[data-own-app="county-parcel-viewer"] iframe { height: max(100vh, 920px); }

@@ -122,8 +122,8 @@ section.group h2 { margin: 0 0 10px; font-family: var(--font-sans); font-size: 1
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 .legend { position: absolute; left: 16px; bottom: 40px; z-index: 1; display: flex; gap: 14px; padding: 8px 12px; border: 1px solid var(--c-border); background: var(--map-chip-bg); font-size: 13px; }
 .swatch { display: inline-block; width: 14px; height: 10px; margin-right: 6px; vertical-align: middle; }
-.swatch.selected { background: color-mix(in srgb, var(--map-select) 18%, transparent); border: 2px solid var(--map-select-line); }
-.swatch.flood { background: color-mix(in srgb, var(--hz-flood) 45%, transparent); border: 1px dashed var(--hz-flood); }
+.swatch.selected { background: color-mix(in srgb, var(--map-select) 45%, transparent); border: 2px solid var(--map-select-line); }
+.swatch.flood { background: color-mix(in srgb, var(--hz-flood) 18%, transparent); border: 1px dashed color-mix(in srgb, var(--hz-flood) 60%, transparent); }
 
 /* MapLibre controls at 44px touch targets (design D15; the default is 29px). */
 .map .maplibregl-ctrl-group { border: 1px solid var(--c-text); border-radius: 0 !important; background: var(--c-surface); box-shadow: none !important; }
@@ -191,8 +191,8 @@ section.group h2 { margin: 0 0 10px; font-family: var(--font-sans); font-size: 1
 @media (max-width: 720px) {
   .property-app { height: auto; min-height: 100%; }
   .property-app .bar { flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
-  .property-app .bar .brand { display: inline-flex; gap: 12px; align-items: center; white-space: normal; }
-  .property-app .tag { margin-left: 0; font-size: 13px; }
+  .property-app .bar .brand { white-space: normal; }
+  .property-app .tag { font-size: 13px; }
   .property-app .search { padding: 12px 16px; }
   .property-app .search .row { flex-wrap: wrap; }
   .property-app .search input { flex-basis: 100%; }
