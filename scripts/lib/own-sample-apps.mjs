@@ -51,7 +51,7 @@ export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https
 // Sites a sample only links to (attribution and the official flood map), never
 // fetches from (R13). They are not data origins. The browser verify lanes
 // assert at runtime that no request goes to them.
-export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://msc.fema.gov", "https://publicweb1.co.maui.hi.us"]);
+export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://msc.fema.gov", "https://publicweb1.co.maui.hi.us", "https://overturemaps.org", "https://opendatacommons.org"]);
 
 const REGULAR_FILE_MODES = new Set(["100644", "100755"]);
 const ORIGIN_PATTERN = /https:\/\/[a-z0-9.-]+(?::\d+)?/giu;
