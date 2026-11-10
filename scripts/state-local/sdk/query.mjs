@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { HonuaClient } from '@honua/sdk-js';
+import { assertExerciseProvenance } from '../exercise-provenance.mjs';
 
 const scenarios = JSON.parse(await readFile(new URL('./scenarios.json', import.meta.url), 'utf8'));
 const scenario = scenarios[process.argv[2]];
@@ -15,11 +16,7 @@ const result = await client.queryFeatures({ serviceId, layerId, where: scenario.
   outFields: ['*'], returnGeometry: true, outSr: 4326, resultRecordCount: 20, method: 'GET' });
 if (!Array.isArray(result.features)) throw new Error('Query omitted features');
 for (const feature of result.features) {
-  const row = feature.attributes;
-  if (scenario.exercise && (row?.data_origin !== 'synthetic_demo' || ![true, 1].includes(row.is_demo)
-    || ![true, 1].includes(row.exercise_only) || !row.display_label?.includes('DEMO DATA'))) {
-    throw new Error('Exercise record is missing its DEMO DATA provenance');
-  }
+  if (scenario.exercise) assertExerciseProvenance(feature.attributes);
 }
 console.log(JSON.stringify({ source: `${baseUrl.replace(/\/$/, '')}/rest/services/${encodeURIComponent(serviceId)}/FeatureServer/${layerId}`,
   scenario: process.argv[2], limit: 20, completeDataset: false, features: result.features }));

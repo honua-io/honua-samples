@@ -25,10 +25,7 @@ function contractFields(row) {
 
 export function validateRecord(attributes) {
   const row = attributes;
-  if (row?.data_origin !== 'synthetic_demo' || ![true, 1].includes(row.is_demo)
-    || ![true, 1].includes(row.exercise_only) || !row.display_label?.includes('DEMO DATA')) {
-    throw new Error('Exercise record is missing its DEMO DATA provenance');
-  }
+  assertExerciseProvenance(row);
   if (row.record_type !== 'service_request' || !Object.hasOwn(STATUS_LABELS, row.status) || !Object.hasOwn(TYPE_LABELS, row.category)
     || typeof row.record_id !== 'string' || !row.record_id || !/^Demo district [1-3] \(fictional\)$/.test(row.district)
     || !/^Demo crew [1-4] \(fictional\)$/.test(row.crew)) {
@@ -94,3 +91,5 @@ function csvCell(value) {
 export function exportCsv(records) {
   return [CSV_FIELDS.join(','), ...records.map(({ properties }) => CSV_FIELDS.map((key) => csvCell(properties[key])).join(','))].join('\r\n');
 }
+import { assertExerciseProvenance } from '../../../scripts/state-local/exercise-provenance.mjs';
+
