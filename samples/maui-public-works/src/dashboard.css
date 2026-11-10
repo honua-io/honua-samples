@@ -8,4 +8,6 @@
 .board-column li { border-bottom: 1px solid var(--c-rule); padding: 10px 0; }
 .board-column p { font-size: 12px; margin: 0 0 6px; overflow-wrap: anywhere; }
 #detail ul { padding-left: 20px; }#detail li { overflow-wrap: anywhere; }
+.board-help { display: none; }
+@media (max-width: 1000px) { .board-help { display: block; } }
 @media (max-width: 640px) { nav { gap: 16px; flex-wrap: wrap; }.board { grid-template-columns: repeat(5, 220px); } }

@@ -1,9 +1,9 @@
 import { STATUS_LABELS, TYPE_LABELS, summarize, weeklyTrend } from './records.mjs';
 
 import { cells, element } from '../../../shared/state-local/dom.mjs';
+import { displayUtc } from '../../../shared/state-local/exercise-time.mjs';
 export { element };
 const percent = (value) => value === null ? 'No closures' : `${Math.round(value * 100)}%`;
-import { displayUtc } from '../../../shared/state-local/exercise-time.mjs';
 
 export function renderMetrics(records) {
   const totals = summarize(records);

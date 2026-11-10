@@ -16,7 +16,12 @@ let shown = 25;
 let view;
 let source;
 
-function select(feature) { renderDetail(feature, inventory, select); }
+function select(feature) {
+  renderDetail(feature, inventory, select);
+  const detail = document.querySelector('#detail');
+  detail.scrollIntoView({ block: 'nearest' });
+  detail.focus({ preventScroll: true });
+}
 
 function mapFilters() {
   const dataset = form.elements.dataset.value;
@@ -30,7 +35,9 @@ function mapFilters() {
     ...Object.entries(stages).map(([value, label]) => element('option', label, { value })));
   form.elements.status.disabled = bridge;
   document.querySelector('#inventory-title').textContent = bridge ? 'Bridge inventory · NBI 2025' : `${dataset === 'orders' ? 'Work orders' : 'Inspections'} · DEMO DATA`;
-  document.querySelector('#map-legend').textContent = `Good: green · Fair: amber · Poor: red. ${bridge ? 'Historical bridge points, June 20, 2025.' : 'Fictional conditions on real road segments.'} No basemap tiles are requested.`;
+  const bridgeLegend = inventory?.bridges.some(({ properties }) => properties.data_origin === 'synthetic_validation')
+    ? 'Synthetic validation points, not county source records.' : 'Historical bridge points, June 20, 2025.';
+  document.querySelector('#map-legend').textContent = `Good: green · Fair: amber · Poor: red. ${bridge ? bridgeLegend : 'Fictional conditions on real road segments.'} No basemap tiles are requested.`;
 }
 
 function renderInventory() {
@@ -53,6 +60,10 @@ async function load() {
   status.dataset.state = 'loading';
   try {
     inventory = await loadInventory(source);
+    const fixtures = inventory.bridges.some(({ properties }) => properties.data_origin === 'synthetic_validation');
+    document.querySelector('#bridge-provenance').replaceChildren(element('strong', fixtures ? 'VALIDATION FIXTURES' : 'REAL DATA'),
+      document.createTextNode(fixtures ? ' Synthetic NBI-schema bridge points, not county source records.' : ' Historical NBI bridges · June 20, 2025.'));
+    mapFilters();
     dashboard.hidden = false;
     if (!view) {
       try { view = createInventoryMap((id) => { const feature = filtered.find((record) => record.id === id); if (feature) select(feature); }); }
@@ -65,8 +76,8 @@ async function load() {
     shown = 25;
     renderInventory();
     const date = inventory.orders[0]?.properties.scenario_date ?? inventory.inspections[0]?.properties.scenario_date;
-    document.querySelector('#scenario').textContent = `Historical bridges: June 20, 2025. Maintenance exercise: ${date ?? 'no exercise records'} (UTC).`;
-    status.textContent = `Loaded ${inventory.bridges.length} historical bridges, ${inventory.orders.length} fictional orders and ${inventory.inspections.length} fictional inspections.`;
+    document.querySelector('#scenario').textContent = `${fixtures ? 'Synthetic bridge validation fixtures' : 'Historical bridges: June 20, 2025'}. Maintenance exercise: ${date ?? 'no exercise records'} (UTC).`;
+    status.textContent = `Loaded ${inventory.bridges.length} ${fixtures ? 'synthetic bridge fixtures' : 'historical bridges'}, ${inventory.orders.length} fictional orders and ${inventory.inspections.length} fictional inspections.`;
     status.dataset.state = 'ready';
     document.body.dataset.sampleStatus = 'pass';
   } catch (error) {

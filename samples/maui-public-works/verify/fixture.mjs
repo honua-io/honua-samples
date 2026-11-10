@@ -14,7 +14,7 @@ export function exerciseFeature(index = 0, kind = 'work_order') {
 
 export function bridgeFeature(index = 0) {
   return { type: 'Feature', id: `bridge-${index + 1}`, geometry: { type: 'Point', coordinates: [-156.5 + index * .002, 20.85] },
-    properties: { structure_number_008: `fixture-${index + 1}`, county_code_003: '009', facility_carried_007: 'Fixture roadway',
+    properties: { data_origin: 'synthetic_validation', structure_number_008: `fixture-${index + 1}`, county_code_003: '009', facility_carried_007: 'Fixture roadway',
       features_desc_006a: 'Fixture crossing', bridge_condition: ['G', 'F', 'P'][index % 3],
       deck_cond_058: '7', superstructure_cond_059: '7', substructure_cond_060: '6', culvert_cond_062: 'N',
       date_of_inspect_090: '0625', year_built_027: '1990' } };

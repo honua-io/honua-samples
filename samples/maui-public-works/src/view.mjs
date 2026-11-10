@@ -1,9 +1,9 @@
 import { cells, element } from '../../../shared/state-local/dom.mjs';
 import { STAGES, associatedInspections } from './records.mjs';
+import { displayUtc } from '../../../shared/state-local/exercise-time.mjs';
 
 const CONDITIONS = { G: 'Good', F: 'Fair', P: 'Poor', exercise_good: 'Good (exercise)',
   exercise_fair: 'Fair (exercise)', exercise_poor: 'Poor (exercise)' };
-import { displayUtc } from '../../../shared/state-local/exercise-time.mjs';
 export const conditionLabel = (row) => CONDITIONS[row.bridge_condition ?? row.condition];
 export const stageLabel = (row) => STAGES[row.status] ?? (row.status === 'exercise_open' ? 'Open' : 'Historical inventory');
 
@@ -16,7 +16,8 @@ function recordButton(feature, onSelect) {
 
 export function renderMetrics(inventory) {
   const { bridges, orders, inspections } = inventory;
-  const values = [['Historical NBI bridges', bridges.length], ['NBI poor condition (2025)', bridges.filter(({ properties }) => properties.bridge_condition === 'P').length],
+  const fixtures = bridges.some(({ properties }) => properties.data_origin === 'synthetic_validation');
+  const values = [[fixtures ? 'Synthetic bridge fixtures' : 'Historical NBI bridges', bridges.length], [fixtures ? 'Poor-condition fixtures' : 'NBI poor condition (2025)', bridges.filter(({ properties }) => properties.bridge_condition === 'P').length],
     ['Unclosed exercise orders', orders.filter(({ properties }) => properties.closed === null).length],
     ['Exercise inspections', inspections.length], ['Fictional crews assigned', new Set(orders.map(({ properties }) => properties.crew)).size]];
   document.querySelector('#metrics').replaceChildren(...values.map(([label, value]) => {
@@ -66,7 +67,7 @@ function detailList(entries) {
 }
 
 function bridgeDetails(row) {
-  return [element('p', 'REAL DATA · historical NBI inventory, June 20, 2025'), detailList([
+  return [element('p', row.data_origin === 'synthetic_validation' ? 'VALIDATION FIXTURE · synthetic NBI-schema record, not a county bridge' : 'REAL DATA · historical NBI inventory, June 20, 2025'), detailList([
     ['Road carried', row.facility_carried_007], ['Feature crossed', row.features_desc_006a],
     ['Bridge condition', conditionLabel(row)], ['Deck / superstructure / substructure / culvert ratings',
       [row.deck_cond_058, row.superstructure_cond_059, row.substructure_cond_060, row.culvert_cond_062].join(' / ')],
