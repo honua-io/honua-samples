@@ -118,19 +118,19 @@ async function addBasemap(map: maplibregl.Map, config: ViewerConfig): Promise<st
     map.addSource("basemap", { type: "vector", url: `pmtiles://${config.basemapUrl}` });
     // Under every data layer.
     const before = map.getStyle().layers.find((layer) => layer.id !== "background")?.id;
-    map.addLayer({ id: "basemap-earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": token("--land") } }, before);
-    map.addLayer({ id: "basemap-water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": token("--water") } }, before);
+    map.addLayer({ id: "basemap-earth", type: "fill", source: "basemap", "source-layer": "earth", paint: { "fill-color": token("--map-land") } }, before);
+    map.addLayer({ id: "basemap-water", type: "fill", source: "basemap", "source-layer": "water", paint: { "fill-color": token("--map-water") } }, before);
     map.addLayer(
       {
         id: "basemap-roads",
         type: "line",
         source: "basemap",
         "source-layer": "roads",
-        paint: { "line-color": token("--road"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 16, 4] },
+        paint: { "line-color": token("--map-road"), "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 16, 4] },
       },
       before,
     );
-    map.setPaintProperty("background", "background-color", token("--water"));
+    map.setPaintProperty("background", "background-color", token("--map-water"));
     return "Protomaps PMTiles from the same server";
   } catch (error) {
     return `not available (${error instanceof Error ? error.message : String(error)}), plain background`;
@@ -154,7 +154,7 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
     source: "parcels",
     "source-layer": PARCEL_SOURCE_LAYER,
     minzoom: OUTLINE_MIN_ZOOM,
-    paint: { "line-color": token("--parcel"), "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 16, 1.2, 19, 2] },
+    paint: { "line-color": token("--map-parcel"), "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 16, 1.2, 19, 2] },
   });
   map.addLayer({
     id: "parcel-selected-fill",
@@ -162,7 +162,7 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
     source: "parcels",
     "source-layer": PARCEL_SOURCE_LAYER,
     filter: ["==", ["get", "tmk_txt"], ""],
-    paint: { "fill-color": token("--yellow"), "fill-opacity": 0.45 },
+    paint: { "fill-color": token("--map-select"), "fill-opacity": 0.45 },
   });
   map.addLayer({
     id: "parcel-selected-line",
@@ -170,19 +170,31 @@ function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
     source: "parcels",
     "source-layer": PARCEL_SOURCE_LAYER,
     filter: ["==", ["get", "tmk_txt"], ""],
-    paint: { "line-color": token("--ink"), "line-width": 3 },
+    paint: { "line-color": token("--map-select-line"), "line-width": 3 },
   });
 }
 
 export function createParcelMap(container: HTMLElement, config: ViewerConfig, events: MapEvents): ParcelMap {
   const map = new maplibregl.Map({
     container,
-    style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": token("--land") } }] },
+    style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": token("--map-land") } }] },
     center: MAUI_VIEW.center,
     zoom: MAUI_VIEW.zoom,
     attributionControl: { compact: true, customAttribution: "Basemap © OpenStreetMap contributors (Protomaps) · Parcels, zoning: County of Maui · Flood zones: FEMA" },
     cooperativeGestures: false,
   });
+  const restyle = () => {
+    const paints = [
+      ["background", "background-color", map.getLayer("basemap-water") ? "--map-water" : "--map-land"],
+      ["basemap-earth", "fill-color", "--map-land"], ["basemap-water", "fill-color", "--map-water"],
+      ["basemap-roads", "line-color", "--map-road"], ["parcel-outlines", "line-color", "--map-parcel"],
+      ["parcel-selected-fill", "fill-color", "--map-select"], ["parcel-selected-line", "line-color", "--map-select-line"],
+      ["flood-fill", "fill-color", "--hz-flood"], ["flood-line", "line-color", "--hz-flood"],
+    ] as const;
+    for (const [layer, paint, color] of paints) if (map.getLayer(layer)) map.setPaintProperty(layer, paint, token(color));
+  };
+  document.addEventListener("honua:theme", restyle);
+  map.on("remove", () => document.removeEventListener("honua:theme", restyle));
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   // On a phone the expanded credit line covers a third of the 38vh map; it
   // starts collapsed there behind MapLibre's (i) button.
@@ -210,8 +222,8 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
       // Flood zones sit over the selected parcel's fill and under its outline.
       const underOutline = map.getLayer("parcel-selected-line") ? "parcel-selected-line" : undefined;
       map.addSource("flood", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({ id: "flood-fill", type: "fill", source: "flood", paint: { "fill-color": token("--flood"), "fill-opacity": 0.18 } }, underOutline);
-      map.addLayer({ id: "flood-line", type: "line", source: "flood", paint: { "line-color": token("--fail"), "line-opacity": 0.6, "line-width": 1, "line-dasharray": [3, 2] } }, underOutline);
+      map.addLayer({ id: "flood-fill", type: "fill", source: "flood", paint: { "fill-color": token("--hz-flood"), "fill-opacity": 0.18 } }, underOutline);
+      map.addLayer({ id: "flood-line", type: "line", source: "flood", paint: { "line-color": token("--hz-flood"), "line-opacity": 0.6, "line-width": 1, "line-dasharray": [3, 2] } }, underOutline);
       events.onBasemap(await addBasemap(map, config));
       resolve();
     });

@@ -1,0 +1,19 @@
+@font-face {
+  font-family: Geist;
+  src: url("../public/honua/geist-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+* { box-sizing: border-box; }
+html { background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); }
+body { margin: 0; font-size: 14px; line-height: 1.5; }
+a { color: var(--c-link); text-underline-offset: 3px; }
+button, input, select { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 3px; }
+.theme-toggle { min-height: 40px; padding: 8px 12px; border: 1px solid var(--c-border); border-radius: var(--radius-md); background: var(--c-surface); color: var(--c-text); }
+.logo-dark { display: none; }
+:root[data-theme="dark"] .logo-light { display: none; }
+:root[data-theme="dark"] .logo-dark { display: inline-block; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }

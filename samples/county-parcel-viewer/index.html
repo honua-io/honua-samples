@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>try{document.documentElement.dataset.theme=localStorage.getItem("honua-theme")==="dark"?"dark":"light"}catch{document.documentElement.dataset.theme="light"}</script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Property & planning · Maui · Honua</title>
@@ -8,8 +9,9 @@
   </head>
   <body class="property-app" data-sample-status="loading">
     <header class="bar">
-      <div class="brand">Honua <span>· Maui property & planning</span></div>
+      <a class="brand" href="https://demo.honua.io/" aria-label="Honua for Maui County overview"><img class="logo-light" src="./honua/honua-lockup.svg" alt="Honua"><img class="logo-dark" src="./honua/honua-lockup-on-dark.svg" alt="Honua"><span>· Maui property & planning</span></a>
       <a class="fullscreen" id="fullscreen" href="./" target="_blank" rel="noopener" hidden>Open full screen ↗</a>
+      <button class="theme-toggle" type="button" aria-pressed="false">Switch to dark mode</button>
       <span class="tag">Public data · independent demo</span>
     </header>
 
@@ -56,5 +58,6 @@
       </p>
     </footer>
     <script type="module" src="./src/main.ts"></script>
+    <script defer src="./honua/theme.js"></script>
   </body>
 </html>

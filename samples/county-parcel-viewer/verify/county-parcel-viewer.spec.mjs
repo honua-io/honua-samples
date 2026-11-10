@@ -16,13 +16,15 @@
 //     unavailable, clipboard blocked, address search per the server's provider;
 //   - click identify, pushState/popstate, the share and full-screen links.
 
-import { cp, mkdtemp, rm, stat } from "node:fs/promises";
+import { cp, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { BROWSER_ORIGIN_PORT, runCommand } from "../../../scripts/browser-verification/harness.mjs";
 import { startStaticServer } from "../../../scripts/lib/browser-lane.mjs";
+
+import { buildStateLocalSite } from "../../../scripts/state-local/build-site.mjs";
 
 const SAMPLE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP_PATH = "/county-parcel-viewer/app/";
@@ -50,6 +52,8 @@ test.beforeAll(async ({}, testInfo) => {
   await runCommand("npm", ["run", "build"], { cwd: SAMPLE_DIR, label: "npm run build" });
   siteRoot = await mkdtemp(path.join(tmpdir(), "county-parcel-viewer-"));
   await cp(path.join(SAMPLE_DIR, "dist"), path.join(siteRoot, ...APP_PATH.split("/").filter(Boolean)), { recursive: true });
+  await buildStateLocalSite({ repoRoot: path.resolve(SAMPLE_DIR, "../.."), siteDir: siteRoot });
+  await writeFile(path.join(siteRoot, "embed.html"), `<!doctype html><title>Embedded demo</title><iframe title="Maui property demo" src="/county-parcel-viewer/app/" style="width:100%;border:0" onload="this.style.height=this.contentDocument.body.scrollHeight+'px'"></iframe>`);
   server = await startStaticServer({ rootDir: siteRoot, port: BROWSER_ORIGIN_PORT });
 });
 
@@ -436,3 +440,44 @@ for (const missing of ["metadata", "value"]) {
     await expect(page.locator("#panel-inner [role=alert]")).toBeVisible();
   });
 }
+
+
+test("SHELL-01: approved landing uses safe light/dark themes at desktop and mobile", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", { get() { throw new DOMException("Storage blocked", "SecurityError"); } });
+  });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(new URL("/state-local/", server.url).href);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("One geospatial platform for the whole county.");
+  await expect(page.locator(".journey .badge")).toHaveCount(4);
+  const light = await page.locator("body").evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--c-bg"));
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator(".logo-dark")).toBeVisible();
+  await expect(page.locator(".logo-light")).toBeHidden();
+  const dark = await page.locator("body").evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--c-bg"));
+  expect(dark).not.toEqual(light);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator(".logo-light")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("SHELL-02: property theme persists and embedded shell keeps its height", async ({ page }) => {
+  await page.goto(appUrl());
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator(".logo-dark")).toBeVisible();
+  await page.goto(new URL("/embed.html", server.url).href);
+  const frame = page.frameLocator("iframe");
+  await expect(frame.locator("body")).toBeVisible();
+  expect(await frame.locator("body").evaluate((body) => body.getBoundingClientRect().height)).toBeGreaterThanOrEqual(920);
+  expect(await page.locator("iframe").evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(920);
+  await frame.getByRole("button", { name: "Switch to light mode" }).click();
+  await expect(frame.locator("html")).toHaveAttribute("data-theme", "light");
+});
