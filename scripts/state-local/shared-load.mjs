@@ -25,7 +25,7 @@ export async function inventory(directory) {
       bytes: (await stat(path.join(directory, `${name}.geojson`))).size });
   }
   // A conservative admission reservation, not a measurement of PostgreSQL storage.
-  // Main checks actual RDS storage before/after; this never authorizes more than 900 MB.
+  // The operator must separately measure database and index storage before activation.
   const reservedBytes = layers.reduce((total, layer) => total + layer.bytes * 16, 32_000_000);
   if (reservedBytes >= maximumBytes) throw new Error("Display dataset exceeds the shared-load storage reservation; reduce the scope before loading");
   return { format: "honua.samples.shared-load.v1", layers, reservedBytes, maximumBytes };
@@ -75,8 +75,9 @@ export async function verifyStagedSource(layer, sourceUrl) {
   }
 }
 
-async function stageMissing(env, options, planned, expectedSha256) {
+async function stageMissing(env, options, approval) {
   const { name, directory, connection } = options;
+  const { planned, expectedSha256 } = approval;
   if (!options.sourceUrl || new URL(options.sourceUrl).protocol !== "https:") {
     throw new Error("Shared imports require a staged HTTPS source URL");
   }
@@ -91,7 +92,8 @@ async function stageMissing(env, options, planned, expectedSha256) {
   await saveDeployment(env, { staged, directory, connection });
 }
 
-export async function runSharedLoad(action, directory, expectedSha256, env) {
+export async function runSharedLoad(env, request) {
+  const { action, directory, expectedSha256 } = request;
   if (!["stage", "activate", "rollback"].includes(action)) throw new Error("Unknown shared load action");
   const plan = await verifyPlan(directory, expectedSha256);
   if (action === "stage") await ensureDepartments(env);
@@ -119,7 +121,7 @@ export async function runSharedLoad(action, directory, expectedSha256, env) {
     }
     if (!existing) {
       if (action !== "stage") throw new Error("Stage receipt missing; activation refused");
-      await stageMissing(env, options, planned, expectedSha256);
+      await stageMissing(env, options, { planned, expectedSha256 });
     }
     const receipt = await readDeployment(env, options);
     if (receipt.connection !== connection) throw new Error("Managed import connection changed");
@@ -145,7 +147,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       env.importSourceUrls = JSON.parse(await readFile(process.env.HONUA_SAMPLE_IMPORT_URLS_FILE, "utf8"));
     }
     const result = action === "prepare" ? await prepare(directory)
-      : await runSharedLoad(action, directory, digest, env);
+      : await runSharedLoad(env, { action, directory, expectedSha256: digest });
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {
     // Do not echo HTTP bodies: the shared stack can include sensitive details.

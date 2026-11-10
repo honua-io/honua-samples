@@ -66,15 +66,15 @@ test('interrupted shared stage retains intent and refuses to duplicate an import
     if (url.pathname.endsWith('/upload-url')) { uploads++; throw new Error('interrupted response'); }
     throw new Error(`Unexpected request ${url.pathname}`);
   };
-  await assert.rejects(runSharedLoad('stage', directory, plan.planSha256, env), /interrupted/);
+  await assert.rejects(runSharedLoad(env, { action: 'stage', directory, expectedSha256: plan.planSha256 }), /interrupted/);
   const intent = JSON.parse(await readFile(path.join(directory, `${loadSources[0]}.intent.json`), 'utf8'));
   assert.equal(intent.expectedSha256, plan.planSha256);
   assert.match(intent.runId, /^[a-f0-9]{32}$/);
   assert.ok(intent.tableName.includes(intent.runId));
   assert.ok(intent.serviceName.includes(intent.runId));
-  await assert.rejects(runSharedLoad('rollback', directory, plan.planSha256, env), /Intent without receipt/);
+  await assert.rejects(runSharedLoad(env, { action: 'rollback', directory, expectedSha256: plan.planSha256 }), /Intent without receipt/);
   assert.equal(JSON.stringify(intent).includes('private'), false);
-  await assert.rejects(runSharedLoad('stage', directory, plan.planSha256, env), { code: 'EEXIST' });
+  await assert.rejects(runSharedLoad(env, { action: 'stage', directory, expectedSha256: plan.planSha256 }), { code: 'EEXIST' });
   assert.equal(uploads, 1);
 });
 
@@ -101,10 +101,10 @@ test('rollback disables only a verified owned layer and never imports or deletes
   };
   await saveDeployment(env, { directory, connection: 'managed', staged: layer });
   layer.enabled = true;
-  await runSharedLoad('rollback', directory, plan.planSha256, env);
+  await runSharedLoad(env, { action: 'rollback', directory, expectedSha256: plan.planSha256 });
   assert.equal(mutations, 1);
   layer.table = 'unrelated_table';
-  await assert.rejects(runSharedLoad('rollback', directory, plan.planSha256, env), /no longer matches/);
+  await assert.rejects(runSharedLoad(env, { action: 'rollback', directory, expectedSha256: plan.planSha256 }), /no longer matches/);
   assert.equal(mutations, 1);
 });
 
@@ -136,13 +136,13 @@ test('successful shared stage reuses verified receipts and never repeats imports
     }
     return json({ data: { items: layers.filter((layer) => layer.serviceName === url.searchParams.get('serviceName')) } });
   };
-  await runSharedLoad('stage', directory, plan.planSha256, env);
+  await runSharedLoad(env, { action: 'stage', directory, expectedSha256: plan.planSha256 });
   assert.equal(uploads, 9);
-  await runSharedLoad('stage', directory, plan.planSha256, env);
+  await runSharedLoad(env, { action: 'stage', directory, expectedSha256: plan.planSha256 });
   assert.equal(uploads, 9);
   assert.ok(layers.every((layer) => layer.enabled === false));
   layers[0].table = 'unrelated_table';
-  await assert.rejects(runSharedLoad('stage', directory, plan.planSha256, env), /no longer matches/);
+  await assert.rejects(runSharedLoad(env, { action: 'stage', directory, expectedSha256: plan.planSha256 }), /no longer matches/);
   assert.equal(uploads, 9);
 });
 
