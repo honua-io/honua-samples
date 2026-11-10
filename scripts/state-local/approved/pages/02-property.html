@@ -190,20 +190,11 @@
 
     <section role="tabpanel" id="p3" aria-labelledby="t3" class="side-sec" hidden>
       <div class="flood">
-        <h3><span class="zone-badge">AE</span> Special flood hazard area</h3>
-        <p class="muted" style="margin:6px 0 10px">1% annual chance of flooding (the "100-year flood"). Flood insurance is required for federally backed mortgages.</p>
-        <dl class="dl">
-          <dt>FIRM panel</dt><dd class="num">Verify the effective panel</dd>
-          <dt>Effective</dt><dd class="num">September 25, 2009</dd>
-          <dt>Base flood elevation</dt><dd class="num">Not verified · consult the effective FIRM</dd>
-          <dt>Substantial improvement</dt><dd>Work over 50% of building value must meet flood standards (MCC 19.62)</dd>
-        </dl>
+        <h3 id="hazFlood"></h3>
+        <p class="muted" id="hazGuidance" style="margin:6px 0 10px"></p>
+        <dl class="dl"><dt>FIRM panel</dt><dd>Verify the effective panel and flood standards with the County floodplain administrator.</dd><dt>Building value</dt><dd id="hazValue"></dd></dl>
       </div>
-      <ul class="checks" style="margin-top:12px">
-        <li><svg class="ico" style="color:var(--hz-tsu)"><use href="#i-waves"/></svg><span><b>Tsunami evacuation zone.</b> Follow current county guidance. School points are exercise anchors, not activated shelters. </span></li>
-        <li><svg class="ico" style="color:var(--hz-slr)"><use href="#i-drop"/></svg><span><b>Sea-level rise, 3.2 ft scenario:</b> outside the exposure area. 21 parcels in this view are inside it.</span></li>
-        <li><svg class="ico faint"><use href="#i-shield"/></svg><span><b>Fire station:</b> Kahului (E10), 1.8 km.</span></li>
-      </ul>
+      <ul class="checks" style="margin-top:12px"><li><svg class="ico" style="color:var(--hz-tsu)"><use href="#i-waves"/></svg><span id="hazTsunami"></span></li><li><svg class="ico" style="color:var(--hz-slr)"><use href="#i-drop"/></svg><span>Review the sea-level-rise exposure overlay and current official evacuation guidance. School points are exercise anchors, not activated shelters.</span></li></ul>
     </section>
 
     <section role="tabpanel" id="p4" aria-labelledby="t4" class="side-sec" hidden>
@@ -322,6 +313,12 @@
     document.getElementById("ovTsu").textContent = p.ts === 1 ? "Evacuation zone" : p.ts === 2 ? "Extreme evacuation zone only" : "Outside evacuation zones";
     document.getElementById("ovLand").textContent = HM.money(p.land); document.getElementById("ovBldg").textContent = HM.money(p.bldg);
     document.getElementById("ovHo").textContent = p.h ? "Yes" : "No";
+    document.getElementById("hazFlood").textContent = `Mapped flood zone ${p.fld || "not available"}`;
+    document.getElementById("hazGuidance").textContent = p.fld === "X" ? "Zone X is outside the mapped special flood hazard area; flooding remains possible. Confirm site requirements with the County." : "Consult the effective FIRM and County floodplain administrator for site-specific development requirements.";
+    document.getElementById("hazValue").textContent = HM.money(p.bldg);
+    document.getElementById("hazTsunami").textContent = p.ts === 1 ? "Inside the mapped tsunami evacuation zone." : p.ts === 2 ? "Inside the mapped extreme tsunami evacuation zone." : "Outside the mapped tsunami evacuation zones.";
+    document.querySelector("#p2 h3").textContent = id === FEAT ? "B-2 Community business district · fixed example" : `${zn} · consult district standards`;
+    document.querySelector("#p2 table").hidden = id !== FEAT;
     document.getElementById("askAnswer").hidden = id !== FEAT;
     fillPermits(p.t9, t); luStack(p);
     updateShare(p.t9);
@@ -395,8 +392,9 @@
     document.getElementById("shareEmbed").textContent = `<iframe src="${url.href}" width="100%" height="560" title="Maui property snapshot"></iframe>`;
   }
   document.getElementById("copyShare").addEventListener("click", async (event) => {
-    try { await navigator.clipboard.writeText(document.getElementById("shareUrl").textContent); event.currentTarget.textContent = "Copied"; }
-    catch { event.currentTarget.textContent = "Select link above to copy"; }
+    const button = event.currentTarget;
+    try { await navigator.clipboard.writeText(document.getElementById("shareUrl").textContent); button.textContent = "Copied"; }
+    catch { button.textContent = "Select link above to copy"; }
   });
   const share = document.getElementById("share"); window.share = share;
   document.getElementById("shareBtn").addEventListener("click", () => share.showModal());

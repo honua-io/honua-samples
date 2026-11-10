@@ -131,9 +131,9 @@
         </div>
       </div>
       <details class="plain">
-        <summary><svg class="ico" style="color:var(--hz-flood)"><use href="#i-drop"/></svg>What does flood zone AE mean for me?<svg class="ico faint"><use href="#i-chev-d"/></svg></summary>
-        <p>Your lot has about a 1 in 100 chance of flooding in any year, which adds up to roughly 1 in 4 over a 30-year mortgage. Lenders with federal backing require flood insurance.</p>
-        <p>If you build new or spend more than half of the building's value on work (here, more than $66,400), the lowest floor must sit at or above the base flood elevation, which must be verified from the effective FIRM, or the building must be flood-proofed. <button class="cite" data-cite="flood">dfirm/150003_136</button> <button class="cite" data-cite="flood">MCC 19.62</button></p>
+        <summary><svg class="ico" style="color:var(--hz-flood)"><use href="#i-drop"/></svg><span id="floodQuestion"></span><svg class="ico faint"><use href="#i-chev-d"/></svg></summary>
+        <p id="floodGuidance"></p>
+        <p>Verify the effective FIRM, base flood elevation and applicable development requirements with the County floodplain administrator. Mapped zones are a snapshot; follow current official guidance.</p>
       </details>
     </section>
 
@@ -201,6 +201,9 @@
     if (p.ts === 1) chips.push(`<span class="chip warn">Tsunami evacuation zone</span>`);
     if (p.mm) chips.push(`<span class="chip danger">Zoning differs from plan</span>`);
     document.getElementById("chips").innerHTML = chips.join("");
+    document.getElementById("floodQuestion").textContent = `What does mapped flood zone ${p.fld || "not available"} mean?`;
+    document.getElementById("floodGuidance").textContent = p.fld === "X" ? "Zone X is outside the mapped special flood hazard area; flooding remains possible." : "The mapped flood zone may carry development and insurance requirements. Confirm the effective designation with the County.";
+
     const lud = LUD[p.lud] || ["Not mapped", ""];
     const R = [
       { c: "var(--viz-5)", name: "State land use district", val: lud[0], p: lud[1], auth: "State Land Use Commission · HRS Chapter 205", ci: cite(`slud/${iS}`, "slud") },
@@ -254,8 +257,9 @@
     document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" });
   });
   async function copyShare(event) {
-    try { await navigator.clipboard.writeText(document.getElementById("shareUrl").textContent); event.currentTarget.textContent = "Copied"; }
-    catch { event.currentTarget.textContent = "Select link above to copy"; }
+    const button = event.currentTarget;
+    try { await navigator.clipboard.writeText(document.getElementById("shareUrl").textContent); button.textContent = "Copied"; }
+    catch { button.textContent = "Select link above to copy"; }
   }
   document.getElementById("copyShare").addEventListener("click", copyShare);
   document.getElementById("nativeShare").addEventListener("click", async (event) => {
