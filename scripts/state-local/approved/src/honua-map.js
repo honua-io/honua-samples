@@ -47,6 +47,17 @@
 
   const maps = [];
   function cssVar(n, fb) { const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return v || fb; }
+  function themeValue(value) {
+    if (typeof value === "string" && value.startsWith("--")) return cssVar(value);
+    if (Array.isArray(value)) return value.map(themeValue);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, themeValue(entry)]));
+    return value;
+  }
+  function themed(map, layer, before) {
+    const paint = layer.paint;
+    map.addLayer({ ...layer, paint: themeValue(paint) }, before);
+    map.on("honua:theme", () => Object.entries(paint).forEach(([key, value]) => map.setPaintProperty(layer.id, key, themeValue(value))));
+  }
   function basePaint() {
     return {
       bg: { "background-color": cssVar("--map-water") },
@@ -179,7 +190,7 @@
   function tmk(t9) { const s = String(t9).padStart(9, "0"); return `(${s[0]}) ${s[1]}-${s[2]}-${s.slice(3, 6)}:${s.slice(6)}`; }
   function money(n) { return n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US"); }
   function icon(name) { return `<svg class="ico" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
-  window.HM = { cssVar, setTheme, theme, restyle, maps, decode, get, points, create, add, overlays, toggle, bindToggles, label, bbox, tmk, money, icon, VIEW, ZONE_GROUP, ZONE_COLOR };
+  window.HM = { themed, cssVar, setTheme, theme, restyle, maps, decode, get, points, create, add, overlays, toggle, bindToggles, label, bbox, tmk, money, icon, VIEW, ZONE_GROUP, ZONE_COLOR };
 
   /* Tabs: [role=tablist] buttons with aria-controls */
   document.addEventListener("click", (e) => {

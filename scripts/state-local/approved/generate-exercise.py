@@ -107,6 +107,31 @@ for i in range(468):
         "evac": any(g.contains(p) for g in evac), "flood": any(g.contains(p) for g in flood),
         "note": rng.choice(NOTES[t[0]]), "c": [r5(p.x), r5(p.y)],
     })
+# Keep the fictional intake history identical in maps, cross-department joins and exports.
+KEEP = {"SR-26-18666", "SR-26-18369", "SR-26-18430", "SR-26-18257", "SR-26-18380"}
+for request in reqs:
+    created = dt.datetime.fromisoformat(request["created"])
+    age = (NOW - created).total_seconds() / 86400
+    spread_age = age if request["id"] in KEEP else 90 * (age / 90) ** 0.625
+    shift = dt.timedelta(days=spread_age - age)
+    created -= shift
+    due = dt.datetime.fromisoformat(request["due"]) - shift
+    closed = dt.datetime.fromisoformat(request["closed"]) - shift if request["closed"] else None
+    if request["status"] != "Closed" and request["id"] not in KEEP:
+        late_days = (NOW - due).total_seconds() / 86400
+        if spread_age > 24 or (late_days > 2 and int(request["id"][-3:]) % 3 != 0):
+            request["status"] = "Closed"
+            closed = min(NOW - dt.timedelta(hours=1), created + dt.timedelta(days=request["sla"] * 0.85))
+        elif request["status"] == "New" and spread_age > 1:
+            request["status"] = "Assigned"
+    request.update(created=created.isoformat(timespec="milliseconds"), due=due.isoformat(timespec="milliseconds"),
+                   closed=closed.isoformat(timespec="milliseconds") if closed else None, breach=(closed or NOW) > due)
+twin = next(request for request in reqs if request["id"] == "SR-26-18666")
+number, street = twin["addr"].split(" ", 1)
+reqs.append({**twin, "id": "SR-26-18708", "status": "New", "channel": "Maui 311 app",
+             "created": "2026-11-09T09:38", "closed": None, "due": "2026-11-12T09:38", "breach": False,
+             "note": "Water across the lane by the school, drain is full of sand. Kids walking in the road.",
+             "c": [twin["c"][0] + 0.00026, twin["c"][1] + 0.00008], "addr": f"{int(number) + 20} {street}"})
 reqs.sort(key=lambda r: r["created"], reverse=True)
 # agent answer: open drainage requests in tsunami evacuation zone within 1 km of a shelter
 ans = []

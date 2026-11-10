@@ -22,7 +22,7 @@ const requests = demo.requests;
 await writeFile(path.join(outputDirectory, 'requests.geojson'), JSON.stringify({ type: 'FeatureCollection',
   features: requests.map(({ c, ...properties }) => ({ type: 'Feature', properties,
     geometry: { type: 'Point', coordinates: c } })) }));
-const fields = ['id', 'type', 'status', 'dept', 'district', 'addr', 'lng', 'lat', 'data_origin', 'disclaimer'];
+const fields = ['id', 'type', 'status', 'created', 'closed', 'due', 'dept', 'district', 'addr', 'lng', 'lat', 'data_origin', 'disclaimer'];
 const cell = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
 await writeFile(path.join(outputDirectory, 'requests.csv'), [fields.join(','),
   ...requests.map((request) => fields.map((field) => cell(field === 'lng' ? request.c[0] : field === 'lat' ? request.c[1] : request[field])).join(','))].join('\n'));

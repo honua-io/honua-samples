@@ -20,7 +20,7 @@ artifacts/ui-python/bin/python scripts/state-local/approved/derive-culvert-count
 node scripts/state-local/approved/pack.mjs artifacts/approved-data artifacts/approved-receipts artifacts/approved-package
 ```
 
-`fetch.mjs` checks raw, metadata and policy receipts for 21 Hawaii Statewide GIS sources.
+`fetch.mjs` checks raw, metadata and policy receipts for 20 Hawaii Statewide GIS sources.
 Their policy permits public-domain redistribution; retain Hawaii Statewide GIS and each
 layer's source attribution. The release manifest records exact URLs, retrieval times,
 licence-policy receipts, original CRS, selection, and hashes. Source coordinates are
