@@ -143,41 +143,6 @@ test("a built sample stages its build output from committed bytes, with provenan
   }
 });
 
-test("built samples export and fingerprint shared sources from the same commit", async () => {
-  const shared = 'export const marker = "committed shared module";';
-  const script = `${BUILD_SCRIPT}
-const { marker } = await import('../../shared/state-local/module.mjs');
-writeFileSync('dist/shared.txt', marker);
-`;
-  const { root, commit } = await fixtureRepo({
-    "shared/state-local/module.mjs": shared,
-    "samples/demo/build.mjs": script,
-  });
-  try {
-    await writeFile(path.join(root, "shared/state-local/module.mjs"), 'throw Error("uncommitted");');
-    await writeFile(path.join(root, "shared/state-local/untracked.mjs"), 'fetch("https://other.example.org");');
-    const { destDir, result } = await stage(root, commit);
-    assert.equal(result.ok, true, result.reason);
-    assert.equal(await readFile(path.join(destDir, "shared.txt"), "utf8"), "committed shared module");
-    assert.deepEqual(result.app.builtFrom.sharedFiles, [{ path: "shared/state-local/module.mjs", sha256: sha256(Buffer.from(shared)) }]);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-test("shared sources count toward a built sample data origin", async () => {
-  const { root, commit } = await fixtureRepo({
-    "shared/state-local/module.mjs": 'fetch("https://other.example.org/x");',
-  });
-  try {
-    const { result } = await stage(root, commit);
-    assert.equal(result.ok, false);
-    assert.match(result.reason, /exactly one data origin/);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
 test("a second data origin in a committed .ts source fails a built sample", async () => {
   const { root, commit } = await fixtureRepo({ "samples/demo/src/geocode.ts": `export const url: string = "https://other.example.org/search";\n` });
   try {

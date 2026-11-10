@@ -17,7 +17,6 @@ on:
     paths:
       - "site/**"
       - "samples/**"
-      - "shared/**"
       - "jobs/**"
       - "schemas/**"
       - "scripts/**"
@@ -33,7 +32,6 @@ on:
     paths:
       - "site/**"
       - "samples/**"
-      - "shared/**"
       - "jobs/**"
       - "schemas/**"
       - "scripts/**"
