@@ -1,3 +1,4 @@
+import { displaySnapshot, snapshotFeatures } from '../../../shared/state-local/display-snapshot.mjs';
 import { HonuaClient } from '@honua/sdk-js';
 import { namedBindings } from '../../../shared/state-local/binding.mjs';
 import { collectFeatures } from '../../../shared/state-local/features.mjs';
@@ -30,7 +31,20 @@ async function readBridges(binding) {
   });
 }
 
+async function displayInventory() {
+  const normalize = async (name, validator) => (await snapshotFeatures(name)).map((feature) => {
+    const properties = validator(feature.properties);
+    return { ...feature, id: properties.record_id, properties, geometry: wgs84Geometry(feature.geometry) };
+  });
+  const [orders, inspections, bridges] = await Promise.all([
+    normalize('maui-demo-work-orders', exerciseRecord), normalize('maui-demo-inspections', exerciseRecord),
+    normalize('maui-bridges', bridgeRecord),
+  ]);
+  return { orders, inspections, bridges };
+}
+
 export async function loadInventory(source) {
+  if (displaySnapshot) return displayInventory();
   const [orders, inspections, bridges] = await Promise.all([
     readExercise(source.orders, 'work_order'), readExercise(source.inspections, 'inspection'), readBridges(source.bridges) ]);
   if (new Set([...orders, ...inspections].map(({ properties }) => properties.scenario_date)).size > 1) throw new Error('Exercise layers have different scenario dates');

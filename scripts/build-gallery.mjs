@@ -1645,7 +1645,7 @@ async function rmGeneratedDetailDirs(ownSamples) {
   } catch {
     return;
   }
-  const known = new Set(["assets", "index.html", "CNAME", ".nojekyll", "sdk", ...ownSamples.map((s) => s.dirName)]);
+  const known = new Set(["assets", "state-local", "index.html", "CNAME", ".nojekyll", "sdk", ...ownSamples.map((s) => s.dirName)]);
   for (const entry of entries) {
     if (entry.isDirectory() && !known.has(entry.name)) {
       await rm(path.join(SITE_DIR, entry.name), { recursive: true, force: true });

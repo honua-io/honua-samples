@@ -1,3 +1,4 @@
+import { displaySnapshot } from '../../../shared/state-local/display-snapshot.mjs';
 import './dashboard.css';
 import { bindings, loadInventory } from './source.mjs';
 import { filterFeatures, STAGES } from './records.mjs';
@@ -99,8 +100,8 @@ document.querySelector('#more').addEventListener('click', () => { shown += 25; i
 refresh.addEventListener('click', load);
 mapFilters();
 try {
-  source = bindings(location.search);
-  if (source) await load();
+  source = displaySnapshot ? null : bindings(location.search);
+  if (displaySnapshot || source) await load();
   else document.body.dataset.sampleStatus = 'unconfigured';
 } catch (error) {
   status.textContent = error.message;
