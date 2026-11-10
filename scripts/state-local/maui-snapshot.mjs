@@ -22,7 +22,7 @@ function queryUrl(source, parameters) {
 
 async function selectedIds(source) {
   const response = await json(queryUrl(source, {
-    f: 'json', where: '1=1', returnIdsOnly: true, geometry: source.bounds.join(','),
+    f: 'json', where: source.where ?? '1=1', returnIdsOnly: true, geometry: source.bounds.join(','),
     geometryType: 'esriGeometryEnvelope', inSR: 4326, spatialRel: 'esriSpatialRelIntersects',
   }));
   const ids = response.objectIds;
@@ -51,17 +51,24 @@ function pageBatches(source, ids) {
 
 function metadataFingerprint(metadata) {
   return JSON.stringify([metadata.extent?.spatialReference, metadata.fields, metadata.editingInfo ?? null,
-    metadata.name, metadata.copyrightText]);
+    metadata.name, metadata.copyrightText, metadata.description ?? null]);
+}
+
+function verifyVintage(source, metadata) {
+  if (source.vintageStatement && !metadata.description?.includes(source.vintageStatement)) {
+    throw new Error('Source vintage changed; review before downloading');
+  }
 }
 
 function provenance(source) {
   return { dataset: source.id, department: source.department, license: source.license,
     licenseUrl: source.licenseUrl, metadataUrl: source.metadataUrl, sourceUrl: source.url,
-    attribution: source.attribution, outputCrs: 'EPSG:4326', coverageBounds: source.bounds,
+    attribution: source.attribution, ...(source.dataVintage ? { dataVintage: source.dataVintage } : {}),
+    outputCrs: 'EPSG:4326', coverageBounds: source.bounds,
     displayGeometry: { ...source.displayGeometry, warning: 'Display geometry generalized in output degrees (approximately two metres); not legal boundaries or survey measurements' },
     datumTransformation: 'No explicit datum transformation requested; server default NAD83 to WGS84 may differ by approximately one metre',
-    selection: { kind: 'Maui Nui envelope intersection; whole features; not a county boundary clip',
-      bounds: source.bounds, completeDataset: false, pageSize } };
+    selection: { kind: `${source.where ? 'Attribute filter and ' : ''}Maui Nui envelope intersection; whole features; not a county boundary clip`,
+      bounds: source.bounds, ...(source.where ? { where: source.where } : {}), completeDataset: false, pageSize } };
 }
 
 async function downloadRows(source, ids) {
@@ -87,6 +94,7 @@ export async function fetchMauiSnapshot(options) {
   const { name, directory, source } = options;
   const metadata = await json(`${source.url}?f=json`);
   nativeSpatialReference(metadata);
+  verifyVintage(source, metadata);
   const policy = await download(source.licenseUrl);
   if (!policy.toString().includes(policyStatement)) throw new Error('Source public-domain terms changed; review before downloading');
   const summary = await download(source.metadataUrl);
@@ -128,6 +136,7 @@ export async function readMauiSnapshot(options) {
   const rows = JSON.parse(files.raw);
   const ids = rows.map((row) => Number(row[':id']));
   nativeSpatialReference(metadata);
+  verifyVintage(source, metadata);
   if (!Array.isArray(receipt.selectedIds) || ids.some((id) => !Number.isSafeInteger(id))
     || new Set(ids).size !== ids.length || JSON.stringify(ids) !== JSON.stringify(receipt.selectedIds)
     || rows.length > maximumFeatures || receipt.downloaded !== rows.length
