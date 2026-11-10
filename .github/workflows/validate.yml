@@ -124,6 +124,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Build snapshot-backed state and local demos
+        run: node scripts/state-local/build-display-site.mjs
+
       - name: Build gallery in --check mode
         # Exercises the full samples.honua.io gallery build (honua-io/honua-samples#3)
         # against both inputs -- this repo's own samples/*/sample.json manifests
@@ -165,10 +168,16 @@ jobs:
       - name: Stage the vendored immutable SDK release
         run: node scripts/lib/sample-bundles.mjs
 
+      - name: Build snapshot-backed state and local demos
+        run: node scripts/state-local/build-display-site.mjs
+
       - name: Build the exact-head gallery
         env:
           KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/9d2169cc12ee6323519567368774d0deba829686/docs/gis/data/capability-keys.v1.json
         run: GITHUB_SHA="$EXPECTED_SOURCE_COMMIT" node scripts/build-gallery.mjs --check
+
+      - name: Verify snapshot-backed state and local routes
+        run: node scripts/smoke-state-local-display.mjs
 
       - name: Run every admitted SDK app
         run: npm run test:gallery:browser
