@@ -2,5 +2,9 @@
   "url": "https://github.com/honua-io/honua-samples/releases/download/maui-display-2026-11-10/maui-display.tar.gz",
   "date": "2026-11-10",
   "sha256": "3899d724fafa821d90d219473bcf51a699acd542adbbf15c461a6534acff2fe9",
-  "sourceRevision": "b9770104a2b273819a60fc9a7613545dc5aaddf9"
+  "sourceRevision": "b9770104a2b273819a60fc9a7613545dc5aaddf9",
+  "approved": {
+    "url": "https://github.com/honua-io/honua-samples/releases/download/maui-approved-display-2026-11-10-r2/maui-approved-display.tar.gz",
+    "sha256": "3f8dd291edc8bc6fc44cf389f03fb16c7353e998b49c0c3644d073928df27563"
+  }
 }

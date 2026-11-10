@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Property and Zoning · Mobile</title>
+<meta name="description" content="Maui County property and zoning lookup on a phone, built in Honua Studio.">
+{{HEAD}}
+<style>
+  body { background: var(--c-surface-2); }
+  .phone { width: 390px; margin: 24px auto 40px; background: var(--c-bg); border-radius: 34px; overflow: hidden; box-shadow: 0 0 0 1px var(--c-border), 0 0 0 9px #1c2120, var(--shadow-3); position: relative; }
+  .statusbar { height: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 13px; font-weight: 600; background: var(--c-surface); }
+  .mbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--c-surface); border-bottom: 1px solid var(--c-border); }
+  .mbar strong { font-size: 15px; letter-spacing: -0.02em; }
+  .mbar small { display: block; font-size: 12px; color: var(--c-text-3); }
+  .msearch { padding: 10px 12px; background: var(--c-surface); }
+  .msearch .field { height: 42px; border-radius: 10px; font-size: 15px; }
+  .mmap { height: 300px; position: relative; }
+  .mmap .mapattr { font-size: 9px; }
+  .lbtn { position: absolute; z-index: 5; left: 10px; top: 10px; height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 999px; border: 0; background: var(--c-surface); box-shadow: var(--shadow-raised); font-weight: 500; font-size: 13px; }
+  .mlegend { position: absolute; z-index: 5; left: 10px; top: 52px; width: 210px; display: none; }
+  .mlegend[data-open="true"] { display: block; }
+  .card { background: var(--c-surface); border-radius: 18px 18px 0 0; margin-top: -16px; position: relative; z-index: 6; padding: 8px 16px 16px; box-shadow: var(--shadow-2); }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--c-surface-3); margin: 0 auto 12px; }
+  .tmk { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .facts3 { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; border-top: 1px solid var(--c-rule); border-bottom: 1px solid var(--c-rule); }
+  .facts3 > div { padding: 9px 0 9px 10px; border-left: 1px solid var(--c-rule); }
+  .facts3 > div:first-child { border-left: 0; padding-left: 0; }
+  .facts3 .v { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .facts3 .l { font-size: 12px; color: var(--c-text-3); }
+  .mapps { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding: 12px; border: 1px solid var(--c-rule); border-radius: 12px; color: var(--c-text); }
+  .mapps:hover { text-decoration: none; background: var(--c-surface-2); }
+  .mapps b { display: block; font-size: 13.5px; }
+  .mapps span { font-size: 12px; color: var(--c-text-2); }
+  .verify { font-size: 12px; color: var(--c-text-3); margin-top: 4px; }
+  .msec { margin-top: 18px; }
+  .msec > h2 { font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .reg { display: grid; grid-template-columns: 6px minmax(0, 1fr); gap: 10px; padding: 11px 0; border-top: 1px solid var(--c-rule); }
+  .reg:first-of-type { border-top: 0; }
+  .reg .bar { border-radius: 3px; }
+  .reg .top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .reg .name { font-size: 12px; color: var(--c-text-3); }
+  .reg .val { font-weight: 600; font-size: 14px; }
+  .reg p { font-size: 13px; color: var(--c-text-2); margin-top: 3px; }
+  .reg .auth { font-size: 12px; color: var(--c-text-3); margin-top: 3px; }
+  .reg.pending .val { color: var(--c-text-3); }
+  .mm { margin-top: 8px; }
+  .ai-card .verdict { display: flex; gap: 8px; padding: 12px; border-radius: 8px; background: var(--c-warn-soft); color: var(--c-warn-ink); font-size: 13px; }
+  .ai-card .verdict b { color: var(--c-text); }
+  .ai-steps { list-style: none; margin: 8px 0 0; padding: 0; }
+  .ai-steps li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; padding: 7px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .ai-steps li:first-child { border-top: 0; }
+  .ai-steps .ico { margin-top: 2px; width: 15px; height: 15px; }
+  .permits-needed { margin-top: 10px; padding: 10px; background: var(--c-surface-2); border-radius: 8px; font-size: 13px; }
+  .permits-needed ol { margin: 4px 0 0; padding-left: 18px; }
+  .mappin.shelter { background: var(--c-ok); } .mappin .ico { color: var(--c-on-accent); width: 12px; height: 12px; }
+  details.plain { border: 1px solid var(--c-info-line); background: var(--c-info-tint); border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
+  details.plain summary { font-weight: 600; font-size: 13.5px; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.plain summary::-webkit-details-marker { display: none; }
+  details.plain summary .ico:last-child { margin-left: auto; transition: transform var(--dur-fast); }
+  details.plain[open] summary .ico:last-child { transform: rotate(180deg); }
+  details.plain p { font-size: 13px; color: var(--c-text-2); margin-top: 8px; }
+  .dockbar { position: sticky; bottom: 0; z-index: 30; display: flex; gap: 8px; padding: 10px 12px 14px; background: var(--c-surface); border-top: 1px solid var(--c-border); }
+  .dockbar .btn { flex: 1; height: 42px; border-radius: 10px; }
+  .sheet { position: fixed; inset: auto 0 0 0; z-index: 70; background: var(--c-surface); border-radius: 18px 18px 0 0; box-shadow: var(--shadow-3); padding: 10px 16px 22px; max-width: 390px; margin: 0 auto; transform: translateY(105%); visibility: hidden; transition: transform var(--dur-base) var(--ease-standard), visibility 0s linear var(--dur-base); }
+  .sheet[data-open="true"] { transform: none; visibility: visible; transition: transform var(--dur-base) var(--ease-standard); }
+  .codebox { font-family: var(--font-mono); font-size: 12px; background: var(--c-surface-2); border-radius: 8px; padding: 12px; word-break: break-all; }
+  .frame-note { text-align: center; color: var(--c-text-3); font-size: 12px; margin-top: 18px; }
+  @media (max-width: 430px) {
+    body { background: var(--c-bg); }
+    .phone { width: 100%; margin: 0; border-radius: 0; box-shadow: none; }
+    .statusbar, .frame-note { display: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#card">Skip to parcel details</a>
+{{ICONS}}
+<div class="display-snapshot" style="padding:8px 12px;font-size:12px">Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</div>
+<p class="frame-note">Shown at 390 px. Open on a phone for the full-bleed view.</p>
+<div class="phone">
+  <div class="statusbar" aria-hidden="true"><span>9:41</span><span>5G ▮▮▮</span></div>
+  <header class="mbar" data-theme-slot>
+    <div class="grow"><strong>County of Maui</strong><small>Property and zoning · Honua Studio</small></div>
+    <button class="iconbtn" id="shareBtn" data-theme-before aria-label="Share this parcel"><svg class="ico"><use href="#i-share"/></svg></button>
+  </header>
+  <div class="msearch">
+    <label class="sr-only" for="q">Search by TMK or street</label>
+    <div class="field"><svg class="ico faint"><use href="#i-search"/></svg><input id="q" value="3-7-004:006" autocomplete="off"></div>
+  </div>
+  <div class="mmap map" id="map" role="region" aria-label="Parcel map">
+    <button class="lbtn" id="lbtn" aria-expanded="false" aria-controls="mlegend"><svg class="ico"><use href="#i-layers"/></svg>Layers</button>
+    <div class="map-legend mlegend" id="mlegend">
+      <label class="layer-toggle"><input type="checkbox" checked data-layers="zoning,zoning-line">County zoning</label>
+      <label class="layer-toggle"><input type="checkbox" checked data-layers="flood,flood-line">Flood zones (FEMA)</label>
+      <label class="layer-toggle"><input type="checkbox" data-layers="tsunami,tsunami-x,tsunami-line">Tsunami evacuation</label>
+      <label class="layer-toggle"><input type="checkbox" data-layers="sma,sma-line">Special management area</label>
+      <label class="layer-toggle"><input type="checkbox" data-layers="slr">Sea-level rise 3.2 ft</label>
+    </div>
+  </div>
+
+  <main class="card" id="card">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="kicker">Selected parcel · Kahului</div>
+    <h1 class="tmk" id="tmk">TMK (2) 3-7-004:006</h1>
+    <p class="muted" style="font-size:13px;margin-top:2px" id="sub">Lono Ave and Kaʻahumanu Ave · 0.326 acres</p>
+    <div class="row wrap" style="margin-top:8px" id="chips"></div>
+    <div class="facts3">
+      <div><div class="v" id="fLand">$602,300</div><div class="l">Land value</div></div>
+      <div><div class="v" id="fBldg">$132,800</div><div class="l">Building value</div></div>
+      <div><div class="v" id="fArea">14,200</div><div class="l">Square feet</div></div>
+    </div>
+    <a class="mapps" id="mapps" href="https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx" rel="noopener">
+      <svg class="ico" style="color:var(--c-accent)"><use href="#i-file"/></svg>
+      <div class="grow"><b>View permits for this TMK in MAPPS</b><span>The County permit system: permit history and new applications</span></div>
+      <svg class="ico faint"><use href="#i-external"/></svg>
+    </a>
+    <div class="verify">County public search · enter the selected TMK</div>
+
+    <section class="msec" aria-labelledby="askH">
+      <div class="ai-card">
+        <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 id="askH" style="font-size:13px">Can I build here?</h2><span class="tag-demo" style="margin-left:auto">Demo answer</span></div>
+        <div class="ai-b" id="ai">
+          <p class="muted" style="font-size:13px;margin-bottom:8px">“Can I expand this building and add a second-floor unit?”</p>
+          <div class="verdict"><svg class="ico" style="margin-top:2px;color:var(--c-warn)"><use href="#i-alert"/></svg><div><b>Planning review required.</b> This example identifies layers to review; Planning must confirm what the project permits require.</div></div>
+          <ul class="ai-steps" id="aiSteps"></ul>
+          <div class="permits-needed"><b>Permits this implies</b>
+            <ol><li>SMA assessment: exemption, minor or major SMA permit (Planning)</li><li>Flood development permit (Public Works, floodplain)</li><li>Building permit (Public Works, Development Services)</li></ol>
+            <div style="margin-top:6px">Apply and track all three in <a href="#mapps">MAPPS</a>.</div>
+          </div>
+          <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>One citation per layer</span><span><svg class="ico"><use href="#i-check"/></svg>Read-only</span><span><svg class="ico"><use href="#i-info"/></svg>Not legal advice; confirm with Planning</span></div>
+        </div>
+      </div>
+      <p id="aiUnavailable" class="muted" hidden>Demo answer is available for the featured parcel only. Review this parcel’s mapped layers below and consult Planning.</p>
+      <details class="plain">
+        <summary><svg class="ico" style="color:var(--hz-flood)"><use href="#i-drop"/></svg><span id="floodQuestion"></span><svg class="ico faint"><use href="#i-chev-d"/></svg></summary>
+        <p id="floodGuidance"></p>
+        <p>Verify the effective FIRM, base flood elevation and applicable development requirements with the County floodplain administrator. Mapped zones are a snapshot; follow current official guidance.</p>
+      </details>
+    </section>
+
+    <section class="msec" aria-labelledby="regH">
+      <h2 id="regH">Rules that apply here</h2>
+      <div id="regs"></div>
+    </section>
+
+    <section class="msec" aria-labelledby="dataH" style="margin-bottom:6px">
+      <h2 id="dataH">Data sources</h2>
+      <p class="faint" style="font-size:12px">Hawaii Statewide GIS Program, State Land Use Commission, County of Maui Department of Planning (community plan 2002, Maui Island Plan 2012), FEMA flood zones; school locations are exercise anchors, not activated shelters. <span class="tag-real">Real data</span></p>
+    </section>
+  </main>
+  <div class="dockbar">
+    <a class="btn" href="#regH"><svg class="ico"><use href="#i-layers"/></svg>Rules</a>
+    <a class="btn primary" href="#askH"><svg class="ico"><use href="#i-agent"/></svg>Ask a question</a>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shH">
+  <div class="grab" aria-hidden="true"></div>
+  <div class="row"><h2 id="shH" style="font-size:16px">Share this parcel</h2><button class="iconbtn" style="margin-left:auto" aria-label="Close" id="shClose"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div class="notice ok" style="margin-top:10px"><svg class="ico"><use href="#i-globe"/></svg><div style="font-size:13px">Anyone can view this snapshot preview. Live Studio publication is coming.</div></div>
+  <div class="label" style="margin-top:12px">Link</div>
+  <div class="codebox" id="shareUrl"></div>
+  <div class="row" style="margin-top:12px"><button class="btn grow" id="copyShare">Copy link</button><button class="btn primary grow" id="nativeShare">Share…</button></div>
+</div>
+
+{{DATA land,roads,streams,waterbodies,zoning,dfirm,tsunami,slr32,sma,slud,mip_growth,cplan,cp_names,parcels,shelters,zone_names}}
+{{MAPJS}}
+<script>
+(() => {
+  const FEAT = 27904;
+
+  const ZN = HD.zone_names, CPN = HD.cp_names;
+  const parcels = HM.get("parcels");
+  const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
+  const cplan = HM.get("cplan");
+  function inRing(pt, ring) { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) c = !c; } return c; }
+  function inGeom(pt, g) { const polys = g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : []; return polys.some((p) => inRing(pt, p[0]) && !p.slice(1).some((h) => inRing(pt, h))); }
+  const findIdx = (fc, pt) => fc.features.findIndex((f) => inGeom(pt, f.geometry));
+  function center(f) { const r = f.geometry.type === "Polygon" ? f.geometry.coordinates[0] : f.geometry.coordinates[0][0]; let x = 0, y = 0; r.forEach((p) => { x += p[0]; y += p[1]; }); return [x / r.length, y / r.length]; }
+  const LUD = { U: ["Urban", "County zoning decides what can be built."], A: ["Agricultural", "Farming and related uses; most building needs county and possibly State approval."], C: ["Conservation", "Managed by the State (DLNR); most building needs a State conservation district use permit."], R: ["Rural", "Small farms and low-density homes."] };
+  const cite = (t, key) => `<button class="cite" data-cite="${key || ""}">${t}</button>`;
+  const ok = '<svg class="ico" style="color:var(--c-ok)"><use href="#i-check-circle"/></svg>';
+  const warn = '<svg class="ico" style="color:var(--c-warn)"><use href="#i-alert"/></svg>';
+  const info = '<svg class="ico faint"><use href="#i-info"/></svg>';
+
+  function render(id) {
+    const f = byId.get(id); const p = f.properties; const pt = id === FEAT ? [-156.47016, 20.88951] : center(f);
+    const zn = ZN[p.zone] || "Not zoned", cp = p.cp >= 0 ? CPN[p.cp] : null;
+    const iS = findIdx({ features: HD.slud.features }, pt), iG = findIdx({ features: HD.mip_growth.features }, pt), iC = findIdx(cplan, pt);
+    document.getElementById("tmk").textContent = "TMK " + HM.tmk(p.t9);
+    const url = new URL(location.href); url.searchParams.set("tmk", p.t9); document.getElementById("shareUrl").textContent = url.href;
+    const sqft = Math.round(p.acres * 43560 / 100) * 100;
+    document.getElementById("sub").textContent = (id === FEAT ? "Lono Ave and Kaʻahumanu Ave · " : "Kahului · ") + `${p.acres.toFixed(3)} acres`;
+    document.getElementById("fLand").textContent = HM.money(p.land); document.getElementById("fBldg").textContent = HM.money(p.bldg); document.getElementById("fArea").textContent = sqft.toLocaleString();
+    document.getElementById("mapps").href = `https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx`;
+    const chips = [`<span class="chip accent">${zn}</span>`, p.fld && p.fld !== "X" ? `<span class="chip info">Flood zone ${p.fld}</span>` : `<span class="chip">Flood zone X</span>`];
+    if (p.sma) chips.push(`<span class="chip">SMA</span>`);
+    if (p.ts === 1) chips.push(`<span class="chip warn">Tsunami evacuation zone</span>`);
+    if (p.mm) chips.push(`<span class="chip danger">Zoning differs from plan</span>`);
+    document.getElementById("chips").innerHTML = chips.join("");
+    document.getElementById("floodQuestion").textContent = `What does mapped flood zone ${p.fld || "not available"} mean?`;
+    document.getElementById("floodGuidance").textContent = p.fld === "X" ? "Zone X is outside the mapped special flood hazard area; flooding remains possible." : "The mapped flood zone may carry development and insurance requirements. Confirm the effective designation with the County.";
+
+    const lud = LUD[p.lud] || ["Not mapped", ""];
+    const R = [
+      { c: "var(--viz-5)", name: "State land use district", val: lud[0], p: lud[1], auth: "State Land Use Commission · HRS Chapter 205", ci: cite(`slud/${iS}`, "slud") },
+      { c: "var(--viz-2)", name: "County zoning", val: zn, p: p.zone === "320" ? "Shops, offices and services; homes allowed above the ground floor." : "See the district standards in Title 19.", auth: "County of Maui Department of Planning · MCC Title 19", ci: cite(`zoning/${p.zone}`, "zoning") },
+      { c: "var(--hz-slr)", name: "Special management area", val: p.sma ? "Inside the SMA" : "Outside the SMA", p: p.sma ? "Coastal zone. Most work needs an SMA assessment first: exemption, minor permit or major permit." : "Confirm coastal requirements with Planning.", auth: "County of Maui Planning · HRS Chapter 205A", ci: p.sma ? cite("sma/1", "sma") : "" },
+      { c: "var(--c-ok)", name: "Community plan (2002)", val: cp || "Source pending", p: p.mm ? "The current zoning does not match the community plan designation. A change of zoning may be needed for some projects." : "Community-plan source pending; consult Planning.", auth: "Wailuku-Kahului Community Plan · County Council", ci: iC >= 0 ? cite(`cplan/${iC}`, "cplan") : "", mm: p.mm },
+      { c: "var(--viz-6)", name: "Maui Island Plan growth boundary", val: p.gb ? `${p.gb} growth boundary` : "Outside growth boundaries", p: p.gb === "Urban" ? "Inside the area where the island plan directs urban growth." : "Growth here is limited by the island plan.", auth: "Maui Island Plan 2012 · alignment status: draft", ci: iG >= 0 ? cite(`mip_growth/${iG}`, "mip") : "" },
+      { c: "var(--hz-flood)", name: "Flood zone (FEMA)", val: p.fld === "AE" ? "AE · elevation not verified" : `Zone ${p.fld || "X"}`, p: p.fld === "AE" || p.fld === "VE" ? `Special flood hazard area. Work over 50% of the building value (over ${HM.money(p.bldg / 2)}) must meet flood standards.` : "Minimal flood hazard.", auth: "FEMA mapped flood zones · verify the effective FIRM and current county rules", ci: cite("dfirm/150003_136", "flood") },
+      { c: "var(--hz-slr)", name: "Sea-level rise, 3.2 ft", val: id === FEAT ? "Check the map layer" : "Check the map layer", p: "Areas expected to flood chronically by mid to late century.", auth: "Hawaii Climate Change Mitigation and Adaptation Commission", ci: cite("slr32/1", "slr") },
+      { c: "var(--hz-tsu)", name: "Tsunami", val: p.ts === 1 ? "Evacuation zone" : p.ts === 2 ? "Extreme evacuation zone" : "Outside evacuation zones", p: p.ts ? "Follow official county evacuation guidance; school points are exercise anchors." : "Follow current official county evacuation guidance.", auth: "Hawaii Emergency Management Agency", ci: cite("tsunami/1", "tsunami") + " " + cite("school exercise anchor", "shelter") },
+      { c: "var(--c-border-strong)", name: "Shoreline setback", val: "Source pending", p: "Not evaluated: no public shoreline setback layer is loaded yet.", auth: "County of Maui Planning · shoreline rules", ci: "", pending: true },
+    ];
+    if (p.zone === "720" || p.zone === "773") R.splice(2, 0, { c: "var(--c-warn)", name: p.zone === "773" ? "Historic district" : "Project district", val: zn, p: "Additional district standards apply.", auth: "County of Maui Planning", ci: cite(`zoning/${p.zone}`, "zoning") });
+    document.getElementById("regs").innerHTML = R.map((r) => `<div class="reg ${r.pending ? "pending" : ""}"><span class="bar" style="background:${r.c}"></span><div><div class="name">${r.name}</div><div class="top"><span class="val">${r.val}</span>${r.ci}</div><p>${r.p}</p>${r.mm ? '<div class="notice danger mm"><svg class="ico"><use href="#i-alert"/></svg><div style="font-size:13px">Zoning and future land use do not match.</div></div>' : ""}<div class="auth">${r.auth}</div></div></div>`).join("");
+    document.getElementById("aiSteps").innerHTML = [
+      `${ok}<span>State district is <b>${lud[0]}</b>, so county zoning governs. ${cite(`slud/${iS}`, "slud")}</span>`,
+      `${ok}<span><b>${zn}</b> allows homes above ground-floor business. ${cite(`zoning/${p.zone}`, "zoning")} ${cite("MCC 19.18", "zoning")}</span>`,
+      `${p.mm ? warn : ok}<span>Community plan <b>${cp || "source pending"}</b>${p.mm ? " does not match zoning" : "; consistency not evaluated"}; inside the <b>${p.gb || "no"}</b> growth boundary. ${iC >= 0 ? cite(`cplan/${iC}`, "cplan") : ""} ${iG >= 0 ? cite(`mip_growth/${iG}`, "mip") : ""}</span>`,
+      p.sma ? `${warn}<span>Inside the <b>special management area</b>: an SMA assessment comes first. ${cite("sma/1", "sma")}</span>` : `${ok}<span>Outside the special management area.</span>`,
+      `${p.fld === "AE" || p.fld === "VE" ? warn : ok}<span>Flood zone <b>${p.fld || "X"}</b>${p.fld === "AE" ? ", elevation not verified" : ""}. Ask the County floodplain administrator to verify applicable development and substantial-improvement requirements. ${cite("dfirm/150003_136", "flood")} </span>`,
+      `${p.ts === 1 ? warn : ok}<span>${p.ts === 1 ? "In the mapped tsunami zone; consult official evacuation guidance." : "Outside the tsunami evacuation zone."} ${cite("tsunami/1", "tsunami")} ${p.ts === 1 ? cite("school exercise anchor", "shelter") : ""}</span>`,
+      `${ok}<span>Review the <b>3.2 ft sea-level-rise</b> exposure overlay. ${cite("slr32/1", "slr")}</span>`,
+      `${info}<span>Shoreline setback not checked: source pending.</span>`,
+    ].map((s) => `<li>${s}</li>`).join("");
+    document.getElementById("ai").hidden = id !== FEAT;
+    document.getElementById("aiUnavailable").hidden = id === FEAT;
+    if (map && map.getSource("parcels")) { if (sel != null) map.setFeatureState({ source: "parcels", id: sel }, { sel: false }); sel = id; map.setFeatureState({ source: "parcels", id }, { sel: true }); map.setFilter("parcels-sel", ["==", ["get", "id"], id]); }
+  }
+  let sel = null, map = null;
+  map = HM.create(document.getElementById("map"), {
+    bounds: [[-156.4775, 20.8855], [-156.463, 20.8935]], padding: 4, roadLabels: false, cooperative: true, navPos: "top-right",
+    onload: (m) => {
+      HM.overlays(m, ["zoning", "slr", "flood", "tsunami", "parcels"], "roads-casing");
+      HM.add(m, "sma", HD.sma);
+      HM.themed(m, { id: "sma", type: "fill", source: "sma", paint: { "fill-color": "--hz-slr", "fill-opacity": 0.12 } }, "roads-casing");
+      HM.themed(m, { id: "sma-line", type: "line", source: "sma", paint: { "line-color": "--hz-slr", "line-width": 1.5, "line-dasharray": [2, 2] } });
+      HM.bindToggles(m);
+      const sh = HD.shelters.features.find((s) => s.properties.name.startsWith("Kahului Elementary"));
+      if (sh) { const el = document.createElement("div"); el.className = "mappin shelter"; el.innerHTML = '<svg class="ico"><use href="#i-home"/></svg>'; el.title = "School exercise anchor: Kahului Elementary"; new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(sh.geometry.coordinates).addTo(m); }
+      m.on("click", "parcels-fill", (e) => { render(e.features[0].properties.id); document.getElementById("card").scrollIntoView({ behavior: "smooth" }); });
+      render(parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
+    },
+  });
+  render(parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
+  const lb = document.getElementById("lbtn"), lg = document.getElementById("mlegend");
+  lb.addEventListener("click", () => { const o = lg.dataset.open !== "true"; lg.dataset.open = o; lb.setAttribute("aria-expanded", o); });
+  const CITE = { flood: ["flood", "flood-line"], tsunami: ["tsunami", "tsunami-x", "tsunami-line"], shelter: ["tsunami", "tsunami-x", "tsunami-line"], slr: ["slr"], sma: ["sma", "sma-line"], zoning: ["zoning", "zoning-line"] };
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-cite]"); if (!b || !map) return;
+    const ids = CITE[b.dataset.cite]; if (ids) { HM.toggle(map, ids, true); document.querySelectorAll("[data-layers]").forEach((cb) => { if (cb.dataset.layers.split(",")[0] === ids[0]) cb.checked = true; }); }
+    if (["tsunami", "shelter", "slr"].includes(b.dataset.cite)) map.fitBounds([[-156.484, 20.877], [-156.462, 20.895]], { duration: 600 });
+    document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  async function copyShare(event) {
+    const button = event.currentTarget;
+    try { await navigator.clipboard.writeText(document.getElementById("shareUrl").textContent); button.textContent = "Copied"; }
+    catch { button.textContent = "Select link above to copy"; }
+  }
+  document.getElementById("copyShare").addEventListener("click", copyShare);
+  document.getElementById("nativeShare").addEventListener("click", async (event) => {
+    if (!navigator.share) return copyShare(event);
+    try { await navigator.share({ title: "Maui property snapshot", url: document.getElementById("shareUrl").textContent }); } catch {}
+  });
+  const sheet = document.getElementById("sheet");
+  document.getElementById("shareBtn").addEventListener("click", () => { sheet.dataset.open = true; document.getElementById("shClose").focus(); });
+  document.getElementById("shClose").addEventListener("click", () => { sheet.dataset.open = false; document.getElementById("shareBtn").focus(); });
+})();
+</script>
+</body>
+</html>
