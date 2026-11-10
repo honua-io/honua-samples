@@ -370,7 +370,8 @@
   const condBadge = (c) => `<span class="condbadge" style="background:${COND[c][1]}">${c} of 5 · ${COND[c][0]}</span>`;
   function selectAsset(a) {
     document.getElementById("aKind").textContent = a.kind;
-    document.getElementById("aSrc").textContent = a.kind === "Traffic signal" ? "roadway-assets/signals" : a.kind === "Culvert" ? "storm-assets/culverts" : "storm-assets/inlets";
+    const assetSource = a.kind === "Traffic signal" ? "roadway-assets/signals" : a.kind === "Culvert" ? "storm-assets/culverts" : "storm-assets/inlets";
+    document.getElementById("aSrc").textContent = assetSource;
     document.getElementById("aTitle").textContent = a.id;
     document.getElementById("aSub").textContent = `${a.street}, ${a.c[0] < -156.49 ? "Wailuku" : "Kahului"} · installed ${a.installed}`;
     const chips = [condBadge(a.cond)];
@@ -390,7 +391,7 @@
         <dt>Inspection cycle</dt><dd>${a.kind === "Traffic signal" ? "12 months" : "18 months"}${age > 548 && a.kind !== "Traffic signal" ? ' <span class="chip danger" style="height:18px">Overdue</span>' : ""}</dd>
         <dt>Material</dt><dd>${a.kind === "Culvert" ? "Reinforced concrete pipe, 36 in" : a.kind === "Traffic signal" ? "Mast arm, LED heads" : "Cast iron grate, concrete box"}</dd>
         <dt>Maintained by</dt><dd>${a.kind === "Traffic signal" ? "Traffic Operations" : "Highways Division, drainage"}</dd>
-        <dt>Layer</dt><dd class="mono" style="font-size:12px">${document.getElementById("aSrc").textContent}/${a.id}</dd>
+        <dt>Layer</dt><dd class="mono" style="font-size:12px">${assetSource}/${a.id}</dd>
       </dl>`;
     document.getElementById("ap2").innerHTML = `<ol class="tl">${hist.map((h, i) => `<li class="${i === 0 ? "ok" : ""}"><time>${fmtD(h.d)} · ${h.who}</time><span class="hist-cond" style="background:${COND[h.c][1]}"></span><b>${h.c} of 5</b> · ${h.note}<div class="faint" style="font-size:12px">${h.src}</div></li>`).join("")}</ol>`;
     const linkedWo = wos.filter((w) => w.asset === a.id);
