@@ -37,10 +37,27 @@ export async function openAnalysisSource(binding, name) {
   return { source, catalog, identity, columns, endpoint };
 }
 
+export function validatedAnalysisSource(source, validateRecord) {
+  if (!validateRecord) return source;
+  return Object.assign(Object.create(source), {
+    async query(request) {
+      const result = await source.query(request);
+      for (const feature of result.features ?? []) validateRecord(feature.attributes);
+      return result;
+    },
+    ...(source.stream ? { async *stream(request) {
+      for await (const result of source.stream(request)) {
+        for (const feature of result.features ?? []) validateRecord(feature.attributes);
+        yield result;
+      }
+    } } : {}),
+  });
+}
+
 export function createAnalysisModel(handle) {
   const { source, identity, columns } = handle;
   const registry = createFilterRegistry();
-  const table = createHonuaFeatureTable({ source, sourceId: source.descriptor.id, identityField: identity,
+  const table = createHonuaFeatureTable({ source: validatedAnalysisSource(source, handle.catalog.validateRecord), sourceId: source.descriptor.id, identityField: identity,
     columns: columns.map((field) => ({ field })), sort: [{ field: identity, direction: 'asc' }],
     returnGeometry: true, budgets: { pageSize: 100, maxCachedRows: 500, maxRequests: 100,
       maxExportRows: 10_000, maxExportBytes: 8 * 1024 * 1024 } });

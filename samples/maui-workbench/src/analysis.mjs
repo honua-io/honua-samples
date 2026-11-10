@@ -38,6 +38,7 @@ function bindTable(next) {
   element('feature-table').table = next.table;
   unsubscribe = next.table.subscribe((snapshot) => {
     if (model !== next) return;
+    if (snapshot.state === 'error') { showError(snapshot.error ?? new Error('Table page validation failed.')); return; }
     const targets = next.table.selectionTargets();
     map.select(targets.map((target) => target.id));
     element('selection-status').textContent = `${describeFeatureTableCount(snapshot.count)} · ${snapshot.selection.length} selected`;
@@ -112,6 +113,7 @@ async function refreshAnalysis(presentation) {
       queryStatusChart(next, { signal }), next.table.setFilters(next.registry.snapshot)]);
     if (current !== revision) return;
     if (!['ready', 'partial'].includes(table.state)) throw new Error('The feature table could not complete this query. Clear filters and retry.');
+    element('feature-table').table = next.table;
     map.update(result.collection);
     if (presentation) {
       next.table.select(next.table.keysForTargets(presentation.selection.map((id) => ({
@@ -160,6 +162,8 @@ function describeFilters() {
 }
 
 function showError(error) {
+  element('feature-table').table = undefined;
+  map.update({ type: 'FeatureCollection', features: [] });
   status.textContent = `Could not finish the query: ${error.message} Clear filters or reconnect to retry.`;
   element('map-status').textContent = 'No completed map result. Retry before using these records.';
   element('status-chart').chartModel = { id: 'status', title: 'Requests by status', kind: 'bar', status: 'error', message: error.message };

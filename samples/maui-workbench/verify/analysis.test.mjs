@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { collectAnalysisExport, encodeAnalysisExport } from '../src/analysis-export.mjs';
-import { analysisBindings, catalogs, queryAnalysisMap, queryStatusChart, setAnalysisFilter } from '../src/analysis-model.mjs';
+import { analysisBindings, catalogs, validatedAnalysisSource, queryAnalysisMap, queryStatusChart, setAnalysisFilter } from '../src/analysis-model.mjs';
 import { createFilterRegistry } from '@honua/sdk-js/filter-registry';
 
 const row = (id) => ({ attributes: { objectid: id, status: 'exercise_open' }, geometry: { x: -156.4, y: 20.85 } });
@@ -83,4 +83,23 @@ test('export follows stable ordered pages and preserves every object ID', async 
 test('CSV quotes cells and neutralizes spreadsheet formulas', () => {
   const data = { features: [{ properties: { value: '=1+1,"quoted"' } }] };
   assert.equal(encodeAnalysisExport(data, ['value'], 'csv'), '"value"\r\n"\'=1+1,""quoted"""');
+});
+
+
+test('every table page validates exercise provenance before returning rows', async () => {
+  const valid = { attributes: { data_origin: 'synthetic-exercise', is_demo: true,
+    exercise_only: true, display_label: 'DEMO DATA' } };
+  const source = { query: async ({ pagination }) => ({ features: pagination.offset === 0 ? [valid] : [row(1001)] }),
+    async *stream() { yield { features: [valid] }; yield { features: [row(1001)] }; } };
+  let checked = 0;
+  const guarded = validatedAnalysisSource(source, (attributes) => {
+    checked += 1;
+    if (attributes !== valid.attributes) throw new Error('DEMO DATA provenance');
+  });
+  assert.deepEqual((await guarded.query({ pagination: { offset: 0 } })).features, [valid]);
+  await assert.rejects(guarded.query({ pagination: { offset: 1000 } }), /DEMO DATA provenance/);
+  const pages = guarded.stream({});
+  assert.deepEqual((await pages.next()).value.features, [valid]);
+  await assert.rejects(pages.next(), /DEMO DATA provenance/);
+  assert.equal(checked, 4);
 });
