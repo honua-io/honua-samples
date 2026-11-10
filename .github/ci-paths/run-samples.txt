@@ -11,3 +11,4 @@ package.json
 package-lock.json
 .github/workflows/run-samples.yml
 .github/ci-paths/run-samples.txt
+scripts/state-local/**

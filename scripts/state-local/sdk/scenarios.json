@@ -1,0 +1,26 @@
+{
+  "property": {
+    "source": "maui-zoning",
+    "where": "zone_code IS NOT NULL",
+    "exercise": false,
+    "requirement": "PRM-08"
+  },
+  "emergency": {
+    "source": "maui-demo-shelters",
+    "where": "record_type = 'exercise_shelter' AND status <> 'exercise_closed'",
+    "exercise": true,
+    "requirement": "EM-01"
+  },
+  "311": {
+    "source": "maui-demo-requests",
+    "where": "record_type = 'service_request' AND status <> 'exercise_closed'",
+    "exercise": true,
+    "requirement": "SR-01"
+  },
+  "public-works": {
+    "source": "maui-demo-work-orders",
+    "where": "record_type = 'work_order' AND status = 'exercise_scheduled'",
+    "exercise": true,
+    "requirement": "PW-01"
+  }
+}

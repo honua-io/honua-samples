@@ -113,11 +113,11 @@ export function outsidePoint(fixture, view) {
  * query endpoint); `protocols` adds more service protocols by their server
  * identifiers, e.g. "OgcFeatures" or "OGC-API-Tiles".
  *
- * @param {{ prefix: string, allowAnonymous: boolean, protocols?: string[] }} opts
+ * @param {{ prefix: string, allowAnonymous: boolean, protocols?: string[], fixture?: {geojson: object, count: number} }} opts
  */
-export async function seedFeatureService({ prefix, allowAnonymous, protocols = [] }) {
+export async function seedFeatureService({ prefix, allowAnonymous, protocols = [], fixture: suppliedFixture }) {
   const env = serverEnv();
-  const fixture = await loadFixture();
+  const fixture = suppliedFixture ?? await loadFixture();
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const serviceName = `${prefix}-${suffix}`;
   const tableName = `${prefix.replace(/-/g, "_")}_${suffix}`;
@@ -150,7 +150,7 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
     enabledProtocols: ["FeatureServer", ...protocols.filter((protocol) => protocol !== "FeatureServer")],
   } });
   if (allowAnonymous) {
-    await adminFetch(env, { method: "PUT", apiPath: `/api/v1/admin/services/${serviceName}/access-policy`, body: { allowAnonymous: true } });
+    await adminFetch(env, { method: "PUT", apiPath: `/api/v1/admin/services/${serviceName}/access-policy`, body: { allowAnonymous: true, allowAnonymousWrite: false } });
   }
 
   const serviceUrl = `${env.baseUrl}/rest/services/${serviceName}/FeatureServer`;

@@ -66,6 +66,18 @@ async function departmentFolder(env, department) {
   return matches[0].metadata.id;
 }
 
+export async function uploadSnapshotTable(env, snapshot) {
+  const form = new FormData();
+  form.set("file", new Blob([JSON.stringify(snapshot.geojson)], { type: "application/geo+json" }), "snapshot.geojson");
+  form.set("TableName", snapshot.tableName);
+  const uploaded = await completedUpload(env,
+    await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form }));
+  if (uploaded?.featureCount !== snapshot.geojson.features.length || !uploaded.physicalTableName) {
+    throw new Error("Import did not confirm the snapshot table and feature count");
+  }
+  return uploaded;
+}
+
 export async function stageSnapshot(env, options) {
   const { name, directory, connection } = options;
   if (!connection) throw new Error("HONUA_SAMPLE_CONNECTION must name this server's managed import database");
@@ -75,12 +87,7 @@ export async function stageSnapshot(env, options) {
   const runId = randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);
   const serviceName = stagingServiceName(name, runId);
-  const form = new FormData();
-  form.set("file", new Blob([JSON.stringify(geojson)], { type: "application/geo+json" }), `${name}.geojson`);
-  form.set("TableName", tableName);
-  const uploaded = await completedUpload(env,
-    await adminFetch(env, { method: "POST", apiPath: "/api/v1/admin/import/upload", body: form }));
-  if (uploaded?.featureCount !== receipt.accepted || !uploaded.physicalTableName) throw new Error("Import did not confirm the snapshot table and feature count");
+  const uploaded = await uploadSnapshotTable(env, { tableName, geojson });
   const published = await adminFetch(env, {
     method: "POST", apiPath: layersPath(connection),
     body: {
