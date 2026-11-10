@@ -1,3 +1,5 @@
+import { assertExerciseProvenance } from './exercise-provenance.mjs';
+
 export const STATUS_LABELS = {
   exercise_open: 'Open', exercise_in_progress: 'In progress', exercise_closed: 'Closed',
 };
@@ -91,5 +93,4 @@ function csvCell(value) {
 export function exportCsv(records) {
   return [CSV_FIELDS.join(','), ...records.map(({ properties }) => CSV_FIELDS.map((key) => csvCell(properties[key])).join(','))].join('\r\n');
 }
-import { assertExerciseProvenance } from '../../../scripts/state-local/exercise-provenance.mjs';
 
