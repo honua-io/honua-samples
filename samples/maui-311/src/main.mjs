@@ -3,6 +3,7 @@ import { loadRequests, sourceBinding } from './source.mjs';
 import { exportCsv, exportGeojson, selectRecords } from './records.mjs';
 import { element, renderAnalysis, renderDetail, renderMetrics, renderRows } from './view.mjs';
 import { createRequestMap, mapUnavailable, updateMap } from './map.mjs';
+import { bindFeed } from './feed-view.mjs';
 
 const form = document.querySelector('#filters');
 const refresh = document.querySelector('#refresh');
@@ -12,6 +13,7 @@ let filtered = [];
 let shown = 25;
 let map;
 let binding;
+let setFeedRecords;
 
 function select(id) {
   const feature = filtered.find(({ properties }) => properties.record_id === id);
@@ -38,8 +40,10 @@ async function refreshData() {
   status.textContent = 'Loading and checking every page of the exercise layer…';
   document.querySelector('#dashboard').hidden = true;
   document.body.dataset.sampleStatus = 'loading';
+  setFeedRecords([]);
   try {
     records = await loadRequests(binding);
+    setFeedRecords(records);
     document.querySelector('#dashboard').hidden = false;
     if (!map) {
       try { map = createRequestMap(select); } catch {
@@ -84,6 +88,7 @@ refresh.addEventListener('click', refreshData);
 try {
   binding = sourceBinding(location.search);
   if (binding) {
+    setFeedRecords = bindFeed(binding);
     const endpoint = new URL(`/rest/services/${binding.serviceId}/FeatureServer/${binding.layerId}`, binding.baseUrl);
     document.querySelector('#source-link').append(element('a', 'Inspect the connected FeatureServer layer', { href: endpoint.href }));
     await refreshData();

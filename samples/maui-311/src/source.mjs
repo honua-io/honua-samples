@@ -22,6 +22,9 @@ export function sourceBinding(search) {
 }
 
 function geojsonGeometry(geometry) {
+  if (geometry?.type === 'Point') return geojsonGeometry({ x: geometry.coordinates?.[0], y: geometry.coordinates?.[1] });
+  if (geometry?.type === 'LineString') return geojsonGeometry({ paths: [geometry.coordinates] });
+  if (geometry?.type === 'MultiLineString') return geojsonGeometry({ paths: geometry.coordinates });
   if (geometry && Number.isFinite(geometry.x) && Number.isFinite(geometry.y)) {
     return { type: 'Point', coordinates: [geometry.x, geometry.y] };
   }
