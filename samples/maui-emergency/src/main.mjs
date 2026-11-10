@@ -148,7 +148,10 @@ document.querySelector('#locate').addEventListener('click', () => {
 try {
   source = location.search ? bindings(location.search) : { snapshot: true };
   if (source) await load();
-  else document.body.dataset.sampleStatus = 'unconfigured';
+  else {
+    document.body.dataset.sampleStatus = 'unconfigured';
+    status.textContent = 'Connect both exercise layers from the approved import receipts, or open this page without parameters for the static snapshot.';
+  }
 } catch (error) {
   status.textContent = error.message;
   status.dataset.state = 'error';

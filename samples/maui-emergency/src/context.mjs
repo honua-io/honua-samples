@@ -14,9 +14,9 @@ export function contextFeature(feature, name) {
     const kinds = { 'Tsunami Evacuation Zone': 'regular', 'Extreme Tsunami Evacuation Zone': 'extreme' };
     const kind = kinds[properties.zone_type];
     if (!kind) throw new Error('Unknown tsunami zone classification');
-    return { type: 'Feature', id: attributes.objectid ?? attributes.OBJECTID, properties: { ...properties, zone_kind: kind }, geometry };
+    return { type: 'Feature', id: attributes.objectid ?? attributes.OBJECTID ?? attributes.id, properties: { ...properties, zone_kind: kind }, geometry };
   }
-  return { type: 'Feature', id: attributes.objectid ?? attributes.OBJECTID, properties, geometry };
+  return { type: 'Feature', id: attributes.objectid ?? attributes.OBJECTID ?? attributes.id, properties, geometry };
 }
 
 export async function loadContext(search) {

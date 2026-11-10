@@ -344,6 +344,9 @@ async function main() {
     );
   }
 
+  const emergencyCard = ownCards.find((card) => card.id === 'maui-emergency' && card.ownApp);
+  if (emergencyCard) await cp(path.join(SITE_DIR, 'maui-emergency/app'), path.join(SITE_DIR, 'state-local/emergency'), { recursive: true });
+
   for (const card of jobCards) {
     const dir = path.join(SITE_DIR, "jobs", card.id);
     await mkdir(dir, { recursive: true });

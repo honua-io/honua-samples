@@ -8,6 +8,7 @@ test('context admits explicit regular and extreme classes and rejects unknown ge
     assert.equal(feature.id, 1);
     assert.equal(feature.properties.zone_kind, kind);
   }
+  assert.equal(contextFeature({ attributes: { id: 7, zone_type: 'Tsunami Evacuation Zone' }, geometry }, 'tsunami').id, 7);
   for (const zone_type of [undefined, 'Other hazard', '<script>']) assert.throws(() => contextFeature({ attributes: { objectid: 1, zone_type }, geometry }, 'tsunami'), /classification/);
   assert.throws(() => contextFeature({ attributes: { objectid: 1 }, geometry }, 'roads'), /line.*geometry/);
 });
