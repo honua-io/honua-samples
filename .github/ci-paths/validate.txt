@@ -4,6 +4,7 @@
 **/*.rst
 **/*.txt
 samples/**
+shared/**
 jobs/**
 schemas/**
 scripts/**

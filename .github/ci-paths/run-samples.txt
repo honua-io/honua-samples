@@ -1,5 +1,6 @@
 # Paths whose change makes run-samples.yml's pull request and trunk jobs run (git glob pathspecs).
 samples/**
+shared/**
 scripts/run-samples.mjs
 scripts/generate-samples-coverage.mjs
 scripts/lib/**
