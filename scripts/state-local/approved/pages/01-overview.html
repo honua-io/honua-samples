@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Honua for Maui County</title>
+<meta name="description" content="Honua platform overview for the Maui County state and local government demo.">
+{{HEAD}}
+<style>
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  .hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 32px; align-items: stretch; padding: 36px 0 28px; }
+  .hero h1 { font-size: 40px; line-height: 1.08; letter-spacing: -0.03em; font-weight: 650; margin: 10px 0 14px; }
+  .hero .lede { font-size: 16px; color: var(--c-text-2); max-width: 54ch; line-height: 1.55; }
+  .hero-map { position: relative; min-height: 500px; border-radius: 14px; overflow: hidden; border: 1px solid var(--c-rule); box-shadow: var(--shadow-panel); }
+  .hero-map .map { position: absolute; inset: 0; }
+  .hero-legend { left: 12px; bottom: 30px; width: 214px; }
+  .hero-card { position: absolute; right: 12px; top: 12px; z-index: 5; width: 260px; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 12px 14px; font-size: 13px; }
+  .hero-card .q { font-weight: 600; font-size: 13px; margin: 6px 0; }
+  .facts-row { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 24px; border-top: 1px solid var(--c-rule); }
+  .facts-row > div { padding: 12px 12px 0 0; }
+  .facts-row .v { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .facts-row .l { font-size: 12px; color: var(--c-text-3); }
+  section.band { padding: 32px 0; border-top: 1px solid var(--c-rule); }
+  .sec-h { display: flex; align-items: baseline; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sec-h h2 { font-size: 22px; letter-spacing: -0.02em; }
+  .sec-h p { color: var(--c-text-2); max-width: 70ch; }
+  .journeys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .jcard { display: grid; grid-template-columns: 220px minmax(0, 1fr); background: var(--c-surface); border: 1px solid var(--c-rule); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel); overflow: hidden; color: var(--c-text); }
+  .jcard:hover { text-decoration: none; box-shadow: var(--shadow-raised); }
+  .jcard .mini { position: relative; min-height: 236px; background: var(--map-water); }
+  .jcard .mini .map { position: absolute; inset: 0; }
+  .jcard .mini .mapattr { display: none; }
+  .jcard .body { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .jcard .num { font-size: 12px; color: var(--c-text-3); font-weight: 500; }
+  .jcard h3 { font-size: 17px; letter-spacing: -0.015em; }
+  .jcard ul { margin: 0; padding-left: 16px; color: var(--c-text-2); font-size: 13px; }
+  .jcard ul li + li { margin-top: 3px; }
+  .ai-line { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; background: var(--c-ai-soft); color: var(--c-info-ink); border-radius: var(--radius-md); padding: 10px 12px; margin-top: auto; }
+  .ai-line .ico { margin-top: 1px; color: var(--c-ai); }
+  .jcard .go { font-weight: 600; color: var(--c-link); display: inline-flex; gap: 4px; align-items: center; font-size: 13px; }
+  .more { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 16px; }
+  .more a { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; background: var(--c-surface); border: 1px solid var(--c-rule); border-radius: var(--radius-md); color: var(--c-text); font-size: 13px; }
+  .more a:hover { text-decoration: none; background: var(--c-surface-2); }
+  .more a b { display: block; font-size: 13.5px; }
+  .more a span { color: var(--c-text-2); font-size: 13px; }
+  .more .ico { margin-top: 2px; color: var(--c-accent); }
+  /* Architecture */
+  .arch { display: grid; grid-template-columns: 1fr 28px 1.5fr 28px 1.3fr; align-items: stretch; gap: 0; }
+  .arch .col { background: var(--c-surface); border: 1px solid var(--c-rule); border-radius: var(--radius-lg); padding: 14px 16px; box-shadow: var(--shadow-panel); }
+  .arch .col h3 { font-size: 13px; color: var(--c-text-3); font-weight: 500; margin-bottom: 10px; }
+  .arch .arrow { display: grid; place-items: center; color: var(--c-border-strong); }
+  .arch .item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .arch .item:first-of-type { border-top: 0; }
+  .arch .item .ico { margin-top: 2px; color: var(--c-accent); }
+  .arch .item b { display: block; }
+  .arch .item span { color: var(--c-text-2); font-size: 13px; }
+  .server { background: var(--teal-900) !important; color: var(--teal-50); border-color: var(--teal-900) !important; }
+  .server h3 { color: var(--teal-200) !important; }
+  .server .name { font-size: 20px; font-weight: 650; letter-spacing: -0.02em; color: var(--teal-50); }
+  .server p { color: var(--teal-100); font-size: 13px; margin: 4px 0 12px; }
+  .proto-g { margin-top: 10px; }
+  .proto-g .gl { font-size: 12px; color: var(--teal-200); margin-bottom: 5px; }
+  .proto { display: inline-flex; gap: 5px; align-items: center; padding: 4px 10px; line-height: 1.3; margin: 0 4px 5px 0; border-radius: 999px; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .16); color: var(--teal-50); font-size: 12px; white-space: nowrap; }
+  .proto small { color: var(--teal-200); font-size: 12px; }
+  .runs { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgb(255 255 255 / .14); font-size: 12px; color: var(--teal-100); }
+  .runs span { display: inline-flex; gap: 5px; align-items: center; }
+  /* Switch proof */
+  .proof { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; }
+  .ok-ic { color: var(--c-ok); white-space: nowrap; }
+  .proof .tbl .id { font-family: var(--font-sans); font-size: 12px; }
+  .proof code { font-size: 12px; }
+  /* Outcomes */
+  .outcomes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--c-surface); border: 1px solid var(--c-rule); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel); }
+  .outcomes > div { padding: 18px; border-left: 1px solid var(--c-rule); }
+  .outcomes > div:first-child { border-left: 0; }
+  .outcomes .v { font-size: 30px; font-weight: 650; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .outcomes .l { font-weight: 600; margin-top: 2px; }
+  .outcomes p { color: var(--c-text-2); font-size: 13px; margin-top: 6px; }
+  footer.site { padding: 28px 0 40px; border-top: 1px solid var(--c-rule); color: var(--c-text-2); font-size: 13px; }
+  footer.site .facts { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; color: var(--c-text); font-weight: 500; }
+  footer.site .facts span { display: inline-flex; gap: 6px; align-items: center; }
+  @media (max-width: 1100px) {
+    .hero { grid-template-columns: minmax(0, 1fr); }
+    .journeys { grid-template-columns: minmax(0, 1fr); }
+    .arch { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .arch .arrow { transform: rotate(90deg); height: 20px; }
+    .proof { grid-template-columns: minmax(0, 1fr); }
+    .more { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .outcomes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .outcomes > div:nth-child(3) { border-left: 0; }
+    .outcomes > div:nth-child(n+3) { border-top: 1px solid var(--c-rule); }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px; }
+    .hero h1 { font-size: 30px; }
+    .hero-map { min-height: 380px; }
+    .hero-card, .hero-legend { display: none; }
+    .jcard { grid-template-columns: minmax(0, 1fr); }
+    .jcard .mini { min-height: 170px; }
+    .more { grid-template-columns: minmax(0, 1fr); }
+    .outcomes { grid-template-columns: minmax(0, 1fr); }
+    .outcomes > div { border-left: 0 !important; border-top: 1px solid var(--c-rule); }
+    .outcomes > div:first-child { border-top: 0; }
+    .facts-row .v { font-size: 18px; }
+    .tbl-wrap { overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+{{ICONS}}
+<header class="appbar">
+  <a class="wordmark" href="index.html"><strong>Honua</strong><small>County of Maui demo</small></a>
+  <nav class="appnav" aria-label="Demo screens">
+    <a href="01-overview.html" aria-current="page">Overview</a><a href="02-property.html">Property</a><a href="03-311.html">311</a><a href="04-emergency.html">Preparedness</a><a href="05-public-works.html">Public works</a><a href="12-workbench.html">Workbench</a><a href="https://docs.honua.io/">Console</a><a href="/state-local/data/approved/manifest.json">Catalog</a><a href="https://github.com/honua-io/honua-samples/tree/trunk/samples/maui-property-planning">Agent</a>
+  </nav>
+  <span class="spacer"></span>
+  <a class="btn ghost hide-sm" href="/state-local/switching/">Coming from other GIS servers</a>
+  <span class="env"><span class="dot"></span>Demo environment</span>
+</header>
+<div class="demostrip" role="note">
+  <span>Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="../data/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span class="tag-real">Real data</span> Parcels, zoning, flood, tsunami, sea-level rise, roads, schools and bridges (Hawaii Statewide GIS Program)
+  <span class="tag-demo">Demo data</span> 311 requests, work orders, assets and agent conversations
+</div>
+
+<main id="main" class="wrap">
+  <section class="hero" aria-labelledby="heroH">
+    <div>
+      <div class="kicker">County of Maui · Kahului and Wailuku</div>
+      <h1 id="heroH">One geospatial platform for the whole county.</h1>
+      <p class="lede">Honua serves your data, publishes your open data hub, builds your public apps and dashboards, runs administration, and gives staff an AI agent that cites every answer. It replaces the GIS stack end to end, and the tools you already run keep working on day one.</p>
+      <div class="row wrap" style="margin-top:20px;gap:10px">
+        <a class="btn primary lg" href="#journeys">See the four journeys</a>
+        <a class="btn lg" href="/state-local/switching/">How switching works</a>
+      </div>
+      <div class="facts-row">
+        <div><div class="v">2,538</div><div class="l">real parcels in the Kahului view</div></div>
+        <div><div class="v">21</div><div class="l">verified source snapshots</div></div>
+        <div><div class="v">6</div><div class="l">protocols from one source</div></div>
+      </div>
+    </div>
+    <div class="hero-map">
+      <div class="map" id="heroMap" role="img" aria-label="Map of Kahului and Wailuku with zoning, FEMA flood zones, tsunami evacuation zones, roads and school exercise anchors"></div>
+      <div class="map-legend hero-legend">
+        <div class="lg-row"><span class="lg-sw" style="background:var(--hz-tsu);opacity:.45"></span>Tsunami evacuation zone</div>
+        <div class="lg-row"><span class="lg-sw" style="background:var(--hz-flood);opacity:.45"></span>FEMA flood zone (AE, VE)</div>
+        <div class="lg-row"><span class="lg-sw" style="background:var(--z-bus)"></span>Business zoning</div>
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-ok)"></span>School exercise anchor</div>
+        <div class="lg-row"><span class="lg-pt" style="background:var(--c-danger)"></span>Fire station</div>
+      </div>
+      <div class="hero-card" aria-label="Agent example">
+        <div class="row" style="color:var(--c-ai);font-weight:600;font-size:12px"><svg class="ico"><use href="#i-agent"/></svg>Honua agent · Demo answer</div>
+        <div class="q">Which open drainage requests are in the tsunami evacuation zone near exercise sites?</div>
+        <p class="muted">Demo answer: illustrative request triage over synthetic records; school points are exercise anchors. <button class="cite">requests/SR-26-18380</button> <button class="cite">tsunami/1</button></p>
+        <p style="margin-top:6px;font-size:12px" class="row"><span class="dot warn"></span>Work order proposed, waiting for one approval</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="journeys" aria-labelledby="jH">
+    <div class="sec-h"><h2 id="jH">Four county journeys, one platform</h2><p>These snapshot previews share verified Maui layers and clearly labelled demo records. Open a journey to see the full screen.</p></div>
+    <div class="journeys">
+      <a class="jcard" href="02-property.html">
+        <div class="mini"><div class="map" data-mini="property" aria-hidden="true"></div></div>
+        <div class="body">
+          <div class="num">Journey 1 · Public app preview</div>
+          <h3>Property and planning</h3>
+          <ul><li>Search by TMK across 2,538 real parcels</li><li>Zoning, FEMA flood and tsunami overlays with source details</li><li>State land use, SMA and growth boundaries; community plan source pending; permits by TMK in MAPPS, the County permit system</li></ul>
+          <div class="ai-line"><svg class="ico"><use href="#i-agent"/></svg><span>"Can I add a second-floor unit?" answered across state and county land-use, flood, tsunami and sea-level-rise layers, every claim cited.</span></div>
+          <span class="go">Open property app <svg class="ico"><use href="#i-arrow-r"/></svg></span>
+        </div>
+      </a>
+      <a class="jcard" href="03-311.html">
+        <div class="mini"><div class="map" data-mini="311" aria-hidden="true"></div></div>
+        <div class="body">
+          <div class="num">Journey 2 · Dashboard preview</div>
+          <h3>311 operations</h3>
+          <ul><li>468 requests on real streets, by district, type and SLA</li><li>Location facts on intake: district, nearest asset, crew, hazard zone</li><li>Preview feed and proposed hand-off to a CRM or work order</li></ul>
+          <div class="ai-line"><svg class="ico"><use href="#i-agent"/></svg><span>Triage, duplicate and routing proposals, SLA-risk alerts and resident replies, each approved by a dispatcher.</span></div>
+          <span class="go">Open 311 dashboard <svg class="ico"><use href="#i-arrow-r"/></svg></span>
+        </div>
+      </a>
+      <a class="jcard" href="04-emergency.html">
+        <div class="mini"><div class="map" data-mini="em" aria-hidden="true"></div></div>
+        <div class="body">
+          <div class="num">Journey 3 · Public map and EOC view</div>
+          <h3>Emergency preparedness exercise</h3>
+          <ul><li>Tsunami zones, school exercise anchors and simulated road status</li><li>Public view and EOC-only layers, public GeoJSON and OGC feeds</li><li>Self-hostable; this preview uses snapshot data</li></ul>
+          <div class="ai-line"><svg class="ico"><use href="#i-agent"/></svg><span>Drafts the situation report and public notice from snapshot layers, with sources, released only after approval.</span></div>
+          <span class="go">Open preparedness map <svg class="ico"><use href="#i-arrow-r"/></svg></span>
+        </div>
+      </a>
+      <a class="jcard" href="05-public-works.html">
+        <div class="mini"><div class="map" data-mini="pw" aria-hidden="true"></div></div>
+        <div class="body">
+          <div class="num">Journey 4 · Operations preview</div>
+          <h3>Public works assets</h3>
+          <ul><li>Storm drains, culverts, signals and real NBI bridge ratings</li><li>Inspections, work order board and crew dispatch</li><li>Field updates from existing field apps, offline with conflict handling</li></ul>
+          <div class="ai-line"><svg class="ico"><use href="#i-agent"/></svg><span>Proposes this week's inspection plan from condition, requests and flood risk, approved by a supervisor.</span></div>
+          <span class="go">Open asset management <svg class="ico"><use href="#i-arrow-r"/></svg></span>
+        </div>
+      </a>
+    </div>
+    <div class="more">
+      <a href="https://docs.honua.io/"><svg class="ico"><use href="#i-settings"/></svg><div><b>Console documentation</b><span>Live Console view coming; learn about folders, services and imports</span></div></a>
+      <a href="/state-local/data/approved/manifest.json"><svg class="ico"><use href="#i-grid"/></svg><div><b>Snapshot catalogue</b><span>Verified sources, attribution, checksums and snapshot downloads</span></div></a>
+      <a href="12-workbench.html"><svg class="ico"><use href="#i-chart"/></svg><div><b>Analysis workbench</b><span>Parcel and demo 311 snapshots: linked charts, filters, export and Demo answer</span></div></a>
+      <a href="/state-local/sdk-explorer/"><svg class="ico"><use href="#i-code"/></svg><div><b>SDK explorer</b><span>Runnable JavaScript, Python and .NET examples for your own services</span></div></a>
+      <a href="/state-local/switching/"><svg class="ico"><use href="#i-route"/></svg><div><b>Coming from other GIS servers</b><span>Product mapping and the migration path</span></div></a>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="aH">
+    <div class="sec-h"><h2 id="aH">The platform</h2><p>These are platform integration examples; the pages above use verified static snapshots. Honua's own apps and the tools you already own read the same endpoints.</p></div>
+    <div class="arch">
+      <div class="col">
+        <h3>Your data</h3>
+        <div class="item"><svg class="ico"><use href="#i-db"/></svg><div><b>PostGIS</b><span>County database, or Honua's managed instance</span></div></div>
+        <div class="item"><svg class="ico"><use href="#i-upload"/></svg><div><b>Imports</b><span>Shapefile, file geodatabase, GeoPackage, CSV; snapshots explicitly reprojected to EPSG:4326</span></div></div>
+        <div class="item"><svg class="ico"><use href="#i-refresh"/></svg><div><b>Connections</b><span>Existing feature services, NWS and gauge feeds, an EOC board</span></div></div>
+      </div>
+      <div class="arrow" aria-hidden="true"><svg class="ico" style="width:22px;height:22px"><use href="#i-arrow-r"/></svg></div>
+      <div class="col server">
+        <h3>Honua Server</h3>
+        <div class="name">Standards-based geospatial server</div>
+        <p>Every layer is published once and served through each protocol below. Writes through OGC API Features and GeoServices REST go to the same records.</p>
+        <div class="proto-g"><div class="gl">Maps and tiles</div><span class="proto">OGC API Tiles <small>1.0</small></span><span class="proto">WMS <small>1.3.0</small></span><span class="proto">WMTS <small>1.0.0</small></span><span class="proto">MapServer <small>REST</small></span></div>
+        <div class="proto-g"><div class="gl">Features and data</div><span class="proto">OGC API Features <small>read and write</small></span><span class="proto">WFS <small>2.0</small></span><span class="proto">WCS <small>2.0</small></span><span class="proto">FeatureServer <small>REST</small></span><span class="proto">OGC API Processes</span></div>
+        <div class="proto-g"><div class="gl">Discovery and agents</div><span class="proto">STAC <small>1.0</small></span><span class="proto">OGC API Records</span><span class="proto">DCAT 3</span><span class="proto">Open311 <small>GeoReport v2</small></span><span class="proto">MCP</span></div>
+        <div class="runs"><span><svg class="ico"><use href="#i-server"/></svg>County data center</span><span><svg class="ico"><use href="#i-shield"/></svg>State GovCloud tenant</span><span><svg class="ico"><use href="#i-wifi-off"/></svg>Disconnected laptop</span></div>
+      </div>
+      <div class="arrow" aria-hidden="true"><svg class="ico" style="width:22px;height:22px"><use href="#i-arrow-r"/></svg></div>
+      <div class="col">
+        <h3>Who reads it</h3>
+        <div class="item"><svg class="ico"><use href="#i-map"/></svg><div><b>Studio</b><span>Public apps, dashboards and embeds with draft, version, release</span></div></div>
+        <div class="item"><svg class="ico"><use href="#i-grid"/></svg><div><b>Catalog</b><span>The county's open data hub and DCAT feeds</span></div></div>
+        <div class="item"><svg class="ico"><use href="#i-settings"/></svg><div><b>Console</b><span>Administration, approvals, jobs and audit</span></div></div>
+        <div class="item"><svg class="ico"><use href="#i-agent"/></svg><div><b>Agents</b><span>MCP tools over real layers; one human approves every change</span></div></div>
+        <div class="item"><svg class="ico"><use href="#i-link"/></svg><div><b>Your existing tools</b><span>Desktop GIS, web maps, permitting, EOC, CRM, field apps</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="pH">
+    <div class="sec-h"><h2 id="pH">Switch without breaking your tools</h2><p>Existing clients point at Honua's endpoints and keep working while you move apps across. Validate each integration in your pilot.</p></div>
+    <div class="proof">
+      <div class="panel"><div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Tool you run today</th><th>Reads Honua through</th><th>Example endpoint</th><th>Day one</th></tr></thead>
+          <tbody>
+            <tr><td><b>Desktop GIS</b><span class="id">existing licences and projects</span></td><td>GeoServices REST, WMS</td><td><code>…/rest/services/Parcels/FeatureServer</code></td><td><span class="row ok-ic"><svg class="ico"><use href="#i-check-circle"/></svg>Pilot check</span></td></tr>
+            <tr><td><b>Existing web maps and dashboards</b><span class="id">validate saved maps in your pilot</span></td><td>GeoServices REST</td><td><code>…/rest/services/Hazards/MapServer</code></td><td><span class="row ok-ic"><svg class="ico"><use href="#i-check-circle"/></svg>Pilot check</span></td></tr>
+            <tr><td><b>Permitting system</b><span class="id">parcel, zoning and overlay lookups</span></td><td>FeatureServer query</td><td><code>…/Zoning/FeatureServer/0/query</code></td><td><span class="row ok-ic"><svg class="ico"><use href="#i-check-circle"/></svg>Pilot check</span></td></tr>
+            <tr><td><b>EOC board</b><span class="id">zones and shelters as map layers</span></td><td>GeoServices REST, WMS</td><td><code>…/Preparedness/FeatureServer</code></td><td><span class="row ok-ic"><svg class="ico"><use href="#i-check-circle"/></svg>Pilot check</span></td></tr>
+            <tr><td><b>Field apps</b><span class="id">inspections, offline sync</span></td><td>FeatureServer edits, OGC API Features</td><td><code>…/StormDrains/FeatureServer/0</code></td><td><span class="row ok-ic"><svg class="ico"><use href="#i-check-circle"/></svg>Pilot check</span></td></tr>
+            <tr><td><b>QGIS</b><span class="id">analysts and partner agencies</span></td><td>OGC API Features and Tiles, WFS</td><td><code>…/ogc/collections</code></td><td><span class="row ok-ic"><svg class="ico"><use href="#i-check-circle"/></svg>Pilot check</span></td></tr>
+          </tbody>
+        </table>
+      </div></div>
+      <div class="stack">
+        <div class="notice ok"><svg class="ico"><use href="#i-check-circle"/></svg><div><b>Checked per client in your pilot.</b> Each tool is tested against your own services before you move it. Honua makes no certification claim.</div></div>
+        <div class="panel"><div class="panel-b">
+          <div class="kicker">What changes for staff</div>
+          <p style="margin-top:6px">A layer URL changes in each tool once. Validate data, symbology and saved maps before migration. New apps are built in Studio, and the old ones are retired when nobody opens them.</p>
+          <a class="btn sm" style="margin-top:12px" href="/state-local/switching/">See the migration path <svg class="ico"><use href="#i-arrow-r"/></svg></a>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="oH">
+    <div class="sec-h"><h2 id="oH">What the county gets</h2><p>Estimates from the demo records. Method notes under each figure.</p></div>
+    <div class="outcomes">
+      <div><div class="v">Illustrative</div><div class="l">staff time saved per week on 311 triage</div><p>About 36 requests a week (468 over 90 days); duplicate checks, routing and status replies drafted by the agent save about 13 minutes per request. Demo estimate.</p></div>
+      <div><div class="v">Illustrative</div><div class="l">to a cited situation report</div><p>The agent drafts the sitrep from snapshot layers; the planning chief reviews and approves. Typical manual compilation runs about 2 hours. Demo estimate.</p></div>
+      <div><div class="v">1</div><div class="l">platform instead of five products</div><p>Server, portal and hub, app builder, admin and AI assistant in one subscription. Fewer licences, contracts and renewals.</p></div>
+      <div><div class="v">0</div><div class="l">silent AI writes</div><p>Every agent change is a proposal with citations. One named person approves it in Console, and the audit log records both.</p></div>
+    </div>
+  </section>
+
+  <footer class="site">
+    <div class="facts"><span><svg class="ico"><use href="#i-globe"/></svg>Open standards</span><span><svg class="ico"><use href="#i-server"/></svg>Self-hostable</span><span><svg class="ico"><use href="#i-code"/></svg>Source-available (Fair Core licence)</span><span><svg class="ico"><use href="#i-shield"/></svg>One human approval for agent changes</span></div>
+    <p>Real layers: Hawaii Statewide GIS Program (geodata.hawaii.gov) and real school exercise anchors. 311 requests, assets, work orders and agent conversations are demo records placed on real streets and parcels. Emergency content is a preparedness exercise. Sources and licences are recorded with the snapshot.</p>
+  </footer>
+</main>
+
+{{DATA land,roads,contours,streams,waterbodies,zoning,dfirm,tsunami,parcels,council,shelters,fire,bridges,demo.requests,demo.assets}}
+{{MAPJS}}
+<script>
+(() => {
+  const TV = (v) => (typeof v === "string" && v.startsWith("--") ? HM.cssVar(v) : Array.isArray(v) ? v.map(TV) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, TV(x)])) : v);
+  function themed(map, layer, before) {
+    const spec = layer.paint; map.addLayer({ ...layer, paint: TV(spec) }, before);
+    map.on("honua:theme", () => Object.entries(spec).forEach(([k, v]) => map.setPaintProperty(layer.id, k, TV(v))));
+  }
+  function pts(map, id, data, color, radius) {
+    HM.add(map, id, data);
+    themed(map, { id, type: "circle", source: id, paint: { "circle-color": color, "circle-radius": radius, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
+  }
+  HM.create(document.getElementById("heroMap"), {
+    view: "wide", padding: 10, cooperative: true,
+    onload: (m) => {
+      HM.overlays(m, ["zoning", "flood", "tsunami"], "roads-casing");
+      m.setPaintProperty("zoning", "fill-opacity", 0.35);
+      pts(m, "fire", HD.fire, "--c-danger", 6);
+      pts(m, "shelters", HD.shelters, "--c-ok", 6.5);
+      m.on("click", "shelters", (e) => new maplibregl.Popup({ offset: 8 }).setLngLat(e.lngLat).setHTML(`<b>${e.features[0].properties.name}</b><br><span class="muted">School exercise anchor · ${e.features[0].properties.addr}</span>`).addTo(m));
+      m.on("mouseenter", "shelters", () => (m.getCanvas().style.cursor = "pointer"));
+      m.on("mouseleave", "shelters", () => (m.getCanvas().style.cursor = ""));
+      m.getContainer().dataset.mapReady = "true";
+    },
+  });
+  const MINI = {
+    property: { bounds: [[-156.4775, 20.884], [-156.4625, 20.8935]], layers: ["zoning", "flood", "parcels"], after: (m) => { m.setFeatureState({ source: "parcels", id: 27904 }, { sel: true }); m.setFilter("parcels-sel", ["==", ["get", "id"], 27904]); } },
+    "311": { bounds: [[-156.51, 20.868], [-156.455, 20.9]], layers: ["council"], after: (m) => {
+      HM.add(m, "req", HM.points(HD.demo.requests.filter((r) => r.status !== "Closed"), (r) => ({ t: r.type })));
+      themed(m, { id: "req", type: "circle", source: "req", paint: { "circle-radius": 3.2, "circle-color": ["match", ["get", "t"], "Drainage / flooding", "--viz-3", "Pothole", "--viz-2", "--viz-1"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 0.8 } });
+    } },
+    em: { bounds: [[-156.505, 20.866], [-156.445, 20.904]], layers: ["tsunami"], after: (m) => pts(m, "shel", HD.shelters, "--c-ok", 5) },
+    pw: { bounds: [[-156.5, 20.87], [-156.458, 20.897]], layers: ["flood"], after: (m) => {
+      HM.add(m, "as", HM.points(HD.demo.assets, (a) => ({ c: a.cond })));
+      themed(m, { id: "as", type: "circle", source: "as", paint: { "circle-radius": 3.4, "circle-color": ["step", ["get", "c"], "--c-danger", 3, "--viz-2", 4, "--c-ok"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 0.8 } });
+      pts(m, "br", HD.bridges, "--c-text-2", 4.5);
+    } },
+  };
+  document.querySelectorAll("[data-mini]").forEach((el) => {
+    const cfg = MINI[el.dataset.mini];
+    HM.create(el, { bounds: cfg.bounds, padding: 0, interactive: false, labels: false, onload: (m) => { HM.overlays(m, cfg.layers, "roads-casing"); cfg.after && cfg.after(m); m.getContainer().dataset.mapReady = "true"; } });
+  });
+})();
+</script>
+</body>
+</html>

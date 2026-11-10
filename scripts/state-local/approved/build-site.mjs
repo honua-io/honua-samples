@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { sha256 } from '../../lib/checksum.mjs';
 
-const pages = [['02-property.html', 'property'], ['10-property-mobile.html', 'property/mobile'],
+const pages = [['01-overview.html', ''], ['12-workbench.html', 'workbench'], ['02-property.html', 'property'], ['10-property-mobile.html', 'property/mobile'],
   ['03-311.html', '311'], ['05-public-works.html', 'public-works']];
 
 export async function buildApprovedDemos({ root, output, lock }) {

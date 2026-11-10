@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data analysis workbench · Honua</title>
+<meta name="description" content="Analyst workbench on Maui County data, built from Honua JS SDK controls: linked table, charts and map, filter builder, 3D, measure, draw, export and an agent that writes filters and charts.">
+{{HEAD}}
+<style>
+  body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
+  .wb { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); }
+  .left { grid-column: 1; grid-row: 1 / span 2; }
+  .nlq { grid-column: 2 / span 2; grid-row: 1; }
+  .center { grid-column: 2; grid-row: 2; }
+  .right { grid-column: 3; grid-row: 2; }
+  .col { min-height: 0; overflow-y: auto; background: var(--c-surface); }
+  .left { border-right: 1px solid var(--c-border); }
+  .right { border-left: 1px solid var(--c-border); display: flex; flex-direction: column; overflow: hidden; }
+  .center { display: grid; grid-template-rows: minmax(260px, 1fr) minmax(200px, 36%); grid-template-columns: minmax(0, 1fr); min-height: 0; min-width: 0; }
+  .center > * { min-width: 0; }
+  .sec { padding: 16px 18px; border-bottom: 1px solid var(--c-rule); }
+  .sec h2 { font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .sec h2 .ct { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--c-text-3); }
+  .pagehead { padding: 18px 18px 14px; border-bottom: 1px solid var(--c-rule); }
+  .pagehead h1 { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; }
+  .pagehead p { color: var(--c-text-2); font-size: 13px; margin-top: 4px; }
+  /* layer picker */
+  .lyr { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 1px solid transparent; background: transparent; border-radius: var(--radius-md); text-align: left; }
+  .lyr:hover { background: var(--c-surface-2); }
+  .lyr[aria-pressed="true"] { background: var(--c-selected); border-color: var(--teal-200); }
+  .lyr .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .lyr .nm { font-weight: 500; font-size: 14px; }
+  .lyr .meta { font-size: 12px; color: var(--c-text-3); }
+  .lyr .r { margin-left: auto; }
+  .ovl { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 2px; }
+  .ovl input { accent-color: var(--c-accent); margin: 0; }
+  /* filter builder */
+  .frow { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; padding: 10px 12px; border: 1px solid var(--c-rule); border-radius: var(--radius-md); background: var(--c-surface); margin-top: 8px; font-size: 13px; }
+  .frow .k { color: var(--c-text-3); font-size: 12px; }
+  .frow b { font-weight: 600; }
+  .frow.src-chart { background: var(--c-info-tint); border-color: var(--c-info-line); }
+  .frow.src-agent { background: var(--c-ai-soft); border-color: var(--c-ai-line); }
+  .addf { display: grid; grid-template-columns: 76px 1fr; gap: 6px; margin-top: 10px; }
+  .addf select, .addf input { height: 32px; border: 1px solid var(--c-border-strong); border-radius: var(--radius-md); padding: 0 8px; background: var(--c-surface); font-size: 13px; min-width: 0; }
+  .addf .full { grid-column: 1 / -1; }
+  .cql { font-family: var(--font-mono); font-size: 12px; background: var(--c-surface-2); border-radius: var(--radius-md); padding: 12px; white-space: pre-wrap; word-break: break-word; color: var(--c-text); margin-top: 10px; line-height: 1.5; }
+  .sdk { display: none; font-family: var(--font-mono); font-size: 12px; color: var(--c-neutral-ink); background: var(--c-neutral-soft); border: 1px solid var(--c-border); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+  .sdk.gap { color: var(--c-danger-ink); background: var(--c-danger-soft); border-color: var(--c-danger-line); }
+  body.show-sdk .sdk { display: inline-block; }
+  /* map */
+  .map { min-height: 0; }
+  .tools { position: absolute; z-index: 6; top: 12px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .toolgrp { display: flex; gap: 2px; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 3px; }
+  .toolgrp button { border: 0; background: transparent; height: 30px; padding: 0 10px; border-radius: 5px; font-size: 13px; font-weight: 500; color: var(--c-text-2); display: inline-flex; gap: 6px; align-items: center; }
+  .toolgrp button:hover { background: var(--c-surface-2); color: var(--c-text); }
+  .toolgrp button[aria-pressed="true"] { background: var(--c-accent-soft); color: var(--c-accent-ink); }
+  .toolgrp select { border: 0; background: transparent; height: 30px; font-size: 13px; font-weight: 500; color: var(--c-text); padding: 0 6px; }
+  .maphint { position: absolute; z-index: 6; left: 50%; bottom: 14px; transform: translateX(-50%); background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 10px 14px; font-size: 13px; display: none; gap: 10px; align-items: center; max-width: calc(100% - 24px); }
+  .maphint[data-on="true"] { display: flex; }
+  .count { position: absolute; z-index: 6; left: 12px; bottom: 12px; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 8px 12px; font-size: 13px; }
+  .count b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .note3d { position: absolute; z-index: 6; right: 12px; bottom: 30px; max-width: 300px; max-height: calc(100% - 96px); overflow-y: auto; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 12px 14px; font-size: 13px; display: none; }
+  .note3d[data-on="true"] { display: block; }
+  /* table */
+  .tablepanel { display: flex; flex-direction: column; min-height: 0; background: var(--c-surface); border-top: 1px solid var(--c-border); }
+  .tp-h { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--c-rule); flex-wrap: wrap; }
+  .tp-h h2 { font-size: 15px; }
+  .tp-h .field { height: 30px; width: 200px; flex: 0 1 200px; min-width: 120px; }
+  .tp-b { overflow: auto; min-height: 0; flex: 1; }
+  .dt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  .dt th { position: sticky; top: 0; background: var(--c-surface); text-align: left; font-weight: 500; color: var(--c-text-3); font-size: 12px; padding: 8px 12px; border-bottom: 1px solid var(--c-rule); white-space: nowrap; cursor: pointer; user-select: none; z-index: 1; }
+  .dt th[aria-sort="ascending"]::after { content: " ▲"; font-size: 9px; }
+  .dt th[aria-sort="descending"]::after { content: " ▼"; font-size: 9px; }
+  .dt td { padding: 7px 12px; border-bottom: 1px solid var(--c-rule); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .dt td.n, .dt th.n { text-align: right; }
+  .dt tbody tr { cursor: pointer; }
+  .dt tbody tr:hover td { background: var(--c-zebra); }
+  .dt tbody tr[aria-selected="true"] td { background: var(--c-selected); }
+  .dt .mono { font-family: var(--font-mono); font-size: 12px; }
+  .more { padding: 10px 16px; color: var(--c-text-3); font-size: 12px; }
+  /* right */
+  .ask { padding: 14px 16px; border-bottom: 1px solid var(--c-rule); background: var(--c-surface); }
+  .askbox { display: flex; gap: 8px; align-items: center; border: 1px solid var(--c-border-strong); border-radius: var(--radius-md); padding: 6px 6px 6px 12px; background: var(--c-surface); }
+  .askbox input { border: 0; outline: 0; flex: 1; min-width: 0; font-size: 14px; background: transparent; }
+  .askbox:focus-within { box-shadow: var(--c-focus-ring); }
+  .sugg { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .sugg button { border: 1px solid var(--c-border); background: var(--c-surface); border-radius: var(--radius-pill); font-size: 12px; padding: 4px 10px; color: var(--c-text-2); }
+  .sugg button:hover { background: var(--c-surface-2); color: var(--c-text); }
+  .rtabs { padding: 0 8px; }
+  .rbody { flex: 1; overflow-y: auto; min-height: 0; }
+  .chart { padding: 14px 16px 12px; border-bottom: 1px solid var(--c-rule); }
+  .chart-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .chart-h h3 { font-size: 14px; }
+  .chart-h .sub { color: var(--c-text-3); font-size: 12px; }
+  .chart-h .x { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .chart .cbody svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .cbody svg text { font: 11px var(--font-sans); fill: var(--c-text-3); }
+  .chart .bar { cursor: pointer; }
+  .chart .bar:hover { opacity: .85; }
+  .chart .hint { font-size: 12px; color: var(--c-text-3); margin-top: 4px; }
+  .addchart { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; padding: 14px 16px; }
+  .addchart select { height: 32px; border: 1px solid var(--c-border-strong); border-radius: var(--radius-md); padding: 0 8px; background: var(--c-surface); font-size: 13px; min-width: 0; }
+  .plan { padding: 16px; }
+  .plan .q { background: var(--c-surface-2); border-radius: var(--radius-md); padding: 12px 14px; font-size: 14px; }
+  .plan h3 { font-size: 14px; margin: 16px 0 8px; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { display: flex; gap: 8px; align-items: baseline; font-family: var(--font-mono); font-size: 12px; padding: 7px 0; border-top: 1px solid var(--c-rule); color: var(--c-text-2); }
+  .steps li:first-child { border-top: 0; }
+  .steps b { color: var(--c-text); font-weight: 600; }
+  .steps .ok { margin-left: auto; color: var(--c-ok-ink); font-family: var(--font-sans); white-space: nowrap; }
+  .spec { font-family: var(--font-mono); font-size: 12px; background: var(--c-surface-2); border-radius: var(--radius-md); padding: 12px; white-space: pre; overflow-x: auto; color: var(--c-text); line-height: 1.5; }
+  .result { display: flex; gap: 10px; align-items: baseline; margin-top: 12px; }
+  .result .big { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  dialog { border: 0; border-radius: var(--radius-lg); box-shadow: var(--shadow-3); padding: 0; width: min(560px, calc(100vw - 32px)); color: var(--c-text); }
+  dialog::backdrop { background: var(--c-scrim); }
+  dialog { background: var(--c-raised); }
+  .codebox { font-family: var(--font-mono); font-size: 12px; background: var(--c-surface-2); border-radius: var(--radius-md); padding: 12px; white-space: pre-wrap; word-break: break-all; }
+  /* natural-language query bar */
+  .nlq { position: relative; max-height: 280px; background: var(--c-surface); border-bottom: 1px solid var(--c-border); padding: 14px 18px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .nlq-bar { display: flex; align-items: center; gap: 8px; }
+  .nlq-in { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px; border: 1px solid var(--c-border-strong); border-radius: var(--radius-lg); background: var(--c-surface); }
+  .nlq-in:focus-within { box-shadow: var(--c-focus-ring); }
+  .nlq-in input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--c-text); }
+  .nlq-in .ico { color: var(--c-ai); }
+  .nlq [hidden] { display: none !important; }
+  .nlq-sugg { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+  .nlq-sugg button { flex: none; }
+  .nlq-sugg .label { margin-right: 2px; }
+  .nlq-sugg button { border: 1px solid var(--c-border); background: var(--c-surface); border-radius: var(--radius-pill); font-size: 13px; padding: 4px 12px; color: var(--c-text-2); }
+  .nlq-sugg button:hover { background: var(--c-surface-2); color: var(--c-text); }
+  .nlq-out { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  .nlq-out .chips { flex: 1 1 420px; min-width: 0; }
+  .nlq-out .nlq-side { flex: 0 1 auto; }
+  .nlq-cql { flex-basis: 100%; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .qchip { display: inline-flex; align-items: center; border: 1px solid var(--c-ai-line); background: var(--c-ai-soft); border-radius: var(--radius-pill); font-size: 13px; color: var(--c-text); }
+  .qchip.grp { background: var(--c-accent-soft); border-color: var(--teal-300); }
+  .qchip > button { border: 0; background: transparent; color: inherit; font-size: 13px; }
+  .qchip .ql { padding: 4px 4px 4px 12px; }
+  .qchip .ql b { font-weight: 600; }
+  .qchip .qx { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; color: var(--c-text-3); }
+  .qchip .qx:hover { color: var(--c-text); background: var(--c-surface-2); }
+  .qchip input { border: 0; outline: 0; background: var(--c-surface); color: var(--c-text); font: 13px var(--font-mono); width: 150px; margin: 2px 4px 2px 10px; padding: 2px 6px; border-radius: 4px; }
+  .nlq-side { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .nlq details summary { cursor: pointer; font-size: 13px; color: var(--c-link); list-style: none; }
+  .nlq details summary::-webkit-details-marker { display: none; }
+  .nlq-cql { grid-column: 1 / -1; font-family: var(--font-mono); font-size: 12px; background: var(--c-surface-2); border-radius: var(--radius-md); padding: 12px; white-space: pre-wrap; color: var(--c-text); margin: 0; }
+  .proposal { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 6px 4px 12px; border: 1px solid var(--c-border); border-radius: var(--radius-pill); background: var(--c-surface-2); font-size: 13px; }
+  .proposal .ico { color: var(--c-accent); }
+  .nlq-exp { border: 1px solid var(--c-border); border-radius: var(--radius-md); padding: 14px 16px; max-height: 150px; overflow-y: auto; font-size: 14px; background: var(--c-surface); }
+  .nlq-exp h3 { font-size: 14px; margin: 0 0 6px; }
+  .nlq-exp h3 + * { margin-top: 0; }
+  .nlq-exp ul { margin: 0 0 12px; padding-left: 18px; }
+  .nlq-exp li { margin: 3px 0; }
+  .nlq-exp code { font-size: 12.5px; }
+  .nlq-miss { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--c-warn-line); background: var(--c-warn-tint); border-radius: var(--radius-md); font-size: 14px; }
+  .nlq-miss .ico { color: var(--c-warn); margin-top: 2px; }
+  .nlq-miss button { border: 0; background: transparent; color: var(--c-link); padding: 0; font-size: 14px; text-decoration: underline; }
+  @media (max-width: 1280px) { .wb { grid-template-columns: 270px minmax(0, 1fr) 340px; } }
+  @media (max-width: 1000px) {
+    body { height: auto; overflow: auto; }
+    .wb { grid-template-columns: 1fr; grid-template-rows: none; }
+    .wb > * { grid-column: 1 !important; grid-row: auto !important; }
+    .nlq { order: -2; max-height: none; } .center { order: -1; }
+    .wb > .nlq { overflow: visible; }
+    .nlq-bar { flex-wrap: wrap; } .nlq-in { flex-basis: 100%; }
+    .nlq-out { grid-template-columns: 1fr; } .nlq-side { justify-content: flex-start; }
+    .left, .right { border: 0; }
+    .right { overflow: visible; }
+    .center { grid-template-rows: 60vh 360px; order: -1; }
+    .rbody { overflow: visible; }
+    .tp-h .field { width: 100%; }
+    
+  }
+
+/* Columns scroll inside a fixed-height shell so nothing overflows the page (embedded frames size to content). */
+.wb { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.wb > .col, .wb > main, .wb > .nlq { position: relative; min-height: 0; overflow-y: auto; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#wbTable">Skip to attribute table</a>
+{{ICONS}}
+<header class="appbar">
+  <a class="wordmark" href="index.html"><strong>Honua Workbench</strong><small>County of Maui GIS</small></a>
+  <nav class="appnav" aria-label="Workbench">
+    <a href="#wbTable" aria-current="page">Analysis</a><a href="#share" id="savedViews">Share view</a><a href="07-catalog.html">Catalog</a><a href="#nlqForm">Agent</a>
+  </nav>
+  <span class="spacer"></span>
+  <button class="btn ghost hide-sm" type="button" id="sdkBtn" aria-pressed="false"><svg class="ico"><use href="#i-code"/></svg>Show SDK controls</button>
+  <span class="env hide-sm"><span class="dot"></span>Snapshot preview</span>
+  <button class="btn" type="button" id="shareBtn"><svg class="ico"><use href="#i-share"/></svg>Share</button>
+  <span class="avatar" aria-hidden="true">AN</span>
+</header>
+<div class="demostrip" role="note">
+  <span>Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="../data/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span class="tag-real">Real data</span> Parcels with zoning, flood, State land use and SMA (Hawaii Statewide GIS Program); building footprints unavailable in this snapshot
+  <span class="tag-demo">Demo data</span> 311 requests and agent plans
+  <span class="faint">· Snapshot preview · Demo answer · local rules, not an MCP call. "Show SDK controls" maps planned integrations and gaps</span>
+</div>
+
+<div class="wb">
+  <aside class="col left" aria-label="Layers and filters">
+    <div class="pagehead">
+      <h1>Data analysis</h1>
+      <p>Pick a layer, filter it, chart it. Table, charts and map stay linked.</p>
+    </div>
+    <section class="sec" aria-labelledby="lyrH">
+      <h2 id="lyrH">Analysis layer <span class="sdk gap">Gap: catalog picker</span></h2>
+      <div class="field" style="margin:10px 0 8px;height:32px"><svg class="ico faint"><use href="#i-search"/></svg><input aria-label="Search the catalog" placeholder="Search the catalog" id="catQ"></div>
+      <div id="lyrList" role="group" aria-label="Layers"></div>
+      <div style="margin-top:12px" class="label">Map overlays <span class="sdk">&lt;honua-layer-list&gt;</span></div>
+      <label class="ovl"><input type="checkbox" data-ovl="flood,flood-line">FEMA flood zones</label>
+      <label class="ovl"><input type="checkbox" data-ovl="tsunami,tsunami-x,tsunami-line">Tsunami evacuation</label>
+      <label class="ovl"><input type="checkbox" data-ovl="zoning,zoning-line">County zoning</label>
+      <label class="ovl"><input type="checkbox" data-ovl="sma-line">Special Management Area</label>
+    </section>
+    <section class="sec" aria-labelledby="fH">
+      <h2 id="fH">Filter <span class="ct" id="fCount"></span></h2>
+      <div style="margin-top:4px"><span class="sdk">QueryBuilder · createFilterRegistry</span> <span class="sdk gap">Gap: filter-builder control</span></div>
+      <div id="fRows"></div>
+      <div class="addf" id="addf">
+        <select id="fField" class="full" aria-label="Field"></select>
+        <select id="fOp" aria-label="Operator"></select>
+        <input id="fVal" aria-label="Value" list="fVals">
+        <datalist id="fVals"></datalist>
+        <button class="btn sm primary full" type="button" id="fAdd"><svg class="ico"><use href="#i-plus"/></svg>Add condition</button>
+      </div>
+      <div class="row wrap" style="margin-top:10px;gap:6px">
+        <button class="btn sm" type="button" id="spDraw"><svg class="ico"><use href="#i-edit"/></svg>Draw area</button>
+        <button class="btn sm" type="button" id="spView"><svg class="ico"><use href="#i-map"/></svg>Map extent</button>
+        <button class="btn sm ghost" type="button" id="fClear">Clear all</button>
+      </div>
+      <div id="timeBox" style="margin-top:12px" hidden>
+        <div class="label">Time <span class="sdk">&lt;honua-time-slider&gt;</span></div>
+        <div class="row" style="gap:6px;margin-top:4px"><input type="date" id="tFrom" aria-label="From date" class="field" style="height:32px;flex:1;padding:0 6px"><input type="date" id="tTo" aria-label="To date" class="field" style="height:32px;flex:1;padding:0 6px"></div>
+      </div>
+      <div class="label" style="margin-top:14px">As CQL2 <span class="sdk">compileQueryFilterToCql2Text</span></div>
+      <div class="cql" id="cql" aria-live="polite"></div>
+    </section>
+  </aside>
+
+  <section class="nlq" aria-labelledby="nlqH">
+    <h2 id="nlqH" class="sr-only">Ask the data in plain language</h2>
+    <form class="nlq-bar" id="nlqForm" role="search" autocomplete="off">
+      <label class="nlq-in"><svg class="ico" aria-hidden="true"><use href="#i-agent"/></svg><span class="sr-only">Question</span><input id="nlqIn" value="parcels over 0.25 acres outside the flood zone, by zone group" spellcheck="false"></label>
+      <button class="btn primary lg" type="submit">Run</button>
+      <button class="btn lg" type="button" id="nlqExplainBtn" aria-pressed="false" aria-controls="nlqExp"><svg class="ico"><use href="#i-info"/></svg>Explain</button>
+      <button class="btn lg" type="button" id="nlqUndo" disabled><svg class="ico"><use href="#i-history"/></svg>Undo<span class="chip" id="undoN" style="height:18px" hidden></span></button>
+    </form>
+    <div class="nlq-sugg" id="nlqSugg"><span class="label">Try</span></div>
+    <div class="nlq-out" id="nlqOut" hidden>
+      <div class="chips" id="chips" role="list" aria-label="Filter clauses from your question"></div>
+      <div class="nlq-side"><div class="proposal" id="nlqProp" hidden></div><span class="row wrap" style="gap:6px" id="nlqCites"></span><details id="nlqCqlD"><summary>CQL2</summary></details><span class="sdk">createNlMapControl · createAskMapSession · approveNlMapPlan</span><span class="sdk gap">Gap: NL query bar with clause chips</span></div>
+      <pre class="nlq-cql" id="nlqCql" hidden></pre>
+    </div>
+    <div class="nlq-exp" id="nlqExp" hidden aria-live="polite"></div>
+    <div class="nlq-miss" id="nlqMiss" hidden role="status"></div>
+  </section>
+
+  <main class="center" aria-label="Map and table">
+    <div class="map" id="map" role="region" aria-label="Map">
+      <div class="tools" role="toolbar" aria-label="Map tools">
+        <div class="toolgrp" aria-label="View"><button type="button" id="v2d" aria-pressed="true">2D</button><button type="button" id="v3d" aria-pressed="false">3D</button></div>
+        <div class="toolgrp"><label class="sr-only" for="basemap">Basemap</label><svg class="ico" style="margin:7px 0 0 8px;color:var(--c-text-3)"><use href="#i-layers"/></svg><select id="basemap"><option value="auto">Auto (follows theme)</option><option value="light">Light</option><option value="dark">Dark</option><option value="plain">Plain</option><option value="imagery" disabled>Imagery (SDK, not in mockup)</option></select></div>
+        <div class="toolgrp" aria-label="Interaction"><button type="button" data-mode="select" aria-pressed="true"><svg class="ico"><use href="#i-pin"/></svg>Select</button><button type="button" data-mode="measure" aria-pressed="false"><svg class="ico"><use href="#i-route"/></svg>Measure</button><button type="button" data-mode="draw" aria-pressed="false"><svg class="ico"><use href="#i-edit"/></svg>Draw</button></div>
+        <span class="sdk">&lt;honua-basemap-control&gt; · &lt;honua-measure-control&gt; · &lt;honua-sketch-control&gt; · createSceneWorkspace</span>
+      </div>
+      <div class="count"><b id="nShown">0</b> <span class="muted" id="nOf"></span></div>
+      <div class="maphint" id="hint" role="status"><span id="hintText"></span><button class="btn sm" type="button" id="hintDone">Done</button><button class="btn sm ghost" type="button" id="hintCancel">Cancel</button></div>
+      <div class="note3d" id="note3d"><b>3D view.</b> 200 real Overture footprints at Kahului Harbor, extruded by <code>render_height</code>. Parcels extruded by assessed building value. Heights are footprint attributes; parcel extrusion is a value visualization, not physical height. Terrain is not embedded in this preview.</div>
+    </div>
+    <section class="tablepanel" aria-labelledby="tH" id="wbTable">
+      <div class="tp-h">
+        <h2 id="tH">Attribute table</h2><span class="muted" id="tCount" style="font-size:13px"></span>
+        <span class="sdk">&lt;honua-feature-table&gt;</span>
+        <span class="spacer" style="flex:1"></span>
+        <label class="field"><svg class="ico faint"><use href="#i-filter"/></svg><input id="tq" placeholder="Filter rows" aria-label="Filter rows"></label>
+        <button class="btn sm" type="button" id="selOnly" aria-pressed="false">Selected only</button>
+        <button class="btn sm" type="button" id="expCsv"><svg class="ico"><use href="#i-download"/></svg>CSV</button>
+        <button class="btn sm" type="button" id="expGj"><svg class="ico"><use href="#i-download"/></svg>GeoJSON</button>
+        <span class="sdk gap">Gap: row export</span>
+      </div>
+      <div class="tp-b"><table class="dt" id="dt"><thead></thead><tbody></tbody></table><div class="more" id="more"></div></div>
+    </section>
+  </main>
+
+  <aside class="col right" aria-label="Charts and agent">
+    <div class="tabs rtabs" role="tablist" aria-label="Right panel">
+      <button role="tab" id="rt1" aria-controls="rp1" aria-selected="true">Charts <span class="chip" style="height:18px;margin-left:4px" id="nCharts">3</span></button>
+      <button role="tab" id="rt2" aria-controls="rp2" aria-selected="false" tabindex="-1">Agent plan</button>
+    </div>
+    <div class="rbody">
+      <section role="tabpanel" id="rp1" aria-labelledby="rt1">
+        <div id="charts"></div>
+        <div class="addchart">
+          <label class="sr-only" for="cType">Chart type</label><select id="cType"><option value="bar">Bar</option><option value="hist">Histogram</option><option value="time">Time series</option><option value="scatter">Scatter</option></select>
+          <label class="sr-only" for="cField">Field</label><select id="cField"></select>
+          <button class="btn sm" type="button" id="cAdd"><svg class="ico"><use href="#i-plus"/></svg>Add chart</button>
+        </div>
+        <p class="faint" style="font-size:12px;padding:0 16px 16px">Click a bar or drag across a histogram, time series or scatter to filter everything else. <span class="sdk">createAnalyticsLinkedSession · bindChartToExploration</span> <span class="sdk gap">Gap: linked scatter brush</span></p>
+      </section>
+      <section role="tabpanel" id="rp2" aria-labelledby="rt2" hidden>
+        <div class="plan" id="plan"></div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<dialog id="share" aria-labelledby="shareH">
+  <div style="padding:18px 20px 6px" class="row"><h2 id="shareH">Share this analysis</h2><button class="iconbtn" style="margin-left:auto" aria-label="Close" type="button" onclick="document.getElementById('share').close()"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <div style="padding:6px 20px 20px" class="stack">
+    <p class="muted">The link restores this analysis from public snapshots. Anyone with the link can open it; no access restrictions are applied.</p>
+    <div><div class="label">Who can open</div><div class="seg" style="margin-top:4px"><button type="button" aria-pressed="true" disabled>Anyone with the link</button></div></div>
+    <div><div class="label">Link</div><div class="codebox" id="shareLink"></div></div>
+    <div><div class="label">Embed</div><div class="codebox" id="embedCode"></div></div>
+    <div class="row" style="justify-content:space-between"><span class="sdk">Public snapshot · no permissions changed</span><span class="row"><button class="btn" type="button" onclick="document.getElementById('share').close()">Close</button><button class="btn primary" type="button" id="copyShare">Copy link</button></span></div>
+  </div>
+</dialog>
+
+{{DATA land,roads,contours,streams,waterbodies,zoning,dfirm,tsunami,sma,parcels,zone_names,cp_names,demo.requests}}
+{{MAPJS}}
+<script>
+(() => {
+  const ZN = HD.zone_names, CPN = HD.cp_names;
+  const GROUP = { res: "Residential", bus: "Business", ind: "Industrial", ag: "Agriculture", pub: "Public", park: "Park", pd: "Project district", other: "Other" };
+  const LUDN = { U: "Urban", A: "Agricultural", C: "Conservation", R: "Rural" };
+  const parcelsFC = HM.get("parcels");
+  // ---- layer definitions (real fields) ----
+  const centroid = (g) => { const b = HM.bbox(g); return [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2]; };
+  const PARCELS = parcelsFC.features.map((f) => { const p = f.properties; return {
+    id: p.id, tmk: HM.tmk(p.t9), zgroup: GROUP[HM.ZONE_GROUP[p.zone] || "other"], zoning: ZN[p.zone] || "Not zoned", flood: p.fld || "X",
+    lud: LUDN[p.lud] || "—", sma: p.sma ? "Inside" : "Outside", tsu: p.ts === 1 ? "Evacuation zone" : p.ts === 2 ? "Extreme only" : "Outside", cplan: p.cp >= 0 ? CPN[p.cp] : "—", land: p.land || 0, bldg: p.bldg || 0, acres: p.acres || 0, c: centroid(f.geometry) }; });
+  const REQS = HD.demo.requests.map((r, i) => ({ data_origin: "synthetic_demo", disclaimer: "DEMO DATA: fictional service request", id: r.id, type: r.type, dept: r.dept, status: r.status, created: r.created.slice(0, 10), district: "District " + r.district, hazard: r.evac && r.flood ? "Flood + tsunami" : r.evac ? "Tsunami zone" : r.flood ? "Flood zone" : "None", sla: r.breach ? "Missed" : "Met", c: r.c, _i: i }));
+  const LAYERS = {
+    parcels: { name: "Parcels (TMK)", meta: `${PARCELS.length.toLocaleString()} · verified parcel snapshot`, get color() { return HM.cssVar("--viz-1"); }, rows: PARCELS, idField: "id", sum: "parcels",
+      cols: [["tmk", "TMK", "mono"], ["zoning", "Zoning"], ["zgroup", "Zone group"], ["flood", "Flood"], ["lud", "State land use"], ["sma", "SMA"], ["tsu", "Tsunami"], ["cplan", "Community plan"], ["land", "Land value", "money"], ["bldg", "Building value", "money"], ["acres", "Acres", "num"]],
+      cat: ["zgroup", "zoning", "flood", "lud", "sma", "tsu", "cplan"], num: ["land", "bldg", "acres"], time: null,
+      charts: [{ t: "bar", f: "zgroup" }, { t: "hist", f: "land" }, { t: "scatter", f: "land", g: "bldg" }] },
+    requests: { name: "311 service requests", meta: "468 · demo data", get color() { return HM.cssVar("--viz-2"); }, rows: REQS, idField: "id", sum: "requests", demo: true,
+      cols: [["data_origin", "Data origin"], ["disclaimer", "Disclaimer"], ["id", "Request", "mono"], ["type", "Type"], ["status", "Status"], ["dept", "Department"], ["district", "District"], ["hazard", "Hazard zone"], ["sla", "SLA"], ["created", "Opened", "date"]],
+      cat: ["type", "status", "dept", "district", "hazard", "sla"], num: [], time: "created",
+      charts: [{ t: "time", f: "created" }, { t: "bar", f: "type" }, { t: "bar", f: "hazard" }] },
+  };
+  const CATALOG = [["parcels", 1], ["requests", 1], ["Zoning", 0, `${HM.get("zoning").features.length} snapshot polygons`], ["FEMA flood zones", 0, `${HM.get("dfirm").features.length} snapshot polygons`], ["Tsunami evacuation zones", 0, `${HM.get("tsunami").features.length} snapshot polygons`], ["Exercise sites", 0, "School exercise anchors"], ["NBI bridges", 0, "Snapshot overlay"]];
+  const LABEL = (L, f) => (L.cols.find((c) => c[0] === f) || [f, f])[1];
+  // ---- state ----
+  const S = { layer: "parcels", attr: [], chartF: {}, spatial: null, time: null, sort: null, tq: "", sel: new Set(), selOnly: false, charts: [], agentFilter: null };
+  const fmt = (v, kind) => kind === "money" ? HM.money(v) : kind === "num" ? (+v).toFixed(3) : v;
+  const money = (v) => v >= 1e6 ? "$" + (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? "$" + Math.round(v / 1e3) + "k" : "$" + v;
+  function pip(pt, poly) { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) inside = !inside; } return inside; }
+  function testAttr(r, a) { const v = r[a.f]; if (a.op === "between-date") return v >= a.v[0] && v <= a.v[1]; if (a.op === "=") return String(v) === a.v; if (a.op === "≠") return String(v) !== a.v; if (a.op === ">") return +v > +a.v; if (a.op === "<") return +v < +a.v; if (a.op === "≥") return +v >= +a.v; if (a.op === "in") return a.v.includes(String(v)); if (a.op === "not in") return !a.v.includes(String(v)); if (a.op === "between") return +v >= a.v[0] && +v <= a.v[1]; if (a.op === "contains") return String(v).toLowerCase().includes(String(a.v).toLowerCase()); return true; }
+  function passes(r, except) {
+    for (const a of S.attr) if (!testAttr(r, a)) return false;
+    for (const [k, a] of Object.entries(S.chartF)) if (k !== except && !testAttr(r, a)) return false;
+    if (S.spatial && !pip(r.c, S.spatial)) return false;
+    const L = LAYERS[S.layer];
+    if (S.time && L.time && (r[L.time] < S.time[0] || r[L.time] > S.time[1])) return false;
+    return true;
+  }
+  const filtered = (except) => LAYERS[S.layer].rows.filter((r) => passes(r, except));
+  // ---- CQL2 text ----
+  const q = (v) => typeof v === "number" ? v : `'${String(v).replace(/'/g, "''")}'`;
+  function clause(a) {
+    if (a.op === "in") return `${a.f} IN (${a.v.map(q).join(", ")})`;
+    if (a.op === "not in") return `${a.f} NOT IN (${a.v.map(q).join(", ")})`;
+    if (a.op === "between-date") return `${a.f} BETWEEN DATE('${a.v[0]}') AND DATE('${a.v[1]}')`;
+    if (a.op === "between") return `${a.f} BETWEEN ${Math.round(a.v[0] * 1000) / 1000} AND ${Math.round(a.v[1] * 1000) / 1000}`;
+    if (a.op === "contains") return `${a.f} LIKE '%${a.v}%'`;
+    return `${a.f} ${a.op === "≠" ? "<>" : a.op === "≥" ? ">=" : a.op} ${isNaN(+a.v) || a.v === "" ? q(a.v) : +a.v}`;
+  }
+  function cqlText() {
+    const parts = [...S.attr, ...Object.values(S.chartF)].map(clause);
+    if (S.spatial) parts.push(`S_INTERSECTS(geometry, POLYGON((${S.spatial.map((p) => p[0].toFixed(5) + " " + p[1].toFixed(5)).concat([S.spatial[0][0].toFixed(5) + " " + S.spatial[0][1].toFixed(5)]).join(", ")})))`);
+    if (S.time) parts.push(`T_INTERSECTS(${LAYERS[S.layer].time}, INTERVAL('${S.time[0]}', '${S.time[1]}'))`);
+    return parts.length ? parts.join("\nAND ") : "-- no filter: all features";
+  }
+  // ---- left panel ----
+  function renderLayers() {
+    const term = document.getElementById("catQ").value.toLowerCase();
+    document.getElementById("lyrList").innerHTML = CATALOG.filter((c) => (LAYERS[c[0]] ? LAYERS[c[0]].name : c[0]).toLowerCase().includes(term)).map((c) => {
+      const L = LAYERS[c[0]];
+      if (L) return `<button type="button" class="lyr" data-l="${c[0]}" aria-pressed="${S.layer === c[0]}"><span class="sw" style="background:${L.color}"></span><span><span class="nm">${L.name}</span><br><span class="meta">${L.meta}</span></span>${L.demo ? '<span class="tag-demo r">Demo</span>' : '<span class="tag-real r">Real</span>'}</button>`;
+      return `<button type="button" class="lyr" disabled style="opacity:.7"><span class="sw" style="background:var(--c-surface-3)"></span><span><span class="nm">${c[0]}</span><br><span class="meta">${c[2]} · add as overlay</span></span></button>`;
+    }).join("");
+  }
+  document.getElementById("catQ").addEventListener("input", renderLayers);
+  document.getElementById("lyrList").addEventListener("click", (e) => { const b = e.target.closest("[data-l]"); if (b) setLayer(b.dataset.l); });
+  function renderFilterUI() {
+    const L = LAYERS[S.layer];
+    const rows = [...S.attr.map((a, i) => ({ a, src: "manual", i })), ...Object.entries(S.chartF).map(([k, a]) => ({ a, src: "chart", k }))];
+    document.getElementById("fRows").innerHTML = rows.map(({ a, src, i, k }) => `<div class="frow ${src === "chart" ? "src-chart" : a.agent ? "src-agent" : ""}"><div><div class="k">${src === "chart" ? "From chart" : a.agent ? "From agent" : "Attribute"}</div><b>${LABEL(L, a.f)}</b> ${a.op} ${a.op === "between" ? (L.cols.find((c) => c[0] === a.f)[2] === "money" ? money(a.v[0]) + "–" + money(a.v[1]) : a.v.map((x) => (+x).toFixed(2)).join("–")) : Array.isArray(a.v) ? a.v.join(", ") : a.v}</div><button class="iconbtn" type="button" aria-label="Remove condition" data-rm="${src === "chart" ? "c:" + k : "a:" + i}"><svg class="ico"><use href="#i-x"/></svg></button></div>`).join("") +
+      (S.spatial ? `<div class="frow"><div><div class="k">Spatial</div><b>Inside drawn area</b> (${S.spatial.length - 1} vertices)</div><button class="iconbtn" type="button" aria-label="Remove area" data-rm="s"><svg class="ico"><use href="#i-x"/></svg></button></div>` : "");
+    const ff = document.getElementById("fField");
+    ff.innerHTML = L.cols.filter((c) => c[0] !== "id" && c[0] !== "tmk" && c[0] !== L.time).map((c) => `<option value="${c[0]}">${c[1]}</option>`).join("");
+    updOps();
+    document.getElementById("timeBox").hidden = !L.time;
+    document.getElementById("cql").textContent = cqlText();
+    const n = rows.length + (S.spatial ? 1 : 0) + (S.time ? 1 : 0);
+    document.getElementById("fCount").textContent = n ? `${n} condition${n > 1 ? "s" : ""}` : "";
+  }
+  function updOps() {
+    const L = LAYERS[S.layer], f = document.getElementById("fField").value, isNum = L.num.includes(f);
+    document.getElementById("fOp").innerHTML = (isNum ? [">", "<", "≥", "="] : ["=", "≠", "contains"]).map((o) => `<option>${o}</option>`).join("");
+    document.getElementById("fVals").innerHTML = isNum ? "" : [...new Set(L.rows.map((r) => r[f]))].sort().slice(0, 40).map((v) => `<option value="${v}">`).join("");
+    document.getElementById("fVal").value = isNum ? (f === "acres" ? "0.25" : "500000") : ([...new Set(L.rows.map((r) => r[f]))].sort()[0] || "");
+  }
+  document.getElementById("fField").addEventListener("change", updOps);
+  document.getElementById("fAdd").addEventListener("click", () => { const v = document.getElementById("fVal").value.trim(); if (!v) return; S.attr.push({ f: document.getElementById("fField").value, op: document.getElementById("fOp").value, v }); refresh(); });
+  document.getElementById("fRows").addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; const r = b.dataset.rm; if (r === "s") { S.spatial = null; clearDrawn(); } else if (r.startsWith("a:")) S.attr.splice(+r.slice(2), 1); else delete S.chartF[r.slice(2)]; refresh(); });
+  document.getElementById("fClear").addEventListener("click", () => { S.attr = []; S.chartF = {}; S.spatial = null; S.time = null; S.sel.clear(); clearDrawn(); setTimeInputs(); refresh(); });
+  function setTimeInputs() { const L = LAYERS[S.layer]; if (!L.time) return; const ds = L.rows.map((r) => r[L.time]).sort(); document.getElementById("tFrom").value = S.time ? S.time[0] : ds[0]; document.getElementById("tTo").value = S.time ? S.time[1] : ds[ds.length - 1]; }
+  ["tFrom", "tTo"].forEach((id) => document.getElementById(id).addEventListener("change", () => { S.time = [document.getElementById("tFrom").value, document.getElementById("tTo").value]; refresh(); }));
+  // ---- table ----
+  function renderTable(rows) {
+    const L = LAYERS[S.layer];
+    let rs = rows;
+    if (S.tq) { const t = S.tq.toLowerCase(); rs = rs.filter((r) => L.cols.some((c) => String(r[c[0]]).toLowerCase().includes(t))); }
+    if (S.selOnly) rs = rs.filter((r) => S.sel.has(r[L.idField]));
+    if (S.sort) { const [f, d] = S.sort; rs = [...rs].sort((a, b) => (a[f] > b[f] ? 1 : a[f] < b[f] ? -1 : 0) * d); }
+    document.querySelector("#dt thead").innerHTML = "<tr>" + L.cols.map((c) => `<th scope="col" data-sort="${c[0]}" class="${["money", "num"].includes(c[2]) ? "n" : ""}" aria-sort="${S.sort && S.sort[0] === c[0] ? (S.sort[1] > 0 ? "ascending" : "descending") : "none"}" tabindex="0">${c[1]}</th>`).join("") + "</tr>";
+    const shown = rs.slice(0, 250);
+    document.querySelector("#dt tbody").innerHTML = shown.map((r) => `<tr data-id="${r[L.idField]}" aria-selected="${S.sel.has(r[L.idField])}">` + L.cols.map((c) => `<td class="${["money", "num"].includes(c[2]) ? "n" : ""} ${c[2] === "mono" ? "mono" : ""}">${fmt(r[c[0]], c[2])}</td>`).join("") + "</tr>").join("");
+    document.getElementById("more").textContent = rs.length > shown.length ? `Showing ${shown.length} of ${rs.length.toLocaleString()} rows; the SDK table pages the rest from the server.` : "";
+    document.getElementById("tCount").textContent = `${rs.length.toLocaleString()} rows${S.sel.size ? ` · ${S.sel.size} selected` : ""}`;
+  }
+  document.querySelector("#dt thead").addEventListener("click", (e) => { const th = e.target.closest("th"); if (!th) return; const f = th.dataset.sort; S.sort = S.sort && S.sort[0] === f ? [f, -S.sort[1]] : [f, 1]; renderTable(filtered()); });
+  document.querySelector("#dt thead").addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.click(); });
+  document.querySelector("#dt tbody").addEventListener("click", (e) => { const tr = e.target.closest("tr"); if (!tr) return; const L = LAYERS[S.layer]; const id = L.rows[0][L.idField].constructor === Number ? +tr.dataset.id : tr.dataset.id; select([id], !e.shiftKey && !e.metaKey, true); });
+  document.getElementById("tq").addEventListener("input", (e) => { S.tq = e.target.value; renderTable(filtered()); });
+  document.getElementById("selOnly").addEventListener("click", (e) => { S.selOnly = !S.selOnly; e.currentTarget.setAttribute("aria-pressed", S.selOnly); renderTable(filtered()); });
+  // ---- charts (SVG) ----
+  const W = 340;
+  function chartDefs() { return S.charts; }
+  function binsOf(vals, n, clipQ) { const s = [...vals].sort((a, b) => a - b); const lo = s[0] || 0, hi = s[Math.floor((s.length - 1) * (clipQ || 1))] || 1; const step = (hi - lo) / n || 1; const b = Array.from({ length: n }, (_, i) => ({ x0: lo + i * step, x1: lo + (i + 1) * step, n: 0 })); vals.forEach((v) => { const i = Math.min(n - 1, Math.max(0, Math.floor((v - lo) / step))); b[i].n++; }); return b; }
+  function renderCharts() {
+    const L = LAYERS[S.layer];
+    document.getElementById("nCharts").textContent = S.charts.length;
+    document.getElementById("charts").innerHTML = S.charts.map((c, idx) => `<div class="chart" data-ci="${idx}"><div class="chart-h"><h3>${chartTitle(c, L)}</h3><span class="sub">${c.agent ? "added by agent" : ""}</span><span class="x"><span class="sdk">${c.t === "scatter" ? "chartWidgetToVegaLiteSpec (point)" : c.t === "hist" ? "showHistogram · range-brush" : c.t === "time" ? "time-series · temporal-brush" : "&lt;honua-chart kind=bar&gt;"}</span><button class="iconbtn" type="button" aria-label="Remove chart" data-cx="${idx}"><svg class="ico"><use href="#i-x"/></svg></button></span></div><div class="cbody"></div></div>`).join("");
+    S.charts.forEach((c, idx) => drawChart(c, document.querySelector(`[data-ci="${idx}"] .cbody`), L));
+  }
+  function chartTitle(c, L) { return c.t === "bar" ? `${S.layer === "parcels" ? "Parcels" : "Requests"} by ${LABEL(L, c.f).toLowerCase()}` : c.t === "hist" ? `${LABEL(L, c.f)} distribution` : c.t === "time" ? "Requests per week" : `${LABEL(L, c.f)} vs ${LABEL(L, c.g).toLowerCase()}`; }
+  const key = (c) => c.t + ":" + c.f;
+  function drawChart(c, el, L) {
+    const rows = filtered(c.t === "scatter" ? "scatter:" + c.f : key(c)), all = L.rows;
+    const color = L.color;
+    if (c.t === "bar") {
+      const cnt = {}, tot = {}; rows.forEach((r) => (cnt[r[c.f]] = (cnt[r[c.f]] || 0) + 1)); all.forEach((r) => (tot[r[c.f]] = (tot[r[c.f]] || 0) + 1));
+      const cats = Object.keys(tot).sort((a, b) => tot[b] - tot[a]).slice(0, 7); const max = Math.max(1, ...cats.map((k) => tot[k]));
+      const act = S.chartF[key(c)]; const rowH = 24;
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${cats.length * rowH}" role="img" aria-label="${chartTitle(c, L)}">` + cats.map((k, i) => { const on = !act || act.v.includes(k); const wAll = (tot[k] / max) * 170, w = ((cnt[k] || 0) / max) * 170; return `<g class="bar" data-cat="${encodeURIComponent(k)}" transform="translate(0 ${i * rowH})"><title>${k}: ${cnt[k] || 0}</title><text x="0" y="15" style="fill:var(--c-text-2);font-size:12px">${k.length > 22 ? k.slice(0, 21) + "…" : k}</text><rect x="140" y="5" width="${wAll}" height="14" rx="3" style="fill:var(--c-surface-2)"/><rect x="140" y="5" width="${Math.max(w, 0)}" height="14" rx="3" style="fill:${on ? color : "var(--c-surface-3)"}"/><text x="${140 + Math.max(wAll, w) + 6}" y="16" style="font-size:11.5px">${(cnt[k] || 0).toLocaleString()}</text></g>`; }).join("") + "</svg>";
+      el.querySelectorAll(".bar").forEach((g) => g.addEventListener("click", (e) => { const k = decodeURIComponent(g.dataset.cat); const cur = S.chartF[key(c)]; let v = cur ? [...cur.v] : []; if (e.shiftKey || e.metaKey) v = v.includes(k) ? v.filter((x) => x !== k) : [...v, k]; else v = cur && cur.v.length === 1 && cur.v[0] === k ? [] : [k]; if (v.length) S.chartF[key(c)] = { f: c.f, op: "in", v }; else delete S.chartF[key(c)]; refresh(); }));
+      el.insertAdjacentHTML("beforeend", `<div class="hint">Gray is the unfiltered total. Shift-click to pick several.</div>`);
+    } else if (c.t === "hist" || c.t === "time") {
+      let bins, xlab;
+      if (c.t === "hist") { bins = binsOf(all.map((r) => r[c.f]), 24, 0.95); const fb = binsOf(rows.map((r) => r[c.f]), 24, 0.95); bins.forEach((b) => (b.m = rows.filter((r) => r[c.f] >= b.x0 && (r[c.f] < b.x1 || b === bins[bins.length - 1])).length)); xlab = (v) => (c.f === "acres" ? v.toFixed(2) : money(v)); }
+      else { const t0 = new Date(all.map((r) => r.created).sort()[0] + "T00:00"); const wk = (d) => Math.floor((new Date(d + "T00:00") - t0) / 6048e5); const nW = wk("2026-11-09") + 1; bins = Array.from({ length: nW }, (_, i) => { const a = new Date(+t0 + i * 6048e5); return { x0: a.toISOString().slice(0, 10), x1: new Date(+a + 6048e5 - 864e5).toISOString().slice(0, 10), n: 0, m: 0 }; }); all.forEach((r) => bins[Math.min(nW - 1, wk(r.created))].n++); rows.forEach((r) => bins[Math.min(nW - 1, wk(r.created))].m++); xlab = (v) => new Date(v + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+      const H = 120, max = Math.max(1, ...bins.map((b) => b.n)), bw = (W - 10) / bins.length; const act = S.chartF[key(c)];
+      const inAct = (b) => !act || (c.t === "time" ? b.x1 >= act.v[0] && b.x0 <= act.v[1] : b.x1 > act.v[0] && b.x0 < act.v[1]);
+      el.innerHTML = `<svg viewBox="0 -4 ${W} ${H + 26}" role="img" aria-label="${chartTitle(c, L)}" style="cursor:crosshair;touch-action:none">` + `<line x1="0" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--viz-grid)"/>` + bins.map((b, i) => { const h = (b.n / max) * H, hm = (b.m / max) * H; return `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" style="fill:var(--c-surface-2)"/><rect x="${i * bw + 1}" y="${H - hm}" width="${bw - 2}" height="${hm}" style="fill:${inAct(b) ? color : "var(--c-surface-3)"}"><title>${c.t === "time" ? b.x0 : xlab(b.x0) + "–" + xlab(b.x1)}: ${b.m}</title></rect>`; }).join("") + `<text x="0" y="${H + 16}">${xlab(bins[0].x0)}</text><text x="${W}" y="${H + 16}" text-anchor="end">${c.t === "hist" ? xlab(bins[bins.length - 1].x1) + "+" : xlab(bins[bins.length - 1].x1)}</text><text x="${W}" y="8" text-anchor="end">max ${max}</text><rect class="brush" x="0" y="0" width="0" height="${H}" style="fill:var(--c-info);fill-opacity:.14;stroke:var(--c-info)" stroke-width="1"/></svg>`;
+      brush(el.querySelector("svg"), H, (a, b) => { const i0 = Math.max(0, Math.floor(a / bw)), i1 = Math.min(bins.length - 1, Math.floor(b / bw)); if (i1 < i0) { delete S.chartF[key(c)]; } else S.chartF[key(c)] = c.t === "time" ? { f: c.f, op: "between-date", v: [bins[i0].x0, bins[i1].x1] } : { f: c.f, op: "between", v: [bins[i0].x0, i1 === bins.length - 1 ? Infinity : bins[i1].x1] }; refresh(); });
+      el.insertAdjacentHTML("beforeend", `<div class="hint">${act ? "Drag again to change, click to clear." : "Drag across the bars to filter."}</div>`);
+    } else if (c.t === "scatter") {
+      const H = 150, lx = (v) => Math.log10(Math.max(v, 1e3)), xs = all.map((r) => lx(r[c.f])), ys = all.map((r) => lx(r[c.g]));
+      const x0 = 3, x1 = Math.max(...xs), y0 = 3, y1 = Math.max(...ys); const X = (v) => 30 + ((lx(v) - x0) / (x1 - x0)) * (W - 36), Y = (v) => H - ((lx(v) - y0) / (y1 - y0)) * (H - 6);
+      const inRows = new Set(rows.map((r) => r.id));
+      const pts = all.filter((_, i) => i % 1 === 0).map((r) => `<circle cx="${X(r[c.f]).toFixed(1)}" cy="${Y(r[c.g]).toFixed(1)}" r="${S.sel.has(r.id) ? 3.6 : 2}" style="fill:${inRows.has(r.id) ? (S.sel.has(r.id) ? "var(--map-select-line)" : color) : "var(--c-surface-3)"}" fill-opacity="${inRows.has(r.id) ? 0.55 : 0.6}"/>`).join("");
+      el.innerHTML = `<svg viewBox="0 -4 ${W} ${H + 26}" role="img" aria-label="${chartTitle(c, L)}" style="cursor:crosshair;touch-action:none"><line x1="30" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--viz-grid)"/><line x1="30" x2="30" y1="0" y2="${H}" style="stroke:var(--viz-grid)"/>${pts}<text x="30" y="${H + 16}">$1k</text><text x="${W}" y="${H + 16}" text-anchor="end">${LABEL(L, c.f)} (log) $${Math.round(10 ** x1 / 1e6)}M</text><text x="0" y="10">${money(10 ** y1)}</text><text x="0" y="${H}">$1k</text><rect class="brush" x="0" y="0" width="0" height="${H}" style="fill:var(--c-info);fill-opacity:.14;stroke:var(--c-info)" stroke-width="1"/></svg>`;
+      brush(el.querySelector("svg"), H, (a, b) => { const inv = (px) => 10 ** (x0 + ((px - 30) / (W - 36)) * (x1 - x0)); if (b - a < 4) delete S.chartF["scatter:" + c.f]; else S.chartF["scatter:" + c.f] = { f: c.f, op: "between", v: [inv(a), inv(b)] }; refresh(); });
+      el.insertAdjacentHTML("beforeend", `<div class="hint">Log scales; each dot is a parcel. Drag to filter by ${LABEL(L, c.f).toLowerCase()}. 2-D brushing is an SDK gap.</div>`);
+    }
+  }
+  function brush(svg, H, done) {
+    const r = svg.querySelector(".brush"); let x0 = null;
+    const px = (e) => { const b = svg.getBoundingClientRect(); return ((e.clientX - b.left) / b.width) * W; };
+    svg.addEventListener("pointerdown", (e) => { x0 = px(e); svg.setPointerCapture(e.pointerId); r.setAttribute("x", x0); r.setAttribute("width", 0); });
+    svg.addEventListener("pointermove", (e) => { if (x0 == null) return; const x = px(e); r.setAttribute("x", Math.min(x, x0)); r.setAttribute("width", Math.abs(x - x0)); });
+    svg.addEventListener("pointerup", (e) => { if (x0 == null) return; const x = px(e); const a = Math.min(x, x0), b = Math.max(x, x0); x0 = null; done(a, b - a < 3 ? a - 1 : b); });
+  }
+  // date range test
+  document.getElementById("charts").addEventListener("click", (e) => { const b = e.target.closest("[data-cx]"); if (!b) return; const c = S.charts[+b.dataset.cx]; delete S.chartF[key(c)]; delete S.chartF["scatter:" + c.f]; S.charts.splice(+b.dataset.cx, 1); refresh(); });
+  function fillChartFields() { const L = LAYERS[S.layer], t = document.getElementById("cType").value; const opts = t === "bar" ? L.cat : t === "time" ? (L.time ? [L.time] : []) : t === "scatter" ? (L.num.length > 1 ? ["land"] : []) : L.num; document.getElementById("cField").innerHTML = opts.length ? opts.map((f) => `<option value="${f}">${LABEL(L, f)}</option>`).join("") : `<option value="">Not available for this layer</option>`; }
+  document.getElementById("cType").addEventListener("change", fillChartFields);
+  document.getElementById("cAdd").addEventListener("click", () => { const t = document.getElementById("cType").value, f = document.getElementById("cField").value; if (!f) return; S.charts.unshift(t === "scatter" ? { t, f: "land", g: "bldg" } : { t, f }); refresh(); });
+  // ---- map ----
+  let map, drawn = [], mode = "select", measurePts = [];
+  const reqFC = () => ({ type: "FeatureCollection", features: filtered().map((r) => ({ type: "Feature", id: r._i, properties: { id: r.id, sel: S.sel.has(r.id) ? 1 : 0 }, geometry: { type: "Point", coordinates: r.c } })) });
+  function renderMap(rows) {
+    if (!map || !map.getSource("reqs")) return;
+    const isP = S.layer === "parcels";
+    const is3d = document.getElementById("v3d").getAttribute("aria-pressed") === "true";
+    ["parcels-fill", "parcels-line"].forEach((l) => map.setLayoutProperty(l, "visibility", isP ? "visible" : "none"));
+    map.setLayoutProperty("pf-hit", "visibility", isP && !is3d ? "visible" : "none");
+    map.setLayoutProperty("p3d", "visibility", isP && is3d ? "visible" : "none");
+    ["reqs", "reqs-sel"].forEach((l) => map.setLayoutProperty(l, "visibility", isP ? "none" : "visible"));
+    if (isP) {
+      const ids = rows.map((r) => r.id); const all = ids.length === PARCELS.length;
+      map.setFilter("pf-hit", all ? null : ["in", ["get", "id"], ["literal", ids]]);
+      map.setFilter("p3d", all ? null : ["in", ["get", "id"], ["literal", ids]]);
+      map.setFilter("parcels-sel", ["in", ["get", "id"], ["literal", [...S.sel]]]);
+    } else map.getSource("reqs").setData(reqFC());
+    document.getElementById("nShown").textContent = rows.length.toLocaleString();
+    document.getElementById("nOf").textContent = `of ${LAYERS[S.layer].rows.length.toLocaleString()} ${LAYERS[S.layer].sum}`;
+  }
+  function select(ids, replace, fly) {
+    if (replace) S.sel.clear(); ids.forEach((id) => S.sel.add(id));
+    renderTable(filtered()); renderMap(filtered()); if (S.charts.some((c) => c.t === "scatter")) renderCharts();
+    if (fly && ids.length === 1) { const L = LAYERS[S.layer]; const r = L.rows.find((x) => x[L.idField] === ids[0]); if (r) map.easeTo({ center: r.c, zoom: Math.max(map.getZoom(), 16), duration: 600 }); }
+    const tr = document.querySelector(`#dt tbody tr[data-id="${ids[0]}"]`); if (tr && !fly) tr.scrollIntoView({ block: "nearest" });
+  }
+  map = HM.create(document.getElementById("map"), { bounds: [[-156.4925, 20.874], [-156.4595, 20.896]], navPos: "top-right", onload: (m) => {
+    HM.overlays(m, ["zoning", "flood", "tsunami", "parcels"], "roads-casing");
+    HM.add(m, "sma", HD.sma); m.addLayer({ id: "sma-line", type: "line", source: "sma", paint: { "line-color": HM.cssVar("--hz-slr"), "line-width": 2, "line-dasharray": [2, 1.5] } });
+    ["zoning", "zoning-line", "flood", "flood-line", "tsunami", "tsunami-x", "tsunami-line", "sma-line"].forEach((l) => m.setLayoutProperty(l, "visibility", "none"));
+    m.addLayer({ id: "pf-hit", type: "fill", source: "parcels", paint: { "fill-color": HM.cssVar("--map-select"), "fill-opacity": 0.32 } }, "parcels-line");
+    m.setPaintProperty("parcels-sel", "line-width", 3);
+    m.setFilter("parcels-sel", ["in", ["get", "id"], ["literal", []]]);
+    m.addLayer({ id: "p3d", type: "fill-extrusion", source: "parcels", layout: { visibility: "none" }, paint: { "fill-extrusion-color": HM.cssVar("--viz-seq-2"), "fill-extrusion-height": ["*", ["sqrt", ["get", "bldg"]], 0.012], "fill-extrusion-opacity": 0.75 } });
+    HM.add(m, "reqs", reqFC());
+    m.addLayer({ id: "reqs", type: "circle", source: "reqs", layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 3, 16, 6], "circle-color": HM.cssVar("--viz-2"), "circle-stroke-color": HM.cssVar("--map-pin-ring"), "circle-stroke-width": 1, "circle-opacity": 0.85 } });
+    m.addLayer({ id: "reqs-sel", type: "circle", source: "reqs", filter: ["==", ["get", "sel"], 1], layout: { visibility: "none" }, paint: { "circle-radius": 9, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": HM.cssVar("--map-select-line"), "circle-stroke-width": 3 } });
+    HM.add(m, "draw", { type: "FeatureCollection", features: [] });
+    m.addLayer({ id: "draw-fill", type: "fill", source: "draw", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": HM.cssVar("--c-info"), "fill-opacity": 0.1 } });
+    m.addLayer({ id: "draw-line", type: "line", source: "draw", paint: { "line-color": HM.cssVar("--c-info"), "line-width": 2, "line-dasharray": [2, 1] } });
+    m.addLayer({ id: "draw-pt", type: "circle", source: "draw", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4, "circle-color": HM.cssVar("--c-surface"), "circle-stroke-color": HM.cssVar("--c-info"), "circle-stroke-width": 2 } });
+    m.on("click", (e) => {
+      if (mode === "select") {
+        const fs = m.queryRenderedFeatures(e.point, { layers: S.layer === "parcels" ? ["pf-hit"] : ["reqs"] });
+        if (fs.length) select([fs[0].properties.id], !e.originalEvent.shiftKey, false); else { S.sel.clear(); select([], true, false); }
+      } else { measurePts.push([e.lngLat.lng, e.lngLat.lat]); drawSketch(); }
+    });
+    m.on("dblclick", (e) => { if (mode !== "select") { e.preventDefault(); finishSketch(); } });
+    m.on("mousemove", (e) => { if (mode !== "select") { m.getCanvas().style.cursor = "crosshair"; return; } const fs = m.queryRenderedFeatures(e.point, { layers: S.layer === "parcels" ? ["pf-hit"] : ["reqs"] }); m.getCanvas().style.cursor = fs.length ? "pointer" : ""; });
+    document.querySelectorAll("[data-ovl]").forEach((cb) => cb.addEventListener("change", () => HM.toggle(m, cb.dataset.ovl.split(","), cb.checked)));
+    applyBasemap();
+    refresh();
+  } });
+  // measure / draw
+  const hav = (a, b) => { const R = 6371008.8, r = Math.PI / 180; const d1 = (b[1] - a[1]) * r, d2 = (b[0] - a[0]) * r; const h = Math.sin(d1 / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(d2 / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+  const areaM2 = (pts) => { const r = Math.PI / 180, R = 6371008.8; let s = 0; for (let i = 0; i < pts.length; i++) { const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length]; s += (x2 - x1) * r * (2 + Math.sin(y1 * r) + Math.sin(y2 * r)); } return Math.abs((s * R * R) / 2); };
+  function drawSketch() {
+    const fs = measurePts.map((p) => ({ type: "Feature", geometry: { type: "Point", coordinates: p } }));
+    if (measurePts.length > 1) fs.push({ type: "Feature", geometry: { type: "LineString", coordinates: measurePts } });
+    if (mode === "draw" && measurePts.length > 2) fs.push({ type: "Feature", geometry: { type: "Polygon", coordinates: [[...measurePts, measurePts[0]]] } });
+    map.getSource("draw").setData({ type: "FeatureCollection", features: fs });
+    let d = 0; for (let i = 1; i < measurePts.length; i++) d += hav(measurePts[i - 1], measurePts[i]);
+    if (mode === "measure") hintText(measurePts.length < 2 ? "Click points to measure. Double-click or Done to finish." : `Distance <b>${d >= 1000 ? (d / 1000).toFixed(2) + " km" : Math.round(d) + " m"}</b>${measurePts.length > 2 ? ` · enclosed area <b>${(areaM2(measurePts) / 4046.86).toFixed(2)} acres</b>` : ""}`);
+    else hintText(measurePts.length < 3 ? "Click to add vertices for the filter area (at least 3)." : `${measurePts.length} vertices · <b>${(areaM2(measurePts) / 4046.86).toFixed(1)} acres</b>. Done applies it as a spatial filter.`);
+  }
+  function hintText(h) { document.getElementById("hintText").innerHTML = h; document.getElementById("hint").dataset.on = "true"; }
+  function finishSketch() {
+    if (mode === "draw" && measurePts.length > 2) { S.spatial = [...measurePts, measurePts[0]]; setMode("select", true); refresh(); return; }
+    if (mode === "measure") { document.getElementById("hintText").innerHTML += ' <span class="faint">(kept)</span>'; mode = "select"; document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mode === "select")); return; }
+    setMode("select");
+  }
+  function clearDrawn() { measurePts = []; if (map && map.getSource("draw")) map.getSource("draw").setData({ type: "FeatureCollection", features: [] }); }
+  function setMode(m, keep) {
+    mode = m; document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mode === m));
+    map.doubleClickZoom[m === "select" ? "enable" : "disable"]();
+    if (m === "select") { document.getElementById("hint").dataset.on = "false"; if (!keep) clearDrawn(); else measurePts = []; }
+    else { clearDrawn(); drawSketch(); }
+  }
+  document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  document.getElementById("spDraw").addEventListener("click", () => setMode("draw"));
+  document.getElementById("spView").addEventListener("click", () => { const b = map.getBounds(); S.spatial = [[b.getWest(), b.getSouth()], [b.getEast(), b.getSouth()], [b.getEast(), b.getNorth()], [b.getWest(), b.getNorth()], [b.getWest(), b.getSouth()]]; map.getSource("draw").setData({ type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Polygon", coordinates: [S.spatial] } }] }); refresh(); });
+  document.getElementById("hintDone").addEventListener("click", finishSketch);
+  document.getElementById("hintCancel").addEventListener("click", () => setMode("select"));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && mode !== "select") setMode("select"); });
+  // 2D / 3D
+  function set3d(on) {
+    document.getElementById("v2d").setAttribute("aria-pressed", !on); document.getElementById("v3d").setAttribute("aria-pressed", on);
+    HM.toggle(map, ["p3d"], on && S.layer === "parcels"); HM.toggle(map, ["pf-hit"], !on && S.layer === "parcels");
+    document.getElementById("note3d").dataset.on = on;
+    map.dragRotate[on ? "enable" : "disable"]();
+    map.easeTo(on ? { pitch: 58, bearing: -28, center: [-156.4705, 20.8905], zoom: 15.7, duration: 900 } : { pitch: 0, bearing: 0, duration: 700 });
+  }
+  document.getElementById("v2d").addEventListener("click", () => set3d(false));
+  document.getElementById("v3d").addEventListener("click", () => set3d(true));
+  // basemap
+  // Basemap: Auto follows the UI theme (tokens); Light/Dark pin the map palette; Plain drops land cover and contours.
+  const PAGE_PAINT = () => ({ "sma-line": { "line-color": HM.cssVar("--hz-slr") }, "pf-hit": { "fill-color": HM.cssVar("--map-select") }, p3d: { "fill-extrusion-color": HM.cssVar("--viz-seq-2") }, bld: { "fill-extrusion-color": HM.cssVar("--c-surface-3") },
+    reqs: { "circle-color": HM.cssVar("--viz-2"), "circle-stroke-color": HM.cssVar("--map-pin-ring") }, "reqs-sel": { "circle-stroke-color": HM.cssVar("--map-select-line") },
+    "draw-fill": { "fill-color": HM.cssVar("--c-info") }, "draw-line": { "line-color": HM.cssVar("--c-info") }, "draw-pt": { "circle-color": HM.cssVar("--c-surface"), "circle-stroke-color": HM.cssVar("--c-info") } });
+  const MAP_PALETTE = { light: { water: "#c9dfe8", land: "#f4f2ec", road: "#ffffff", cas: "#d6cfbf", hwy: "#fbe2a0", hcas: "#d2a54c" }, dark: { water: "#0a2230", land: "#0f1d24", road: "#2a3e48", cas: "#17262e", hwy: "#6b5432", hcas: "#3d3020" } };
+  function applyBasemap() {
+    if (!map || !map.getLayer("land")) return;
+    const v = document.getElementById("basemap").value, ui = HM.theme();
+    HM.restyle(map);
+    Object.entries(PAGE_PAINT()).forEach(([id, pp]) => map.getLayer(id) && Object.entries(pp).forEach(([k, val]) => map.setPaintProperty(id, k, val)));
+    const pal = v === "light" || v === "dark" ? MAP_PALETTE[v] : null;
+    if (pal) {
+      map.setPaintProperty("bg", "background-color", pal.water); map.setPaintProperty("land", "fill-color", pal.land);
+      map.setPaintProperty("roads", "line-color", ["match", ["get", "cls"], "hwy", pal.hwy, pal.road]); map.setPaintProperty("roads-casing", "line-color", ["match", ["get", "cls"], "hwy", pal.hcas, pal.cas]);
+    }
+    if (v === "plain") { map.setPaintProperty("land", "fill-color", HM.cssVar("--c-bg")); map.setPaintProperty("roads", "line-color", HM.cssVar("--c-surface")); }
+    map.setPaintProperty("contours", "line-opacity", v === "plain" ? 0 : 0.75);
+    if (map.getLayer("zoning-base")) map.setPaintProperty("zoning-base", "fill-opacity", v === "plain" || (pal && v !== ui) ? 0 : 0.9);
+    const flip = pal && v !== ui;
+    document.querySelectorAll("#map .maplabel").forEach((l) => (l.style.filter = flip ? "invert(1) hue-rotate(180deg)" : ""));
+  }
+  document.getElementById("basemap").addEventListener("change", applyBasemap);
+  document.addEventListener("honua:theme", () => { applyBasemap(); renderCharts(); renderLayers(); });
+  // ---- layer switch ----
+  function setLayer(l) {
+    S.layer = l; S.attr = []; S.chartF = {}; S.time = null; S.sel.clear(); S.sort = null; S.tq = ""; document.getElementById("tq").value = "";
+    S.charts = LAYERS[l].charts.map((c) => ({ ...c }));
+    setTimeInputs(); fillChartFields(); renderLayers();
+    if (map && map.getLayer("p3d")) { const on = document.getElementById("v3d").getAttribute("aria-pressed") === "true"; HM.toggle(map, ["p3d"], on && l === "parcels"); }
+    refresh();
+  }
+  function refresh() { const rows = filtered(); renderFilterUI(); renderTable(rows); renderCharts(); renderMap(rows); if (typeof renderNL === "function" && lastPlan) renderNL(); }
+  // ---- natural-language query bar (createNlMapControl / createAskMapSession → proposeMapPlan → approveNlMapPlan → executeMapPlan) ----
+  const SUGGEST = [
+    "parcels over 0.25 acres outside the flood zone, by zone group",
+    "parcels over 0.25 acres outside the flood zone, by State land use",
+    "B-2 parcels over 0.25 acres outside the flood zone",
+    "open drainage requests in the flood or tsunami zone since August, weekly",
+    "parcels inside the SMA with building value over $1M",
+    "potholes in District 4 in the last 30 days, by status",
+    "land value by State land use",
+  ];
+  const FLOOD_SFHA = ["AE", "VE", "A", "AO", "AH"];
+  const CITE = { parcels: "maui/parcels", requests: "maui/311-requests", flood: "maui/dfirm-flood-zones", lud: "maui/state-land-use", sma: "maui/special-management-area", zoning: "maui/county-zoning", zgroup: "maui/county-zoning", cplan: "community-plan-source-not-verified", tsu: "maui/tsunami-evacuation", hazard: "maui/dfirm-flood-zones" };
+  const FIELD_WORDS = { parcels: [["state land use", "lud"], ["land use district", "lud"], ["land use", "lud"], ["zone group", "zgroup"], ["zoning", "zoning"], ["zone", "zgroup"], ["flood", "flood"], ["sma", "sma"], ["special management", "sma"], ["community plan", "cplan"], ["plan designation", "cplan"], ["tsunami", "tsu"]],
+    requests: [["type", "type"], ["category", "type"], ["department", "dept"], ["dept", "dept"], ["district", "district"], ["status", "status"], ["hazard", "hazard"], ["sla", "sla"]] };
+  const NOW = "2026-11-09";
+  const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  const amount = (n, unit) => { let v = parseFloat(String(n).replace(/[$,]/g, "")); if (/^(k|thousand)/i.test(unit || "")) v *= 1e3; if (/^(m|million)/i.test(unit || "")) v *= 1e6; return v; };
+  const CMP = [[/\b(over|more than|greater than|above|at least|>=?)\s*/i, ">"], [/\b(under|less than|below|at most|<=?)\s*/i, "<"]];
+  const OPWORD = { ">": "greater than", "<": "less than", "=": "is", "≠": "is not", "in": "is one of", "not in": "is not", "contains": "contains", "between-date": "between" };
+  function parseNL(text) {
+    const raw = text.trim(); let t = " " + raw.toLowerCase().replace(/[,;]/g, " ").replace(/\s+/g, " ") + " ";
+    const used = []; const take = (re) => { const m = t.match(re); if (m) { used.push(m[0].trim()); t = t.replace(m[0], " "); } return m; };
+    const plan = { text: raw, layer: /\b(311|requests?|reports?|potholes?|drainage|streetlights?|dumping|graffiti|abandoned|sidewalk|trash|signals?|vehicles?)\b/.test(t) ? "requests" : "parcels", clauses: [], time: null, group: null, chartKind: null, read: [], ignored: [] };
+    take(/\b(show( me)?|find|list|which|what|all|the|parcels?|lots?|properties|311|service|requests?|reports?)\b/g); // nouns and fillers
+    const add = (f, op, v, phrase, words) => { plan.clauses.push({ f, op, v, nl: 1 }); plan.read.push([phrase, words]); };
+    if (plan.layer === "parcels") {
+      let m;
+      if ((m = take(/\bbetween\s*([\d.]+)\s*and\s*([\d.]+)\s*(acres?|ac)\b/))) add("acres", "between", [+m[1], +m[2]], m[0], `acres between ${m[1]} and ${m[2]}`);
+      for (const [re, op] of CMP) { const r = new RegExp(re.source + "([\\d.]+)\\s*(acres?|ac)\\b", "i"); if ((m = take(r))) add("acres", op, m[2], m[0].trim(), `acres ${OPWORD[op]} ${m[2]}`); }
+      for (const [re, op] of CMP) {
+        const r = new RegExp("\\b(land|building|bldg|assessed)?\\s*(value|worth)?\\s*(of\\s*)?" + re.source + "\\$?([\\d.,]+)\\s*(k|m|million|thousand)?\\b", "i");
+        const mm = t.match(r); if (mm && (mm[1] || mm[2] || /\$/.test(mm[0]) || /k|m/.test(mm[6] || ""))) { take(r); const f = /build|bldg/.test(mm[1] || "") ? "bldg" : "land"; const v = amount(mm[5], mm[6]); add(f, op, String(v), mm[0].trim(), `${f === "bldg" ? "building" : "land"} value ${OPWORD[op]} ${HM.money(v)}`); }
+      }
+      if ((m = take(/\b(outside|out of|not in)\s*(the\s*)?(fema\s*)?(flood\s*(zones?|plain|hazard area)?|sfha)\b/))) add("flood", "not in", FLOOD_SFHA, m[0].trim(), "outside the FEMA special flood hazard area (zones AE, VE, A, AO, AH)");
+      else if ((m = take(/\b(inside|in|within)\s*(the\s*)?(fema\s*)?(flood\s*(zones?|plain|hazard area)?|sfha)\b/))) add("flood", "in", FLOOD_SFHA, m[0].trim(), "inside the FEMA special flood hazard area");
+      else if ((m = take(/\b(zone\s*)?(ve|coastal high hazard)\b/))) add("flood", "=", "VE", m[0].trim(), "in coastal high hazard zone VE");
+      if ((m = take(/\b(outside|not in)\s*(the\s*)?(sma|special management area)\b/))) add("sma", "=", "Outside", m[0].trim(), "outside the Special Management Area");
+      else if ((m = take(/\b(inside|in|within)\s*(the\s*)?(sma|special management area)\b/))) add("sma", "=", "Inside", m[0].trim(), "inside the Special Management Area");
+      if ((m = take(/\b(outside|not in)\s*(the\s*)?tsunami( evacuation)?( zones?)?\b/))) add("tsu", "=", "Outside", m[0].trim(), "outside the tsunami evacuation zones");
+      else if ((m = take(/\b(inside|in|within)\s*(the\s*)?tsunami( evacuation)?( zones?)?\b/))) add("tsu", "=", "Evacuation zone", m[0].trim(), "inside the tsunami evacuation zone");
+      if ((m = take(/\b(urban|agricultural|conservation|rural)\s*(state\s*)?(land use\s*)?(district|lands?)?\b(?!\s*by)/))) { const v = m[1][0].toUpperCase() + m[1].slice(1); add("lud", "=", v, m[0].trim(), `State land use district is ${v}`); }
+      if ((m = take(/\b([abmrph]{1,2})-?(\d(\.\d)?)\b/))) { const code = (m[1] + "-" + m[2]).toUpperCase(); const zn = [...new Set(PARCELS.map((r) => r.zoning))].find((z) => z.toUpperCase().startsWith(code + " ")); if (zn) add("zoning", "=", zn, m[0].trim(), `zoning is ${zn}`); else plan.ignored.push(m[0].trim()); }
+      else if ((m = take(/\b(residential|business|commercial|industrial|agriculture|public|park)\s*(zoning|zoned|parcels)?\b/))) { const v = { commercial: "Business" }[m[1]] || m[1][0].toUpperCase() + m[1].slice(1); add("zgroup", "=", v, m[0].trim(), `zone group is ${v}`); }
+      if (/\b(histogram|distribution)\b/.test(t)) { const mh = take(/\b(histogram|distribution)\s*(of\s*)?(land|building)?\s*(value)?\b/); plan.chartKind = "hist"; plan.group = /build/.test(mh[0]) ? "bldg" : /acre/.test(t) ? "acres" : "land"; }
+    } else {
+      let m;
+      const TYPES = [["drain|flood(ing)?|ponding", "Drainage / flooding"], ["pothole", "Pothole"], ["streetlight|light out", "Streetlight out"], ["dumping", "Illegal dumping"], ["abandoned|vehicle", "Abandoned vehicle"], ["sidewalk", "Sidewalk damage"], ["tree|vegetation", "Tree / vegetation"], ["graffiti", "Graffiti"], ["trash|pickup", "Missed trash pickup"], ["signal", "Traffic signal"]];
+      if ((m = take(/\bin\s*(the\s*)?(flood\s*or\s*tsunami|tsunami\s*or\s*flood|hazard)\s*(zones?)?\b/))) add("hazard", "≠", "None", m[0].trim(), "inside a flood or tsunami zone");
+      else if ((m = take(/\bin\s*(the\s*)?tsunami\s*(evacuation\s*)?(zones?)?\b/))) add("hazard", "in", ["Tsunami zone", "Flood + tsunami"], m[0].trim(), "inside the tsunami evacuation zone");
+      else if ((m = take(/\bin\s*(the\s*)?flood\s*(zones?)?\b/))) add("hazard", "in", ["Flood zone", "Flood + tsunami"], m[0].trim(), "inside a FEMA flood zone");
+      for (const [re, v] of TYPES) { const mm = take(new RegExp("\\b(" + re + ")\\w*\\b")); if (mm) { add("type", "=", v, mm[0], `type is ${v}`); break; } }
+      if ((m = take(/\b(open|unresolved|outstanding)\b/))) add("status", "≠", "Closed", m[0], "status is not Closed");
+      else if ((m = take(/\b(closed|resolved)\b/))) add("status", "=", "Closed", m[0], "status is Closed");
+      if ((m = take(/\b(past due|overdue|missed (the )?sla|late)\b/))) add("sla", "=", "Missed", m[0], "missed its SLA");
+      if ((m = take(/\bdistrict\s*(\d)\b/))) add("district", "=", "District " + m[1], m[0], `council district ${m[1]}`);
+      if ((m = take(/\b(in the )?last\s*(\d+)\s*(days?|weeks?|months?)\b/))) { const n = +m[2] * (/week/.test(m[3]) ? 7 : /month/.test(m[3]) ? 30 : 1); const d = new Date(new Date(NOW + "T12:00") - n * 864e5).toISOString().slice(0, 10); plan.time = [d, NOW]; plan.read.push([m[0].trim(), `opened ${d} to ${NOW}`]); }
+      else if ((m = take(/\bsince\s*(january|february|march|april|may|june|july|august|september|october|november|december)\b/))) { const d = `2026-${String(MONTHS.indexOf(m[1]) + 1).padStart(2, "0")}-01`; plan.time = [d, NOW]; plan.read.push([m[0].trim(), `opened ${d} to ${NOW}`]); }
+      else if ((m = take(/\bthis month\b/))) { plan.time = ["2026-11-01", NOW]; plan.read.push([m[0], "opened 2026-11-01 to today"]); }
+      if ((m = take(/\b(weekly|per week|by week|over time|trend)\b/))) { plan.chartKind = "time"; plan.group = "created"; plan.read.push([m[0], "chart: requests per week"]); }
+    }
+    const mb = t.match(/\bby\s+([a-z ]+?)\s*$/) || t.match(/\bby\s+([a-z ]+?)\s+(?=in |with |over |under |since |outside |inside )/);
+    if (mb) { const w = mb[1].trim(); const hit = FIELD_WORDS[plan.layer].find(([k]) => w.startsWith(k) || w.includes(k)); if (hit) { take(new RegExp("\\bby\\s+" + mb[1].trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b")); plan.group = hit[1]; plan.chartKind = "bar"; plan.read.push(["by " + w, `group and chart by ${LABEL(LAYERS[plan.layer], hit[1]).toLowerCase()}`]); } }
+    if (!plan.group && /\b(land|building) value\b/.test(t) && plan.layer === "parcels") { take(/\b(land|building) value\b/); }
+    plan.ignored.push(...t.replace(/\b(and|or|with|of|in|on|at|a|an|to|for|that|are|is|me|that|than|zone|zones|by|over|under|since|ac|acres|value)\b/g, " ").split(/\s+/).filter((w) => w.length > 2));
+    plan.cites = [...new Set([CITE[plan.layer], ...plan.clauses.map((c) => CITE[c.f]).filter(Boolean), ...(plan.group && CITE[plan.group] ? [CITE[plan.group]] : [])])];
+    plan.ok = plan.clauses.length > 0 || !!plan.group || !!plan.time;
+    return plan;
+  }
+  // history for Undo (the SDK's AnalyticsLinkCommit.undo() restores one commit; this keeps a stack)
+  const HIST = [];
+  const snap = () => JSON.parse(JSON.stringify({ layer: S.layer, attr: S.attr, chartF: Object.fromEntries(Object.entries(S.chartF).map(([k, a]) => [k, { ...a, v: Array.isArray(a.v) ? a.v.map((x) => (x === Infinity ? 1e15 : x)) : a.v }])), spatial: S.spatial, time: S.time, charts: S.charts, sel: [...S.sel], q: lastQ, plan: lastPlan, prop: proposal }));
+  function pushHist() { HIST.push(snap()); if (HIST.length > 12) HIST.shift(); updUndo(); }
+  function updUndo() { const b = document.getElementById("nlqUndo"), n = document.getElementById("undoN"); b.disabled = !HIST.length; n.hidden = !HIST.length; n.textContent = HIST.length; b.title = HIST.length ? `Undo (${HIST.length} step${HIST.length > 1 ? "s" : ""})` : "Nothing to undo"; }
+  document.getElementById("nlqUndo").addEventListener("click", () => {
+    const h = HIST.pop(); if (!h) return;
+    if (S.layer !== h.layer) setLayer(h.layer);
+    Object.assign(S, { attr: h.attr, chartF: h.chartF, spatial: h.spatial, time: h.time, charts: h.charts, sel: new Set(h.sel) });
+    document.getElementById("nlqIn").value = h.q; lastPlan = h.plan; proposal = h.prop; lastQ = h.q; document.getElementById("nlqMiss").hidden = true; setTimeInputs(); refresh(); renderNL(); updUndo();
+  });
+  let lastPlan = null, proposal = null, lastQ = "";
+  function hashPlan(p) { let h = 2166136261; const str = JSON.stringify([p.layer, p.clauses, p.time, p.group]); for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16).padStart(8, "0"); }
+  function runNL(text) {
+    const plan = parseNL(text);
+    const miss = document.getElementById("nlqMiss");
+    if (!plan.ok) {
+      miss.hidden = false; document.getElementById("nlqOut").hidden = true;
+      miss.innerHTML = `<svg class="ico"><use href="#i-alert"/></svg><div>I can't map <b>“${text.replace(/</g, "&lt;")}”</b> to these layers yet. Try a field and a condition, for example <button type="button" data-try="parcels over 0.5 acres inside the SMA">parcels over 0.5 acres inside the SMA</button> or <button type="button" data-try="open potholes in District 3 in the last 30 days">open potholes in District 3 in the last 30 days</button>. Nothing on the map changed.</div>`;
+      return;
+    }
+    miss.hidden = true; pushHist();
+    if (S.layer !== plan.layer) setLayer(plan.layer);
+    S.attr = plan.clauses.map((c) => ({ ...c })); S.chartF = {}; S.time = plan.time ? [...plan.time] : null; S.sel.clear(); setTimeInputs();
+    proposal = plan.group ? { t: plan.chartKind === "hist" ? "hist" : plan.chartKind || "bar", f: plan.group, agent: 1 } : null;
+    plan.hash = hashPlan(plan); lastPlan = plan; lastQ = text;
+    refresh(); renderNL(); renderPlanTab(plan);
+  }
+  function chipText(a) {
+    const L = LAYERS[S.layer], lab = LABEL(L, a.f);
+    const val = a.op === "between" ? a.v.map((x) => (["land", "bldg"].includes(a.f) ? money(x) : (+x).toFixed(2))).join("–") : Array.isArray(a.v) ? a.v.join(", ") : ["land", "bldg"].includes(a.f) && !isNaN(+a.v) ? HM.money(+a.v) : a.v;
+    return `<b>${lab}</b> ${a.op === "≠" ? "≠" : a.op === "not in" ? "not in" : a.op} ${val}`;
+  }
+  function renderNL() {
+    const out = document.getElementById("nlqOut");
+    if (!lastPlan) { out.hidden = true; document.getElementById("nlqExp").hidden = true; return; }
+    out.hidden = false;
+    const L = LAYERS[S.layer];
+    const chips = S.attr.map((a, i) => `<span class="qchip" role="listitem"><button type="button" class="ql" data-qe="${i}" title="Edit this clause">${chipText(a)}</button><button type="button" class="qx" data-qr="${i}" aria-label="Remove ${LABEL(L, a.f)} clause"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
+    if (S.time) chips.push(`<span class="qchip" role="listitem"><span class="ql"><b>Opened</b> ${S.time[0]} → ${S.time[1]}</span><button type="button" class="qx" data-qr="time" aria-label="Remove date range"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
+    if (proposal) chips.push(`<span class="qchip grp" role="listitem"><span class="ql">${proposal.t === "time" ? "<b>Chart</b> per week" : proposal.t === "hist" ? "<b>Histogram</b> " + LABEL(L, proposal.f) : "<b>Group by</b> " + LABEL(L, proposal.f)}</span><button type="button" class="qx" data-qr="group" aria-label="Remove grouping"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
+    document.getElementById("chips").innerHTML = (chips.join("") || `<span class="muted">No conditions: all ${L.sum}.</span>`) + `<span class="muted" style="font-size:13px;margin-left:4px">${filtered().length.toLocaleString()} of ${L.rows.length.toLocaleString()} ${L.sum}</span>`;
+    document.getElementById("nlqCites").innerHTML = lastPlan.cites.map((c) => `<span class="cite">${c}</span>`).join("");
+    document.getElementById("nlqCql").textContent = cqlText();
+    const prop = document.getElementById("nlqProp");
+    const already = proposal && S.charts.some((c) => c.t === proposal.t && c.f === proposal.f && c.agent);
+    prop.hidden = !proposal;
+    if (proposal) prop.innerHTML = `<svg class="ico"><use href="#i-chart"/></svg><span>${already ? "Added: " : "Proposed: "}<b>${chartTitle(proposal, L)}</b></span>${already ? `<svg class="ico" style="color:var(--c-ok);margin-right:6px"><use href="#i-check"/></svg>` : `<button class="btn sm primary" type="button" id="propOk">Add chart</button><button class="btn sm ghost" type="button" id="propNo">Dismiss</button>`}<span class="sdk">addWidget</span>`;
+    if (document.getElementById("nlqExplainBtn").getAttribute("aria-pressed") === "true") renderExplain();
+  }
+  function renderExplain() {
+    const p = lastPlan, box = document.getElementById("nlqExp"); if (!p) { box.hidden = true; return; }
+    const L = LAYERS[p.layer];
+    box.hidden = false;
+    box.innerHTML = `<h3>How I read “${p.text.replace(/</g, "&lt;")}”</h3>
+      <ul>${[`<li>Layer: <b>${L.name}</b> (<code>${CITE[p.layer]}</code>)</li>`, ...p.read.map(([ph, w]) => `<li>“${ph}” → ${w}</li>`)].join("")}${p.ignored.length ? `<li class="faint">Not used: ${[...new Set(p.ignored)].map((w) => "“" + w + "”").join(", ")}</li>` : ""}</ul>
+      <h3>Plan, read-only</h3>
+      <ul>
+        <li><code>createAskMapSession</code> → <code>proposeMapPlan</code>: <code>listSources</code>, <code>setFilter</code> (CQL2 text, ${p.clauses.length + (p.time ? 1 : 0)} clause${p.clauses.length + (p.time ? 1 : 0) === 1 ? "" : "s"})${p.group ? ", <code>addWidget</code> (chart, proposed)" : ""}, <code>summarizeSelection</code></li>
+        <li><code>approveNlMapPlan</code>: pressing Run approved plan <code>${p.hash}</code> (<code>hashNlMapPlan</code>). It changes your view only, never the data.</li>
+        <li><code>executeMapPlan</code>: ${filtered().length.toLocaleString()} of ${L.rows.length.toLocaleString()} ${L.sum} match. The chart waits for you to add it.</li>
+      </ul>
+      <p class="faint" style="font-size:13px">Edit any chip to change a clause; Undo restores the view before this question.</p>`;
+  }
+  function renderPlanTab(p) {
+    const L = LAYERS[p.layer];
+    document.getElementById("plan").innerHTML = `<div class="q">${p.text.replace(/</g, "&lt;")}</div>
+      <h3>Plan <span class="faint" style="font-weight:400;font-size:12px">proposeMapPlan · read-only · ${p.hash}</span></h3>
+      <ol class="steps"><li><b>listSources</b>{ match: "${p.layer === "parcels" ? "parcels" : "311"}" }<span class="ok">${p.cites.length} layer${p.cites.length > 1 ? "s" : ""}</span></li><li><b>setFilter</b>{ layer: "${CITE[p.layer]}", lang: "cql2-text" }<span class="ok">${filtered().length} features</span></li>${p.group ? `<li><b>addWidget</b>{ kind: "${p.chartKind === "time" ? "time-series" : p.chartKind === "hist" ? "histogram" : "category"}", field: "${p.group}" }<span class="ok">proposed</span></li>` : ""}<li><b>summarizeSelection</b>{ }<span class="ok">ready</span></li></ol>
+      <h3>Filter (CQL2)</h3><div class="cql" style="margin-top:0">${cqlText().replace(/</g, "&lt;")}</div>
+      ${p.group ? `<h3>Chart spec</h3><div class="spec">${JSON.stringify({ mark: p.chartKind === "time" ? "bar" : "bar", encoding: p.chartKind === "time" ? { x: { field: "created", timeUnit: "yearweek", type: "temporal" }, y: { aggregate: "count" } } : p.chartKind === "hist" ? { x: { field: p.group, bin: true }, y: { aggregate: "count" } } : { y: { field: p.group, type: "nominal" }, x: { aggregate: "count" } } }, null, 2)}</div>` : ""}
+      <div class="row wrap" style="gap:6px;margin-top:12px">${p.cites.map((c) => `<span class="cite">${c}</span>`).join("")}</div>
+      <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Shown before anything runs</span><span><svg class="ico"><use href="#i-check"/></svg>Changes your view only, never the data</span><span><svg class="ico"><use href="#i-check"/></svg>Cites every layer it read</span></div>`;
+  }
+  // chip edit / remove
+  document.getElementById("chips").addEventListener("click", (e) => {
+    const rm = e.target.closest("[data-qr]"), ed = e.target.closest("[data-qe]");
+    if (rm) { pushHist(); const k = rm.dataset.qr; if (k === "time") S.time = null; else if (k === "group") proposal = null; else S.attr.splice(+k, 1); setTimeInputs(); refresh(); renderNL(); return; }
+    if (ed) {
+      const i = +ed.dataset.qe, a = S.attr[i]; const cur = Array.isArray(a.v) ? a.v.join(", ") : a.v;
+      ed.outerHTML = `<span class="ql"><b>${LABEL(LAYERS[S.layer], a.f)}</b> ${a.op}</span><input data-qi="${i}" value="${String(cur).replace(/"/g, "&quot;")}" aria-label="Edit value for ${LABEL(LAYERS[S.layer], a.f)}">`;
+      const inp = document.querySelector(`[data-qi="${i}"]`); inp.focus(); inp.select();
+      const commit = () => { const v = inp.value.trim(); if (v && v !== String(cur)) { pushHist(); if (a.op === "between") { const nums = v.split(/\s*(?:[-–]|to|and)\s*/).map((x) => parseFloat(x.replace(/[$,]/g, ""))).filter((x) => !isNaN(x)); if (nums.length >= 2) a.v = nums.slice(0, 2); else if (nums.length === 1) { a.op = ">"; a.v = String(nums[0]); } } else a.v = Array.isArray(a.v) ? v.split(/\s*,\s*/) : v.replace(/[$,]/g, ""); refresh(); } renderNL(); };
+      inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(); } if (ev.key === "Escape") renderNL(); });
+      inp.addEventListener("blur", commit, { once: true });
+    }
+  });
+  document.getElementById("nlqProp").addEventListener("click", (e) => {
+    if (e.target.closest("#propOk")) { pushHist(); adoptChart(proposal); refresh(); renderNL(); document.getElementById("rt1").click(); document.querySelector(".rbody").scrollTop = 0; }
+    if (e.target.closest("#propNo")) { proposal = null; renderNL(); }
+  });
+  document.getElementById("nlqCqlD").addEventListener("toggle", (e) => { document.getElementById("nlqCql").hidden = !e.target.open; });
+  document.getElementById("nlqExplainBtn").addEventListener("click", (e) => { const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on); if (on) renderExplain(); else document.getElementById("nlqExp").hidden = true; });
+  document.getElementById("nlqForm").addEventListener("submit", (e) => { e.preventDefault(); runNL(document.getElementById("nlqIn").value); });
+  const sg = document.getElementById("nlqSugg"); sg.insertAdjacentHTML("beforeend", SUGGEST.slice(1).map((q) => `<button type="button" data-try="${q}">${q}</button>`).join("") + `<span class="sdk">mountAskMapControl suggestions</span>`);
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-try]"); if (b) { document.getElementById("nlqIn").value = b.dataset.try; runNL(b.dataset.try); } });
+  // ---- export / share / sdk ----
+  function download(name, text, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+  document.getElementById("expCsv").addEventListener("click", () => { const L = LAYERS[S.layer], rows = filtered(); const esc = (v) => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v; download(`maui-${S.layer}.csv`, [L.cols.map((c) => c[1]).join(","), ...rows.map((r) => L.cols.map((c) => esc(r[c[0]])).join(","))].join("\n"), "text/csv"); });
+  document.getElementById("expGj").addEventListener("click", () => { const L = LAYERS[S.layer], rows = filtered(); const byId = new Map(parcelsFC.features.map((f) => [f.properties.id, f.geometry])); download(`maui-${S.layer}.geojson`, JSON.stringify({ type: "FeatureCollection", features: rows.map((r) => { const { c, _i, ...props } = r; return { type: "Feature", properties: props, geometry: S.layer === "parcels" ? byId.get(r.id) : { type: "Point", coordinates: c } }; }) }), "application/geo+json"); });
+  function openShare() {
+    const view = { center: map.getCenter().toArray(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
+    const state = { ...snap(), view, sort: S.sort, tq: S.tq, selOnly: S.selOnly }; delete state.plan; delete state.prop;
+    const url = new URL(location.href); url.hash = "s=" + encodeURIComponent(JSON.stringify(state));
+    document.getElementById("shareLink").textContent = url.href;
+    document.getElementById("embedCode").textContent = `<iframe src="${url.href.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" width="100%" height="640" title="Maui analysis"></iframe>`;
+    document.getElementById("share").showModal();
+  }
+  document.getElementById("shareBtn").addEventListener("click", openShare);
+  document.getElementById("savedViews").addEventListener("click", (event) => { event.preventDefault(); openShare(); });
+  document.getElementById("copyShare").addEventListener("click", async (event) => {
+    try { await navigator.clipboard.writeText(document.getElementById("shareLink").textContent); event.target.textContent = "Copied"; }
+    catch { const range = document.createRange(); range.selectNodeContents(document.getElementById("shareLink")); getSelection().removeAllRanges(); getSelection().addRange(range); event.target.textContent = "Select and copy link"; }
+  });
+  document.getElementById("sdkBtn").addEventListener("click", (e) => { const on = document.body.classList.toggle("show-sdk"); e.currentTarget.setAttribute("aria-pressed", on); e.currentTarget.lastChild.textContent = on ? "Hide SDK controls" : "Show SDK controls"; });
+  function restoreSharedView() {
+    if (!location.hash.startsWith("#s=")) return;
+    try {
+      if (location.hash.length > 60000) throw new Error("Oversized view");
+      const h = JSON.parse(decodeURIComponent(location.hash.slice(3)));
+      if (!Object.hasOwn(LAYERS, h.layer)) throw new Error("Unknown layer");
+      const L = LAYERS[h.layer], fields = L.cols.map(([field]) => field);
+      const safeValue = (v) => typeof v === "number" ? Number.isFinite(v) : typeof v === "string" && v.length < 300 && !/[<>&"`]/.test(v);
+      const validClause = (a) => a && fields.includes(a.f) && ["=", "≠", ">", "<", "≥", "in", "not in", "between", "between-date", "contains"].includes(a.op) && (Array.isArray(a.v) ? a.v.length < 200 && a.v.every(safeValue) : safeValue(a.v));
+      const validPoint = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite) && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90;
+      if (!Array.isArray(h.attr) || h.attr.length > 30 || !h.attr.every(validClause)) throw new Error("Invalid filters");
+      if (!h.chartF || Object.keys(h.chartF).length > 30 || !Object.entries(h.chartF).every(([k, a]) => /^(bar|hist|scatter|time):[a-z_]+$/.test(k) && validClause(a))) throw new Error("Invalid chart filters");
+      if (!Array.isArray(h.charts) || h.charts.length > 15 || !h.charts.every((c) => ["bar", "hist", "scatter", "time"].includes(c.t) && fields.includes(c.f) && (!c.g || fields.includes(c.g)))) throw new Error("Invalid charts");
+      if (h.spatial && (!Array.isArray(h.spatial) || h.spatial.length > 1000 || !h.spatial.every(validPoint))) throw new Error("Invalid geometry");
+      if (h.time && (!Array.isArray(h.time) || h.time.length !== 2 || !h.time.every((t) => /^\d{4}-\d{2}-\d{2}$/.test(t)))) throw new Error("Invalid date range");
+      if (!Array.isArray(h.sel) || h.sel.length > 5000 || !h.sel.every(safeValue)) throw new Error("Invalid selection");
+      if (h.sort && (!Array.isArray(h.sort) || h.sort.length !== 2 || !fields.includes(h.sort[0]) || ![-1, 1].includes(h.sort[1]))) throw new Error("Invalid sort");
+      if (h.tq && !safeValue(h.tq)) throw new Error("Invalid search");
+      const v = h.view;
+      if (!v || !validPoint(v.center) || ![v.zoom, v.pitch, v.bearing].every(Number.isFinite) || v.zoom < 0 || v.zoom > 22 || v.pitch < 0 || v.pitch > 85) throw new Error("Invalid map view");
+      setLayer(h.layer);
+      Object.assign(S, { attr: h.attr, chartF: h.chartF, spatial: h.spatial, time: h.time, charts: h.charts.map(({ t, f, g }) => ({ t, f, ...(g ? { g } : {}) })), sel: new Set(h.sel), tq: h.tq || "", sort: h.sort || null, selOnly: h.selOnly === true });
+      lastPlan = null; proposal = null; document.getElementById("nlqOut").hidden = true;
+      document.getElementById("tq").value = S.tq; setTimeInputs(); refresh(); renderNL();
+      if (map.loaded()) map.jumpTo(v); else map.once("load", () => map.jumpTo(v));
+    } catch { document.getElementById("shareLink").textContent = "This shared view is invalid. The default snapshot is shown."; }
+  }
+  // wire date-aware attribute test and boot
+  setLayer("parcels");
+  runNL(document.getElementById("nlqIn").value); HIST.length = 0; updUndo();
+  function adoptChart(p) {
+    const i = S.charts.findIndex((c) => c.t === p.t && c.f === p.f && (c.g || "") === (p.g || ""));
+    if (i >= 0) { const [c] = S.charts.splice(i, 1); S.charts.unshift({ ...c, agent: true }); } else S.charts.unshift({ ...p });
+  }
+  if (proposal) { adoptChart(proposal); refresh(); renderNL(); }
+  restoreSharedView();
+})();
+</script>
+</body>
+</html>

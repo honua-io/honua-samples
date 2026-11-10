@@ -8,7 +8,10 @@ export async function buildStateLocalSite({ repoRoot, siteDir }) {
   const output = path.join(siteDir, 'state-local');
   const assets = path.join(output, 'assets');
   await mkdir(assets, { recursive: true });
-  await cp(path.join(source, 'index.html'), path.join(output, 'index.html'));
+  const landing = path.join(output, 'index.html');
+  if (!(await stat(landing).catch(() => null))?.isFile()) {
+    await cp(path.join(source, 'index.html'), landing);
+  }
   await cp(path.join(source, 'overview.css'), path.join(assets, 'overview.css'));
   await cp(path.join(sample, 'src/tokens.css'), path.join(assets, 'tokens.css'));
   const shared = await readFile(path.join(sample, 'src/shared.css'), 'utf8');
