@@ -191,6 +191,15 @@ separate; none of these checks establishes a released demo or an agent eval pass
 
 ## Bounded shared load
 
+Staging checks every prepared layer against the pinned default server's geometry
+budget before making any server request: 10,000 vertices and 100 total polygon
+rings per feature. Single-layer uploads use the same check. An excess stops the
+load with the original source feature ID and measured counts; no geometry is
+discarded. Resolve the supported import contract before staging complex public
+coastal or regulatory layers. Preparation and valid checksums alone do not prove
+importability, and this size check does not validate topology or predict geometry
+repair outcomes. Rollback remains available for previously staged layers.
+
 The shared loader prepares the nine property layers as display geometry in EPSG:4326
 with a 0.00002-degree simplification tolerance and six decimal places. These layers
 are for public display, not legal boundary measurement. No source raster is loaded.

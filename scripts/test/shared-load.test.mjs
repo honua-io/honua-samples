@@ -10,13 +10,14 @@ import { uploadSnapshotTable } from '../state-local/import.mjs';
 const json = (body) => new Response(JSON.stringify(body));
 const polygon = { type: 'Polygon', coordinates: [[[-156.5, 20.8], [-156.49, 20.8], [-156.49, 20.81], [-156.5, 20.8]]] };
 
-async function prepared(t) {
+async function prepared(t, lastLayerGeometry = polygon) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'honua-shared-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   t.mock.method(globalThis, 'fetch', async (input) => {
     const url = new URL(input);
     if (url.pathname.endsWith('/query')) return json(url.searchParams.has('returnIdsOnly') ? { objectIds: [1] }
-      : { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { objectid: 1 }, geometry: polygon }] });
+      : { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { objectid: 1 },
+        geometry: url.pathname.includes('/Climate/') ? lastLayerGeometry : polygon }] });
     if (url.searchParams.get('f') === 'json') return json({ name: 'Maui source', fields: [{ name: 'objectid', type: 'esriFieldTypeOID' }],
       extent: { spatialReference: { wkid: 102202, latestWkid: 3750 } } });
     return new Response(url.pathname.endsWith('.pdf') ? 'source summary' : 'The contents of this web page are public domain');
@@ -34,6 +35,19 @@ test('shared prepare is repeatable and binds every layer byte to the reviewed in
   const file = path.join(directory, `${loadSources[0]}.geojson`);
   await writeFile(file, `${await readFile(file, 'utf8')} `);
   await assert.rejects(verifyPlan(directory, plan.planSha256), /checksum/);
+});
+
+test('shared stage preflights every geometry before any server request while rollback remains available', async (t) => {
+  const geometry = { type: 'MultiPolygon', coordinates: Array.from({ length: 101 }, () => polygon.coordinates) };
+  const { directory, plan } = await prepared(t, geometry);
+  let requests = 0;
+  globalThis.fetch = async () => { requests++; throw new Error('server contacted'); };
+  const env = { baseUrl: 'https://server.test', adminApiKey: 'private-key' };
+  const request = { directory, expectedSha256: plan.planSha256 };
+  await assert.rejects(runSharedLoad(env, { ...request, action: 'stage' }), /101 rings \(maximum 100\)/);
+  assert.equal(requests, 0);
+  await assert.rejects(runSharedLoad(env, { ...request, action: 'rollback' }), /server contacted/);
+  assert.equal(requests, 1);
 });
 
 test('URL imports use the import API and require physical table and exact count receipts', async (t) => {
