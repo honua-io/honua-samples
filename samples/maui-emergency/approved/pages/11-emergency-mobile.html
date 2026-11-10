@@ -96,7 +96,7 @@
     <div class="m-map map" id="map" role="region" aria-label="Evacuation map"></div>
     <div class="keys" aria-label="Map key">
       <span><span class="lg-sw" style="background:color-mix(in srgb, var(--hz-tsu) 45%, var(--c-surface))"></span>Evacuation zone</span>
-      <span><span class="lg-sw" style="background:color-mix(in srgb, var(--hz-tsux) 35%, var(--c-surface))"></span>Extreme zone</span>
+      <span><span class="lg-sw" style="background:color-mix(in srgb, var(--hz-tsux) 35%, var(--c-surface))"></span>Extreme zone · not in snapshot</span>
       <span><span class="lg-pt" style="background:var(--c-ok)"></span>Open shelter</span>
       <span><span class="lg-pt" style="background:var(--c-neutral)"></span>Not activated in exercise</span>
       <span><span class="lg-ln" style="border-color:var(--c-danger)"></span>Closed road</span>
@@ -155,8 +155,7 @@
   document.getElementById("resText").textContent = inEvac ? "Exercise only. Sample point and straight-line connection are not navigation or an evacuation route." : "Exercise only. Follow official county alerts during a real emergency.";
   document.getElementById("nearName").textContent = near.label;
   document.getElementById("nearMeta").textContent = `${km(near.d)} straight-line · ${near.addr} · ${near.pct > 75 ? "filling" : "space available"}`;
-  document.getElementById("shelters").innerHTML = open.map((s) => `<div class="row-item"><span>${s.label}</span><span class="chip ${s.pct > 75 ? "warn" : "ok"}">${s.pct > 75 ? "Filling" : "Space"}</span><small>${km(s.d)} · ${s.addr}${s.pets ? " · pets OK" : ""}</small></div>`).join("") +
-    `<div class="row-item"><span>UH Maui College</span><span class="chip">Not activated</span><small>Fictional exercise status</small></div>`;
+  document.getElementById("shelters").innerHTML = open.map((s) => `<div class="row-item"><span>${s.label}</span><span class="chip ${s.pct > 75 ? "warn" : "ok"}">${s.pct > 75 ? "Filling" : "Space"}</span><small>${km(s.d)} · ${s.addr}${s.pets ? " · pets OK" : ""}</small></div>`).join("");
 
   HM.create(document.getElementById("map"), {
     bounds: [[-156.488, 20.874], [-156.462, 20.896]], padding: 12, nav: false, roadLabels: false,

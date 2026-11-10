@@ -1,5 +1,5 @@
 // Assemble the approved UI with attested display geometry and fictional exercise records.
-import { approvedPage } from '../../scripts/lib/approved-page.mjs';
+import { approvedPage } from '../../shared/state-local/approved-page.mjs';
 import { readFile, writeFile, mkdir, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';

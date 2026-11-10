@@ -151,7 +151,7 @@
     <div class="map-legend legend" aria-label="Legend">
       <details open><summary><svg class="ico"><use href="#i-layers"/></svg>Legend and layers</summary><div class="toggles">
       <label class="layer-toggle"><input type="checkbox" checked data-layers="tsunami,tsunami-line">Evacuation zone<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-tsu) 45%, var(--c-surface));margin-left:auto"></span></label>
-      <label class="layer-toggle"><input type="checkbox" checked data-layers="tsunami-x">Extreme zone<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-tsux) 35%, var(--c-surface));margin-left:auto"></span></label>
+      <label class="layer-toggle"><input type="checkbox" disabled data-layers="tsunami-x">Extreme zone · not in snapshot<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-tsux) 35%, var(--c-surface));margin-left:auto"></span></label>
       <label class="layer-toggle"><input type="checkbox" data-layers="flood,flood-line">FEMA flood<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-flood) 40%, var(--c-surface));margin-left:auto"></span></label>
       <label class="layer-toggle"><input type="checkbox" data-layers="slr">Sea level +3.2 ft<span class="lg-sw" style="background:color-mix(in srgb, var(--hz-slr) 40%, var(--c-surface));margin-left:auto"></span></label></div>
       <div class="grp sym">
@@ -199,7 +199,7 @@
       </div>
 
       <div class="approval" style="margin-top:12px">
-        <div class="row"><svg class="ico" style="color:var(--c-warn)"><use href="#i-agent"/></svg><b style="font-size:13px">Proposal: send new arrivals from Baldwin High to Maui High</b></div>
+        <div class="row"><svg class="ico" style="color:var(--c-warn)"><use href="#i-agent"/></svg><b style="font-size:13px">Exercise proposal: compare available shelter capacity</b></div>
         <p style="font-size:13px;margin-top:6px" id="balanceText"></p>
         <div class="who" style="margin-top:6px">Demo answer · proposed by the shelter agent · 09:38 · one approval needed (Mass care lead)</div>
         <div class="actions" style="margin-top:10px"><button class="btn primary sm" disabled title="Coming soon" type="button">Approve</button><button class="btn sm" disabled title="Coming soon" type="button">Decline</button><button class="btn ghost sm" type="button" data-cite="balance">Show on map</button></div>
@@ -296,7 +296,7 @@
     ...HD.fire.features.map((f, i) => ({ kind: "Fire station", name: f.properties.name.replace(/^(\w+) \((E\d+)\)$/, "$1 Fire Station ($2)"), id: "fire/" + [96, 97][i], c: f.geometry.coordinates })),
     ...HD.police.features.map((f) => ({ kind: "Police", name: f.properties.name, id: "police/6", c: f.geometry.coordinates })),
     ...HD.hospitals.features.map((f) => ({ kind: "Hospital", name: f.properties.name, id: "hospitals/16", c: f.geometry.coordinates })),
-    ...HD.schools.features.map((f) => ({ kind: "School", name: f.properties.name, id: "schools/" + f.properties.name.toLowerCase().replace(/\s+/g, "-"), c: f.geometry.coordinates })),
+    ...HD.schools.features.filter((f) => !HD.shelters.features.some((s) => s.geometry.coordinates.join() === f.geometry.coordinates.join())).map((f) => ({ kind: "School", name: f.properties.name, id: "schools/" + f.properties.name.toLowerCase().replace(/\s+/g, "-"), c: f.geometry.coordinates })),
   ];
   const uniq = (a) => a.filter((f, i) => a.findIndex((g) => g.name === f.name) === i);
   const inEvac = uniq(facilities.filter((f) => inZone(f.c, 1)));
@@ -305,7 +305,7 @@
   const cite = (id, key) => `<button class="cite" data-cite="${key || "fly"}" data-id="${id}">${id}</button>`;
 
   document.getElementById("exposure").innerHTML =
-    `<p><b>${inEvac.length} facilities are inside the evacuation zone</b> and ${inExtreme.length} more are inside the extreme zone only. I checked ${facilities.length} facilities against the zone polygons.</p>
+    `<p><b>${inEvac.length} facilities are inside the evacuation zone</b> ${zone(2).length ? `and ${inExtreme.length} more are inside the extreme zone only.` : "The extreme zone is not included in this snapshot."} I checked ${facilities.length} facilities against the zone polygons.</p>
      <table class="tbl" style="margin-top:6px"><tbody>
      ${inEvac.map((f) => `<tr><td><span class="chip warn" style="height:20px">Evacuation</span></td><td>${f.name}<span class="id">${f.kind}</span></td><td class="r">${cite(f.id)}</td></tr>`).join("")}
      ${inExtreme.map((f) => `<tr><td><span class="chip" style="height:20px">Extreme</span></td><td>${f.name}<span class="id">${f.kind}</span></td><td class="r">${cite(f.id)}</td></tr>`).join("")}
@@ -313,13 +313,13 @@
      <p class="muted" style="margin-top:8px">Demo answer: facility exposure is a snapshot intersection, not an evacuation order. Resource movements are fictional. ${cite("hospitals/16")}.</p>`;
 
   const baldwin = shelters.find((s) => s.label === "Baldwin High"), mauiHigh = shelters.find((s) => s.label === "Maui High");
-  document.getElementById("balanceText").innerHTML = `Baldwin High is at <b>${pct(baldwin)}%</b> (${fmt(baldwin.occ)} of ${fmt(baldwin.cap)}) and a fictional exercise shelter. Maui High has <b>${fmt(mauiHigh.cap - mauiHigh.occ)}</b> spaces free and the highlighted road statuses are fictional exercise records. ${cite("shelters/149", "baldwin")} ${cite("shelters/142", "mauihigh")} ${cite("road-status/kaahumanu", "roads")}`;
+  document.getElementById("balanceText").innerHTML = `Baldwin High is at <b>${pct(baldwin)}%</b> (${fmt(baldwin.occ)} of ${fmt(baldwin.cap)}) and a fictional exercise shelter. Maui High has <b>${fmt(mauiHigh.cap - mauiHigh.occ)}</b> spaces free and the highlighted road statuses are fictional exercise records. ${cite("shelters/" + baldwin.fid, "baldwin")} ${cite("shelters/" + mauiHigh.fid, "mauihigh")} ${cite("road-status/kaahumanu", "roads")}`;
 
   document.getElementById("sitrep").innerHTML = `<ol>
     <li><b>Situation.</b> Simulated tsunami warning in effect since 08:52 HST; simulated first wave 12:10 HST. ${cite("nws/HIZ016-exercise", "feeds")} ${cite("ptwc/msg-7", "feeds")} Demo tide gauge reads +0.42 ft above predicted. ${cite("noaa/1615680", "feeds")}</li>
     <li><b>Evacuation.</b> Exercise zones are highlighted; no real warning is active on this page. Parcel exposure has not been verified in this exercise. ${cite("tsunami/zone-1", "zone")} ${cite("query/parcels-in-zone", "zone")}</li>
-    <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.map((f) => f.name).join(", ")} is in the extreme zone only. ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
-    <li><b>Shelters.</b> ${open.length} of ${shelters.length} open; ${fmt(totOcc)} of ${fmt(totCap)} spaces used (${Math.round((totOcc / totCap) * 100)}%). Baldwin High at ${pct(baldwin)}%. ${cite("shelters/*", "shelters")} ${cite("shelters/149", "baldwin")}</li>
+    <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.length ? inExtreme.map((f) => f.name).join(", ") + " are in the extreme zone only." : "Extreme-zone exposure is unavailable in this snapshot."} ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
+    <li><b>Shelters.</b> ${open.length} of ${shelters.length} open; ${fmt(totOcc)} of ${fmt(totCap)} spaces used (${Math.round((totOcc / totCap) * 100)}%). Baldwin High at ${pct(baldwin)}%. ${cite("shelters/*", "shelters")} ${cite("shelters/" + baldwin.fid, "baldwin")}</li>
     <li><b>Roads.</b> Fictional scenario: 3 closed roads; Waiehu Beach Rd in contraflow. ${cite("road-status/*", "roads")}</li>
     <li><b>Resources.</b> 5 open requests, 1 critical: 150 kW generator for Baldwin High. ${cite("eoc-board/RR-114", "rr")}</li>
     <li><b>Systems.</b> Simulated deployment and outage; no county system connection.</li>

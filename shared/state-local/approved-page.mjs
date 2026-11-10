@@ -12,6 +12,6 @@ export async function approvedPage({ template, assets, data }) {
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script><style>${css}</style>`;
   const html = await readFile(template, 'utf8');
-  return html.replace('{{HEAD}}', head).replace('{{ICONS}}', icons).replace('{{MAPJS}}', kit)
+  return html.replace('{{HEAD}}', () => head).replace('{{ICONS}}', () => icons).replace('{{MAPJS}}', () => kit)
     .replace(/\{\{DATA [^}]*\}\}/g, () => `<script>window.HD=${JSON.stringify(data).replaceAll('</', '<\\/')};</script>`);
 }
