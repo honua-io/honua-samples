@@ -51,6 +51,17 @@ class NumericDepthTests(unittest.TestCase):
             self.assertFalse(values.mask[512, 650])
             self.assertIn(float(values[512, 650]), np.arange(64) / 8)
 
+    def test_prepared_raster_closes_when_conversion_fails(self):
+        self.write_source()
+        with rasterio.open(self.source) as original:
+            with self.assertRaisesRegex(RuntimeError, "conversion failed"):
+                with depth.reproject_depth(original) as cropped:
+                    self.assertFalse(cropped.closed)
+                    self.assertEqual(cropped.crs.to_epsg(), 3857)
+                    raise RuntimeError("conversion failed")
+            self.assertTrue(cropped.closed)
+            self.assertFalse(original.closed)
+
     def test_rejects_wrong_crs_and_nodata(self):
         for crs, nodata, message in [("EPSG:4326", depth.SOURCE_NODATA, "source CRS"),
                                       ("EPSG:26904", -9999, "source NoData")]:

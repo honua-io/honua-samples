@@ -2,6 +2,7 @@
 
 import argparse
 import json
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -42,19 +43,23 @@ def verify_source(original):
         raise ValueError("Unexpected NOAA source NoData")
 
 
-def reproject_depth(original, memory):
+@contextmanager
+def reproject_depth(original):
     bounds = transform_bounds("EPSG:4326", "EPSG:3857", *BOUNDS)
     width, height = OUTPUT_SIZE
     profile = {"driver": "GTiff", "width": width, "height": height,
                "count": 1, "dtype": "float32", "crs": "EPSG:3857",
                "transform": from_bounds(*bounds, width, height), "nodata": OUTPUT_NODATA}
-    with memory.open(**profile) as cropped:
-        reproject(source=rasterio.band(original, 1), destination=rasterio.band(cropped, 1),
-                  src_nodata=SOURCE_NODATA, dst_nodata=OUTPUT_NODATA,
-                  resampling=Resampling.nearest)
-        cropped.update_tags(scenario="+3 ft above MHHW", units="metres above ground",
-                            attribution=ATTRIBUTION, warning=WARNING)
-        cropped.set_band_description(1, "Modeled ocean-connected inundation depth (metres)")
+    with MemoryFile() as memory:
+        with memory.open(**profile) as cropped:
+            reproject(source=rasterio.band(original, 1), destination=rasterio.band(cropped, 1),
+                      src_nodata=SOURCE_NODATA, dst_nodata=OUTPUT_NODATA,
+                      resampling=Resampling.nearest)
+            cropped.update_tags(scenario="+3 ft above MHHW", units="metres above ground",
+                                attribution=ATTRIBUTION, warning=WARNING)
+            cropped.set_band_description(1, "Modeled ocean-connected inundation depth (metres)")
+        with memory.open() as cropped:
+            yield cropped
 
 
 def source_cell_oracle(original, result, values):
@@ -92,10 +97,9 @@ def inspect_output(source, target):
 
 
 def crop_depth(source, target):
-    with rasterio.open(source) as original, MemoryFile() as memory:
+    with rasterio.open(source) as original:
         verify_source(original)
-        reproject_depth(original, memory)
-        with memory.open() as cropped:
+        with reproject_depth(original) as cropped:
             copy_raster(cropped, target, driver="COG", BLOCKSIZE=256,
                         COMPRESS="DEFLATE", OVERVIEWS="AUTO", RESAMPLING="NEAREST")
     return inspect_output(source, target)
