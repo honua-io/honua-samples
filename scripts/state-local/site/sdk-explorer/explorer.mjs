@@ -56,7 +56,7 @@ function selectSample(sample) {
   if (preview) {
     const url = new URL(preview.url, location.origin);
     if (url.origin !== location.origin || !url.pathname.endsWith('/') && !url.pathname.endsWith('.html')) throw new Error('Invalid verified preview URL');
-    $('#sample-provenance').textContent = `Runnable preview · ${({ fixture: 'Demo records', hybrid: 'Real data and demo records', live: 'Live data', 'public-live': 'Public live data', 'local-integration': 'Local integration data' })[preview.dataMode] ?? preview.dataMode ?? 'Unknown data mode'} · built from ${preview.commit ?? 'unknown commit'}. Fixture and hybrid modes include demo records.`;
+    $('#sample-provenance').textContent = `Runnable preview · ${preview.dataModeLabel ?? 'Unknown data mode'} · built from ${preview.commit ?? 'unknown commit'}. Fixture and hybrid modes include demo records.`;
     const iframe = document.createElement('iframe'); iframe.src = url.href; iframe.title = `${sample.title} — running sample`;
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
     $('#preview').append(iframe); $('#open-preview').href = url.href;

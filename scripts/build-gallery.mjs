@@ -85,6 +85,7 @@ import {
   movedEntries,
   publicSampleIds,
 } from "./lib/gallery-public-portfolio.mjs";
+import { DATA_MODE_LABELS } from "./lib/data-mode-labels.mjs";
 import { buildStateLocalSite, validateStateLocalLinks } from "./state-local/build-site.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
 import {
@@ -818,12 +819,7 @@ function runBadgeHtml(badge) {
 // never a broken/empty iframe; own-repo headless/CLI samples always get the
 // labeled headless panel, never a fake embed.
 
-const DATA_MODE_LABELS = {
-  fixture: "fixture mode",
-  hybrid: "hybrid mode",
-  "public-live": "public-live mode",
-  live: "live mode",
-};
+
 
 function renderEmbedPanel(card) {
   const { bundleSample } = card;

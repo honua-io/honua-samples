@@ -59,6 +59,7 @@ try {
   catalog.samples[0].readme = '<table><tbody><tr><td>Table cell</td></tr></tbody></table><script>window.explorerXss=true</script><img src=x onerror="window.explorerXss=true"><a href="javascript:alert(1)">Bad link</a>';
   await page.route('**/sdk-explorer/catalog.json', (route) => route.fulfill({ json: catalog }));
   await page.goto(`${base}/state-local/sdk-explorer/#${catalog.samples[0].repo}:${catalog.samples[0].id}`);
+  await page.reload();
   await page.locator('#tab-readme').click();
   await expect(page.locator('#readme td')).toHaveText('Table cell');
   await expect(page.locator('#readme script, #readme img, #readme a[href]')).toHaveCount(0);

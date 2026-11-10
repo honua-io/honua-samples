@@ -1,6 +1,7 @@
 // The standalone sample owns shared assets so clean sample exports remain buildable.
 import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { DATA_MODE_LABELS } from '../lib/data-mode-labels.mjs';
 import { sampleAppPath } from '../lib/sample-app-url.mjs';
 
 export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
@@ -16,7 +17,7 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
     const app = card.ownApp ?? card.bundleSample;
     return [`${card.sourceRepo === 'honua-sdk-js' ? 'sdk-js' : 'samples'}:${card.id}`, {
       url: `${card.detailPath}${sampleAppPath(app)}`,
-      dataMode: app.dataMode, commit: app.builtFrom?.commit,
+      dataMode: app.dataMode, dataModeLabel: DATA_MODE_LABELS[app.dataMode] ?? app.dataMode, commit: app.builtFrom?.commit,
     }];
   }));
   await writeFile(path.join(output, 'sdk-explorer/previews.json'), JSON.stringify(previews));
