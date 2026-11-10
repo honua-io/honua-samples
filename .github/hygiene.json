@@ -17,6 +17,7 @@
     "samples/",
     "schemas/",
     "scripts/",
+    "shared/",
     "site/",
     "templates/",
     "vendor/"
