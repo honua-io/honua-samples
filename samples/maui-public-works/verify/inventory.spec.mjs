@@ -66,7 +66,7 @@ test('PW-01/02/03/04: real-server inventory, condition filters, board and exact 
   await expect(page.locator('#detail')).toContainText('maui-roads:1');
   await expect(page.locator('#detail')).toContainText('inspection-9');
   await expect(page.locator('#detail')).not.toContainText('inspection-2');
-  await page.getByLabel('Work-order stage').selectOption('exercise_closed');
+  await page.getByLabel('Work-order stage', { exact: true }).selectOption('exercise_closed');
   await expect(page.locator('#rows tr')).toHaveCount(6);
   await page.getByLabel('Find record or crew').fill('nonexistent');
   await expect(page.locator('#rows tr')).toHaveCount(0);
