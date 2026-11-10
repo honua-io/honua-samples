@@ -19,7 +19,7 @@ export const EXAMPLE_TMK = "234008053";
 /** URL parameters that choose data, carried into every share link. */
 export const PLANNING_PARAMS = ["stateLandUseUrl", "smaUrl", "growthBoundariesUrl", "growthAreasUrl", "tsunamiUrl", "seaLevelRiseUrl"] as const;
 export type PlanningKey = typeof PLANNING_PARAMS[number];
-export const LAYER_PARAMS = ["baseUrl", "parcelsUrl", "zoningUrl", "floodUrl", "parcelTilesUrl", "basemap", ...PLANNING_PARAMS] as const;
+export const LAYER_PARAMS = ["baseUrl", "parcelsUrl", "zoningUrl", "floodUrl", "parcelTilesUrl", "buildingsUrl", "basemap", ...PLANNING_PARAMS] as const;
 
 export interface ViewerConfig {
   readonly baseUrl: string;
@@ -28,6 +28,7 @@ export interface ViewerConfig {
   readonly floodUrl: string;
   /** null when outlines are turned off. */
   readonly parcelTilesUrl: string | null;
+  readonly buildingsUrl: string | null;
   /** null when the basemap is turned off. */
   readonly basemapUrl: string | null;
   readonly geocoderLocator: string;
@@ -42,12 +43,14 @@ function trimSlash(value: string): string {
 export function readConfig(params: URLSearchParams): ViewerConfig {
   const baseUrl = trimSlash(params.get("baseUrl") || DEFAULT_BASE_URL);
   const tiles = params.get("parcelTilesUrl");
+  const buildings = params.get("buildingsUrl");
   return {
     baseUrl,
     parcelsUrl: trimSlash(params.get("parcelsUrl") || `${baseUrl}/rest/services/maui-parcels/FeatureServer/1`),
     zoningUrl: trimSlash(params.get("zoningUrl") || `${baseUrl}/rest/services/maui-zoning/FeatureServer/2`),
     floodUrl: trimSlash(params.get("floodUrl") || `${baseUrl}/rest/services/maui-flood-hazard/FeatureServer/4`),
     parcelTilesUrl: tiles === "none" ? null : trimSlash(tiles || `${baseUrl}/api/v1/tiles/pmtiles/maui-parcels-static`),
+    buildingsUrl: buildings === "none" ? null : trimSlash(buildings || `${baseUrl}/api/v1/tiles/pmtiles/maui-buildings-static`),
     basemapUrl: params.get("basemap") === "none" ? null : `${baseUrl}/api/v1/tiles/pmtiles/maui-basemap`,
     geocoderLocator: "World",
     planning: Object.fromEntries(PLANNING_PARAMS.map((key) => [key, params.get(key) ? trimSlash(params.get(key)!) : null])) as ViewerConfig["planning"],

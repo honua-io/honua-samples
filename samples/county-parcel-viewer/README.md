@@ -37,6 +37,7 @@ and writes the static app to `dist/`; any static file server can host it, at any
 | `src/data.ts` | `connect()` discovers each FeatureServer layer with a client whose `fetchFn` is the request logger. `QueryBuilder` then runs the TMK lookup (`where=tmk_txt='<9 digits>'`), the point identify for a map click or a geocoded address, and the zoning and flood candidate queries, sent as `POST` with the parcel polygon as `geometry`. |
 | `src/overlap.ts` | Converts the Esri JSON answers to GeoJSON, groups polygons by `zone_code` / `fld_zone`, merges each group with `union`, clips it to the parcel with `intersect` and measures it with `area` (geodesic m²), all from `@honua/sdk-js/geometry`. |
 | `src/map.ts` | MapLibre draws the server's Protomaps basemap and the parcel outlines from the static PMTiles archive `maui-parcels-static`, mounted with `registerPmtilesSource` from `@honua/sdk-js/pmtiles` and the `pmtiles` protocol. The selected parcel is a filter on those tiles. |
+| `src/buildings.ts` | The 2D/3D control uses the published SDK's `scene-workspace` extrusion adapter and Overture building PMTiles on the same server. |
 | `src/tmk.ts` | TMK input: spaces, `-`, `:` and `.` are stripped and only `^[0-9]{9}$` is accepted, so `2-1-5-010:077` searches `215010077`. Anything else shows "Not a valid TMK" and sends no request. |
 | `src/main.ts` | The results panel, its loading, empty, error and retry states, history (`pushState` per lookup, Back re-renders), and the share links. |
 | `src/request-log.ts` | "Technical details (requests this page made)" lists every FeatureServer and GeocodeServer request and every PMTiles byte-range read. |
@@ -73,9 +74,18 @@ Every default is on one Honua server. URL parameters point the same build somewh
 | `zoningUrl` | `<baseUrl>/rest/services/maui-zoning/FeatureServer/2` | Zoning layer with `zone_code` and `zone_dist`. |
 | `floodUrl` | `<baseUrl>/rest/services/maui-flood-hazard/FeatureServer/4` | Flood layer with `fld_zone` (A, AE, AH, AO, D, V, VE, X). |
 | `parcelTilesUrl` | `<baseUrl>/api/v1/tiles/pmtiles/maui-parcels-static` | PMTiles archive of parcel outlines (source layer `layer`, attribute `tmk_txt`). `none` turns outlines off; clicking still identifies. |
+| `buildingsUrl` | `<baseUrl>/api/v1/tiles/pmtiles/maui-buildings-static` | Overture building footprints for optional 3D context. Source layer `layer`, height in metres in `render_height`. `none` removes the 3D control. |
 | `basemap` | (on) | `none` skips the server's `maui-basemap` PMTiles basemap. |
 
 Share links keep these parameters. There is no field mapping: your layers need the field names above.
+
+The existing demo building archive contains 42,674 Overture footprints from release `2026-05-20.0`,
+clipped to Maui Nui. Attribution: **Overture Maps Foundation · © OpenStreetMap contributors**,
+licensed under [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
+The archive's `render_height` uses the reported height, floors × 3 metres, or a 4 metre fallback;
+the 3D view displays this limitation. These are contextual estimates, not surveyed elevations.
+The SDK `scene-workspace` export remains available in the pinned 0.3.x release; its documented
+successor is `@honua/app-platform/scene-workspace` for a future SDK upgrade.
 
 ## Verification
 
