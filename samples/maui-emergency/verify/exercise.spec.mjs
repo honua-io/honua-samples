@@ -44,18 +44,27 @@ test('EM-01 bounded slice: real-server map, fictional capacity, filters and keyb
   await ready(page);
   await expect(page.locator('#map-status')).toContainText('33 records mapped');
   const canvas = page.locator('#map canvas');
-  const size = await canvas.boundingBox();
-  const pixels = await readPixels(page, canvas, Array.from({ length: 100 }, (_, i) => [
-    Math.floor(size.width * ((i % 10) + .5) / 10), Math.floor(size.height * (Math.floor(i / 10) + .5) / 10)]));
-  expect(pixels.some(({ r, g, b }) => (r > g * 1.2 && r > b * 1.2) || (g > r * 1.2 && g > b * 1.2))).toBe(true);
+  await expect(page.locator('[data-geometry-source]').first()).toContainText('Synthetic validation geometry');
+  const search = page.getByLabel('Find record or anchor');
+  for (const [anchor, color] of [['maui-public-schools:30', 'teal'], ['exercise_closure-3', 'amber']]) {
+    await search.fill(anchor);
+    await expect(page.locator('#map-status')).toContainText('1 records mapped');
+    await settleMapCanvas(page);
+    const size = await canvas.boundingBox();
+    const [pixel] = await readPixels(page, canvas, [[Math.floor(size.width / 2), Math.floor(size.height / 2)]]);
+    if (color === 'teal') expect(pixel.g > pixel.r * 2 && pixel.b > pixel.r * 2).toBe(true);
+    else expect(pixel.r > pixel.g * 1.2 && pixel.g > pixel.b * 1.2).toBe(true);
+  }
+  await search.fill('');
+  await expect(page.locator('#map-status')).toContainText('33 records mapped');
   await expect(page.locator('#metrics')).toContainText('2,000');
   await expect(page.locator('#metrics')).toContainText('400');
   await expect(page.locator('#rows tr')).toHaveCount(25);
   await page.getByRole('button', { name: 'Show more records' }).click();
   await expect(page.locator('#rows tr')).toHaveCount(33);
-  await page.getByRole('combobox', { name: /^Resource/ }).selectOption('exercise_closure');
+  await page.getByRole('combobox', { name: 'Resource', exact: true }).selectOption('exercise_closure');
   await expect(page.locator('#rows tr')).toHaveCount(3);
-  await page.getByRole('combobox', { name: /^Exercise status/ }).selectOption('exercise_open');
+  await page.getByRole('combobox', { name: 'Exercise status', exact: true }).selectOption('exercise_open');
   await expect(page.locator('#rows tr')).toHaveCount(1);
   const record = page.locator('#rows').getByRole('button', { name: 'exercise_closure-1', exact: true });
   await record.focus();
@@ -82,7 +91,9 @@ test('EM-01 bounded slice: timer displays changed server data, failed refresh hi
   expect(objectIdField).toBeTruthy();
   const edit = await adminFetch(serverEnv(), { method: 'POST', apiPath: `${new URL(layerUrl).pathname}/applyEdits`,
     body: { updates: [{ attributes: { [objectIdField]: attributes[objectIdField], occupancy: 35 } }] } });
-  expect(edit.updateResults?.[0]?.success).toBe(true);
+  expect(edit.updateResults?.[0]?.success, JSON.stringify(edit)).toBe(true);
+  await page.locator('#rows').getByRole('button', { name: 'exercise_shelter-1', exact: true }).click();
+  await expect(page.locator('#detail')).toBeFocused();
   const firstCheck = await page.locator('#freshness').getAttribute('data-verified-at');
   let queries = 0;
   page.on('request', (request) => { if (request.url().includes('/query?')) queries++; });
@@ -90,6 +101,8 @@ test('EM-01 bounded slice: timer displays changed server data, failed refresh hi
   await expect.poll(() => queries).toBeGreaterThanOrEqual(2);
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
   await expect(page.locator('#metrics')).toContainText('35');
+  await expect(page.locator('#detail')).toBeFocused();
+  await expect(page.locator('#detail')).toContainText('35');
   await expect(page.locator('#freshness')).not.toHaveAttribute('data-verified-at', firstCheck);
   await page.route('**/query?**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"Unavailable"}' }));
   await page.getByRole('button', { name: 'Refresh now', exact: true }).click();
@@ -120,6 +133,7 @@ test('EM-01 bounded slice: desktop and mobile light/dark layouts keep selected d
     if (await page.locator('html').getAttribute('data-theme') !== theme) await page.locator('.theme-toggle').click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await settleMapCanvas(page);
+    if (width === 390) expect((await page.locator('#map').boundingBox()).y).toBeLessThan(height);
     await page.screenshot({ path: info.outputPath(`emergency-${name}.png`), fullPage: true });
   }
   await page.locator('#rows').getByRole('button', { name: 'exercise_shelter-1', exact: true }).click();

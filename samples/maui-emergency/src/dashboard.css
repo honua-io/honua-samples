@@ -3,3 +3,16 @@
 #freshness { font-size: 13px; font-variant-numeric: tabular-nums; }
 #records { margin-top: 32px; }
 @media (max-width: 640px) { nav { gap: 20px; flex-wrap: wrap; }.app-name { max-width: 160px; } }
+
+@media (max-width: 640px) {
+  #dashboard { display: flex; flex-direction: column; }
+  #dashboard[hidden] { display: none; }
+  .workspace { order: -2; }
+  .filters { order: -1; }
+  .metrics { margin: 12px 0; }
+  .heading { flex-direction: row; gap: 12px; }
+  h1 { font-size: 22px; }
+  .heading p { font-size: 13px; }
+  #load-status { padding: 0; font-size: 13px; margin-bottom: 8px; }
+  #freshness { font-size: 12px; margin-bottom: 12px; }
+}

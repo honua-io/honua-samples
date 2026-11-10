@@ -7,8 +7,12 @@ export function createFeatureMap(options) {
     attributionControl: false });
   map.addControl(new library.NavigationControl(), 'top-left');
   map.addControl(new library.AttributionControl({ compact: true, customAttribution: attribution }));
+  const updateTheme = () => { if (map.getLayer('background')) map.setPaintProperty('background', 'background-color',
+    getComputedStyle(document.documentElement).getPropertyValue('--map-land').trim() || '#eef1ec'); };
+  new MutationObserver(updateTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   map.on('error', options.onError);
   map.on('load', () => {
+    updateTheme();
     map.addSource('records', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     map.addLayer({ id: 'record-lines', type: 'line', source: 'records', filter: ['==', ['geometry-type'], 'LineString'],
       paint: { 'line-color': color, 'line-width': 5, 'line-opacity': .85 } });
@@ -23,14 +27,14 @@ export function createFeatureMap(options) {
   return { map, library, status: options.status };
 }
 
-export function updateFeatureMap(view, records) {
+export function updateFeatureMap(view, records, options = {}) {
   const { map, library, status } = view;
   const update = () => {
     map.getSource('records').setData({ type: 'FeatureCollection', features: records });
     if (!records.length) { status.textContent = 'No records match these filters.'; return; }
     const bounds = new library.LngLatBounds();
     for (const { geometry } of records) for (const position of positions(geometry)) bounds.extend(position);
-    map.fitBounds(bounds, { padding: 36, maxZoom: 14, duration: 0 });
+    if (options.fit !== false) map.fitBounds(bounds, { padding: 36, maxZoom: 14, duration: 0 });
     map.once('idle', () => { status.textContent = `${records.length} records mapped. Select a feature or use the table.`; });
   };
   if (map.getSource('records')) update();

@@ -8,6 +8,6 @@ export function createExerciseMap(onSelect) {
   const status = document.querySelector('#map-status');
   return createFeatureMap({ library: maplibregl, onSelect, status,
     color: ['match', ['get', 'record_type'], 'exercise_shelter', '#0d807b', '#a86408'],
-    attribution: 'Hawaii Statewide GIS Program · public domain. Exercise: Honua · CC0.',
+    attribution: 'See geometry source disclosure below. Exercise: Honua · CC0.',
     onError: () => { status.textContent = 'Map unavailable. Use the exercise resources table to inspect records.'; } });
 }

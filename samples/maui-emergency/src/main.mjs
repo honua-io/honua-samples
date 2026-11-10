@@ -20,25 +20,29 @@ let view;
 let timer;
 let loading = false;
 let verifiedAt;
+let selectedId;
 
 function select(feature) {
+  selectedId = feature.id;
   renderDetail(feature, source);
   const detail = document.querySelector('#detail');
   detail.scrollIntoView({ block: 'nearest' });
   detail.focus({ preventScroll: true });
 }
 
-function render() {
+function render(options = {}) {
   filtered = filterRecords(records, Object.fromEntries(new FormData(form)));
   renderRows(filtered.slice(0, shown), select);
   document.querySelector('#result-count').textContent = `${filtered.length} matching exercise records · showing ${Math.min(shown, filtered.length)}`;
   document.querySelector('#more').hidden = shown >= filtered.length;
-  document.querySelector('#detail').replaceChildren(element('h2', 'Exercise record details'),
+  const selected = filtered.find((record) => record.id === selectedId);
+  if (selected) renderDetail(selected, source);
+  else document.querySelector('#detail').replaceChildren(element('h2', 'Exercise record details'),
     element('p', filtered.length ? 'Select a feature on the map or a record below.' : 'No records match. Clear filters to restore the exercise.'));
-  if (view) updateFeatureMap(view, filtered);
+  if (view) updateFeatureMap(view, filtered, options);
 }
 
-function showExercise() {
+function showExercise(options) {
   dashboard.hidden = false;
   if (!view) {
     try { view = createExerciseMap((id) => { const feature = filtered.find((record) => record.id === id); if (feature) select(feature); }); }
@@ -46,8 +50,7 @@ function showExercise() {
   }
   view?.map.resize();
   renderMetrics(records);
-  shown = 25;
-  render();
+  render(options);
 }
 
 function freshnessText() {
@@ -62,20 +65,23 @@ async function load() {
   loading = true;
   clearTimeout(timer);
   refresh.disabled = true;
-  dashboard.hidden = true;
-  records = [];
+  const preserveView = records.length > 0;
   document.body.dataset.sampleStatus = 'loading';
   status.dataset.state = 'loading';
   status.textContent = 'Checking both layers, exercise labels and every page of records…';
   try {
     records = await loadExercise(source);
     verifiedAt = Date.now();
-    showExercise();
+    const validation = records.some(({ properties }) => properties.validation_geometry === true);
+    document.querySelectorAll('[data-geometry-source]').forEach((node) => { node.textContent = validation
+      ? 'Synthetic validation geometry; not county source locations.' : 'Geometry: Hawaii Statewide GIS Program, public domain.'; });
+    showExercise({ fit: !preserveView });
     status.textContent = `Loaded ${records.length} fictional exercise records. No operational use.`;
     status.dataset.state = 'ready';
     document.body.dataset.sampleStatus = 'pass';
   } catch (error) {
     records = [];
+    dashboard.hidden = true;
     status.textContent = `Could not verify the exercise. ${error.message}. Check the import receipts, then refresh.`;
     status.dataset.state = 'error';
     document.body.dataset.sampleStatus = 'fail';
