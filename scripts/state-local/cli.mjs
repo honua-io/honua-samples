@@ -3,11 +3,13 @@ import { fetchSnapshot } from "./snapshot.mjs";
 import { stageSnapshot } from "./import.mjs";
 import { activateDeployment, saveDeployment } from "./deployment.mjs";
 import { propertyApp } from "./property-app.mjs";
+import { mcpJourney } from "./mcp-journey.mjs";
 
 async function run(command, options) {
   const { name, directory } = options;
   if (command === "fetch") return fetchSnapshot(name, directory);
   const env = serverEnv();
+  if (command === "mcp-client") return mcpJourney(env, options);
   if (command === "property-app") return propertyApp(env, directory);
   if (command === "activate") return activateDeployment(env, options);
   const connection = process.env.HONUA_SAMPLE_CONNECTION;
@@ -17,9 +19,9 @@ async function run(command, options) {
 
 const [command, name, directory, ...extra] = process.argv.slice(2);
 try {
-  if (!name || !directory || extra.length || !["fetch", "stage", "activate", "property-app"].includes(command)
+  if (!name || !directory || extra.length || !["fetch", "stage", "activate", "property-app", "mcp-client"].includes(command)
     || (command === "property-app" && name !== "maui")) {
-    throw new Error("Usage: node scripts/state-local/cli.mjs <fetch|stage|activate> <source> <snapshot-directory>, or property-app maui <snapshot-directory>");
+    throw new Error("Usage: node scripts/state-local/cli.mjs <fetch|stage|activate> <source> <snapshot-directory>, property-app maui <snapshot-directory>, or mcp-client <property|311|public-works|emergency> <snapshot-directory>");
   }
   const result = await run(command, { name, directory });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

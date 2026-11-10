@@ -79,6 +79,9 @@ Share links keep these parameters. There is no field mapping: your layers need t
 
 ## Verification
 
+Generate a [receipt-bound stock MCP client setup and question](../../docs/state-local-mcp.md)
+for the agent moment. Setup generation does not mark the stock-client journey complete.
+
 `verify/county-parcel-viewer.spec.mjs` builds the committed app (`npm ci`, typecheck, `vite build`), serves
 `dist/` under `/county-parcel-viewer/app/` as the gallery publishes it, and drives it against the public demo
 (`HONUA_SAMPLE_TARGET_BASE_URL`). It fails if any request leaves the app's own origin and the data origin. It covers
