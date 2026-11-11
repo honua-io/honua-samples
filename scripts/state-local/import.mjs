@@ -3,6 +3,7 @@ import { setTimeout } from "node:timers/promises";
 import { adminFetch } from "../lib/admin-api.mjs";
 import { getSource } from "./sources.mjs";
 import { readSnapshot } from "./snapshot.mjs";
+import { assertDefaultImportGeometry } from "./import-geometry.mjs";
 
 // Keep the full random suffix while respecting the server's 64-character limit.
 export function stagingServiceName(name, runId) {
@@ -67,6 +68,7 @@ async function departmentFolder(env, department) {
 }
 
 export async function uploadSnapshotTable(env, snapshot) {
+  assertDefaultImportGeometry(snapshot.geojson);
   const request = snapshot.sourceUrl ? {
     apiPath: "/api/v1/admin/import/upload-url",
     body: { sourceUrl: snapshot.sourceUrl, fileName: "snapshot.geojson", tableName: snapshot.tableName,

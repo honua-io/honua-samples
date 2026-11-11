@@ -9,6 +9,7 @@ import { propertyLayers } from "./property-app.mjs";
 import { stageSnapshot, layersPath, stagingTableName, stagingServiceName } from "./import.mjs";
 import { saveDeployment, readDeployment, activateDeployment, verifyLayer } from "./deployment.mjs";
 import { ensureDepartments } from "./departments.mjs";
+import { assertDefaultImportGeometry } from "./import-geometry.mjs";
 
 export const loadSources = Object.keys(propertyLayers);
 const planName = "shared-load-plan.json";
@@ -96,7 +97,13 @@ export async function runSharedLoad(env, request) {
   const { action, directory, expectedSha256 } = request;
   if (!["stage", "activate", "rollback"].includes(action)) throw new Error("Unknown shared load action");
   const plan = await verifyPlan(directory, expectedSha256);
-  if (action === "stage") await ensureDepartments(env);
+  if (action === "stage") {
+    for (const { name } of plan.layers) {
+      const { geojson } = await readSnapshot(name, directory);
+      assertDefaultImportGeometry(geojson);
+    }
+    await ensureDepartments(env);
+  }
   const connectionResponse = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/connections" });
   const connections = connectionResponse?.data?.items ?? connectionResponse?.data;
   const matches = connections?.filter((connection) => connection.name === "demo-rds");
