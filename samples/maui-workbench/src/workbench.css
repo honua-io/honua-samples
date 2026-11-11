@@ -1,0 +1,26 @@
+@import '../../../shared/state-local/app-header.css';
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--c-text); background: var(--c-bg); font: 14px/1.5 var(--font-sans); }
+main { max-width: 1920px; margin: auto; padding: 24px; }
+h1 { font-size: 28px; line-height: 1.2; letter-spacing: -.02em; margin: 0; }
+h2 { font-size: 16px; margin: 0 0 16px; } h3 { font-size: 14px; margin: 24px 0 8px; }
+p { max-width: 72ch; } a { color: var(--c-link); text-underline-offset: 3px; }
+.heading { display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; }
+.heading p { color: var(--c-text-2); margin: 8px 0; }
+.notice { color: var(--c-warn-ink); background: var(--c-warn-soft); padding: 12px 16px; max-width: none; }
+.workspace { display: grid; grid-template-columns: 240px minmax(0, 1fr) 260px; border: 1px solid var(--c-border); background: var(--c-surface); }
+aside { padding: 20px; min-width: 0; } .map-panel { padding: 20px; min-width: 0; border-inline: 1px solid var(--c-border); }
+dt { color: var(--c-text-2); margin-top: 16px; } dd { margin: 4px 0 0; }
+button { background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border-strong); border-radius: var(--radius-md); padding: 8px 12px; font: inherit; cursor: pointer; }
+button:hover { background: var(--c-surface-2); } button:disabled { color: var(--c-text-3); cursor: wait; }
+:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 3px; }
+::selection { background: var(--c-accent-soft); color: var(--c-accent-ink); }
+.canvas-frame { background: var(--c-surface-2); display: flex; justify-content: center; padding: 12px; }
+canvas { display: block; width: min(100%, 390px); height: auto; aspect-ratio: 3/4; image-rendering: pixelated; background: var(--c-surface-3); touch-action: pan-y; }
+.extent { font-size: 12px; color: var(--c-text-2); } output { display: block; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.legend { list-style: none; padding: 0; } .legend li { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.swatch { display: inline-block; width: 20px; height: 20px; border: 1px solid var(--c-border-strong); }
+.shallow { background: rgb(174 221 225); } .middle { background: rgb(80 166 190); } .deep { background: rgb(32 102 153); } .deepest { background: rgb(25 56 99); } .unknown { background: rgb(216 222 220); }
+footer { margin-top: 24px; color: var(--c-text-2); } #load-status { overflow-wrap: anywhere; }
+@media (max-width: 1000px) { .workspace { grid-template-columns: 210px minmax(0, 1fr); } aside:last-child { grid-column: 1 / -1; border-top: 1px solid var(--c-border); } .map-panel { border-right: 0; } }
+@media (max-width: 600px) { main { padding: 16px; } .workspace { display: block; } .map-panel { border: 0; border-top: 1px solid var(--c-border); padding: 16px; } aside { padding: 16px; } .heading { gap: 0; } }
