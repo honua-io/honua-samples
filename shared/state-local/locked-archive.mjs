@@ -1,7 +1,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
-import { sha256 } from '../lib/checksum.mjs';
+import { createHash } from 'node:crypto';
+
+const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 export async function lockedArchive(lock, directory) {
   await mkdir(directory, { recursive: true });

@@ -209,7 +209,7 @@ test('gallery preserves the separately built landing and checks Switching links'
 test('Explorer selection keeps the camera hash and migrates legacy sample links', async () => {
   const html = await readFile(path.join(repoRoot, 'scripts/state-local/approved/13-sdk-explorer.html'), 'utf8');
   const writer = html.slice(html.indexOf('  function writeSelection()'), html.indexOf("  document.querySelectorAll('.shead"));
-  for (const hash of ['#9/20.805/-156.42', '#maplibre-featureserver-layer/src']) {
+  for (const hash of ['#map=9/20.805/-156.42', '#maplibre-featureserver-layer/src']) {
     const location = new URL(`https://samples.test/state-local/sdk-explorer/?keep=1${hash}`);
     let written;
     runInNewContext(`${writer};writeSelection();`, {
@@ -220,6 +220,6 @@ test('Explorer selection keeps the camera hash and migrates legacy sample links'
     assert.equal(written.searchParams.get('sample'), 'maplibre-category-style-legend');
     assert.equal(written.searchParams.get('tab'), 'md');
     assert.equal(written.searchParams.get('keep'), '1');
-    assert.equal(written.hash, hash.startsWith('#9') ? hash : '');
+    assert.equal(written.hash, hash.startsWith('#map=') ? hash : '');
   }
 });

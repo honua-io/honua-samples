@@ -360,7 +360,7 @@
   let map;
   map = HM.create(document.getElementById("map"), {
     bounds: [[-156.515, 20.866], [-156.447, 20.906]], padding: 10, roadLabels: false,
-    attr: "Data: Hawaii Statewide GIS Program, Hawaii Statewide GIS Program · exercise data · served by Honua",
+    attr: "Data: Hawaii Statewide GIS Program · exercise data · Honua tiles",
     onload: (m) => {
       HM.overlays(m, ["slr", "flood", "tsunami"], "roads-casing");
       m.addSource("exercise-roads", { type: "geojson", data: HD.roads });

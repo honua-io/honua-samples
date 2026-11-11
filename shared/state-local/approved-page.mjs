@@ -2,12 +2,11 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-export async function approvedPage({ template, assets, data, islandDirectory }) {
-  if (islandDirectory) data = await islandPointData(islandDirectory, data);
+export async function approvedPage({ template, assets, data }) {
   const css = await readFile(path.join(assets, 'tokens.css'), 'utf8') + '\n' + await readFile(path.join(assets, 'app.css'), 'utf8');
   const icons = await readFile(path.join(assets, 'icons.svg'), 'utf8');
   const island = await readFile(new URL('./island-map.js', import.meta.url), 'utf8');
-  const mapKit = await readFile(new URL('../../scripts/state-local/approved/src/honua-map.js', import.meta.url), 'utf8');
+  const mapKit = await readFile(new URL('./honua-map.js', import.meta.url), 'utf8');
   const kit = `<script>${island}\n${mapKit}</script>`;
   const head = `<script>try{var t=localStorage.getItem("honua-theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){document.documentElement.setAttribute("data-theme","light")}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,10 +20,3 @@ export async function approvedPage({ template, assets, data, islandDirectory }) 
     .replace(/\{\{DATA [^}]*\}\}/g, () => `<script>window.HD=${JSON.stringify(data).replaceAll('</', '<\\/')};</script>`);
 }
 
-export async function islandPointData(directory, data) {
-  const result = { ...data };
-  for (const name of ['fire', 'police', 'hospitals', 'places', 'bridges', 'schools']) {
-    if (name in result) result[name] = JSON.parse(await readFile(path.join(directory, `${name}.geojson`)));
-  }
-  return result;
-}

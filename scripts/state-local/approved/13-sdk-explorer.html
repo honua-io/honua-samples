@@ -610,15 +610,14 @@ try {
 
   /* ---------- Map runtime: every sample adds into RT and resetRuntime() removes it ---------- */
   let map;
-  let restoringCamera = /^#\d/.test(location.hash);
+  let restoringCamera = HM.hashParams().has("map");
   const RT = { layers: [], sources: [], handlers: [], popups: [], timers: [], cleanup: [] };
-  const BASE = ["land", "contours", "zoning-base", "waterbodies", "streams", "roads-casing", "roads"];
   function rtSource(id, data) { map.addSource(id, { type: "geojson", data }); RT.sources.push(id); }
   function rtLayer(def, before) { map.addLayer(def, before); RT.layers.push(def.id); }
   function rtOn(type, a, b) { if (b) map.on(type, a, b); else map.on(type, a); RT.handlers.push(b ? [type, a, b] : [type, a]); }
   function rtLater(fn, ms) { RT.timers.push(setTimeout(fn, ms)); }
   function rtPopup(lngLat, html) { const p = new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setHTML(html).addTo(map); RT.popups.push(p); return p; }
-  function setBasemap(on) { BASE.forEach((id) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none")); $("#map").classList.toggle("no-labels", !on); }
+  function setBasemap(on) { map.basemapLayers.forEach((id) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none")); $("#map").classList.toggle("no-labels", !on); }
   function resetRuntime() {
     RT.cleanup.splice(0).forEach((f) => { try { f(); } catch (e) { /* teardown is best effort */ } });
     RT.timers.splice(0).forEach(clearTimeout);

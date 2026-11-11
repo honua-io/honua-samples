@@ -159,10 +159,11 @@
 
   HM.create(document.getElementById("map"), {
     bounds: [[-156.488, 20.874], [-156.462, 20.896]], padding: 12, nav: false, roadLabels: false,
-    attr: "Hawaii Statewide GIS · Honua",
+    attr: "Data: Hawaii Statewide GIS · exercise data · Honua tiles",
     onload: (m) => {
       HM.overlays(m, ["tsunami"], "roads-casing");
-      m.addLayer({ id: "closed", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ["Kahului Beach Road", "Hobron Avenue", "Wharf Street"]]], layout: { "line-cap": "round" }, paint: { "line-color": "#b3261e", "line-width": 4 } });
+      m.addSource("exercise-roads", { type: "geojson", data: HD.roads });
+      m.addLayer({ id: "closed", type: "line", source: "exercise-roads", filter: ["in", ["get", "name"], ["literal", ["Kahului Beach Road", "Hobron Avenue", "Wharf Street"]]], layout: { "line-cap": "round" }, paint: { "line-color": "#b3261e", "line-width": 4 } });
       m.addSource("walk", { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [ME, near.c] } } });
       m.addLayer({ id: "walk", type: "line", source: "walk", paint: { "line-color": "#2563eb", "line-width": 2.5, "line-dasharray": [2, 1.5] } });
       m.addSource("sh", { type: "geojson", data: HM.points(shelters, (s) => ({ st: s.st })) });

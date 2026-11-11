@@ -510,6 +510,7 @@
     if (fly && ids.length === 1) { const L = LAYERS[S.layer]; const r = L.rows.find((x) => x[L.idField] === ids[0]); if (r) map.easeTo({ center: r.c, zoom: Math.max(map.getZoom(), 16), duration: 600 }); }
     const tr = document.querySelector(`#dt tbody tr[data-id="${ids[0]}"]`); if (tr && !fly) tr.scrollIntoView({ block: "nearest" });
   }
+  const linkHash = HM.hashParams();
   map = HM.create(document.getElementById("map"), { bounds: [[-156.4925, 20.874], [-156.4595, 20.896]], navPos: "top-right", onload: (m) => {
     HM.overlays(m, ["zoning", "flood", "tsunami", "parcels"], "roads-casing");
     HM.add(m, "sma", HD.sma); m.addLayer({ id: "sma-line", type: "line", source: "sma", paint: { "line-color": HM.cssVar("--hz-slr"), "line-width": 2, "line-dasharray": [2, 1.5] } });
@@ -781,8 +782,7 @@
   function openShare() {
     const view = { center: map.getCenter().toArray(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
     const state = { ...snap(), view, sort: S.sort, tq: S.tq, selOnly: S.selOnly, is3d: document.getElementById("v3d").getAttribute("aria-pressed") === "true" }; delete state.plan; delete state.prop;
-    const url = new URL(location.href); url.searchParams.set("s", JSON.stringify(state));
-    const center = map.getCenter(); url.hash = `${map.getZoom().toFixed(2)}/${center.lat.toFixed(5)}/${center.lng.toFixed(5)}`;
+    const url = new URL(location.href); url.searchParams.delete("s"); url.hash = new URLSearchParams({ s: JSON.stringify(state) }).toString();
     document.getElementById("shareLink").textContent = url.href;
     document.getElementById("embedCode").textContent = `<iframe src="${url.href.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" width="100%" height="640" title="Maui analysis"></iframe>`;
     document.getElementById("share").showModal();
@@ -795,12 +795,12 @@
   });
   document.getElementById("sdkBtn").addEventListener("click", (e) => { const on = document.body.classList.toggle("show-sdk"); e.currentTarget.setAttribute("aria-pressed", on); e.currentTarget.lastChild.textContent = on ? "Hide SDK controls" : "Show SDK controls"; });
   function restoreSharedView() {
-    const shared = new URL(location.href).searchParams.get("s") || (location.hash.startsWith("#s=") ? location.hash.slice(3) : null);
+    const shared = linkHash.get("s") || new URL(location.href).searchParams.get("s");
     if (!shared) return;
     const defaultState = structuredClone(S), defaultPlan = lastPlan, defaultProposal = proposal;
     try {
       if (shared.length > 60000) throw new Error("Oversized view");
-      const h = JSON.parse(location.hash.startsWith("#s=") ? decodeURIComponent(shared) : shared);
+      const h = JSON.parse(shared);
       if (!Object.hasOwn(LAYERS, h.layer)) throw new Error("Unknown layer");
       const L = LAYERS[h.layer], fields = L.cols.map(([field]) => field);
       const safeValue = (v) => typeof v === "number" ? Number.isFinite(v) : typeof v === "string" && v.length < 300 && !/[<>"`]/.test(v);
@@ -828,7 +828,7 @@
       Object.assign(S, { attr: h.attr, chartF: h.chartF, spatial: h.spatial, time: h.time, charts: h.charts.map(({ t, f, g }) => ({ t, f, ...(g ? { g } : {}) })), sel: new Set(h.sel), tq: h.tq || "", sort: h.sort || null, selOnly: h.selOnly === true });
       lastPlan = null; proposal = null; document.getElementById("nlqOut").hidden = true;
       document.getElementById("tq").value = S.tq; setTimeInputs(); refresh(); renderNL();
-      const restoreCamera = () => { set3d(h.is3d === true || (h.is3d === undefined && v.pitch > 0), false); if (!/^#\d+(?:\.\d+)?\//.test(location.hash)) map.jumpTo(v); };
+      const restoreCamera = () => { set3d(h.is3d === true || (h.is3d === undefined && v.pitch > 0), false); if (!linkHash.has("map")) map.jumpTo(v); };
       if (map.loaded()) restoreCamera(); else map.once("load", restoreCamera);
     } catch {
       setLayer(defaultState.layer); Object.assign(S, defaultState); lastPlan = defaultPlan; proposal = defaultProposal;

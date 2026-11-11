@@ -51,6 +51,7 @@
   }
 
   function basemap(map, opts) {
+    const existing = new Set(map.getStyle().layers.map(({ id }) => id));
     streets(map);
     map.addSource('contours', source('contours'));
     layer(map, { id: 'contours', type: 'line', source: 'contours', minzoom: 11, paint: { 'line-color': '#a59980', 'line-width': 0.45, 'line-opacity': 0.35 } }, 'roads-casing');
@@ -64,9 +65,10 @@
     HM.themed(map, { id: 'island-parcels-line', type: 'line', source: 'island-parcels', 'source-layer': 'layer', minzoom: 13.5, paint: { 'line-color': '--map-parcel', 'line-width': 0.5 } }, 'roads-casing');
     if (opts.zoningBase !== false) {
       map.addSource('zoning-base', source('zoning'));
-      layer(map, { id: 'zoning-base', type: 'fill', source: 'zoning-base', paint: { 'fill-color': HM.zoneColorExpr(), 'fill-opacity': 0.22 } }, 'roads-casing');
+      layer(map, { id: 'zoning-base', type: 'fill', source: 'zoning-base', paint: { 'fill-opacity': 0.22 } }, 'roads-casing');
     }
     labels(map, opts);
+    map.basemapLayers = map.getStyle().layers.map(({ id }) => id).filter((id) => !existing.has(id));
   }
 
   window.HI = { bounds, register, source, layer, basemap };

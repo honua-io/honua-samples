@@ -3,9 +3,17 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256 } from '../../lib/checksum.mjs';
-import { islandSources, islandTileLayers } from './sources.mjs';
+import { islandSources, islandTileBudgetBytes, islandTileLayers } from './sources.mjs';
 import { readIslandSnapshot } from './island-snapshot.mjs';
 import { islandDisplay } from './island-display.mjs';
+
+export function verifyTileArchive({ name, receipt, bytes, cleanSha256 }) {
+  if (receipt.source !== name || receipt.cleanSha256 !== cleanSha256
+    || receipt.sha256 !== sha256(bytes) || receipt.sizeBytes !== bytes.length
+    || bytes.length > islandTileBudgetBytes || bytes.subarray(0, 7).toString() !== 'PMTiles' || bytes[7] !== 3) {
+    throw new Error(`${name} tile receipt or archive integrity failed`);
+  }
+}
 
 export async function packIsland(options) {
   const { sourceDirectory, directory, tileDirectory, outputDirectory } = options;
@@ -21,11 +29,7 @@ export async function packIsland(options) {
       file = `${name}.pmtiles`;
       const bytes = await readFile(path.join(tileDirectory, file));
       const receipt = JSON.parse(await readFile(path.join(tileDirectory, `${name}.tiles.json`)));
-      if (receipt.source !== name || receipt.cleanSha256 !== snapshot.receipt.cleanSha256
-        || receipt.sha256 !== sha256(bytes) || receipt.sizeBytes !== bytes.length
-        || bytes.length > 100_000_000 || bytes.subarray(0, 7).toString() !== 'PMTiles' || bytes[7] !== 3) {
-        throw new Error(`${name} tile receipt or archive integrity failed`);
-      }
+      verifyTileArchive({ name, receipt, bytes, cleanSha256: snapshot.receipt.cleanSha256 });
       manifest.sources[name].tiles = receipt;
       await cp(path.join(tileDirectory, file), path.join(outputDirectory, file));
     } else {

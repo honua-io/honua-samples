@@ -410,7 +410,7 @@
   document.getElementById("fType").onchange = (e) => { state.type = e.target.value; render(); };
   document.getElementById("fDist").onchange = (e) => { state.dist = e.target.value; render(); };
   renderBrief(); render();
-  if (location.hash === "#triage") setTimeout(() => openDrawer(incoming.id), 400);
+  if (HM.hashParams().has("triage")) setTimeout(() => openDrawer(incoming.id), 400);
 })();
 </script>
 </body>

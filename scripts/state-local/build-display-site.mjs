@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256 } from '../lib/checksum.mjs';
-import { lockedArchive } from './locked-archive.mjs';
+import { lockedArchive } from '../../shared/state-local/locked-archive.mjs';
 import { buildIslandAssets } from './approved/build-island.mjs';
 import { buildApprovedDemos } from './approved/build-site.mjs';
 
@@ -26,5 +26,6 @@ async function downloadSnapshots() {
 }
 
 await downloadSnapshots();
-await buildIslandAssets({ root, output, lock: lock.island });
+const islandLock = JSON.parse(await readFile(path.join(root, 'shared/state-local/island-display.lock.json')));
+await buildIslandAssets({ root, output, lock: islandLock });
 await buildApprovedDemos({ root, output, lock: lock.approved });

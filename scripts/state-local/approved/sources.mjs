@@ -39,3 +39,4 @@ export const islandSources = Object.fromEntries(Object.entries(approvedSources).
 }]));
 
 export const islandTileLayers = ['parcels', 'zoning', 'dfirm', 'tsunami', 'roads', 'contours'];
+export const islandTileBudgetBytes = 100_000_000;
