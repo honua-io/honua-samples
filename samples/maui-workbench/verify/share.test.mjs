@@ -1,6 +1,7 @@
+import { boundingBoxClause } from '../src/analysis-spatial.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateRangeClauses, boundingBoxClause } from '../src/analysis-query.mjs';
+import { dateRangeClauses } from '../src/analysis-query.mjs';
 import { createAnalysisShareUrl, parseAnalysisShare } from '../src/analysis-share.mjs';
 
 const address = 'https://samples.honua.io/maui-workbench/app/analysis.html?requestsService=r&requestsLayer=1&parcelsService=p&parcelsLayer=2&token=discard-me';

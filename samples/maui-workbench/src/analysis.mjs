@@ -20,7 +20,7 @@ let unsubscribe;
 let exportSnapshot;
 const explanation = bindSelectionExplanation({ model: () => model,
   button: element('explain-selection'), output: element('selection-explanation') });
-const capability = bindCapabilityExplanation({ model: () => model, form: element('capability-form'),
+const capabilityExplanation = bindCapabilityExplanation({ model: () => model, form: element('capability-form'),
   select: element('capability'), output: element('capability-explanation') });
 const map = createAnalysisMap((id) => {
   if (model) model.table.select(model.table.keysForTargets([{ sourceId: model.source.descriptor.id, id }]), { replace: true });
@@ -35,7 +35,7 @@ function setControlsState(state) {
 }
 
 function clearResults() {
-  capability.invalidate();
+  capabilityExplanation.invalidate();
   explanation.invalidate();
   element('share-output').hidden = true;
   map.update({ type: 'FeatureCollection', features: [] });
@@ -191,7 +191,7 @@ function describeFilters() {
 }
 
 function showError(error) {
-  capability.invalidate();
+  capabilityExplanation.invalidate();
   explanation.invalidate();
   revision += 1;
   active?.abort();

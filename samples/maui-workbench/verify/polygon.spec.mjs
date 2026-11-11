@@ -8,7 +8,7 @@ let site;
 test.beforeAll(async () => { site = await prepareDepthBrowser(); });
 test.afterAll(async () => { await site?.close(); });
 for (const theme of ['light', 'dark']) for (const width of [1440, 390]) {
-  test(`WB-10 polygon shape filters map, chart, table, export and shared state ${theme} ${width}px`, async ({ page }) => {
+  test(`Polygon shape filters map, chart, table, export and shared state ${theme} ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1100 });
     await page.addInitScript((value) => localStorage.setItem('honua-theme', value), theme);
     const errors = [];
@@ -25,6 +25,7 @@ for (const theme of ['light', 'dark']) for (const width of [1440, 390]) {
     await expect(page.locator('#map-status')).toHaveText('2 matching records mapped.');
     await expect(page.locator('#feature-table').locator('tbody tr[data-row-key]')).toHaveCount(2);
     await expect(page.locator('#chart-filters').getByRole('button', { name: 'exercise_open · 2', exact: true })).toBeVisible();
+    await expect(page.locator('#chart-filters button')).toHaveCount(1);
     await expect(page.locator('#cql2-preview')).toContainText('POLYGON');
     await expect(widget.getByRole('button', { name: 'Off', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await page.locator('#feature-table').locator('tbody tr[data-row-key]').first().getByRole('gridcell').first().click();
@@ -48,6 +49,10 @@ for (const theme of ['light', 'dark']) for (const width of [1440, 390]) {
     await page.locator('#export-geojson').click();
     const download = await downloadPending;
     expect(JSON.parse(await readFile(await download.path(), 'utf8')).features.map((feature) => feature.id)).toEqual([1, 2]);
+    const grouped = control.queries.filter((query) => query.outStatistics);
+    expect(grouped.length).toBeGreaterThan(0);
+    expect(grouped.every((query) => query.geometryType === 'esriGeometryPolygon'
+      && JSON.parse(query.geometry).rings[0].length === 4)).toBe(true);
     const queries = control.queries.filter((query) => query.geometry);
     expect(queries.length).toBeGreaterThanOrEqual(4);
     expect(queries.every((query) => query.geometryType === 'esriGeometryPolygon'

@@ -1,6 +1,7 @@
+import { boundingBoxClause } from '../src/analysis-spatial.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateRangeClauses, boundingBoxClause, previewAnalysisCql2 } from '../src/analysis-query.mjs';
+import { dateRangeClauses, previewAnalysisCql2 } from '../src/analysis-query.mjs';
 
 test('date range includes the complete final UTC day and rejects reversed or impossible dates', () => {
   const clauses = dateRangeClauses('2026-11-01', '2026-11-02');

@@ -1,6 +1,7 @@
 import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { createLatestSketchBinding } from './analysis-sketch-binding.mjs';
 import { createAnalysisSketch } from './analysis-sketch.mjs';
 
 maplibregl.setWorkerUrl(workerUrl);
@@ -14,12 +15,12 @@ export function createAnalysisMap(onSelect, measurement) {
   map.addControl(new maplibregl.NavigationControl());
   map.addControl(new maplibregl.AttributionControl({ customAttribution: 'County of Maui · DEMO DATA operations' }));
   measurement.map = map;
-  let sketch;
-  let sketchRevision = 0;
   let area;
   let loaded;
   const ready = new Promise((resolve) => { loaded = resolve; });
-  const selectRecord = (id) => { if (measurement.mode === 'off' && !sketch?.drawing) onSelect(id); };
+  const sketches = createLatestSketchBinding({ ready,
+    create: (context) => createAnalysisSketch(map, { ...context, measurement }) });
+  const selectRecord = (id) => { if (measurement.mode === 'off' && !sketches.drawing) onSelect(id); };
   let collection = empty();
   let selected = [];
   let camera;
@@ -47,28 +48,20 @@ export function createAnalysisMap(onSelect, measurement) {
       .map((feature) => feature.id)).size;
     map.getContainer().setAttribute('aria-label', `Map showing ${visible} matching county records in current view.`);
   });
-  return { async bindSketch(context) {
-      const current = ++sketchRevision;
-      sketch?.dispose(); sketch = undefined;
-      await ready;
-      if (current !== sketchRevision) return;
-      const next = await createAnalysisSketch(map, { ...context, measurement });
-      if (current !== sketchRevision) { next.dispose(); return; }
-      sketch = next; next.attach();
-    },
-    cancelSketch() { sketch?.cancel(); },
+  return { bindSketch(context) { return sketches.bind(context); },
+    cancelSketch() { sketches.cancel(); },
     setArea(value) { area = Array.isArray(value) ? boundsGeometry(value) : value; sync(); },
     update(data) { collection = data; camera = undefined; sync(); fitFeatures(map, data); },
     restoreCamera(value) { camera = value; position(); },
     camera() { const center = map.getCenter().wrap(); return [center.lng, center.lat, map.getZoom(), map.getBearing(), map.getPitch()]; },
     select(ids) { selected = ids.map(String); sync(); },
-    dispose() { sketchRevision += 1; sketch?.dispose(); observer.disconnect(); measurement.map = undefined; map.remove(); } };
+    dispose() { sketches.dispose(); observer.disconnect(); measurement.map = undefined; map.remove(); } };
 }
 
 function addLayers(map, onSelect) {
   for (const source of ['area', 'records', 'selected']) {
     map.addSource(source, { type: 'geojson', data: empty() });
-    const color = source === 'records' ? '#276965' : '#b86116';
+    const color = { records: '#276965', area: '#6659a6', selected: '#b86116' }[source];
     map.addLayer({ id: `${source}-fill`, type: 'fill', source,
       filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': color, 'fill-opacity': .3 } });
     map.addLayer({ id: `${source}-line`, type: 'line', source,

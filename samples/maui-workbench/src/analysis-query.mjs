@@ -1,5 +1,4 @@
 import { spatialClause } from './analysis-spatial.mjs';
-export { boundingBoxClause } from './analysis-spatial.mjs';
 import { queryFilter } from '@honua/sdk-js/contract';
 import { compileOgcApiFeaturesQuery } from '@honua/sdk-js/query-planner';
 

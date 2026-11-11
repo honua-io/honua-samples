@@ -88,7 +88,7 @@ test('real-server unlabelled 311 records cannot produce map or exports', async (
 });
 
 
-test('WB-10 real-server polygon intersection excludes a parcel inside its bounding box', async ({ page }) => {
+test('real-server polygon intersection excludes a parcel inside its bounding box', async ({ page }) => {
   await page.goto(url());
   await expect(page.locator('#connection-status')).toContainText('311 service requests connected', { timeout: 60_000 });
   await page.locator('#catalog').selectOption('parcels');

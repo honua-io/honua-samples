@@ -1,3 +1,4 @@
+import { bindAsyncExplanation } from './analysis-explanation.mjs';
 import { executeHonuaAgentTool } from '@honua/sdk-js/agent-tools';
 import { previewAnalysisCql2 } from './analysis-query.mjs';
 
@@ -33,22 +34,14 @@ export async function summarizeAnalysisSelection(model) {
 }
 
 export function bindSelectionExplanation(context) {
-  let revision = 0;
-  const invalidate = () => { revision += 1; context.output.replaceChildren(); };
-  context.button.addEventListener('click', async () => {
-    const current = ++revision;
-    const model = context.model();
-    context.output.textContent = 'Summarizing the selected records…';
-    try {
-      const summary = await summarizeAnalysisSelection(model);
-      if (current !== revision || context.model() !== model) return;
+  return bindAsyncExplanation({ ...context, trigger: context.button, event: 'click',
+    pending: 'Summarizing the selected records…', run: summarizeAnalysisSelection,
+    render(summary) {
       const lines = [`${summary.count} selected from ${summary.layer}.`, summary.scope,
         ...summary.fields, `Filter (CQL2): ${summary.filter}`, `Source: ${summary.endpoint}`,
         `Read-only SDK tool: ${summary.tool}. These are descriptive counts, not a model-generated comparison.`];
       context.output.replaceChildren(...lines.map((text) => {
         const paragraph = document.createElement('p'); paragraph.textContent = text; return paragraph;
       }));
-    } catch (error) { if (current === revision) context.output.textContent = error.message; }
-  });
-  return { invalidate };
+    } });
 }
