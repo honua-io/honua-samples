@@ -610,6 +610,7 @@ try {
 
   /* ---------- Map runtime: every sample adds into RT and resetRuntime() removes it ---------- */
   let map;
+  let restoringCamera = /^#\d/.test(location.hash);
   const RT = { layers: [], sources: [], handlers: [], popups: [], timers: [], cleanup: [] };
   const BASE = ["land", "contours", "zoning-base", "waterbodies", "streams", "roads-casing", "roads"];
   function rtSource(id, data) { map.addSource(id, { type: "geojson", data }); RT.sources.push(id); }
@@ -694,7 +695,7 @@ try {
       ids.forEach((id) => rtOn("click", id, (e) => { const pr = e.features[0].properties; rtPopup(e.lngLat, `<strong>${esc(pr[p.labelField] ?? "(no label)")}</strong>${attrTable(pr)}`); }));
       hoverCursor(ids);
       const b = bboxOfFeatures(features);
-      map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 40, duration: 0, maxZoom: 16 });
+      if (!restoringCamera) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 40, duration: 0, maxZoom: 16 });
       map.once("idle", () => {
         const rendered = map.queryRenderedFeatures({ layers: ids.filter((id) => map.getLayer(id)) }).length;
         statusPanel("pass", `Snapshot: ${L.title} (${L.geom}): ${features.length} features from the embedded extract, ${rendered} drawn. No server request was made. Click a feature for its attributes.`, req.filter(Boolean));
@@ -755,7 +756,7 @@ try {
       const rows = [...classes, ...(otherCount ? [{ value: "Other", count: otherCount, color: other }] : [])];
       $("#mapUi").innerHTML = `<div class="card legend" style="left:12px;bottom:28px;max-width:min(280px,calc(100% - 24px));max-height:calc(100% - 60px);overflow-y:auto"><h3>${esc(p.field)}</h3><ul>${rows.map((c) => `<li><span class="sw" style="background:${c.color}"></span><span>${esc(c.value)}</span><span class="n">${c.count}</span></li>`).join("")}</ul></div>`;
       const b = bboxOfFeatures(items);
-      if (items.length) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 30, duration: 0, maxZoom: 16 });
+      if (items.length && !restoringCamera) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 30, duration: 0, maxZoom: 16 });
       map.once("idle", () => {
         const rendered = map.queryRenderedFeatures({ layers: ["features-fill"] }).length;
         statusPanel("pass", `Snapshot: ${items.length} features from the embedded extract, ${counts.size} distinct "${p.field}" values, ${rendered} drawn. No server request was made. Click a ${pt ? "point" : "polygon"} for details.`, req);
@@ -814,12 +815,21 @@ try {
     renderSource();
     renderReadme();
     if (opts.tab) activateTab(opts.tab);
-    writeHash();
+    writeSelection();
     if (!opts.keepScroll) { const it = $(`#list .item[data-id="${id}"]`), box = $("#list"); if (it && (it.offsetTop < box.scrollTop || it.offsetTop + it.offsetHeight > box.scrollTop + box.clientHeight)) box.scrollTop = it.offsetTop - 40; }
   }
   function activateTab(t) { const b = { pv: "#tabPv", src: "#tabSrc", md: "#tabMd" }[t]; if (b) $(b).click(); }
-  function writeHash() { try { history.replaceState(null, "", `#${state.id}${state.tab !== "pv" ? "/" + state.tab : ""}`); } catch (e) { /* file:// or sandboxed frames may refuse */ } }
-  document.querySelectorAll('.shead [role="tab"]').forEach((b) => b.addEventListener("click", () => { state.tab = { tabPv: "pv", tabSrc: "src", tabMd: "md" }[b.id]; if (state.tab === "pv" && map) setTimeout(() => map.resize(), 0); writeHash(); }));
+  function writeSelection() {
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set("sample", state.id);
+      if (state.tab === "pv") url.searchParams.delete("tab");
+      else url.searchParams.set("tab", state.tab);
+      if (BY[url.hash.slice(1).split("/")[0]]) url.hash = "";
+      history.replaceState(null, "", url);
+    } catch (e) { /* Sandboxed frames may refuse URL updates. */ }
+  }
+  document.querySelectorAll('.shead [role="tab"]').forEach((b) => b.addEventListener("click", () => { state.tab = { tabPv: "pv", tabSrc: "src", tabMd: "md" }[b.id]; if (state.tab === "pv" && map) setTimeout(() => map.resize(), 0); writeSelection(); }));
 
   function renderRight() {
     const s = BY[state.id], sm = sim();
@@ -993,10 +1003,13 @@ function sanitizedReadme(html) {
   $("#revNote").title = `honua-sdk-js ${D.sdkRev}, honua-samples ${D.samplesRev}; source snapshots are unmodified; preview provenance is shown separately`;
   renderList();
   const hash = (location.hash || "").slice(1).split("/");
-  select(BY[hash[0]] ? hash[0] : "maplibre-featureserver-layer", { tab: hash[1] === "src" || hash[1] === "md" ? hash[1] : null, keepScroll: true });
+  const query = new URLSearchParams(location.search);
+  const selected = query.get("sample") ?? hash[0];
+  const tab = query.get("tab") ?? hash[1];
+  select(BY[selected] ? selected : "maplibre-featureserver-layer", { tab: tab === "src" || tab === "md" ? tab : null, keepScroll: true });
   if (D.display) {
     map = HM.create($("#map"), { view: "core", padding: 20 });
-    if (map) map.on("load", () => { mapLoaded = true; const sm = sim(); if (sm && !$("#map").hidden) { map.resize(); resetRuntime(); sm.mount(state.params); } });
+    if (map) map.on("load", () => { mapLoaded = true; const sm = sim(); if (sm && !$("#map").hidden) { map.resize(); resetRuntime(); sm.mount(state.params); } restoringCamera = false; });
     document.addEventListener("honua:theme", () => { const sm = sim(); if (mapLoaded && sm && sm.restyle) sm.restyle(state.params); if (sm) renderSource(); });
   }
 
