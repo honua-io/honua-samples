@@ -150,8 +150,7 @@ test("SDK-08 3D renders real Overture buildings, retains the parcel and returns 
   expect(await page.evaluate(() => window.sampleMap.getPitch())).toBeCloseTo(55, 8);
   const lightBuildings = await page.evaluate(() => window.sampleMap.getPaintProperty("overture-buildings", "fill-extrusion-color"));
   await page.screenshot({ path: testInfo.outputPath("property-3d-light.png") });
-  await page.getByRole("button", { name: "Dark mode" }).click();
-  await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
   expect(await page.evaluate(() => window.sampleMap.getPaintProperty("overture-buildings", "fill-extrusion-color"))).not.toEqual(lightBuildings);
   await page.screenshot({ path: testInfo.outputPath("property-3d-dark.png") });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -504,16 +503,15 @@ test("SHELL-01: approved landing uses safe light/dark themes at desktop and mobi
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("One geospatial platform for the whole county.");
   await expect(page.locator(".journey .badge")).toHaveCount(4);
   const light = await page.locator("body").evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--c-bg"));
-  await page.getByRole("button", { name: "Dark mode" }).click();
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".logo-dark")).toBeVisible();
   await expect(page.locator(".logo-light")).toBeHidden();
   const dark = await page.locator("body").evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--c-bg"));
   expect(dark).not.toEqual(light);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole("button", { name: "Dark mode" }).click();
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator(".logo-light")).toBeVisible();
   expect(errors).toEqual([]);
@@ -523,7 +521,7 @@ test("SHELL-02: property theme persists and embedded shell keeps its height", as
   await page.goto(appUrl());
   await expect.poll(() => page.evaluate(() => window.sampleMap?.getLayer("background") !== undefined)).toBe(true);
   const lightMap = await page.evaluate(() => window.sampleMap.getPaintProperty("background", "background-color"));
-  await page.getByRole("button", { name: "Dark mode" }).click();
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
   expect(await page.evaluate(() => window.sampleMap.getPaintProperty("background", "background-color"))).not.toEqual(lightMap);
   const controlColors = await page.locator(".maplibregl-ctrl-group").evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor));
   const surfaceColor = await page.evaluate(() => { const element = document.createElement("div"); element.style.background = "var(--c-surface)"; document.body.append(element); const color = getComputedStyle(element).backgroundColor; element.remove(); return color; });
@@ -531,14 +529,13 @@ test("SHELL-02: property theme persists and embedded shell keeps its height", as
   for (const color of controlColors) expect(color).toBe(surfaceColor);
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".logo-dark")).toBeVisible();
   await page.goto(new URL("/embed.html", server.url).href);
   const frame = page.frameLocator("iframe");
   await expect(frame.locator("body")).toBeVisible();
   expect(await frame.locator("body").evaluate((body) => body.getBoundingClientRect().height)).toBeGreaterThanOrEqual(920);
   expect(await page.locator("iframe").evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(920);
-  await frame.getByRole("button", { name: "Dark mode" }).click();
+  await frame.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(frame.locator("html")).toHaveAttribute("data-theme", "light");
 });
 

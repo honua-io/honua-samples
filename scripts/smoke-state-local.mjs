@@ -47,12 +47,17 @@ try {
   await expect(page.locator('#md')).toBeVisible();
   for (const id of ids) {
     await page.locator(`[data-id="${id.split(':')[1]}"]`).click();
+    await page.locator('#tabPv').click();
     assert.ok(previews[id].dataMode && previews[id].commit, `Missing provenance: ${id}`);
-    await expect(page.locator('#pvPanel iframe')).toHaveCount(1);
     const response = await page.request.get(`${base}${previews[id].url}`);
     assert.equal(response.status(), 200, `Preview entrypoint: ${id}`);
-    // Execution and rendering of the app itself are gated by the gallery's existing
-    // app smoke suite. This check verifies Explorer wiring and disclosure.
+    const snapshotMap = await page.locator('#map').isVisible();
+    if (snapshotMap) {
+      await expect(page.locator('#pvPanel iframe')).toHaveCount(0);
+      await expect(page.locator('#pvBottom')).toBeVisible();
+    } else {
+      await expect(page.locator('#pvPanel iframe')).toHaveCount(1);
+    }
     await expect(page.locator('#datas')).toContainText(previews[id].commit);
   }
   const malicious = '<table><tbody><tr><td>Table cell</td></tr></tbody></table><script>window.explorerXss=true</script><img src=x onerror="window.explorerXss=true"><a href="javascript:alert(1)">Bad link</a>';
