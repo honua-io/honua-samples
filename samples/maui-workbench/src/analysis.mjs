@@ -21,6 +21,8 @@ const map = createAnalysisMap((id) => {
 }, element('measurement'));
 
 function setControlsState(state) {
+  if (state !== 'ready') map.cancelSketch();
+  element('sketch').inert = state !== 'ready';
   for (const id of ['catalog', 'field', 'operator', 'value', 'apply', 'clear', 'export-csv', 'export-geojson', 'share', ...queryControlIds]) {
     element(id).disabled = state !== 'ready';
   }
@@ -65,6 +67,7 @@ function resetAnalysis() {
   unsubscribe?.();
   model?.table.dispose();
   model = null;
+  map.setArea(undefined);
   element('feature-table').table = undefined;
   clearResults();
   setControlsState('busy');
@@ -79,6 +82,17 @@ async function chooseCatalog(restored) {
     const handle = await openAnalysisSource(bindings[name], name);
     if (current !== revision) return;
     model = createAnalysisModel(handle);
+    await map.bindSketch({ source: handle.source, element: element('sketch'), measurement: element('measurement'),
+      onGeometry(clause) {
+        if (model?.source !== handle.source) return;
+        setAnalysisFilter(model, clause);
+        restoreQueryControls(name, model.registry.snapshot.clauses);
+        describeFilters();
+        void refreshAnalysis();
+      },
+      onError(error) { status.textContent = error.message; },
+    });
+    if (current !== revision) return;
     for (const clause of restored?.clauses ?? []) setAnalysisFilter(model, {
       ...clause, owner: clause.id === 'chart-status' ? 'status-chart' : 'query',
     });
@@ -153,10 +167,16 @@ function renderChart(data) {
   }
 }
 
+function describeClause(clause) {
+  if (clause.id !== 'spatial') return `${clause.field} ${clause.operator} ${clause.value}`;
+  if (Array.isArray(clause.value)) return `Intersects bounding box ${clause.value.join(', ')}`;
+  return `Intersects drawn polygon (${clause.value.coordinates[0].length - 1} vertices)`;
+}
+
 function describeFilters() {
+  map.setArea(model.registry.snapshot.clauses.find((clause) => clause.id === 'spatial')?.value);
   element('filter-summary').textContent = model.registry.snapshot.clauses
-    .map((clause) => clause.id === 'spatial' ? `Intersects bounding box ${clause.value.join(', ')}`
-      : `${clause.field} ${clause.operator} ${clause.value}`).join(' AND ') || 'No filters applied.';
+    .map(describeClause).join(' AND ') || 'No filters applied.';
   try { element('cql2-preview').textContent = previewAnalysisCql2(model.registry.snapshot.clauses); }
   catch { element('cql2-preview').textContent = 'CQL2 preview unavailable for this filter. The map, table and exports still use the active GeoServices query.'; }
 }

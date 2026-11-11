@@ -1,3 +1,4 @@
+import { drawPolygon } from './sketch.mjs';
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { serverEnv } from '../../../scripts/browser-verification/harness.mjs';
@@ -84,4 +85,25 @@ test('real-server unlabelled 311 records cannot produce map or exports', async (
   await expect(page.locator('#map-status')).toHaveText('No completed map result. Retry before using these records.');
   await expect(page.locator('#export-csv')).toBeDisabled();
   await expect(page.locator('#export-geojson')).toBeDisabled();
+});
+
+
+test('WB-10 real-server polygon intersection excludes a parcel inside its bounding box', async ({ page }) => {
+  await page.goto(url());
+  await expect(page.locator('#connection-status')).toContainText('311 service requests connected', { timeout: 60_000 });
+  await page.locator('#catalog').selectOption('parcels');
+  await expect(page.locator('#map-status')).toHaveText('3 matching records mapped.');
+  await page.locator('#measurement').evaluate((node) => node.map.jumpTo({ center: [-156.468, 20.88], zoom: 15 }));
+  const ring = [[-156.4694, 20.8796], [-156.4664, 20.8796], [-156.4694, 20.8808], [-156.4694, 20.8796]];
+  await drawPolygon(page, ring);
+  await expect(page.locator('#filter-summary')).toHaveText('Intersects drawn polygon (3 vertices)');
+  await expect(page.locator('#map-status')).toHaveText('2 matching records mapped.');
+  await expect(page.locator('#feature-table').locator('tbody tr[data-row-key]')).toHaveCount(2);
+  expect(JSON.parse(await exported(page, 'geojson')).features.map(({ properties }) => properties.tmk_txt).sort())
+    .toEqual(['DEMO-PARCEL-1', 'DEMO-PARCEL-2']);
+  await page.locator('#share').click();
+  await page.goto(await page.locator('#share-url').inputValue());
+  await expect(page.locator('#map-status')).toHaveText('2 matching records mapped.');
+  await page.locator('#remove-bounds').click();
+  await expect(page.locator('#map-status')).toHaveText('3 matching records mapped.');
 });

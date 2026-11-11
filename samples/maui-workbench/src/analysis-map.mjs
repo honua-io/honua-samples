@@ -1,6 +1,7 @@
 import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { createAnalysisSketch } from './analysis-sketch.mjs';
 
 maplibregl.setWorkerUrl(workerUrl);
 
@@ -13,7 +14,12 @@ export function createAnalysisMap(onSelect, measurement) {
   map.addControl(new maplibregl.NavigationControl());
   map.addControl(new maplibregl.AttributionControl({ customAttribution: 'County of Maui · DEMO DATA operations' }));
   measurement.map = map;
-  const selectRecord = (id) => { if (measurement.mode === 'off') onSelect(id); };
+  let sketch;
+  let sketchRevision = 0;
+  let area;
+  let loaded;
+  const ready = new Promise((resolve) => { loaded = resolve; });
+  const selectRecord = (id) => { if (measurement.mode === 'off' && !sketch?.drawing) onSelect(id); };
   let collection = empty();
   let selected = [];
   let camera;
@@ -23,6 +29,7 @@ export function createAnalysisMap(onSelect, measurement) {
   };
   const sync = () => {
     if (!map.getSource('records')) return;
+    map.getSource('area').setData({ type: 'FeatureCollection', features: area ? [{ type: 'Feature', properties: {}, geometry: area }] : [] });
     map.getSource('records').setData(collection);
     map.getSource('selected').setData({ type: 'FeatureCollection',
       features: collection.features.filter((feature) => selected.includes(String(feature.id))) });
@@ -33,24 +40,35 @@ export function createAnalysisMap(onSelect, measurement) {
   };
   const observer = new MutationObserver(theme);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  map.on('load', () => { addLayers(map, selectRecord); theme(); sync(); position(); });
+  map.on('load', () => { addLayers(map, selectRecord); theme(); sync(); position(); loaded(); });
   map.on('idle', () => {
     if (!map.getSource('records')) return;
     const visible = new Set(map.queryRenderedFeatures({ layers: ['records-fill', 'records-line', 'records-point'] })
       .map((feature) => feature.id)).size;
     map.getContainer().setAttribute('aria-label', `Map showing ${visible} matching county records in current view.`);
   });
-  return { update(data) { collection = data; camera = undefined; sync(); fitFeatures(map, data); },
+  return { async bindSketch(context) {
+      const current = ++sketchRevision;
+      sketch?.dispose(); sketch = undefined;
+      await ready;
+      if (current !== sketchRevision) return;
+      const next = await createAnalysisSketch(map, { ...context, measurement });
+      if (current !== sketchRevision) { next.dispose(); return; }
+      sketch = next; next.attach();
+    },
+    cancelSketch() { sketch?.cancel(); },
+    setArea(value) { area = Array.isArray(value) ? boundsGeometry(value) : value; sync(); },
+    update(data) { collection = data; camera = undefined; sync(); fitFeatures(map, data); },
     restoreCamera(value) { camera = value; position(); },
     camera() { const center = map.getCenter().wrap(); return [center.lng, center.lat, map.getZoom(), map.getBearing(), map.getPitch()]; },
     select(ids) { selected = ids.map(String); sync(); },
-    dispose() { observer.disconnect(); measurement.map = undefined; map.remove(); } };
+    dispose() { sketchRevision += 1; sketch?.dispose(); observer.disconnect(); measurement.map = undefined; map.remove(); } };
 }
 
 function addLayers(map, onSelect) {
-  for (const source of ['records', 'selected']) {
+  for (const source of ['area', 'records', 'selected']) {
     map.addSource(source, { type: 'geojson', data: empty() });
-    const color = source === 'selected' ? '#b86116' : '#276965';
+    const color = source === 'records' ? '#276965' : '#b86116';
     map.addLayer({ id: `${source}-fill`, type: 'fill', source,
       filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': color, 'fill-opacity': .3 } });
     map.addLayer({ id: `${source}-line`, type: 'line', source,
@@ -75,4 +93,8 @@ function fitFeatures(map, collection) {
   };
   for (const feature of collection.features) extend(feature.geometry?.coordinates);
   if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 32, maxZoom: 15, duration: 0 });
+}
+
+function boundsGeometry([west, south, east, north]) {
+  return { type: 'Polygon', coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]] };
 }

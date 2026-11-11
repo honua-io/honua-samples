@@ -1,6 +1,7 @@
 import { parseInteractionQueryState, serializeInteractionQueryState } from '@honua/sdk-js/interactions';
 import { analysisBindings, catalogs } from './analysis-model.mjs';
-import { boundingBoxClause, dateRangeClauses } from './analysis-query.mjs';
+import { dateRangeClauses } from './analysis-query.mjs';
+import { spatialClause } from './analysis-spatial.mjs';
 
 const shareError = () => new Error('This share link contains unsupported analysis state. Ask for a new link.');
 const ownKeys = (value, allowed) => Object.keys(value).every((key) => allowed.includes(key));
@@ -21,7 +22,7 @@ function validatePresentation(state) {
 function validateClause(catalog, id, clause) {
   if (id === 'spatial') {
     if (!clause || typeof clause !== 'object' || Array.isArray(clause) || !ownKeys(clause, ['value'])) throw shareError();
-    try { return boundingBoxClause(clause.value); } catch { throw shareError(); }
+    try { return spatialClause(clause.value); } catch { throw shareError(); }
   }
   if (!clause || typeof clause !== 'object' || Array.isArray(clause)
     || !ownKeys(clause, ['field', 'operator', 'value']) || !catalogs[catalog].fields.includes(clause.field)
