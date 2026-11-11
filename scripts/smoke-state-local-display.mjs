@@ -109,3 +109,5 @@ try {
   await browser.close();
   await server.close();
 }
+
+await import('./smoke-state-local-workbench.mjs');
