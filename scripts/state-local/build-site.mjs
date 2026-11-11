@@ -51,7 +51,7 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
 // Validate after all gallery detail pages have been emitted.
 export async function validateStateLocalLinks(siteDir) {
   for (const page of ['index.html', 'switching/index.html', 'sdk-explorer/index.html']) {
-    const html = (await readFile(path.join(siteDir, 'state-local', page), 'utf8')).replace(/(<script\b[^>]*>)[\s\S]*?<\/script\s*>/gi, '$1</script>');
+    const html = (await readFile(path.join(siteDir, 'state-local', page), 'utf8')).replace(/(<script\b[^>]*>)[\s\S]*?<\/script[^>]*>/gi, '$1</script>');
     for (const [, href] of html.matchAll(/(?:href|src)="([^"#][^"]*)"/g)) {
       if (/^[a-z]+:/i.test(href)) continue;
       const target = new URL(href, `https://gallery.invalid/state-local/${page}`);
