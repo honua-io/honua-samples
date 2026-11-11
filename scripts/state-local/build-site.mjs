@@ -59,6 +59,7 @@ async function buildSdkExplorer({ repoRoot, siteDir, cards, source }) {
     template: path.join(repoRoot, 'scripts/state-local/approved/13-sdk-explorer.html'),
     assets: path.join(repoRoot, 'samples/maui-emergency/approved/src'),
     data: { '13-sdk-samples': catalog, ...(display ?? {}) },
+    islandDirectory: display ? path.join(siteDir, 'state-local/data/island') : undefined,
   }));
 }
 

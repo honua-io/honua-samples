@@ -54,6 +54,9 @@ test('approved display snapshots turn the two admitted Explorer previews into in
     for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'places', 'schools', 'shelters']) {
       await writeFile(path.join(display, `${name}.geojson`), JSON.stringify(collection));
     }
+    const island = path.join(siteDir, 'state-local/data/island');
+    await mkdir(island, { recursive: true });
+    for (const name of ['places', 'schools']) await writeFile(path.join(island, `${name}.geojson`), JSON.stringify(collection));
     await writeFile(path.join(display, 'zoning.cjson'), '{}');
     await writeFile(path.join(display, 'parcels.cjson'), '{}');
     await writeFile(path.join(display, 'zone_names.json'), '{}');
@@ -90,6 +93,9 @@ test('display snapshots do not mark a sample live until its app is admitted', as
     for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'places', 'schools', 'shelters']) {
       await writeFile(path.join(display, `${name}.geojson`), JSON.stringify(collection));
     }
+    const island = path.join(siteDir, 'state-local/data/island');
+    await mkdir(island, { recursive: true });
+    for (const name of ['places', 'schools']) await writeFile(path.join(island, `${name}.geojson`), JSON.stringify(collection));
     await writeFile(path.join(display, 'zoning.cjson'), '{}');
     await writeFile(path.join(display, 'parcels.cjson'), '{}');
     await writeFile(path.join(display, 'zone_names.json'), '{}');

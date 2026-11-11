@@ -1,4 +1,5 @@
 // Assemble the approved UI with attested display geometry and fictional exercise records.
+import { buildIslandAssets } from '../../scripts/state-local/approved/build-island.mjs';
 import { approvedPage } from '../../shared/state-local/approved-page.mjs';
 import { readFile, writeFile, mkdir, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -7,6 +8,9 @@ import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const approved = path.join(root, 'approved');
 const output = path.join(root, 'dist');
+const repoRoot = path.resolve(root, '../..');
+const lock = JSON.parse(await readFile(path.join(repoRoot, 'config/state-local-display.v1.json')));
+const islandDirectory = await buildIslandAssets({ root: repoRoot, output: path.join(output, 'state-local'), lock: lock.island });
 const read = (file) => readFile(file, 'utf8');
 const snapshot = JSON.parse(await read(path.join(root, 'public/data/exercise-data.json')));
 const collection = (features) => ({ type: 'FeatureCollection', features });
@@ -21,7 +25,7 @@ const overrides = {
   roads: collection(snapshot.context.roads),
   tsunami: collection(snapshot.context.zones.map((f) => ({ ...f, properties: { ...f.properties,
     code: f.properties.zone_kind === 'extreme' ? 2 : 1 } }))),
-  shelters: collection(shelterRecords.map((f) => ({ ...f, properties: {
+  shelters: collection(shelterRecords.map((f) => ({ ...f, properties: { ...f.properties,
     name: f.properties.anchor_name, addr: 'Real school location · fictional exercise shelter', pets: false, sn: false,
   } }))),
 };
@@ -49,7 +53,7 @@ for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'dfir
 await mkdir(output, { recursive: true });
 await cp(path.join(root, 'public'), output, { recursive: true });
 for (const [name, target] of [['04-emergency.html', 'index.html'], ['11-emergency-mobile.html', 'mobile.html']]) {
-  const html = await approvedPage({ template: path.join(approved, 'pages', name), assets: path.join(approved, 'src'), data });
+  const html = await approvedPage({ template: path.join(approved, 'pages', name), assets: path.join(approved, 'src'), data, islandDirectory });
   await writeFile(path.join(output, target), html);
 }
 const sourceFile = path.join(output, 'data/sources.json');

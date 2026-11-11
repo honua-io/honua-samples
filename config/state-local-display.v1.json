@@ -6,5 +6,9 @@
   "approved": {
     "url": "https://github.com/honua-io/honua-samples/releases/download/maui-approved-display-2026-11-10-r2/maui-approved-display.tar.gz",
     "sha256": "3f8dd291edc8bc6fc44cf389f03fb16c7353e998b49c0c3644d073928df27563"
+  },
+  "island": {
+    "url": "https://github.com/honua-io/honua-samples/releases/download/maui-island-display-2026-11-10/maui-island-display.tar.gz",
+    "sha256": "be832da989a2d71b2d3c40bf0bcfff41686ff971b4e5473e3b8ecae474545bf6"
   }
 }

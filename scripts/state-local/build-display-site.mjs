@@ -1,8 +1,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256 } from '../lib/checksum.mjs';
+import { lockedArchive } from './locked-archive.mjs';
+import { buildIslandAssets } from './approved/build-island.mjs';
 import { buildApprovedDemos } from './approved/build-site.mjs';
 
 const root = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
@@ -11,16 +12,7 @@ const archiveDir = path.join(root, 'artifacts/display-download');
 const lock = JSON.parse(await readFile(path.join(root, 'config/state-local-display.v1.json')));
 
 async function downloadSnapshots() {
-  await mkdir(archiveDir, { recursive: true });
-  const response = await fetch(lock.url, { signal: AbortSignal.timeout(120_000) });
-  if (!response.ok) throw new Error(`Display snapshot HTTP ${response.status}`);
-  const archive = Buffer.from(await response.arrayBuffer());
-  if (sha256(archive) !== lock.sha256) throw new Error('Display archive checksum mismatch');
-  const filename = path.join(archiveDir, 'display.tar.gz');
-  await writeFile(filename, archive);
-  execFileSync('tar', ['-xzf', filename, '-C', archiveDir]);
-  const manifest = JSON.parse(await readFile(path.join(archiveDir, 'manifest.json')));
-  if (manifest.schemaVersion !== 1 || manifest.crs !== 'EPSG:4326') throw new Error('Unsupported display manifest');
+  const manifest = await lockedArchive(lock, archiveDir);
   await mkdir(path.join(output, 'data'), { recursive: true });
   for (const [name, layer] of Object.entries(manifest.layers)) {
     if (!/^maui-[a-z-]+$/.test(name)) throw new Error('Invalid snapshot filename');
@@ -34,4 +26,5 @@ async function downloadSnapshots() {
 }
 
 await downloadSnapshots();
+await buildIslandAssets({ root, output, lock: lock.island });
 await buildApprovedDemos({ root, output, lock: lock.approved });

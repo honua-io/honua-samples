@@ -293,9 +293,9 @@
   const inZone = (c, code) => zone(code).some((f) => inPoly(c, f.geometry));
   const facilities = [
     ...HD.shelters.features.map((f) => ({ kind: "Shelter", name: SH[f.properties.name].label, id: "shelters/" + SH[f.properties.name].fid, c: f.geometry.coordinates })),
-    ...HD.fire.features.map((f, i) => ({ kind: "Fire station", name: f.properties.name.replace(/^(\w+) \((E\d+)\)$/, "$1 Fire Station ($2)"), id: "fire/" + [96, 97][i], c: f.geometry.coordinates })),
-    ...HD.police.features.map((f) => ({ kind: "Police", name: f.properties.name, id: "police/6", c: f.geometry.coordinates })),
-    ...HD.hospitals.features.map((f) => ({ kind: "Hospital", name: f.properties.name, id: "hospitals/16", c: f.geometry.coordinates })),
+    ...HD.fire.features.map((f) => ({ kind: "Fire station", name: f.properties.name.replace(/^(\w+) \((E\d+)\)$/, "$1 Fire Station ($2)"), id: "fire/" + (f.properties.source_objectid ?? f.properties.objectid), c: f.geometry.coordinates })),
+    ...HD.police.features.map((f) => ({ kind: "Police", name: f.properties.name, id: "police/" + (f.properties.source_objectid ?? f.properties.objectid), c: f.geometry.coordinates })),
+    ...HD.hospitals.features.map((f) => ({ kind: "Hospital", name: f.properties.name, id: "hospitals/" + (f.properties.source_objectid ?? f.properties.objectid), c: f.geometry.coordinates })),
     ...HD.schools.features.filter((f) => !HD.shelters.features.some((s) => s.geometry.coordinates.join() === f.geometry.coordinates.join())).map((f) => ({ kind: "School", name: f.properties.name, id: "schools/" + f.properties.name.toLowerCase().replace(/\s+/g, "-"), c: f.geometry.coordinates })),
   ];
   const uniq = (a) => a.filter((f, i) => a.findIndex((g) => g.name === f.name) === i);
@@ -363,9 +363,10 @@
     attr: "Data: Hawaii Statewide GIS Program, Hawaii Statewide GIS Program · exercise data · served by Honua",
     onload: (m) => {
       HM.overlays(m, ["slr", "flood", "tsunami"], "roads-casing");
-      m.addLayer({ id: "road-status-casing", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5, 16, 11] } });
-      m.addLayer({ id: "road-status", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "name"], ...ROADS.flatMap((r) => [r.name, RC[r.st]]), "#999"], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 16, 7] } });
-      m.addLayer({ id: "road-closed-dash", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.filter((r) => r.st === "closed").map((r) => r.name)]], paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 1, 16, 2.5], "line-dasharray": [1.5, 1.5] } });
+      m.addSource("exercise-roads", { type: "geojson", data: HD.roads });
+      m.addLayer({ id: "road-status-casing", type: "line", source: "exercise-roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5, 16, 11] } });
+      m.addLayer({ id: "road-status", type: "line", source: "exercise-roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "name"], ...ROADS.flatMap((r) => [r.name, RC[r.st]]), "#999"], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 16, 7] } });
+      m.addLayer({ id: "road-closed-dash", type: "line", source: "exercise-roads", filter: ["in", ["get", "name"], ["literal", ROADS.filter((r) => r.st === "closed").map((r) => r.name)]], paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 1, 16, 2.5], "line-dasharray": [1.5, 1.5] } });
       const fac = { type: "FeatureCollection", features: [...HD.fire.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Fire station" } })), ...HD.police.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Police" } })), ...HD.hospitals.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Hospital" } }))] };
       m.addSource("facilities", { type: "geojson", data: fac });
       m.addLayer({ id: "facilities", type: "circle", source: "facilities", paint: { "circle-radius": 5.5, "circle-color": "#b3261e", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });

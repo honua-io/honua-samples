@@ -88,3 +88,54 @@ prepared source. An archive without its receipt is refused for manual inspection
 These commands prepare and export data; they do not configure anonymous access,
 change public hosting or publish a demo. Retain source attribution when packaging
 archives into an approved public site build.
+
+
+## Package the static display
+
+```sh
+node scripts/state-local/approved/pack-island.mjs \
+  artifacts/island-download artifacts/island-import artifacts/island-tiles artifacts/island-display
+```
+
+The package retains all twenty sources and their licence, attribution and checksum
+receipts. Six sources use Honua-generated PMTiles; fourteen smaller overlays use
+GeoJSON. Display aliases preserve original fields and label every feature as real
+reference data. Exercise shelters, requests and work orders remain separate.
+The reviewed archive SHA-256 is pinned in `config/state-local-display.v1.json`;
+site builds download it at build time and verify every extracted file.
+Release the pinned data asset before enabling a clean public site build.
+
+The 2026-11-10 exports use the default PostGIS-only candidate and contain 3,660
+processed tiles per source, with no failures or warnings:
+
+| Layer | PMTiles bytes |
+| --- | ---: |
+| Parcels | 30,620,499 |
+| Zoning | 5,284,805 |
+| Flood zones | 4,823,909 |
+| Tsunami zones | 1,530,649 |
+| Roads | 4,493,513 |
+| Contours | 13,067,211 |
+| Total | 59,820,586 |
+
+The street basemap reuses the existing public Maui Protomaps archive from the demo
+server (7,089,102 bytes, OpenStreetMap/ODbL attribution). It creates no new hosting
+resource. Honua archives are static files served with HTTP byte-range support.
+
+## Check camera interaction and performance
+
+After building the gallery into `site/`, run:
+
+```sh
+node scripts/measure-island-maps.mjs
+```
+
+Set `HONUA_GALLERY_URL` to test a deployed gallery instead. The script checks all
+six full maps at Kahului, Lahaina, Kihei and island extent, then verifies that
+reloading the shared URL restores the camera. Reports and screenshots stay in
+ignored `artifacts/island-performance/`. It fails on browser/map errors, tile
+readiness above one second, or main-thread tasks above 200 ms. Readiness includes
+the 300 ms camera animation; it is not a pixel-based blank-tile assertion.
+The default software GL run is diagnostic: record the renderer and network with
+the numbers, and verify the broadband target on a hardware-accelerated browser
+before claiming that target passes.

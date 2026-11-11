@@ -20,6 +20,9 @@ def read(p):
 
 
 def load(name):
+    island = os.environ.get("HONUA_ISLAND_DATA")
+    if island and name in ("fire", "police", "hospitals", "places", "bridges", "schools"):
+        return json.loads(read(os.path.join(island, name + ".geojson")))
     for ext in (".cjson", ".geojson", ".json"):
         p = os.path.join(DATA, name + ext)
         if os.path.exists(p):
@@ -49,6 +52,8 @@ def head(uses_map):
     if uses_map:
         parts.append(f'<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{MAPLIBRE}/dist/maplibre-gl.css">')
         parts.append(f'<script src="https://unpkg.com/maplibre-gl@{MAPLIBRE}/dist/maplibre-gl.js"></script>')
+    if uses_map:
+        parts.append('<script src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js" integrity="sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn" crossorigin="anonymous"></script>')
     parts.append(f"<style>{css}\n[hidden]{{display:none!important}}</style>")
     return "\n".join(parts)
 
@@ -62,7 +67,7 @@ def build(name):
     uses_map = "{{MAPJS}}" in src
     src = src.replace("{{HEAD}}", head(uses_map))
     src = src.replace("{{ICONS}}", read(os.path.join(SRC, "icons.svg")))
-    kit = "<script>" + read(os.path.join(SRC, "honua-map.js")) + "</script>"
+    kit = "<script>" + read(os.path.join(ROOT, "../../../shared/state-local/island-map.js")) + "\n" + read(os.path.join(SRC, "honua-map.js")) + "</script>"
     if "{{MAPJS}}" in src:
         src = src.replace("{{MAPJS}}", kit)
     else:
