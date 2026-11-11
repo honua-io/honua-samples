@@ -66,9 +66,15 @@ node scripts/state-local/approved/export-island.mjs \
 ```
 
 This exports parcels, zoning, flood, tsunami, roads and contours through Honua's
-native archive job API. Each layer covers zooms 8–14 over the Maui Nui envelope:
-3,660 requested tiles, within the default 5,000-tile ceiling. Higher display zooms
-can overzoom these tiles. The MVT source layer is `layer`.
+native archive job API over the Maui Nui envelope, up to zoom 14, within the default
+5,000-tile ceiling. Each archive starts at the lowest zoom the island map draws it
+(`islandTileMinZoom` in `sources.mjs`): parcels z13, roads z12, contours z11, the
+others z8 (3,660 tiles). Tests fail if an `island-map.js` layer draws a trimmed
+archive below its exported zoom, or if page sources attach one by literal name
+(`add(map, "roads", HD.roads)`, `HI.source("roads")`). Indirect attachment is not
+detected; such a layer would draw nothing below the archive's zoom. Site builds
+refuse an archive whose recorded zooms differ from these. Higher display zooms
+overzoom these tiles. The MVT source layer is `layer`.
 
 Run this against a private build server. Honua requires a routable layer for tile
 export, so each disabled staged layer is temporarily enabled, then restored and
@@ -101,22 +107,32 @@ The package retains all twenty sources and their licence, attribution and checks
 receipts. Six sources use Honua-generated PMTiles; fourteen smaller overlays use
 GeoJSON. Display aliases preserve original fields and label every feature as real
 reference data. Exercise shelters, requests and work orders remain separate.
-The reviewed archive SHA-256 is pinned in `config/state-local-display.v1.json`;
+The reviewed archive SHA-256 is pinned in `shared/state-local/island-display.lock.json`;
 site builds download it at build time and verify every extracted file.
 Release the pinned data asset before enabling a clean public site build.
 
-The 2026-11-10 exports use the default PostGIS-only candidate and contain 3,660
-processed tiles per source, with no failures or warnings:
+The 2026-11-11 exports use the default PostGIS-only image (nightly, server commit
+`8fe5493`) and processed every requested tile with no failures or warnings:
 
-| Layer | PMTiles bytes |
-| --- | ---: |
-| Parcels | 30,620,499 |
-| Zoning | 5,284,805 |
-| Flood zones | 4,823,909 |
-| Tsunami zones | 1,530,649 |
-| Roads | 4,493,513 |
-| Contours | 13,067,211 |
-| Total | 59,820,586 |
+| Layer | Zooms | Requested tiles | PMTiles bytes |
+| --- | --- | ---: | ---: |
+| Parcels | 13–14 | 3,394 | 18,494,778 |
+| Zoning | 8–14 | 3,660 | 5,286,007 |
+| Flood zones | 8–14 | 3,660 | 4,824,988 |
+| Tsunami zones | 8–14 | 3,660 | 1,529,539 |
+| Roads | 12–14 | 3,581 | 2,233,213 |
+| Contours | 11–14 | 3,635 | 10,229,368 |
+| Total | | | 42,597,893 |
+
+Starting each archive at its drawn zoom cut the total from 59,820,586 bytes
+(2026-11-10, all layers z8–14) by 29%. Tiles are stored uncompressed: the export
+cannot yet write gzip tiles (honua-server#7361).
+
+Chromium-family browsers read these island archives with the browser HTTP cache
+bypassed (`island-map.js`; pmtiles 4.5.0 does this only on Windows). With the
+cache, concurrent range reads of one archive intermittently returned another
+request's bytes and tiles failed to parse. The static-site CDN still caches. The
+street basemap keeps default caching.
 
 The street basemap reuses the existing public Maui Protomaps archive from the demo
 server (7,089,102 bytes, OpenStreetMap/ODbL attribution). It creates no new hosting
