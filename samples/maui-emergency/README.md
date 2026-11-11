@@ -129,9 +129,10 @@ School anchors are not designated shelters; all statuses and occupancy are ficti
 - SDK-03: a 60-second server check is not a realtime stream. Realtime gauges
   remain cut pending a deployment with advertised feature-stream support
   (tracked in the SDK issue #2375).
-- SDK-04: no published isochrone API is available in the pinned SDK;
-  travel-time polygons remain cut (SDK issue #2374). No synthetic buffer
-  is presented as an isochrone.
+- SDK-04: SDK isochrone support was implemented in SDK change #2384,
+  resolving SDK issue #2374. Travel-time polygons remain cut until an existing
+  routing provider is approved and verified for Maui; [provider verification](https://github.com/honua-io/honua-samples/issues/127) tracks that work.
+  No synthetic buffer is presented as an isochrone.
 - SDK-05: imagery comparison remains cut until a public COG has a current,
   attested source/licence and approved deployment binding. This page does not
   use historical disaster imagery. A missing data receipt is not an SDK defect.
@@ -140,9 +141,9 @@ School anchors are not designated shelters; all statuses and occupancy are ficti
 - EM-02: special-needs and pets intake remain cut; the exercise does not collect
   personal information or imply that any school offers these services.
 
-Public release remains gated on the shared deployment receipts and independent
-browser verification against the released server. A successful local fixture is
-not a public readiness claim.
+The snapshot exercise can publish independently of live API activation after
+visual approval and browser verification. Live SDK capabilities remain gated on
+their deployment and provider receipts; a fixture does not establish live readiness.
 
 Imagery comparison and terrain previews are cut until bounded federal inputs have source URLs, licence statements, SHA-256 receipts and anonymous deployment bindings. The remaining work is tracked in [the source attestation issue](https://github.com/honua-io/honua-samples/issues/122).
 
