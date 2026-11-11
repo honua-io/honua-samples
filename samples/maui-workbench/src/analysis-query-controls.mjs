@@ -1,4 +1,5 @@
-import { boundingBoxClause, dateRangeClauses } from './analysis-query.mjs';
+import { boundingBoxClause } from './analysis-spatial.mjs';
+import { dateRangeClauses } from './analysis-query.mjs';
 import { setAnalysisFilter } from './analysis-model.mjs';
 
 const element = (id) => document.getElementById(id);

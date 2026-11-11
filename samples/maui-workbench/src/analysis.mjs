@@ -1,4 +1,6 @@
 import './analysis.css';
+import { bindSelectionExplanation } from './analysis-selection.mjs';
+import { bindCapabilityExplanation } from './analysis-capability.mjs';
 import { describeFeatureTableCount } from '@honua/app-platform/web-components';
 import { analysisBindings, openAnalysisSource, createAnalysisModel, analysisQuery,
   queryAnalysisMap, queryStatusChart, setAnalysisFilter, MAP_LIMIT } from './analysis-model.mjs';
@@ -16,17 +18,25 @@ let revision = 0;
 let active;
 let unsubscribe;
 let exportSnapshot;
+const explanation = bindSelectionExplanation({ model: () => model,
+  button: element('explain-selection'), output: element('selection-explanation') });
+const capabilityExplanation = bindCapabilityExplanation({ model: () => model, form: element('capability-form'),
+  select: element('capability'), output: element('capability-explanation') });
 const map = createAnalysisMap((id) => {
   if (model) model.table.select(model.table.keysForTargets([{ sourceId: model.source.descriptor.id, id }]), { replace: true });
 }, element('measurement'));
 
 function setControlsState(state) {
-  for (const id of ['catalog', 'field', 'operator', 'value', 'apply', 'clear', 'export-csv', 'export-geojson', 'share', ...queryControlIds]) {
+  if (state !== 'ready') map.cancelSketch();
+  element('sketch').inert = state !== 'ready';
+  for (const id of ['capability', 'check-capability', 'explain-selection', 'catalog', 'field', 'operator', 'value', 'apply', 'clear', 'export-csv', 'export-geojson', 'share', ...queryControlIds]) {
     element(id).disabled = state !== 'ready';
   }
 }
 
 function clearResults() {
+  capabilityExplanation.invalidate();
+  explanation.invalidate();
   element('share-output').hidden = true;
   map.update({ type: 'FeatureCollection', features: [] });
   element('map-status').textContent = 'Loading matching records…';
@@ -39,6 +49,7 @@ function bindTable(next) {
   unsubscribe = next.table.subscribe((snapshot) => {
     if (model !== next) return;
     if (snapshot.state === 'error') { showError(snapshot.error ?? new Error('Table page validation failed.')); return; }
+    explanation.invalidate();
     const targets = next.table.selectionTargets();
     map.select(targets.map((target) => target.id));
     element('selection-status').textContent = `${describeFeatureTableCount(snapshot.count)} · ${snapshot.selection.length} selected`;
@@ -65,6 +76,7 @@ function resetAnalysis() {
   unsubscribe?.();
   model?.table.dispose();
   model = null;
+  map.setArea(undefined);
   element('feature-table').table = undefined;
   clearResults();
   setControlsState('busy');
@@ -79,6 +91,17 @@ async function chooseCatalog(restored) {
     const handle = await openAnalysisSource(bindings[name], name);
     if (current !== revision) return;
     model = createAnalysisModel(handle);
+    await map.bindSketch({ source: handle.source, element: element('sketch'), measurement: element('measurement'),
+      onGeometry(clause) {
+        if (model?.source !== handle.source) return;
+        setAnalysisFilter(model, clause);
+        restoreQueryControls(name, model.registry.snapshot.clauses);
+        describeFilters();
+        void refreshAnalysis();
+      },
+      onError(error) { status.textContent = error.message; },
+    });
+    if (current !== revision) return;
     for (const clause of restored?.clauses ?? []) setAnalysisFilter(model, {
       ...clause, owner: clause.id === 'chart-status' ? 'status-chart' : 'query',
     });
@@ -153,15 +176,23 @@ function renderChart(data) {
   }
 }
 
+function describeClause(clause) {
+  if (clause.id !== 'spatial') return `${clause.field} ${clause.operator} ${clause.value}`;
+  if (Array.isArray(clause.value)) return `Intersects bounding box ${clause.value.join(', ')}`;
+  return `Intersects drawn polygon (${clause.value.coordinates[0].length - 1} vertices)`;
+}
+
 function describeFilters() {
+  map.setArea(model.registry.snapshot.clauses.find((clause) => clause.id === 'spatial')?.value);
   element('filter-summary').textContent = model.registry.snapshot.clauses
-    .map((clause) => clause.id === 'spatial' ? `Intersects bounding box ${clause.value.join(', ')}`
-      : `${clause.field} ${clause.operator} ${clause.value}`).join(' AND ') || 'No filters applied.';
+    .map(describeClause).join(' AND ') || 'No filters applied.';
   try { element('cql2-preview').textContent = previewAnalysisCql2(model.registry.snapshot.clauses); }
   catch { element('cql2-preview').textContent = 'CQL2 preview unavailable for this filter. The map, table and exports still use the active GeoServices query.'; }
 }
 
 function showError(error) {
+  capabilityExplanation.invalidate();
+  explanation.invalidate();
   revision += 1;
   active?.abort();
   exportSnapshot = undefined;

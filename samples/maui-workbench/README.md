@@ -83,15 +83,16 @@ The layout checks mock transport with small fictional records while running
 the published SDK. The capability-keyed real-server check imports 205 fictional
 requests and three synthetic parcel points through the admin API, publishes
 anonymous layers, and checks pagination, chart filtering, table selection,
-catalog switching, labeled exports and rejection of unlabelled requests. These
+catalog switching, labeled exports, rejection of unlabelled requests, and polygon
+intersection that excludes a point inside the polygon’s bounding box. These
 points test the contract; they do not represent county parcel boundaries.
 Neither check proves the shared deployment. The full Workbench (including agent
-plan approval, scatter/time-series controls, sketching and map-click row reveal),
+plan approval, scatter/time-series controls and map-click row reveal),
 shared activation,
 and published-site acceptance remain pending.
 
 The analysis page can generate an anonymous link that restores its catalog,
-field, status-chart, UTC date-range and WGS84 bounding-box filters using the published SDK's
+field, status-chart, UTC date-range and WGS84 area filters using the published SDK's
 `serializeInteractionQueryState` / `parseInteractionQueryState` helpers. State
 lives in the URL fragment; endpoint bindings remain in the query string. Only
 validated endpoint bindings are copied. Unsupported state fails before loading
@@ -108,11 +109,36 @@ length and area in metres and square metres. Choose Distance or Area, click
 vertices, then Finish (also available on touch screens). Escape or Cancel clears
 the sketch; Off restores record selection. Measurements follow the clicked map
 coordinates and do not calculate a parcel’s legal area. They are temporary and
-are excluded from shared links and record exports. Browser acceptance is pending.
+are excluded from shared links and record exports. Drawing a query polygon and measuring are mutually exclusive.
 
 The 311 opened-date filter includes the entire final UTC day using an exclusive
-next-day bound. The geographic filter intersects an explicit WGS84 bounding box;
+next-day bound. The geographic filter intersects an explicit WGS84 bounding box or a drawn polygon;
 panning the map does not change it. Both use the same filter registry as the map,
 table, status chart and exports. The expandable CQL2 preview uses the public SDK
 query compiler; the connected layers receive equivalent GeoServices queries.
-Date/area browser acceptance remains pending until the focused suite passes.
+Choose Polygon in the published sketch control and close the ring by clicking its
+first vertex. The filter accepts one simple WGS84 ring with 3–100 vertices;
+holes, self-intersections and dateline crossings are rejected. It sends the
+polygon itself to the server, retains an area overlay, and restores it from
+shared links. Drawing replaces a bounding-box filter; Remove area filter clears
+either. Point and line query filters are unavailable. Sketching never writes
+features. The focused desktop/mobile checks run with:
+
+```sh
+npx playwright test samples/maui-workbench/verify/polygon.spec.mjs --project chromium
+```
+
+The selection panel calls the published SDK's read-only `summarizeSelection`
+agent tool and cites the active layer, source URL and equivalent CQL2 filter.
+It counts selected records and shows field frequencies for selected rows in the
+loaded table window, explicitly reporting that window's coverage. Selection,
+query or catalog changes clear the summary. This deterministic summary does
+not supply natural-language analysis, histogram brushing or a comparison with
+unselected records; those acceptance steps remain pending.
+
+The capability panel uses the published SDK's read-only `explainCapabilityGap`
+tool against the connected source descriptor. Choose a listed operation to see
+whether the source advertises it, with the layer and endpoint cited. No source
+operation executes; advertised support does not establish permissions or runtime
+success. Missing metadata produces an error rather than inferred protocol support.
+This is a guided SDK tool invocation, not a natural-language agent conversation.

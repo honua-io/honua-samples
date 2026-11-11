@@ -4,7 +4,7 @@ import { createHonuaFeatureTable } from '@honua/app-platform/web-components';
 import { createFilterRegistry, projectFilterRegistryToQuery } from '@honua/sdk-js/filter-registry';
 import { namedBindings } from '../../../shared/state-local/binding.mjs';
 import { assertExerciseProvenance } from '../../../shared/state-local/exercise-provenance.mjs';
-import { boundingBoxClause } from './analysis-query.mjs';
+import { spatialClause } from './analysis-spatial.mjs';
 
 export const catalogs = {
   parcels: { label: 'Parcels', fields: ['tmk_txt', 'gisacres', 'taxacres'], group: null },
@@ -114,7 +114,7 @@ export async function queryStatusChart(model, options = {}) {
 export function setAnalysisFilter(model, filter) {
   const { id, field, operator, value, owner = 'query' } = filter;
   if (id !== 'spatial' && !model.columns.includes(field)) throw new Error('Choose a field from the active layer.');
-  const clause = id === 'spatial' ? boundingBoxClause(value) : { id, field, operator, value };
+  const clause = id === 'spatial' ? spatialClause(value) : { id, field, operator, value };
   model.registry.upsert({ ...clause, owner: { kind: 'control', id: owner },
     sourceScope: [model.source.descriptor.id], lifecycle: 'persistent', effect: 'filter' });
 }

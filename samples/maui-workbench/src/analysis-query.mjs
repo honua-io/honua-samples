@@ -1,4 +1,4 @@
-import { envelope } from '@honua/sdk-js';
+import { spatialClause } from './analysis-spatial.mjs';
 import { queryFilter } from '@honua/sdk-js/contract';
 import { compileOgcApiFeaturesQuery } from '@honua/sdk-js/query-planner';
 
@@ -24,22 +24,11 @@ export function dateRangeClauses(start, end) {
   return clauses;
 }
 
-export function boundingBoxClause(bounds) {
-  if (!Array.isArray(bounds) || bounds.length !== 4 || !bounds.every(Number.isFinite)) {
-    throw new Error('Enter four finite bounding box coordinates.');
-  }
-  const [west, south, east, north] = bounds;
-  if (west < -180 || east > 180 || south < -90 || north > 90 || west >= east || south >= north) {
-    throw new Error('Use a WGS84 bounding box with west < east and south < north.');
-  }
-  return { id: 'spatial', value: [...bounds], spatialScope: { filter: envelope(west, south, east, north) } };
-}
-
 const comparisons = { '=': 'eq', '!=': 'ne', '>=': 'gte', '<=': 'lte', '<': 'lt' };
 export function previewAnalysisCql2(clauses) {
   if (!clauses.length) return 'TRUE';
   const filters = clauses.map((clause) => clause.id === 'spatial'
-    ? queryFilter.spatial('intersects', boundingBoxClause(clause.value).spatialScope.filter)
+    ? queryFilter.spatial('intersects', spatialClause(clause.value).spatialScope.filter)
     : queryFilter[comparisons[clause.operator]](clause.field, clause.value));
   const source = { id: 'preview', protocol: 'ogc-features', collectionId: 'preview',
     endpoint: 'https://demo.honua.io/ogc', authorizationScope: [], capabilities: [] };
