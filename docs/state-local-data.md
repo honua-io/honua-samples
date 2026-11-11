@@ -191,9 +191,28 @@ separate; none of these checks establishes a released demo or an agent eval pass
 
 ## Bounded shared load
 
+Staging checks every prepared layer against the pinned default server's geometry
+budget before making any server request: 10,000 vertices and 100 total polygon
+rings per feature. Single-layer uploads use the same check. An excess stops the
+load with the original source feature ID and measured counts; no geometry is
+discarded. Resolve the supported import contract before staging complex public
+coastal or regulatory layers. Preparation and valid checksums alone do not prove
+importability, and this size check does not validate topology or predict geometry
+repair outcomes. Rollback remains available for previously staged layers whose
+receipts match the current source contract.
+
 The shared loader prepares the nine property layers as display geometry in EPSG:4326
-with a 0.00002-degree simplification tolerance and six decimal places. These layers
-are for public display, not legal boundary measurement. No source raster is loaded.
+with a 0.00002-degree simplification tolerance and 15 decimal places in the source
+query. Explicit precision avoids the upstream default rounding collapsing small
+zoning polygons. These layers are for public display, not legal boundary
+measurement. No source raster is loaded. For directories that were never staged,
+prepare into a new directory: six-decimal receipts no longer match the current
+precision-bound provenance contract. Re-fetch every real Maui snapshot made with
+six-decimal queries into a fresh run directory, then regenerate any fictional
+records anchored to those snapshots. Previously staged six-decimal directories
+require reconciliation in Console; keep their deployment and intent receipts and
+do not retry staging from a fresh directory. Existing published display archives
+remain pinned to their recorded checksums.
 
 ```sh
 node scripts/state-local/shared-load.mjs prepare artifacts/shared-load
