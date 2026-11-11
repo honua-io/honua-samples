@@ -70,9 +70,11 @@ native archive job API over the Maui Nui envelope, up to zoom 14, within the def
 5,000-tile ceiling. Each archive starts at the lowest zoom the island map draws it
 (`islandTileMinZoom` in `sources.mjs`): parcels z13, roads z12, contours z11, the
 others z8 (3,660 tiles). Tests fail if an `island-map.js` layer draws a trimmed
-archive below its exported zoom, or if a page attaches a trimmed archive another
-way. Site builds refuse an archive whose recorded zooms differ from these. Higher display zooms overzoom these tiles. The MVT source
-layer is `layer`.
+archive below its exported zoom, or if page sources attach one by literal name
+(`add(map, "roads", HD.roads)`, `HI.source("roads")`). Indirect attachment is not
+detected; such a layer would draw nothing below the archive's zoom. Site builds
+refuse an archive whose recorded zooms differ from these. Higher display zooms
+overzoom these tiles. The MVT source layer is `layer`.
 
 Run this against a private build server. Honua requires a routable layer for tile
 export, so each disabled staged layer is temporarily enabled, then restored and
