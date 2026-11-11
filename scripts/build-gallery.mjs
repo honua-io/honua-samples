@@ -344,6 +344,15 @@ async function main() {
     );
   }
 
+  const emergency = ownSampleByDir.get('maui-emergency');
+  const emergencyDir = path.join(SITE_DIR, 'state-local/emergency');
+  const stagedEmergency = await stageOwnBrowserApp({
+    repoRoot: REPO_ROOT, dirName: emergency.dirName, manifest: emergency.manifest,
+    sourceCommit, destDir: emergencyDir,
+  });
+  if (!stagedEmergency.ok) throw new Error(`Emergency page could not be staged: ${stagedEmergency.reason}`);
+  await writeFile(path.join(emergencyDir, OWN_APP_MANIFEST_NAME), `${JSON.stringify(stagedEmergency.app, null, 2)}\n`, 'utf8');
+
   for (const card of jobCards) {
     const dir = path.join(SITE_DIR, "jobs", card.id);
     await mkdir(dir, { recursive: true });

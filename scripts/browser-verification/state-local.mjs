@@ -16,7 +16,9 @@ async function buildSample(sample, scenario) {
   await ensureOperationsDependencies(sample);
   await runCommand('npm', ['test'], { cwd: sample, label: 'operations unit tests' });
   if (scenario) await runCommand('node', ['scripts/state-local/sdk/verify.mjs', scenario], { cwd: path.resolve(sample, '../..'), label: 'three published SDK contracts' });
-  await runCommand('npm', ['run', 'build'], { cwd: sample, label: 'build operations app' });
+  // The live API contract harness remains separate from the approved public snapshot UI.
+  const build = scenario === 'emergency' ? 'build:contract' : 'build';
+  await runCommand('npm', ['run', build], { cwd: sample, label: 'build operations app' });
 }
 
 export async function prepareOperationsBrowser({ sampleUrl, scenario, seeds }) {
