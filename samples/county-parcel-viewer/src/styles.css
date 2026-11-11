@@ -131,6 +131,11 @@ section.group h2 { margin: 0 0 10px; font-family: var(--font-sans); font-size: 1
 .maplibregl-ctrl-group button + button { border-top: 1px solid var(--c-border) !important; }
 .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 16px 16px 0 0; }
 .maplibregl-ctrl-attrib { font: 12px var(--font-sans); }
+.building-control button { color: var(--c-text); font: 700 14px var(--font-sans); }
+.building-control button:disabled { opacity: 0.55; cursor: wait; }
+.building-control button[aria-pressed="true"] { background: var(--c-border); }
+.building-control button:focus-visible { outline: 2px solid var(--c-text); outline-offset: 2px; }
+.building-note { position: absolute; left: 16px; bottom: 84px; max-width: min(42ch, calc(100% - 92px)); z-index: 1; margin: 0; padding: 8px 12px; border: 1px solid var(--c-border); background: var(--map-chip-bg); color: var(--c-text); font-size: 13px; }
 
 .tech { border-top: 1px solid var(--c-border); background: var(--c-surface); }
 .tech summary { display: flex; align-items: center; min-height: 44px; padding: 0 24px; cursor: pointer; font-size: 15px; font-weight: 700; }

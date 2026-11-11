@@ -455,6 +455,8 @@ handoff runs through 2026-11-09T22:30Z
 less than three days away, so the pin is refreshed before admission refuses it.
 
 ```bash
+node scripts/state-local/build-display-site.mjs # fetches verified snapshots and builds
+                                                # the three state/local demo routes first
 node scripts/build-gallery.mjs          # builds site/ (index + one page per sample/entry);
                                          # also fetches + integrity-verifies + stages sdk-js
                                          # sample bundles inline (see the Embeds section above)

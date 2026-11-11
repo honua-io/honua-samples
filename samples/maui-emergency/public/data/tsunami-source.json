@@ -1,0 +1,92 @@
+{
+  "source": "maui-tsunami-zones",
+  "dataset": "Hazards/MapServer/2",
+  "department": "Emergency Management",
+  "license": "public-domain",
+  "licenseUrl": "https://planning.hawaii.gov/gis/download-gis-data-expanded/",
+  "metadataUrl": "https://files.hawaii.gov/dbedt/op/gis/data/tsunevac.pdf",
+  "sourceUrl": "https://geodata.hawaii.gov/arcgis/rest/services/Hazards/MapServer/2",
+  "attribution": "County of Maui; Hawaii Statewide GIS Program",
+  "outputCrs": "EPSG:4326",
+  "coverageBounds": [
+    -157.4,
+    20.45,
+    -155.95,
+    21.25
+  ],
+  "displayGeometry": {
+    "maxAllowableOffset": 0.00002,
+    "geometryPrecision": 15,
+    "warning": "Display geometry generalized in output degrees (approximately two metres); not legal boundaries or survey measurements"
+  },
+  "datumTransformation": "No explicit datum transformation requested; server default NAD83 to WGS84 may differ by approximately one metre",
+  "selection": {
+    "kind": "Maui Nui envelope intersection; whole features; not a county boundary clip",
+    "bounds": [
+      -157.4,
+      20.45,
+      -155.95,
+      21.25
+    ],
+    "completeDataset": false,
+    "pageSize": 100
+  },
+  "requests": [
+    "https://geodata.hawaii.gov/arcgis/rest/services/Hazards/MapServer/2/query?f=geojson&objectIds=4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C13%2C14%2C15%2C16%2C17%2C18%2C19%2C20%2C21%2C22%2C23%2C24%2C25%2C26%2C27%2C28%2C29&outFields=objectid%2Cisland%2Cmapname%2Czone_type%2Czone_desc%2Ctsu_evac%2Cevac_zone&returnGeometry=true&outSR=4326&maxAllowableOffset=0.00002&geometryPrecision=15"
+  ],
+  "selectedIds": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29
+  ],
+  "retrievedAt": "2026-11-10T08:28:22.163Z",
+  "sourceCrs": {
+    "falseM": -100000,
+    "xyTolerance": 0.001,
+    "mUnits": 10000,
+    "zUnits": 10000,
+    "latestWkid": 3750,
+    "zTolerance": 0.001,
+    "wkid": 102202,
+    "xyUnits": 10000,
+    "mTolerance": 0.001,
+    "falseX": -5120900,
+    "falseY": -9998100,
+    "falseZ": -100000
+  },
+  "consistency": "ID set and exposed metadata checked before/after; attribute changes may be undetectable without editingInfo",
+  "downloaded": 26,
+  "accepted": 26,
+  "rejected": 0,
+  "hashes": {
+    "raw": "3f1e763b647a83fcd48e741a3a2e7ae40ab33b139b2815ea5f86265c6146a266",
+    "geojson": "5d5be907351936f713f6d7bc61fb9a4f70d02d8ff0d6d609b700c0765fd6e9b6",
+    "metadata": "a793c6e507288028ef31d9fceb348410ae49c7b4f427dbb59c70bd6e30d1bf68",
+    "policy": "869a23dfc89c00f38843222109541260f2ced0dea3f513061e4bc43db41380b6",
+    "summary": "71c6d21a79436784a0771f824e68b0cd9e51c32fe2ac2af8a664103842ed1b36"
+  },
+  "cleanSha256": "5d5be907351936f713f6d7bc61fb9a4f70d02d8ff0d6d609b700c0765fd6e9b6"
+}

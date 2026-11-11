@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { buildStateLocalSite, validateStateLocalLinks } from '../state-local/build-site.mjs';
+
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
+test('gallery preserves the separately built landing and checks Switching links', async () => {
+  const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-site-'));
+  try {
+    await mkdir(path.join(siteDir, 'state-local'), { recursive: true });
+    await writeFile(path.join(siteDir, 'state-local/index.html'), '<main>Approved landing</main>');
+    await buildStateLocalSite({ repoRoot, siteDir });
+    assert.equal(await readFile(path.join(siteDir, 'state-local/index.html'), 'utf8'), '<main>Approved landing</main>');
+    const switching = await readFile(path.join(siteDir, 'state-local/switching/index.html'), 'utf8');
+    assert.match(switching, /including QField/);
+    assert.match(switching, /Collect field app are in development/);
+    await assert.rejects(validateStateLocalLinks(siteDir), /switching\/index.html:/);
+    for (const route of ['property', '311', 'emergency', 'public-works']) {
+      await mkdir(path.join(siteDir, 'state-local', route), { recursive: true });
+      await writeFile(path.join(siteDir, 'state-local', route, 'index.html'), '<main>Published journey</main>');
+    }
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="source-only.html">`;</script><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="spaced-end.html">`;</script ><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<SCRIPT>const example = `<a href="newline-end.html">`;</SCRIPT\n><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="attr-end.html">`;</script foo="bar"><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="tab-end.html">`;</script\t\n bar><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = "https://example.invalid/unclosed";<a href="after-unclosed.html"></a>');
+    await assert.rejects(validateStateLocalLinks(siteDir), /after-unclosed.html/);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script src="missing.js"></script>');
+    await assert.rejects(validateStateLocalLinks(siteDir), /switching\/index.html: missing.js/);
+  } finally { await rm(siteDir, { recursive: true, force: true }); }
+});

@@ -17,3 +17,8 @@ export function fill(target: HTMLElement, ...children: Child[]): void {
   target.replaceChildren(...children.filter((child): child is Node | string => child !== null && child !== undefined && child !== false));
 }
 
+export function token(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+export const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;

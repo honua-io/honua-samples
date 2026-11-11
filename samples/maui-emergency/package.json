@@ -1,0 +1,17 @@
+{
+  "name": "honua-maui-emergency",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build-approved.mjs",
+    "test": "node --test verify/*.test.mjs",
+    "build:contract": "vite build"
+  },
+  "dependencies": {
+    "@honua/sdk-js": "0.3.2",
+    "maplibre-gl": "6.4.1"
+  },
+  "devDependencies": {
+    "vite": "8.2.4"
+  }
+}
