@@ -13,18 +13,12 @@
     maplibregl.addProtocol('pmtiles', protocol.tile);
   }
 
-  // Chromium's HTTP cache can return another request's bytes for concurrent range reads of one static
-  // island archive ("Unable to parse the tile" on the property page). pmtiles 4.5.0 bypasses that cache
-  // only on Windows, so bypass it for these archives on every Chromium browser. The static-site CDN still
-  // caches, and MapLibre keeps loaded tiles in memory. Other archives (the street basemap) keep defaults.
+  // Chromium's HTTP cache can hand concurrent range reads of one static archive another request's bytes, and
+  // pmtiles bypasses that cache only on Windows, so island archives bypass it on every Chromium browser.
   const chromium = /Chrome|Chromium|Edg|OPR|Brave/.test(navigator.userAgent);
   function islandArchive(url) {
     register();
-    if (!protocol.get(url)) {
-      const fetchSource = new pmtiles.FetchSource(url);
-      if (chromium) fetchSource.chromeWindowsNoCache = true;
-      protocol.add(new pmtiles.PMTiles(fetchSource));
-    }
+    if (!protocol.get(url)) protocol.add(new pmtiles.PMTiles(Object.assign(new pmtiles.FetchSource(url), { chromeWindowsNoCache: chromium })));
     return 'pmtiles://' + url;
   }
 
