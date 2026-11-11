@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
+import { verifyAppShells } from './lib/state-local-app-shell.mjs';
 
 const server = await startStaticServer({ rootDir: path.resolve('site'), port: 0 });
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
@@ -19,6 +20,7 @@ async function open(route) {
 }
 
 try {
+  await verifyAppShells(context, server.url);
   await open('311');
   await expect(page.locator('#qBody tr')).toHaveCount(12);
   const before = await page.locator('#qSub').textContent();

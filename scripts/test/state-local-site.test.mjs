@@ -54,6 +54,9 @@ test('approved display snapshots turn the two admitted Explorer previews into in
     for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'places', 'schools', 'shelters']) {
       await writeFile(path.join(display, `${name}.geojson`), JSON.stringify(collection));
     }
+    const island = path.join(siteDir, 'state-local/data/island');
+    await mkdir(island, { recursive: true });
+    for (const name of ['places', 'schools']) await writeFile(path.join(island, `${name}.geojson`), JSON.stringify(collection));
     await writeFile(path.join(display, 'zoning.cjson'), '{}');
     await writeFile(path.join(display, 'parcels.cjson'), '{}');
     await writeFile(path.join(display, 'zone_names.json'), '{}');
@@ -90,6 +93,9 @@ test('display snapshots do not mark a sample live until its app is admitted', as
     for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'places', 'schools', 'shelters']) {
       await writeFile(path.join(display, `${name}.geojson`), JSON.stringify(collection));
     }
+    const island = path.join(siteDir, 'state-local/data/island');
+    await mkdir(island, { recursive: true });
+    for (const name of ['places', 'schools']) await writeFile(path.join(island, `${name}.geojson`), JSON.stringify(collection));
     await writeFile(path.join(display, 'zoning.cjson'), '{}');
     await writeFile(path.join(display, 'parcels.cjson'), '{}');
     await writeFile(path.join(display, 'zone_names.json'), '{}');
@@ -197,4 +203,23 @@ test('gallery preserves the separately built landing and checks Switching links'
     await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script src="missing.js"></script>');
     await assert.rejects(validateStateLocalLinks(siteDir), /switching\/index.html: missing.js/);
   } finally { await rm(siteDir, { recursive: true, force: true }); }
+});
+
+
+test('Explorer selection keeps the camera hash and migrates legacy sample links', async () => {
+  const html = await readFile(path.join(repoRoot, 'scripts/state-local/approved/13-sdk-explorer.html'), 'utf8');
+  const writer = html.slice(html.indexOf('  function writeSelection()'), html.indexOf("  document.querySelectorAll('.shead"));
+  for (const hash of ['#map=9/20.805/-156.42', '#maplibre-featureserver-layer/src']) {
+    const location = new URL(`https://samples.test/state-local/sdk-explorer/?keep=1${hash}`);
+    let written;
+    runInNewContext(`${writer};writeSelection();`, {
+      URL, location, BY: { 'maplibre-featureserver-layer': {} },
+      state: { id: 'maplibre-category-style-legend', tab: 'md' },
+      history: { replaceState(_state, _title, url) { written = url; } },
+    });
+    assert.equal(written.searchParams.get('sample'), 'maplibre-category-style-legend');
+    assert.equal(written.searchParams.get('tab'), 'md');
+    assert.equal(written.searchParams.get('keep'), '1');
+    assert.equal(written.hash, hash.startsWith('#map=') ? hash : '');
+  }
 });

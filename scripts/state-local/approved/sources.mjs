@@ -1,4 +1,4 @@
-import { mauiSources } from '../maui-sources.mjs';
+import { mauiBounds, mauiSources } from '../maui-sources.mjs';
 
 const wide = [-156.535, 20.855, -156.42, 20.915];
 const parcelBounds = [-156.49, 20.875, -156.462, 20.895];
@@ -32,3 +32,11 @@ export const approvedSources = {
   police: backdrop('EmergMgmtPubSafety/MapServer/5', ['station_name', 'district', 'full_address']),
   hospitals: backdrop('Infrastructure/MapServer/5', ['name', 'address_addressline1', 'facilitytype_name']),
 };
+
+export const islandSources = Object.fromEntries(Object.entries(approvedSources).map(([name, source]) => [name, {
+  ...source, bounds: mauiBounds,
+  displayGeometry: { maxAllowableOffset: 0.00001, geometryPrecision: 15 },
+}]));
+
+export const islandTileLayers = ['parcels', 'zoning', 'dfirm', 'tsunami', 'roads', 'contours'];
+export const islandTileBudgetBytes = 100_000_000;
