@@ -29,6 +29,8 @@ test('landing link validation rejects missing gallery detail pages', async () =>
   const siteDir = await mkdtemp(path.join(tmpdir(), 'maui-links-'));
   try {
     await mkdir(path.join(siteDir, 'state-local'));
+    await mkdir(path.join(siteDir, 'state-local/switching'));
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), 'Switching');
     await writeFile(path.join(siteDir, 'state-local/index.html'), '<a href="../query/">Query</a>');
     await assert.rejects(validateStateLocalLinks(siteDir), /does not resolve/);
     await mkdir(path.join(siteDir, 'query'));
