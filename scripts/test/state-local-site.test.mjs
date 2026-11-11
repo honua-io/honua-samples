@@ -7,6 +7,18 @@ import { fileURLToPath } from 'node:url';
 import { buildStateLocalSite, validateStateLocalLinks } from '../state-local/build-site.mjs';
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
+
+function admittedCard(id, commit) {
+  return {
+    id, sourceRepo: 'honua-samples', bundleRunnable: true, detailPath: `/${id}/`,
+    ownApp: { dataMode: 'public-live', builtFrom: { commit } },
+  };
+}
+
+function catalogFrom(html) {
+  const samples = JSON.parse(html.match(/window\.HD=(.*?);<\/script>/s)[1])['13-sdk-samples'].samples;
+  return Object.fromEntries(samples.map((sample) => [sample.id, sample]));
+}
 test('Explorer includes only admitted apps and preserves their build provenance', async () => {
   const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-site-'));
   try {
@@ -44,14 +56,33 @@ test('approved display snapshots turn the two admitted Explorer previews into in
     await writeFile(path.join(display, 'zoning.cjson'), '{}');
     await writeFile(path.join(display, 'parcels.cjson'), '{}');
     await writeFile(path.join(display, 'zone_names.json'), '{}');
-    await buildStateLocalSite({ repoRoot, siteDir, cards: [] });
+    await buildStateLocalSite({ repoRoot, siteDir, cards: [admittedCard('county-parcel-viewer', 'parcel-revision')] });
     const html = await readFile(path.join(siteDir, 'state-local/sdk-explorer/index.html'), 'utf8');
+    const shown = catalogFrom(html);
     assert.match(html, /SIMS\.fslayer/);
     assert.match(html, /Point radius/);
-    assert.match(html, /"live":"fslayer"/);
-    assert.match(html, /"live":"category"/);
-    assert.doesNotMatch(html, /"live":"firstmap"/);
     assert.match(html, /Exercise anchors on real school locations/);
+    assert.equal(shown['maplibre-featureserver-layer'].live, 'fslayer');
+    assert.equal(shown['maplibre-category-style-legend'].live, 'category');
+    assert.equal(shown['county-parcel-viewer'].live, 'verified');
+    assert.equal(shown['county-parcel-viewer'].preview.commit, 'parcel-revision');
+    assert.equal(shown['maplibre-quickstart'].live, null);
+  } finally { await rm(siteDir, { recursive: true, force: true }); }
+});
+
+test('an admitted catalog app stays verified when no display snapshot is loaded', async () => {
+  const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-verified-'));
+  try {
+    await buildStateLocalSite({ repoRoot, siteDir, cards: [
+      admittedCard('county-parcel-viewer', 'parcel-revision'),
+      admittedCard('maplibre-featureserver-layer', 'layer-revision'),
+    ] });
+    const shown = catalogFrom(await readFile(path.join(siteDir, 'state-local/sdk-explorer/index.html'), 'utf8'));
+    assert.equal(shown['county-parcel-viewer'].live, 'verified');
+    assert.equal(shown['county-parcel-viewer'].preview.commit, 'parcel-revision');
+    assert.equal(shown['maplibre-featureserver-layer'].live, 'verified');
+    assert.equal(shown['maplibre-featureserver-layer'].preview.dataMode, 'public-live');
+    assert.equal(shown['maplibre-quickstart'].live, null);
   } finally { await rm(siteDir, { recursive: true, force: true }); }
 });
 

@@ -830,7 +830,9 @@ try {
     if (sm) bindParams();
     $("#install").innerHTML = snippet(sm ? sm.install() : installFor(s));
     $("#apis").innerHTML = (sm ? sm.apis : s.apis).map((a) => `<code>${esc(a)}</code>`).join("") || `<span class="faint">None: plain HTTP requests.</span>`;
-    const data = s.preview ? [[s.preview.dataMode === "public-live" || s.preview.dataMode === "live" ? "real" : "demo", `${s.preview.dataModeLabel}; built from ${s.preview.commit ?? "unknown commit"}. Fixture and hybrid modes include demo records.`]] : [["none", "Source and README only; no verified preview in this deployment."]];
+    const data = sm ? sm.data(state.params) : s.preview
+      ? [[s.preview.dataMode === "public-live" || s.preview.dataMode === "live" ? "real" : "demo", `${s.preview.dataModeLabel}; built from ${s.preview.commit ?? "unknown commit"}. Fixture and hybrid modes include demo records.`]]
+      : [["none", "Source and README only; no verified preview in this deployment."]];
     $("#datas").innerHTML = data.map(([k, t]) => `<div>${k === "real" ? `<span class="tag-real">Real</span>` : k === "demo" ? `<span class="tag-demo">Demo</span>` : `<span class="chip sm">n/a</span>`}<span>${esc(t)}</span></div>`).join("");
   }
   function runLocalHtml(s) {

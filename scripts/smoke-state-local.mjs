@@ -55,10 +55,16 @@ try {
     if (snapshotMap) {
       await expect(page.locator('#pvPanel iframe')).toHaveCount(0);
       await expect(page.locator('#pvBottom')).toBeVisible();
+      await expect(page.locator('#datas')).not.toContainText(previews[id].commit);
+      const source = id.endsWith('maplibre-category-style-legend')
+        ? 'County of Maui, Department of Planning'
+        : 'USGS GNIS via Hawaii Statewide GIS';
+      await expect(page.locator('#datas .tag-real')).toBeVisible();
+      await expect(page.locator('#datas')).toContainText(source);
     } else {
       await expect(page.locator('#pvPanel iframe')).toHaveCount(1);
+      await expect(page.locator('#datas')).toContainText(previews[id].commit);
     }
-    await expect(page.locator('#datas')).toContainText(previews[id].commit);
   }
   const malicious = '<table><tbody><tr><td>Table cell</td></tr></tbody></table><script>window.explorerXss=true</script><img src=x onerror="window.explorerXss=true"><a href="javascript:alert(1)">Bad link</a>';
   await page.route('**/state-local/sdk-explorer/', async (route) => {
