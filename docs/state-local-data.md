@@ -204,7 +204,10 @@ The shared loader prepares the nine property layers as display geometry in EPSG:
 with a 0.00002-degree simplification tolerance and 15 decimal places in the source
 query. Explicit precision avoids the upstream default rounding collapsing small
 zoning polygons. These layers are for public display, not legal boundary
-measurement. No source raster is loaded.
+measurement. No source raster is loaded. Re-prepare existing shared-load directories
+and re-fetch road/bridge snapshots created with six-decimal source queries; their
+old receipts no longer match the precision-bound provenance contract. Existing
+published display archives remain pinned to their recorded checksums.
 
 ```sh
 node scripts/state-local/shared-load.mjs prepare artifacts/shared-load
