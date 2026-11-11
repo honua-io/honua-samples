@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 import { buildStateLocalSite, validateStateLocalLinks } from '../state-local/build-site.mjs';
 
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -56,19 +57,68 @@ test('approved display snapshots turn the two admitted Explorer previews into in
     await writeFile(path.join(display, 'zoning.cjson'), '{}');
     await writeFile(path.join(display, 'parcels.cjson'), '{}');
     await writeFile(path.join(display, 'zone_names.json'), '{}');
-    await buildStateLocalSite({ repoRoot, siteDir, cards: [admittedCard('county-parcel-viewer', 'parcel-revision')] });
+    await buildStateLocalSite({ repoRoot, siteDir, cards: [
+      admittedCard('county-parcel-viewer', 'parcel-revision'),
+      admittedCard('maplibre-featureserver-layer', 'layer-revision'),
+      admittedCard('maplibre-category-style-legend', 'category-revision'),
+    ] });
     const html = await readFile(path.join(siteDir, 'state-local/sdk-explorer/index.html'), 'utf8');
     const shown = catalogFrom(html);
     assert.match(html, /SIMS\.fslayer/);
     assert.match(html, /Point radius/);
     assert.match(html, /Exercise anchors on real school locations/);
+    assert.equal(parcelRecord(html).zoning, 'Residential district');
     assert.equal(shown['maplibre-featureserver-layer'].live, 'fslayer');
+    assert.equal(shown['maplibre-featureserver-layer'].preview.commit, 'layer-revision');
     assert.equal(shown['maplibre-category-style-legend'].live, 'category');
+    assert.equal(shown['maplibre-category-style-legend'].preview.commit, 'category-revision');
+    assert.doesNotMatch(html, /Protomaps PMTiles from the same server/);
+    assert.match(html, /Illustrative requests\. This preview did not call the server/);
+    assert.match(html, /No server request was made/);
     assert.equal(shown['county-parcel-viewer'].live, 'verified');
     assert.equal(shown['county-parcel-viewer'].preview.commit, 'parcel-revision');
     assert.equal(shown['maplibre-quickstart'].live, null);
   } finally { await rm(siteDir, { recursive: true, force: true }); }
 });
+
+test('display snapshots do not mark a sample live until its app is admitted', async () => {
+  const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-unadmitted-'));
+  try {
+    const display = path.join(siteDir, 'state-local/data/approved');
+    await mkdir(display, { recursive: true });
+    const collection = { type: 'FeatureCollection', features: [] };
+    for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'places', 'schools', 'shelters']) {
+      await writeFile(path.join(display, `${name}.geojson`), JSON.stringify(collection));
+    }
+    await writeFile(path.join(display, 'zoning.cjson'), '{}');
+    await writeFile(path.join(display, 'parcels.cjson'), '{}');
+    await writeFile(path.join(display, 'zone_names.json'), '{}');
+    await buildStateLocalSite({ repoRoot, siteDir, cards: [] });
+    const shown = catalogFrom(await readFile(path.join(siteDir, 'state-local/sdk-explorer/index.html'), 'utf8'));
+    assert.equal(shown['maplibre-featureserver-layer'].live, null);
+    assert.equal(shown['maplibre-featureserver-layer'].preview, null);
+    assert.equal(shown['maplibre-category-style-legend'].live, null);
+  } finally { await rm(siteDir, { recursive: true, force: true }); }
+});
+
+function parcelRecord(html) {
+  const start = html.indexOf('const D = HD["13-sdk-samples"]');
+  const end = html.indexOf('function layerData');
+  assert.ok(start > 0 && end > start);
+  const context = {
+    HD: { '13-sdk-samples': { samples: [], categories: [] }, zone_names: { R1: 'Residential district' } },
+    HM: {
+      get: () => ({ features: [{ type: 'Feature', properties: { id: 7, t9: '123', zone: 'R1', fld: 'X', lud: 'U', acres: 1, land: 2, bldg: 3 }, geometry: { type: 'Point', coordinates: [0, 0] } }] }),
+      tmk: (value) => `TMK ${value}`,
+      ZONE_GROUP: { R1: 'res' },
+    },
+    result: null,
+  };
+  runInNewContext(`${html.slice(start, end)}
+    function layerData(key) { const L = LAYERS[key]; return { type: 'FeatureCollection', features: L.build() }; }
+    result = layerData('parcels').features[0].properties;`, context);
+  return context.result;
+}
 
 test('an admitted catalog app stays verified when no display snapshot is loaded', async () => {
   const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-verified-'));

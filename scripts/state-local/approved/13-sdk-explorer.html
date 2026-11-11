@@ -513,7 +513,7 @@ try {
 {{MAPJS}}
 <script>
 (() => {
-  const D = HD["13-sdk-samples"];
+  const D = HD["13-sdk-samples"], ZN = HD.zone_names;
   const SERVER = D.server, VER = D.version;
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -633,7 +633,7 @@ try {
   function attrTable(props, skip = []) { return `<table class="pop">${Object.entries(props).filter(([k]) => !skip.includes(k)).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" && /value/.test(k) ? money(v) : v)}</td></tr>`).join("")}</table>`; }
   function statusPanel(state, text, requests, extra = "") {
     const icon = { pass: "check-circle", fail: "alert", warn: "alert", run: "clock" }[state] || "info";
-    $("#pvBottom").innerHTML = `<div class="pv-status" data-state="${state}"><svg class="ico" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(text)}</span></div>${extra}${requests && requests.length ? `<pre class="reqlog" aria-label="Requests the sample made">${requests.map((r) => esc(r)).join("\n")}</pre>` : ""}`;
+    $("#pvBottom").innerHTML = `<div class="pv-status" data-state="${state}"><svg class="ico" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(text)}</span></div>${extra}${requests && requests.length ? `<pre class="reqlog" aria-label="Illustrative requests. This preview did not call the server.">${requests.map((r) => esc(r)).join("\n")}</pre>` : ""}`;
   }
   const VIZ = (i) => tok(`--viz-${i + 1}`);
   const COLOR_TOKENS = ["--viz-1", "--viz-2", "--viz-3", "--viz-4"];
@@ -643,14 +643,14 @@ try {
 
   /* FeatureServer layer in MapLibre (honua-samples) */
   SIMS.fslayer = {
-    hint: "Edit the URL parameters the page reads. The preview runs the same requests against the demo extract.",
+    hint: "Edit the parameters. This preview filters the embedded snapshot. The request list is illustrative and is not sent.",
     params: (p) => [
       { key: "layerKey", label: "Layer", code: "service/layer", type: "select", options: Object.entries(LAYERS).map(([k, L]) => [k, `${L.title} · ${L.service}/${L.layer}`]) },
       { key: "where", label: "Filter", code: "where", type: "text", mono: true, placeholder: "1=1" },
       { key: "labelField", label: "Popup title", code: "labelField", type: "select", options: fieldsOf(p.layerKey).map((f) => [f, f]) },
       { key: "color", label: "Colour", code: "paint", type: "swatch" },
       { key: "size", label: LAYERS[p.layerKey].geom === "esriGeometryPoint" ? "Point radius" : "Fill opacity", code: LAYERS[p.layerKey].geom === "esriGeometryPoint" ? "circle-radius" : "fill-opacity", type: "range", min: 2, max: 10, step: 1 },
-      { key: "basemap", label: "Basemap probe", code: "basemap", type: "check", text: "Use the server's own basemap" },
+      { key: "basemap", label: "Basemap", code: "basemap", type: "check", text: "Show the embedded basemap" },
     ],
     defaults: { layerKey: "places", where: "1=1", labelField: "name", color: "--viz-1", size: 4, basemap: true },
     normalize(p, key) { if (key === "layerKey") { p.labelField = LAYERS[p.layerKey].label; p.where = "1=1"; } },
@@ -671,20 +671,19 @@ try {
     },
     apis: ["FeatureServer ?f=json", "FeatureServer /query f=geojson", "maplibregl.Map", "fitBounds", "maplibregl.Popup"],
     mount(p) {
-      const L = LAYERS[p.layerKey], url = `${SERVER}/rest/services/${L.service}/FeatureServer/${L.layer}`, t0 = performance.now();
-      const req = [`GET ${url}?f=json`];
+      const L = LAYERS[p.layerKey], url = `${SERVER}/rest/services/${L.service}/FeatureServer/${L.layer}`;
+      const req = [`Illustrative GET ${url}?f=json`];
       let features;
       try {
         const pred = compileWhere(p.where, fieldsOf(p.layerKey));
         features = layerData(p.layerKey).features.filter((f) => pred(f.properties));
       } catch (e) {
-        req.push(`GET ${url}/query?${new URLSearchParams({ where: p.where, outFields: "*", returnGeometry: "true", outSR: "4326", resultOffset: "0", resultRecordCount: "2000", f: "geojson" })}`);
+        req.push(`Illustrative GET ${url}/query?${new URLSearchParams({ where: p.where, outFields: "*", returnGeometry: "true", outSR: "4326", resultOffset: "0", resultRecordCount: "2000", f: "geojson" })}`);
         statusPanel("fail", `FAIL: ${e.message}`, req); return;
       }
-      req.push(`GET ${url}/query?${new URLSearchParams({ where: p.where, outFields: "*", returnGeometry: "true", outSR: "4326", resultOffset: "0", resultRecordCount: "2000", f: "geojson" })}`);
+      req.push(`Illustrative GET ${url}/query?${new URLSearchParams({ where: p.where, outFields: "*", returnGeometry: "true", outSR: "4326", resultOffset: "0", resultRecordCount: "2000", f: "geojson" })}`);
       if (!features.length) { statusPanel("fail", "FAIL: The query returned no features.", req); return; }
       setBasemap(p.basemap);
-      req.push(p.basemap ? `${SERVER}/api/v1/tiles/pmtiles/maui-basemap (Range: bytes=0-6, basemap probe)` : "");
       const s = this.sizeVals(p), c = tok(p.color);
       rtSource("layer", { type: "FeatureCollection", features });
       const isType = (...types) => ["match", ["geometry-type"], types, true, false];
@@ -698,8 +697,7 @@ try {
       map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 40, duration: 0, maxZoom: 16 });
       map.once("idle", () => {
         const rendered = map.queryRenderedFeatures({ layers: ids.filter((id) => map.getLayer(id)) }).length;
-        const ms = Math.round(performance.now() - t0) + 180;
-        statusPanel("pass", `PASS: ${L.title} (${L.geom}): ${features.length} features, ${rendered} rendered in view, ${ms} ms. Basemap: ${p.basemap ? "Protomaps PMTiles from the same server" : "off"}. Click a feature for its attributes.`, req.filter(Boolean));
+        statusPanel("pass", `Snapshot: ${L.title} (${L.geom}): ${features.length} features from the embedded extract, ${rendered} drawn. No server request was made. Click a feature for its attributes.`, req.filter(Boolean));
       });
       statusPanel("run", "Loading the layer...", req.filter(Boolean));
     },
@@ -737,7 +735,7 @@ try {
     mount(p) {
       const coll = CAT_SETS[p.layerKey].collection, url = `${SERVER}/ogc/features/collections/${coll}`;
       const q = new URLSearchParams({ limit: "1000", f: "json" }); if (p.bbox !== "none") q.set("bbox", KAHULUI.map((v) => v.toFixed(2)).join(","));
-      const req = [`GET ${url}/queryables?f=json`, `GET ${url}/items?${q}`, `${SERVER}/api/v1/tiles/pmtiles/maui-basemap (Range: bytes=0-6, basemap probe)`];
+      const req = [`Illustrative GET ${url}/queryables?f=json`, `Illustrative GET ${url}/items?${q}`];
       let feats = layerData(p.layerKey).features;
       if (p.bbox !== "none") feats = feats.filter((f) => { const b = bboxOfFeatures([f]); return b[2] >= KAHULUI[0] && b[0] <= KAHULUI[2] && b[3] >= KAHULUI[1] && b[1] <= KAHULUI[3]; });
       const counts = new Map();
@@ -760,7 +758,7 @@ try {
       if (items.length) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 30, duration: 0, maxZoom: 16 });
       map.once("idle", () => {
         const rendered = map.queryRenderedFeatures({ layers: ["features-fill"] }).length;
-        statusPanel("pass", `PASS: ${items.length} of ${items.length} features, ${counts.size} distinct "${p.field}" values (a queryable), ${rendered} rendered. Basemap: Protomaps PMTiles from the same server. Click a ${pt ? "point" : "polygon"} for details.`, req);
+        statusPanel("pass", `Snapshot: ${items.length} features from the embedded extract, ${counts.size} distinct "${p.field}" values, ${rendered} drawn. No server request was made. Click a ${pt ? "point" : "polygon"} for details.`, req);
       });
       statusPanel("run", "Loading the collection...", req);
     },

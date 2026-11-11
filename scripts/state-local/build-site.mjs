@@ -39,7 +39,8 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   };
   for (const entry of catalog.samples) {
     entry.preview = previews[`${entry.repo}:${entry.id}`] ?? null;
-    entry.live = (display && pageSims[`${entry.repo}:${entry.id}`]) || (entry.preview ? 'verified' : null);
+    const simulation = pageSims[`${entry.repo}:${entry.id}`];
+    entry.live = entry.preview ? ((display && simulation) || 'verified') : null;
   }
   await writeFile(path.join(output, 'sdk-explorer/index.html'), await approvedPage({
     template: path.join(repoRoot, 'scripts/state-local/approved/13-sdk-explorer.html'),
