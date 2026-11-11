@@ -24,16 +24,25 @@ test('trimmed archives are only for known island layers and keep the 8-14 defaul
   assert.equal(islandTileExtent('parcels').minZoom, 13);
 });
 
+function assertSourceLayersFrom(sourceId, name, minZoom) {
+  const layers = layersDrawing(islandMap, sourceId);
+  assert.ok(layers.length > 0, `${sourceId} has layers`);
+  for (const layer of layers) assert.ok(layer.minzoom >= minZoom, `${layer.id} draws ${name} from z${layer.minzoom}, archive starts at z${minZoom}`);
+}
+
+async function scriptsOutsideIslandMap(directory) {
+  const entries = await readdir(new URL(`${directory}/`, root), { recursive: true });
+  return entries
+    .map((file) => `${directory}/${file}`)
+    .filter((relative) => /\.(html|js|mjs)$/.test(relative) && !relative.includes('node_modules') && relative !== 'shared/state-local/island-map.js');
+}
+
 test('no island map layer draws an archive below the zoom it was exported from', () => {
   const sources = archiveSources(islandMap);
   for (const [name, minZoom] of Object.entries(islandTileMinZoom)) {
     const ids = [...sources].filter(([, archive]) => archive === name).map(([id]) => id);
     assert.ok(ids.length > 0, `${name} archive is drawn somewhere`);
-    for (const id of ids) {
-      const layers = layersDrawing(islandMap, id);
-      assert.ok(layers.length > 0, `${id} has layers`);
-      for (const layer of layers) assert.ok(layer.minzoom >= minZoom, `${layer.id} draws ${name} from z${layer.minzoom}, archive starts at z${minZoom}`);
-    }
+    for (const id of ids) assertSourceLayersFrom(id, name, minZoom);
   }
 });
 
@@ -44,15 +53,8 @@ test('no page or shared script attaches a trimmed archive outside island-map.js'
   const trimmed = Object.keys(islandTileMinZoom).filter((name) => name !== 'parcels').join('|');
   const viaAdd = new RegExp(`\\badd\\(\\s*\\w+\\s*,\\s*["'][\\w-]+["']\\s*,\\s*(?:HD\\.(?:${trimmed})\\b|["'](?:${trimmed})["'])`);
   const viaSource = new RegExp(`\\b(?:HI\\.)?source\\(\\s*["'](?:${Object.keys(islandTileMinZoom).join('|')})["']\\s*\\)`);
-  const files = [];
-  for (const directory of ['shared', 'samples/maui-emergency', 'scripts/state-local']) {
-    for (const file of await readdir(new URL(`${directory}/`, root), { recursive: true })) {
-      const relative = `${directory}/${file}`;
-      if (/\.(html|js|mjs)$/.test(file) && !relative.includes('node_modules') && relative !== 'shared/state-local/island-map.js') {
-        files.push(relative);
-      }
-    }
-  }
+  const directories = ['shared', 'samples/maui-emergency', 'scripts/state-local'];
+  const files = (await Promise.all(directories.map(scriptsOutsideIslandMap))).flat();
   assert.ok(files.some((file) => file.endsWith('04-emergency.html')), 'page sources are scanned');
   for (const file of files) {
     const text = await readFile(new URL(file, root), 'utf8');
