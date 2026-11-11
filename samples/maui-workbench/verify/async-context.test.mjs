@@ -34,13 +34,17 @@ for (const action of ['invalidate', 'changeSource']) for (const outcome of ['res
 
 test('Only the latest catalog sketch binds when map readiness is delayed', async () => {
   const ready = deferred();
-  const attached = [];
+  const attached = [], created = [];
   const binding = createLatestSketchBinding({ ready: ready.promise,
-    create: async (name) => ({ attach() { attached.push(name); }, dispose() {} }) });
+    create: async (name) => {
+      created.push(name);
+      return { attach() { attached.push(name); }, dispose() {} };
+    } });
   const first = binding.bind('first');
   const second = binding.bind('second');
   ready.resolve();
   await Promise.all([first, second]);
+  assert.deepEqual(created, ['second']);
   assert.deepEqual(attached, ['second']);
 });
 
