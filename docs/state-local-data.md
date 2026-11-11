@@ -201,8 +201,10 @@ importability, and this size check does not validate topology or predict geometr
 repair outcomes. Rollback remains available for previously staged layers.
 
 The shared loader prepares the nine property layers as display geometry in EPSG:4326
-with a 0.00002-degree simplification tolerance and six decimal places. These layers
-are for public display, not legal boundary measurement. No source raster is loaded.
+with a 0.00002-degree simplification tolerance and 15 decimal places in the source
+query. Explicit precision avoids the upstream default rounding collapsing small
+zoning polygons. These layers are for public display, not legal boundary
+measurement. No source raster is loaded.
 
 ```sh
 node scripts/state-local/shared-load.mjs prepare artifacts/shared-load
