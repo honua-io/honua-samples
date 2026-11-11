@@ -12,6 +12,7 @@ import { createReadStream } from "node:fs";
 import { createServer } from "node:http";
 import { mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
+import { parseByteRange } from "./byte-range.mjs";
 
 export const PLAYWRIGHT_VERSION = "1.58.2";
 
@@ -84,13 +85,12 @@ async function serveStaticFile({ req, res, resolved }) {
   let start = 0;
   let end = size - 1;
   if (req.headers.range) {
-    const match = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range);
-    start = match ? Number(match[1]) : NaN;
-    end = match?.[2] ? Math.min(Number(match[2]), end) : end;
-    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end || start >= size) {
+    const range = parseByteRange(req.headers.range, size);
+    if (!range) {
       res.writeHead(416, { "Content-Range": `bytes */${size}` }).end();
       return;
     }
+    ({ start, end } = range);
     headers["Content-Range"] = `bytes ${start}-${end}/${size}`;
   }
   headers["Content-Length"] = Math.max(0, end - start + 1);

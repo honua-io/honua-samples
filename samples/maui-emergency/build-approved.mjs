@@ -1,6 +1,6 @@
 // Assemble the approved UI with attested display geometry and fictional exercise records.
 import { approvedPage } from '../../shared/state-local/approved-page.mjs';
-import { lockedArchive } from '../../shared/state-local/locked-archive.mjs';
+import { lockedArchive, copyManifestFiles, islandFilePattern } from '../../shared/state-local/locked-archive.mjs';
 import { withIslandPoints } from '../../shared/state-local/island-points.mjs';
 import { readFile, writeFile, mkdir, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -54,6 +54,8 @@ for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'dfir
 const data = await withIslandPoints({ manifest: islandManifest, directory: islandDirectory, data: approvedData });
 await mkdir(output, { recursive: true });
 await cp(path.join(root, 'public'), output, { recursive: true });
+await copyManifestFiles({ manifest: islandManifest, directory: islandDirectory,
+  output: path.join(output, 'state-local/data/island'), pattern: islandFilePattern });
 for (const [name, target] of [['04-emergency.html', 'index.html'], ['11-emergency-mobile.html', 'mobile.html']]) {
   const html = await approvedPage({ template: path.join(approved, 'pages', name), assets: path.join(approved, 'src'), data });
   await writeFile(path.join(output, target), html);

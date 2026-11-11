@@ -3,6 +3,8 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
+export const islandFilePattern = /^[a-z0-9_-]+\.(geojson|pmtiles)$/;
+
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 export async function lockedArchive(lock, directory) {

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { lockedArchive, copyManifestFiles } from '../../../shared/state-local/locked-archive.mjs';
+import { lockedArchive, copyManifestFiles, islandFilePattern } from '../../../shared/state-local/locked-archive.mjs';
 import { islandSources, islandTileBudgetBytes, islandTileLayers } from './sources.mjs';
 
 export function verifyIslandManifest(manifest) {
@@ -18,6 +18,6 @@ export async function buildIslandAssets({ root, output, lock }) {
   const manifest = await lockedArchive(lock, directory);
   verifyIslandManifest(manifest);
   await copyManifestFiles({ manifest, directory, output: path.join(output, 'data/island'),
-    pattern: /^[a-z0-9_-]+\.(geojson|pmtiles)$/ });
+    pattern: islandFilePattern });
   return path.join(output, 'data/island');
 }

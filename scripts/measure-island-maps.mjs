@@ -11,6 +11,7 @@ import { chromium } from '@playwright/test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { startStaticServer } from './lib/browser-lane.mjs';
+import { parseByteRange } from './lib/byte-range.mjs';
 
 const routes = process.env.HONUA_MAP_ROUTES?.split(',')
   ?? ['property', '311', 'public-works', 'emergency', 'workbench', 'sdk-explorer'];
@@ -176,11 +177,11 @@ async function serveLocalBasemap(page, hits) {
   const cors = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range, etag', etag: '"local-basemap"' };
   await page.route('**/tiles/pmtiles/maui-basemap', (route) => {
     hits.count += 1;
-    const match = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range ?? '');
-    if (!match) return route.fulfill({ status: 200, body: localBasemap, headers: cors });
-    const start = Number(match[1]);
-    if (start >= localBasemap.length) return route.fulfill({ status: 416, headers: { ...cors, 'content-range': `bytes */${localBasemap.length}` } });
-    const end = Math.min(Number(match[2] || localBasemap.length - 1), localBasemap.length - 1);
+    const header = route.request().headers().range;
+    if (!header) return route.fulfill({ status: 200, body: localBasemap, headers: cors });
+    const range = parseByteRange(header, localBasemap.length);
+    if (!range) return route.fulfill({ status: 416, headers: { ...cors, 'content-range': `bytes */${localBasemap.length}` } });
+    const { start, end } = range;
     return route.fulfill({ status: 206, body: localBasemap.subarray(start, end + 1),
       headers: { ...cors, 'content-range': `bytes ${start}-${end}/${localBasemap.length}`, 'accept-ranges': 'bytes' } });
   });

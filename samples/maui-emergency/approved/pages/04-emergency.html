@@ -305,7 +305,7 @@
   const cite = (id, key) => `<button class="cite" data-cite="${key || "fly"}" data-id="${id}">${id}</button>`;
 
   document.getElementById("exposure").innerHTML =
-    `<p><b>${inEvac.length} facilities are inside the evacuation zone</b> ${zone(2).length ? `and ${inExtreme.length} more are inside the extreme zone only.` : "The extreme zone is not included in this snapshot."} I checked ${facilities.length} facilities against the zone polygons.</p>
+    `<p><b>${inEvac.length} facilities are inside the evacuation zone</b> ${zone(2).length ? `and ${inExtreme.length} more are inside the extreme zone only.` : "The exercise analysis snapshot has no extreme-zone polygons, so the extreme zone drawn on the map is reference display only."} I checked ${facilities.length} facilities against the zone polygons.</p>
      <table class="tbl" style="margin-top:6px"><tbody>
      ${inEvac.map((f) => `<tr><td><span class="chip warn" style="height:20px">Evacuation</span></td><td>${f.name}<span class="id">${f.kind}</span></td><td class="r">${cite(f.id)}</td></tr>`).join("")}
      ${inExtreme.map((f) => `<tr><td><span class="chip" style="height:20px">Extreme</span></td><td>${f.name}<span class="id">${f.kind}</span></td><td class="r">${cite(f.id)}</td></tr>`).join("")}
@@ -318,7 +318,7 @@
   document.getElementById("sitrep").innerHTML = `<ol>
     <li><b>Situation.</b> Simulated tsunami warning in effect since 08:52 HST; simulated first wave 12:10 HST. ${cite("nws/HIZ016-exercise", "feeds")} ${cite("ptwc/msg-7", "feeds")} Demo tide gauge reads +0.42 ft above predicted. ${cite("noaa/1615680", "feeds")}</li>
     <li><b>Evacuation.</b> Exercise zones are highlighted; no real warning is active on this page. Parcel exposure has not been verified in this exercise. ${cite("tsunami/zone-1", "zone")} ${cite("query/parcels-in-zone", "zone")}</li>
-    <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.length ? inExtreme.map((f) => f.name).join(", ") + " are in the extreme zone only." : "Extreme-zone exposure is unavailable in this snapshot."} ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
+    <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.length ? inExtreme.map((f) => f.name).join(", ") + " are in the extreme zone only." : "Extreme-zone exposure was not analysed: the exercise snapshot has no extreme-zone polygons."} ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
     <li><b>Shelters.</b> ${open.length} of ${shelters.length} open; ${fmt(totOcc)} of ${fmt(totCap)} spaces used (${Math.round((totOcc / totCap) * 100)}%). Baldwin High at ${pct(baldwin)}%. ${cite("shelters/*", "shelters")} ${cite("shelters/" + baldwin.fid, "baldwin")}</li>
     <li><b>Roads.</b> Fictional scenario: 3 closed roads; Waiehu Beach Rd in contraflow. ${cite("road-status/*", "roads")}</li>
     <li><b>Resources.</b> 5 open requests, 1 critical: 150 kW generator for Baldwin High. ${cite("eoc-board/RR-114", "rr")}</li>
