@@ -5,8 +5,8 @@ body.app-shell {
   flex-direction: column;
   overflow: hidden;
 }
-.app-shell *, .app-shell *::before, .app-shell *::after { min-width: 0; }
-.app-shell * {
+:where(.app-shell *, .app-shell *::before, .app-shell *::after) { min-width: 0; }
+:where(.app-shell *) {
   scrollbar-width: thin;
   scrollbar-color: var(--c-border-strong) var(--c-surface);
   overscroll-behavior: contain;
@@ -92,5 +92,6 @@ body.app-shell {
   .app-emergency .col { overflow: auto; }
   .app-requests .page, .app-works .pw-main { padding: 10px; }
   .department-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
-  .app-requests .ph, .app-works .pagehead { max-height: 110px; overflow: auto; flex-shrink: 0; }
+  .app-requests .ph, .app-works .pagehead { flex-shrink: 0; gap: 8px; margin-bottom: 10px; }
+  .app-requests .ph .sub, .app-works .pagehead p { display: none; }
 }
