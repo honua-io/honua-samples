@@ -25,6 +25,12 @@ test('gallery preserves the separately built landing and checks Switching links'
     await validateStateLocalLinks(siteDir);
     await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="source-only.html">`;</script><a href="#main">Main</a>');
     await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="spaced-end.html">`;</script ><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<SCRIPT>const example = `<a href="newline-end.html">`;</SCRIPT\n><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = "https://example.invalid/unclosed";<a href="after-unclosed.html"></a>');
+    await assert.rejects(validateStateLocalLinks(siteDir), /after-unclosed.html/);
     await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script src="missing.js"></script>');
     await assert.rejects(validateStateLocalLinks(siteDir), /switching\/index.html: missing.js/);
   } finally { await rm(siteDir, { recursive: true, force: true }); }
