@@ -127,3 +127,11 @@ features. The focused desktop/mobile checks run with:
 ```sh
 npx playwright test samples/maui-workbench/verify/polygon.spec.mjs --project chromium
 ```
+
+The selection panel calls the published SDK's read-only `summarizeSelection`
+agent tool and cites the active layer, source URL and equivalent CQL2 filter.
+It counts selected records and shows field frequencies for selected rows in the
+loaded table window, explicitly reporting that window's coverage. Selection,
+query or catalog changes clear the summary. This deterministic summary does
+not supply natural-language analysis, histogram brushing or a comparison with
+unselected records; those acceptance steps remain pending.

@@ -27,6 +27,14 @@ for (const theme of ['light', 'dark']) for (const width of [1440, 390]) {
     await expect(page.locator('#chart-filters').getByRole('button', { name: 'exercise_open · 2', exact: true })).toBeVisible();
     await expect(page.locator('#cql2-preview')).toContainText('POLYGON');
     await expect(widget.getByRole('button', { name: 'Off', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#feature-table').locator('tbody tr[data-row-key]').first().getByRole('gridcell').first().click();
+    await page.locator('#explain-selection').click();
+    await expect(page.locator('#selection-explanation')).toContainText('1 selected from 311 service requests.');
+    await expect(page.locator('#selection-explanation')).toContainText('status — exercise_open: 1');
+    await expect(page.locator('#selection-explanation')).toContainText('Filter (CQL2):');
+    await expect(page.locator('#selection-explanation')).toContainText('POLYGON');
+    await expect(page.locator('#selection-explanation')).toContainText('Read-only SDK tool: summarizeSelection');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `artifacts/analysis-polygon-${theme}-${width}.png`, fullPage: true });
     const downloadPending = page.waitForEvent('download');
     await page.locator('#export-geojson').click();
@@ -52,6 +60,7 @@ for (const theme of ['light', 'dark']) for (const width of [1440, 390]) {
     await page.locator('#catalog').selectOption('parcels');
     await expect(page.locator('#connection-status')).toContainText('Parcels connected');
     await expect(page.locator('#filter-summary')).toHaveText('No filters applied.');
+    await expect(page.locator('#selection-explanation')).toBeEmpty();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
   });
