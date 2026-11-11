@@ -45,8 +45,9 @@ export const OWN_APP_MANIFEST_NAME = "app.manifest.v1.json";
 export const OWN_SAMPLE_SOURCE_REPO = "honua-samples";
 
 // Published-package CDNs the samples load pinned libraries from (README rule:
-// published packages only). They are libraries, not data origins.
-export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https://unpkg.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"]);
+// published packages only), plus the MapLibre glyph host for map label fonts.
+// They are libraries, not data origins.
+export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https://unpkg.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://demotiles.maplibre.org"]);
 
 // Sites a sample only links to (attribution and the official flood map), never
 // fetches from (R13). They are not data origins. The browser verify lanes

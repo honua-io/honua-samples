@@ -10,6 +10,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.abspath(sys.argv[2])
 os.makedirs(OUT, exist_ok=True)
 SRC, PAGES, DATA = (os.path.join(ROOT, d) for d in ("src", "pages", "data"))
+SHARED = os.path.join(ROOT, "../../../shared/state-local")
 DATA = os.path.abspath(sys.argv[1])
 MAPLIBRE = "4.7.1"
 
@@ -20,6 +21,9 @@ def read(p):
 
 
 def load(name):
+    island = os.environ.get("HONUA_ISLAND_DATA")
+    if island and name in os.environ["HONUA_ISLAND_POINT_LAYERS"].split(","):
+        return json.loads(read(os.path.join(island, name + ".geojson")))
     for ext in (".cjson", ".geojson", ".json"):
         p = os.path.join(DATA, name + ext)
         if os.path.exists(p):
@@ -49,6 +53,7 @@ def head(uses_map):
     if uses_map:
         parts.append(f'<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{MAPLIBRE}/dist/maplibre-gl.css">')
         parts.append(f'<script src="https://unpkg.com/maplibre-gl@{MAPLIBRE}/dist/maplibre-gl.js"></script>')
+        parts.append('<script src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js" integrity="sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn" crossorigin="anonymous"></script>')
     parts.append(f"<style>{css}\n[hidden]{{display:none!important}}</style>")
     return "\n".join(parts)
 
@@ -57,10 +62,12 @@ ROUTES = {"02-property.html": "/state-local/property/", "10-property-mobile.html
 
 def build(name):
     src = read(os.path.join(PAGES, name))
+    shell = read(os.path.join(ROOT, "../../../shared/state-local/app-shell.css"))
+    src = src.replace("</head>", f"<style>{shell}</style></head>", 1)
     uses_map = "{{MAPJS}}" in src
     src = src.replace("{{HEAD}}", head(uses_map))
     src = src.replace("{{ICONS}}", read(os.path.join(SRC, "icons.svg")))
-    kit = "<script>" + read(os.path.join(SRC, "honua-map.js")) + "</script>"
+    kit = "<script>" + read(os.path.join(SHARED, "island-map.js")) + "\n" + read(os.path.join(SHARED, "honua-map.js")) + "</script>"
     if "{{MAPJS}}" in src:
         src = src.replace("{{MAPJS}}", kit)
     else:

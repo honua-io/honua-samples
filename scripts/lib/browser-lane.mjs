@@ -8,9 +8,11 @@
 // node_modules, downgrades browsers, or performs network installation.
 
 import { spawn } from "node:child_process";
+import { createReadStream } from "node:fs";
 import { createServer } from "node:http";
 import { mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
+import { parseByteRange } from "./byte-range.mjs";
 
 export const PLAYWRIGHT_VERSION = "1.58.2";
 
@@ -55,10 +57,7 @@ export function startStaticServer({ rootDir, port }) {
       }
       const stats = await stat(filePath);
       const resolved = stats.isDirectory() ? path.join(filePath, "index.html") : filePath;
-      const body = await readFile(resolved);
-      const ext = path.extname(resolved).toLowerCase();
-      res.writeHead(200, { "Content-Type": MIME_TYPES[ext] ?? "application/octet-stream" });
-      res.end(body);
+      await serveStaticFile({ req, res, resolved });
     } catch (err) {
       res.writeHead(404).end(`Not found: ${err.message}`);
     }
@@ -77,6 +76,27 @@ export function startStaticServer({ rootDir, port }) {
       });
     });
   });
+}
+
+async function serveStaticFile({ req, res, resolved }) {
+  const { size } = await stat(resolved);
+  const headers = { "Content-Type": MIME_TYPES[path.extname(resolved).toLowerCase()] ?? "application/octet-stream",
+    "Accept-Ranges": "bytes" };
+  let start = 0;
+  let end = size - 1;
+  if (req.headers.range) {
+    const range = parseByteRange(req.headers.range, size);
+    if (!range) {
+      res.writeHead(416, { "Content-Range": `bytes */${size}` }).end();
+      return;
+    }
+    ({ start, end } = range);
+    headers["Content-Range"] = `bytes ${start}-${end}/${size}`;
+  }
+  headers["Content-Length"] = Math.max(0, end - start + 1);
+  res.writeHead(req.headers.range ? 206 : 200, headers);
+  if (req.method === "HEAD" || !size) res.end();
+  else createReadStream(resolved, { start, end }).pipe(res);
 }
 
 /** Fails fast when `npm ci` has not installed the locked Playwright. */

@@ -3,10 +3,9 @@ import path from "node:path";
 import { adminFetch } from "../lib/admin-api.mjs";
 import { layersPath, listLayers } from "./import.mjs";
 import { readSnapshot } from "./snapshot.mjs";
-import { getSource } from "./sources.mjs";
 
-function receiptPath(directory, name) {
-  getSource(name);
+export function receiptPath(directory, name) {
+  if (!/^[a-z0-9][a-z0-9_-]*$/.test(name)) throw new Error("Invalid deployment source name");
   return path.join(directory, `${name}.deployment.json`);
 }
 
@@ -28,6 +27,9 @@ export async function verifyLayer(env, receipt) {
     || layer.table !== receipt.table || !layer.description?.includes(`SHA-256 ${receipt.cleanSha256}`)) {
     throw new Error("Published layer no longer matches the import receipt");
   }
+  for (const field of ["license", "licenseUrl", "attribution"]) {
+    if (receipt[field] !== undefined && layer[field] !== receipt[field]) throw new Error(`Published layer ${field} does not match its source`);
+  }
   const services = await adminFetch(env, { method: "GET", apiPath: `/api/v1/admin/services/?q=${encodeURIComponent(receipt.serviceName)}` });
   const service = services?.data?.items?.find((entry) => entry.serviceName === receipt.serviceName);
   if (service?.folderId !== receipt.folderId) throw new Error("Published service no longer belongs to the receipt department folder");
@@ -37,7 +39,7 @@ export async function verifyLayer(env, receipt) {
 
 export async function saveDeployment(env, options) {
   const { staged, directory, connection } = options;
-  const { receipt } = await readSnapshot(staged.source, directory);
+  const receipt = options.snapshotReceipt ?? (await readSnapshot(staged.source, directory)).receipt;
   if (!connection || staged.enabled !== false || staged.cleanSha256 !== receipt.cleanSha256
     || !Number.isInteger(staged.layerId) || !staged.serviceName || !staged.folderId) {
     throw new Error("Deployment requires a disabled layer and matching snapshot receipt");
@@ -53,7 +55,7 @@ export async function saveDeployment(env, options) {
 export async function readDeployment(env, options) {
   const { name, directory } = options;
   const deployment = JSON.parse(await readFile(receiptPath(directory, name), "utf8"));
-  const { receipt } = await readSnapshot(name, directory);
+  const receipt = options.snapshotReceipt ?? (await readSnapshot(name, directory)).receipt;
   if (deployment.format !== "honua.samples.deployment.v1" || deployment.source !== name
     || deployment.baseUrl !== serverUrl(env) || deployment.cleanSha256 !== receipt.cleanSha256
     || !deployment.connection || !Number.isInteger(deployment.layerId) || deployment.layerId < 0
@@ -73,6 +75,26 @@ function publicReadOnly(policy) {
   return policy?.allowAnonymous === true && policy.allowAnonymousWrite === false;
 }
 
+async function setLayerState(env, options) {
+  const { receipt, enabled } = options;
+  await adminFetch(env, { method: "PUT",
+    apiPath: `${layersPath(receipt.connection)}/${receipt.layerId}/enabled?serviceName=${encodeURIComponent(receipt.serviceName)}`,
+    body: { enabled } });
+  const { layer } = await verifyLayer(env, receipt);
+  if (layer.enabled !== enabled) throw new Error("Requested layer state was not confirmed");
+}
+
+export async function withTemporaryLayer(env, receipt, operation) {
+  const { layer } = await verifyLayer(env, receipt);
+  if (layer.enabled !== false) throw new Error("Temporary export requires a disabled staged layer");
+  try {
+    await setLayerState(env, { receipt, enabled: true });
+    return await operation();
+  } finally {
+    await setLayerState(env, { receipt, enabled: false });
+  }
+}
+
 export async function activateDeployment(env, options) {
   const receipt = await readDeployment(env, options);
   const { layer: current } = await verifyLayer(env, receipt);
@@ -82,9 +104,7 @@ export async function activateDeployment(env, options) {
       body: { allowAnonymous: true, allowAnonymousWrite: false } });
   }
   if (current.enabled !== true) {
-    await adminFetch(env, { method: "PUT",
-      apiPath: `${layersPath(receipt.connection)}/${receipt.layerId}/enabled?serviceName=${encodeURIComponent(receipt.serviceName)}`,
-      body: { enabled: true } });
+    await setLayerState(env, { receipt, enabled: true });
   }
   return activeDeployment(env, options);
 }

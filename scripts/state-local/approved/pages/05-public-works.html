@@ -80,7 +80,7 @@
   }
 </style>
 </head>
-<body>
+<body class="app-shell app-works">
 <a class="skip-link" href="#main">Skip to content</a>
 {{ICONS}}
 <header class="appbar">
@@ -114,6 +114,21 @@
       <a class="btn primary" href="#"><svg class="ico"><use href="#i-plus"/></svg>New work order</a>
     </div>
   </div>
+<div class="department-workspace">
+<div class="map" id="map" role="region" aria-label="Asset map">
+      <div class="map-legend map-tools">
+        <h2>Layers</h2>
+        <label class="layer-toggle"><input type="checkbox" checked data-layers="assets">Drainage and signals</label>
+        <div class="cond-scale" aria-hidden="true"><i style="background:var(--cond-1)"></i><i style="background:var(--cond-2)"></i><i style="background:var(--cond-3)"></i><i style="background:var(--cond-4)"></i><i style="background:var(--cond-5)"></i></div>
+        <div class="cond-lbl"><span>Failed</span><span>Very good</span></div>
+        <label class="layer-toggle"><input type="checkbox" checked data-layers="bridges,bridges-ring">Bridges (NBI)<span class="lg-pt" style="margin-left:auto;background:var(--x-bridge);border-radius:2px"></span></label>
+        <label class="layer-toggle"><input type="checkbox" checked data-layers="reqs">Open drainage requests<span class="lg-pt" style="margin-left:auto;background:var(--c-info)"></span></label>
+        <label class="layer-toggle"><input type="checkbox" id="planToggle" checked>This week's plan<span class="rank" style="margin-left:auto;width:16px;height:16px;font-size:9px">1</span></label>
+        <label class="layer-toggle"><input type="checkbox" checked data-layers="tsunami,tsunami-line">Tsunami evacuation zone<span class="lg-sw" style="margin-left:auto;background:color-mix(in srgb, var(--hz-tsu) 45%, var(--c-surface))"></span></label>
+        <label class="layer-toggle"><input type="checkbox" data-layers="flood,flood-line">Flood zones (FEMA)<span class="lg-sw" style="margin-left:auto;background:color-mix(in srgb, var(--hz-flood) 40%, var(--c-surface))"></span></label>
+      </div>
+    </div>
+<aside class="department-panel" aria-label="Operations dashboard">
 
   <div class="aibar" role="region" aria-label="Agent proposal">
     <svg class="ico"><use href="#i-agent"/></svg>
@@ -130,19 +145,7 @@
   </div>
 
   <div class="grid">
-    <div class="map" id="map" role="region" aria-label="Asset map">
-      <div class="map-legend map-tools">
-        <h2>Layers</h2>
-        <label class="layer-toggle"><input type="checkbox" checked data-layers="assets">Drainage and signals</label>
-        <div class="cond-scale" aria-hidden="true"><i style="background:var(--cond-1)"></i><i style="background:var(--cond-2)"></i><i style="background:var(--cond-3)"></i><i style="background:var(--cond-4)"></i><i style="background:var(--cond-5)"></i></div>
-        <div class="cond-lbl"><span>Failed</span><span>Very good</span></div>
-        <label class="layer-toggle"><input type="checkbox" checked data-layers="bridges,bridges-ring">Bridges (NBI)<span class="lg-pt" style="margin-left:auto;background:var(--x-bridge);border-radius:2px"></span></label>
-        <label class="layer-toggle"><input type="checkbox" checked data-layers="reqs">Open drainage requests<span class="lg-pt" style="margin-left:auto;background:var(--c-info)"></span></label>
-        <label class="layer-toggle"><input type="checkbox" id="planToggle" checked>This week's plan<span class="rank" style="margin-left:auto;width:16px;height:16px;font-size:9px">1</span></label>
-        <label class="layer-toggle"><input type="checkbox" checked data-layers="tsunami,tsunami-line">Tsunami evacuation zone<span class="lg-sw" style="margin-left:auto;background:color-mix(in srgb, var(--hz-tsu) 45%, var(--c-surface))"></span></label>
-        <label class="layer-toggle"><input type="checkbox" data-layers="flood,flood-line">Flood zones (FEMA)<span class="lg-sw" style="margin-left:auto;background:color-mix(in srgb, var(--hz-flood) 40%, var(--c-surface))"></span></label>
-      </div>
-    </div>
+
 
     <aside class="panel" aria-label="Asset detail" id="assetPanel" style="display:flex;flex-direction:column;max-height:560px">
       <div class="asset-h">
@@ -242,6 +245,9 @@
     <div class="kanban" id="board"></div>
     <div id="list" hidden style="padding:0 16px 16px" class="tbl-scroll"><table class="tbl"><thead><tr><th>Work order</th><th>Asset</th><th>Stage</th><th>Priority</th><th>Crew</th><th>Scheduled</th><th>EAM</th></tr></thead><tbody id="listBody"></tbody></table></div>
   </section>
+
+</aside>
+</div>
 </main>
 
 {{DATA land,roads,contours,streams,waterbodies,zoning,dfirm,tsunami,bridges,demo.assets,demo.workorders,demo.requests,demo.now,05-culvert-parcels}}

@@ -92,7 +92,7 @@
   @media (max-width: 640px) { .maplabel.poi { display: none; } .xbanner { flex-wrap: wrap; } .xbanner .t { margin-left: 0; } .legend { display: none; } }
 </style>
 </head>
-<body data-view="eoc">
+<body class="app-shell app-emergency" data-view="eoc">
 <a class="skip-link" href="#main">Skip to situation details</a>
 {{ICONS}}
 <h1 class="sr-only" style="font-size:22px">Exercise situation map for Kahului and Wailuku</h1>
@@ -293,9 +293,9 @@
   const inZone = (c, code) => zone(code).some((f) => inPoly(c, f.geometry));
   const facilities = [
     ...HD.shelters.features.map((f) => ({ kind: "Shelter", name: SH[f.properties.name].label, id: "shelters/" + SH[f.properties.name].fid, c: f.geometry.coordinates })),
-    ...HD.fire.features.map((f, i) => ({ kind: "Fire station", name: f.properties.name.replace(/^(\w+) \((E\d+)\)$/, "$1 Fire Station ($2)"), id: "fire/" + [96, 97][i], c: f.geometry.coordinates })),
-    ...HD.police.features.map((f) => ({ kind: "Police", name: f.properties.name, id: "police/6", c: f.geometry.coordinates })),
-    ...HD.hospitals.features.map((f) => ({ kind: "Hospital", name: f.properties.name, id: "hospitals/16", c: f.geometry.coordinates })),
+    ...HD.fire.features.map((f) => ({ kind: "Fire station", name: f.properties.name.replace(/^(\w+) \((E\d+)\)$/, "$1 Fire Station ($2)"), id: "fire/" + (f.properties.source_objectid ?? f.properties.objectid), c: f.geometry.coordinates })),
+    ...HD.police.features.map((f) => ({ kind: "Police", name: f.properties.name, id: "police/" + (f.properties.source_objectid ?? f.properties.objectid), c: f.geometry.coordinates })),
+    ...HD.hospitals.features.map((f) => ({ kind: "Hospital", name: f.properties.name, id: "hospitals/" + (f.properties.source_objectid ?? f.properties.objectid), c: f.geometry.coordinates })),
     ...HD.schools.features.filter((f) => !HD.shelters.features.some((s) => s.geometry.coordinates.join() === f.geometry.coordinates.join())).map((f) => ({ kind: "School", name: f.properties.name, id: "schools/" + f.properties.name.toLowerCase().replace(/\s+/g, "-"), c: f.geometry.coordinates })),
   ];
   const uniq = (a) => a.filter((f, i) => a.findIndex((g) => g.name === f.name) === i);
@@ -305,7 +305,7 @@
   const cite = (id, key) => `<button class="cite" data-cite="${key || "fly"}" data-id="${id}">${id}</button>`;
 
   document.getElementById("exposure").innerHTML =
-    `<p><b>${inEvac.length} facilities are inside the evacuation zone</b> ${zone(2).length ? `and ${inExtreme.length} more are inside the extreme zone only.` : "The extreme zone is not included in this snapshot."} I checked ${facilities.length} facilities against the zone polygons.</p>
+    `<p><b>${inEvac.length} facilities are inside the evacuation zone</b> ${zone(2).length ? `and ${inExtreme.length} more are inside the extreme zone only.` : "The exercise analysis snapshot has no extreme-zone polygons, so the extreme zone drawn on the map is reference display only."} I checked ${facilities.length} facilities against the zone polygons.</p>
      <table class="tbl" style="margin-top:6px"><tbody>
      ${inEvac.map((f) => `<tr><td><span class="chip warn" style="height:20px">Evacuation</span></td><td>${f.name}<span class="id">${f.kind}</span></td><td class="r">${cite(f.id)}</td></tr>`).join("")}
      ${inExtreme.map((f) => `<tr><td><span class="chip" style="height:20px">Extreme</span></td><td>${f.name}<span class="id">${f.kind}</span></td><td class="r">${cite(f.id)}</td></tr>`).join("")}
@@ -318,7 +318,7 @@
   document.getElementById("sitrep").innerHTML = `<ol>
     <li><b>Situation.</b> Simulated tsunami warning in effect since 08:52 HST; simulated first wave 12:10 HST. ${cite("nws/HIZ016-exercise", "feeds")} ${cite("ptwc/msg-7", "feeds")} Demo tide gauge reads +0.42 ft above predicted. ${cite("noaa/1615680", "feeds")}</li>
     <li><b>Evacuation.</b> Exercise zones are highlighted; no real warning is active on this page. Parcel exposure has not been verified in this exercise. ${cite("tsunami/zone-1", "zone")} ${cite("query/parcels-in-zone", "zone")}</li>
-    <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.length ? inExtreme.map((f) => f.name).join(", ") + " are in the extreme zone only." : "Extreme-zone exposure is unavailable in this snapshot."} ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
+    <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.length ? inExtreme.map((f) => f.name).join(", ") + " are in the extreme zone only." : "Extreme-zone exposure was not analysed: the exercise snapshot has no extreme-zone polygons."} ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
     <li><b>Shelters.</b> ${open.length} of ${shelters.length} open; ${fmt(totOcc)} of ${fmt(totCap)} spaces used (${Math.round((totOcc / totCap) * 100)}%). Baldwin High at ${pct(baldwin)}%. ${cite("shelters/*", "shelters")} ${cite("shelters/" + baldwin.fid, "baldwin")}</li>
     <li><b>Roads.</b> Fictional scenario: 3 closed roads; Waiehu Beach Rd in contraflow. ${cite("road-status/*", "roads")}</li>
     <li><b>Resources.</b> 5 open requests, 1 critical: 150 kW generator for Baldwin High. ${cite("eoc-board/RR-114", "rr")}</li>
@@ -360,12 +360,13 @@
   let map;
   map = HM.create(document.getElementById("map"), {
     bounds: [[-156.515, 20.866], [-156.447, 20.906]], padding: 10, roadLabels: false,
-    attr: "Data: Hawaii Statewide GIS Program, Hawaii Statewide GIS Program · exercise data · served by Honua",
+    attr: "Data: Hawaii Statewide GIS Program · exercise data · Honua tiles",
     onload: (m) => {
       HM.overlays(m, ["slr", "flood", "tsunami"], "roads-casing");
-      m.addLayer({ id: "road-status-casing", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5, 16, 11] } });
-      m.addLayer({ id: "road-status", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "name"], ...ROADS.flatMap((r) => [r.name, RC[r.st]]), "#999"], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 16, 7] } });
-      m.addLayer({ id: "road-closed-dash", type: "line", source: "roads", filter: ["in", ["get", "name"], ["literal", ROADS.filter((r) => r.st === "closed").map((r) => r.name)]], paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 1, 16, 2.5], "line-dasharray": [1.5, 1.5] } });
+      m.addSource("exercise-roads", { type: "geojson", data: HD.roads });
+      m.addLayer({ id: "road-status-casing", type: "line", source: "exercise-roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 5, 16, 11] } });
+      m.addLayer({ id: "road-status", type: "line", source: "exercise-roads", filter: ["in", ["get", "name"], ["literal", ROADS.map((r) => r.name)]], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["match", ["get", "name"], ...ROADS.flatMap((r) => [r.name, RC[r.st]]), "#999"], "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 16, 7] } });
+      m.addLayer({ id: "road-closed-dash", type: "line", source: "exercise-roads", filter: ["in", ["get", "name"], ["literal", ROADS.filter((r) => r.st === "closed").map((r) => r.name)]], paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 1, 16, 2.5], "line-dasharray": [1.5, 1.5] } });
       const fac = { type: "FeatureCollection", features: [...HD.fire.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Fire station" } })), ...HD.police.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Police" } })), ...HD.hospitals.features.map((f) => ({ ...f, properties: { ...f.properties, k: "Hospital" } }))] };
       m.addSource("facilities", { type: "geojson", data: fac });
       m.addLayer({ id: "facilities", type: "circle", source: "facilities", paint: { "circle-radius": 5.5, "circle-color": "#b3261e", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
