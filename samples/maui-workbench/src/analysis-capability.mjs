@@ -5,7 +5,8 @@ const operations = new Set(['query', 'queryAggregate', 'spatialAggregate', 'proc
 export async function explainAnalysisCapability(model, capability) {
   if (!operations.has(capability)) throw new Error('Choose one of the listed operations.');
   const descriptor = model?.source.descriptor;
-  if (!descriptor || !(descriptor.capabilities instanceof Set)) throw new Error('Reconnect to discover the source capabilities.');
+  if (typeof descriptor?.capabilities?.has !== 'function'
+    || typeof descriptor.capabilities[Symbol.iterator] !== 'function') throw new Error('Reconnect to discover the source capabilities.');
   const result = await executeHonuaAgentTool({ listSources: () => [{ ...descriptor, capabilities: [...descriptor.capabilities] }] }, {
     name: 'explainCapabilityGap', args: { sourceId: descriptor.id, capability },
   }, { allowedTools: ['explainCapabilityGap'], allowActions: false });

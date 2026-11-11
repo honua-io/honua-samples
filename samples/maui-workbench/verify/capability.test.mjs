@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { connect } from '@honua/sdk-js';
 import { explainAnalysisCapability } from '../src/analysis-capability.mjs';
 
 function model(capabilities) {
@@ -26,4 +27,22 @@ test('missing or empty source metadata never implies protocol-default support', 
   await assert.rejects(explainAnalysisCapability(model(undefined), 'query'), /Reconnect/);
   await assert.rejects(explainAnalysisCapability(null, 'query'), /Reconnect/);
   await assert.rejects(explainAnalysisCapability(model(['query']), 'madeUpCapability'), /listed operations/);
+});
+
+
+test('a source discovered by the published SDK supports capability inspection', async () => {
+  let requests = 0;
+  const connection = await connect({ endpoint: 'https://demo.example/rest/services/parcels/FeatureServer/0',
+    protocol: 'geoservices-feature-service', authorizationScopeFingerprint: 'anonymous-public', clientOptions: { fetchFn: async () => {
+      requests += 1;
+      return Response.json({ id: 0, name: 'Parcels', type: 'Feature Layer',
+        capabilities: 'Query', fields: [{ name: 'objectid', type: 'esriFieldTypeOID' }],
+        objectIdField: 'objectid', geometryType: 'esriGeometryPoint',
+        advancedQueryCapabilities: { supportsPagination: true } });
+    } } });
+  const next = { ...model([]), source: connection.source() };
+  const before = requests;
+  assert.equal((await explainAnalysisCapability(next, 'query')).supported, true);
+  assert.equal((await explainAnalysisCapability(next, 'spatialAggregate')).supported, false);
+  assert.equal(requests, before, 'explanations must not probe or execute an operation');
 });
