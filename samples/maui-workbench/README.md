@@ -135,3 +135,10 @@ loaded table window, explicitly reporting that window's coverage. Selection,
 query or catalog changes clear the summary. This deterministic summary does
 not supply natural-language analysis, histogram brushing or a comparison with
 unselected records; those acceptance steps remain pending.
+
+The capability panel uses the published SDK's read-only `explainCapabilityGap`
+tool against the connected source descriptor. Choose a listed operation to see
+whether the source advertises it, with the layer and endpoint cited. No source
+operation executes; advertised support does not establish permissions or runtime
+success. Missing metadata produces an error rather than inferred protocol support.
+This is a guided SDK tool invocation, not a natural-language agent conversation.

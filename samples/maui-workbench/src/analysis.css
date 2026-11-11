@@ -11,10 +11,11 @@ honua-measurement { margin-top: 16px; }
 #chart-filters button { overflow-wrap: anywhere; text-align: left; }
 #chart-filters button[aria-pressed=true] { background: var(--c-accent-soft); color: var(--c-accent-ink); border-color: var(--c-focus); }
 #map-status, #selection-status, #filter-summary, #connection-status, #export-status { overflow-wrap: anywhere; }
-#source-link, #selection-explanation { overflow-wrap: anywhere; }
+#source-link, #selection-explanation, #capability-explanation { overflow-wrap: anywhere; }
+#capability-explanation { white-space: pre-line; }
 @media (max-width: 600px) { #map { height: 300px; } }
 
-honua-feature-table, honua-chart, honua-measurement { --honua-ui-bg: var(--c-surface); --honua-ui-fg: var(--c-text); --honua-ui-muted: var(--c-text-2); --honua-ui-border: var(--c-border-strong); --honua-ui-accent: var(--c-accent); --honua-ui-accent-fg: var(--c-on-accent); --honua-ui-surface: var(--c-surface-2); }
+honua-feature-table, honua-chart, honua-measurement, honua-sketch-control { --honua-ui-bg: var(--c-surface); --honua-ui-fg: var(--c-text); --honua-ui-muted: var(--c-text-2); --honua-ui-border: var(--c-border-strong); --honua-ui-accent: var(--c-accent); --honua-ui-accent-fg: var(--c-on-accent); --honua-ui-surface: var(--c-surface-2); }
 
 .bounds-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
 .bounds-inputs input { display: block; margin-top: 4px; }

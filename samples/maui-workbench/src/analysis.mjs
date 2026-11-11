@@ -1,5 +1,6 @@
 import './analysis.css';
 import { bindSelectionExplanation } from './analysis-selection.mjs';
+import { bindCapabilityExplanation } from './analysis-capability.mjs';
 import { describeFeatureTableCount } from '@honua/app-platform/web-components';
 import { analysisBindings, openAnalysisSource, createAnalysisModel, analysisQuery,
   queryAnalysisMap, queryStatusChart, setAnalysisFilter, MAP_LIMIT } from './analysis-model.mjs';
@@ -19,6 +20,8 @@ let unsubscribe;
 let exportSnapshot;
 const explanation = bindSelectionExplanation({ model: () => model,
   button: element('explain-selection'), output: element('selection-explanation') });
+const capability = bindCapabilityExplanation({ model: () => model, form: element('capability-form'),
+  select: element('capability'), output: element('capability-explanation') });
 const map = createAnalysisMap((id) => {
   if (model) model.table.select(model.table.keysForTargets([{ sourceId: model.source.descriptor.id, id }]), { replace: true });
 }, element('measurement'));
@@ -26,12 +29,13 @@ const map = createAnalysisMap((id) => {
 function setControlsState(state) {
   if (state !== 'ready') map.cancelSketch();
   element('sketch').inert = state !== 'ready';
-  for (const id of ['explain-selection', 'catalog', 'field', 'operator', 'value', 'apply', 'clear', 'export-csv', 'export-geojson', 'share', ...queryControlIds]) {
+  for (const id of ['capability', 'check-capability', 'explain-selection', 'catalog', 'field', 'operator', 'value', 'apply', 'clear', 'export-csv', 'export-geojson', 'share', ...queryControlIds]) {
     element(id).disabled = state !== 'ready';
   }
 }
 
 function clearResults() {
+  capability.invalidate();
   explanation.invalidate();
   element('share-output').hidden = true;
   map.update({ type: 'FeatureCollection', features: [] });
@@ -187,6 +191,7 @@ function describeFilters() {
 }
 
 function showError(error) {
+  capability.invalidate();
   explanation.invalidate();
   revision += 1;
   active?.abort();

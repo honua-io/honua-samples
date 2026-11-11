@@ -34,6 +34,14 @@ for (const theme of ['light', 'dark']) for (const width of [1440, 390]) {
     await expect(page.locator('#selection-explanation')).toContainText('Filter (CQL2):');
     await expect(page.locator('#selection-explanation')).toContainText('POLYGON');
     await expect(page.locator('#selection-explanation')).toContainText('Read-only SDK tool: summarizeSelection');
+    await page.getByText('Check a source capability', { exact: true }).click();
+    await page.locator('#capability').selectOption('spatialAggregate');
+    const queryCount = control.queries.length;
+    await page.locator('#check-capability').click();
+    await expect(page.locator('#capability-explanation')).toContainText('spatialAggregate" is not advertised');
+    await expect(page.locator('#capability-explanation')).toContainText('Read-only SDK tool: explainCapabilityGap');
+    await expect(page.locator('#capability-explanation')).toContainText('No operation was executed.');
+    expect(control.queries.length).toBe(queryCount);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `artifacts/analysis-polygon-${theme}-${width}.png`, fullPage: true });
     const downloadPending = page.waitForEvent('download');
@@ -61,6 +69,7 @@ for (const theme of ['light', 'dark']) for (const width of [1440, 390]) {
     await expect(page.locator('#connection-status')).toContainText('Parcels connected');
     await expect(page.locator('#filter-summary')).toHaveText('No filters applied.');
     await expect(page.locator('#selection-explanation')).toBeEmpty();
+    await expect(page.locator('#capability-explanation')).toBeEmpty();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
   });
