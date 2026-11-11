@@ -103,6 +103,15 @@ jobs:
         with:
           node-version: "22"
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify island geometry preparation
+        run: |
+          python -m pip install -r scripts/state-local/approved/geometry-requirements.txt
+          python -m unittest discover -s scripts/state-local/approved -p test_subdivide.py
+
       - name: Run node test suite
         # Network-independent (NFR-002 on honua-io/honua-samples#16): every
         # case works from the committed byte-exact sdk-js handoff snapshot

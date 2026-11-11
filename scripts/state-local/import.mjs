@@ -94,6 +94,12 @@ export async function stageSnapshot(env, options) {
   return stageVerifiedSnapshot(env, { ...options, source, ...snapshot });
 }
 
+export function sourceLicense(source) {
+  return { license: source.license === "public-domain" ? "LicenseRef-Hawaii-Statewide-GIS-Public-Domain"
+    : source.license === "CC0_10" ? "CC0-1.0" : source.license ?? undefined,
+    licenseUrl: source.licenseUrl, attribution: source.attribution };
+}
+
 export async function stageVerifiedSnapshot(env, options) {
   const { name, connection, source, receipt, geojson } = options;
   if (!connection) throw new Error("HONUA_SAMPLE_CONNECTION must name this server's managed import database");
@@ -108,9 +114,7 @@ export async function stageVerifiedSnapshot(env, options) {
     body: {
       schema: uploaded.schema ?? "honua_data", table: uploaded.physicalTableName,
       layerName: name, serviceName, folderId, srid: 4326, enabled: false,
-      license: source.license === "public-domain" ? "LicenseRef-Hawaii-Statewide-GIS-Public-Domain"
-        : source.license === "CC0_10" ? "CC0-1.0" : source.license ?? undefined,
-      licenseUrl: source.licenseUrl, attribution: source.attribution,
+      ...sourceLicense(source),
       sourceUrl: source.url ?? `https://data.nola.gov/d/${source.id}`,
       description: `${receipt.dataVintage ? `Data vintage ${receipt.dataVintage}. ` : ""}${receipt.selection.kind}; ${receipt.accepted} accepted, ${receipt.rejected} rejected. SHA-256 ${receipt.cleanSha256}`,
     },
@@ -119,6 +123,6 @@ export async function stageVerifiedSnapshot(env, options) {
   if (!Number.isInteger(layer?.layerId) || layer.enabled !== false) {
     throw new Error("Publish did not confirm a disabled layer; inspect Console before retrying");
   }
-  return { source: name, serviceName, folderId, layerId: layer.layerId, enabled: false,
+  return { source: name, ...sourceLicense(source), serviceName, folderId, layerId: layer.layerId, enabled: false,
     schema: uploaded.schema ?? "honua_data", table: uploaded.physicalTableName, cleanSha256: receipt.cleanSha256 };
 }

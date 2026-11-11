@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serverEnv } from '../../lib/admin-api.mjs';
@@ -36,7 +36,7 @@ async function exportLayer(env, options) {
   if (existing) return existing;
   const filename = path.join(outputDirectory, `${layer.source}.pmtiles`);
   try {
-    await readFile(filename);
+    await stat(filename);
     throw new Error(`${layer.source} archive exists without a receipt; inspect it before retrying`);
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;

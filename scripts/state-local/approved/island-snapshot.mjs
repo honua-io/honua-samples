@@ -5,6 +5,15 @@ import { readMauiSnapshot } from '../maui-snapshot.mjs';
 import { assertDefaultImportGeometry } from '../import-geometry.mjs';
 import { sha256 } from '../../lib/checksum.mjs';
 
+function assertSourceAttributes(collection, original) {
+  const ignored = new Set(['objectid', 'source_objectid', 'source_part', 'data_origin']);
+  const attributes = (properties) => JSON.stringify(Object.entries(properties).filter(([key]) => !ignored.has(key)).sort(([a], [b]) => a.localeCompare(b)));
+  const expected = new Map(original.features.map((feature) => [String(feature.properties.objectid), attributes(feature.properties)]));
+  if (collection.features.some((feature) => attributes(feature.properties) !== expected.get(String(feature.properties.source_objectid)))) {
+    throw new Error('Prepared snapshot changed source attributes');
+  }
+}
+
 export async function readIslandSnapshot(options) {
   const { name, directory, sourceDirectory } = options;
   const source = islandSources[name];
@@ -26,6 +35,7 @@ export async function readIslandSnapshot(options) {
     || original.geojson.features.some((feature) => !ids.has(String(feature.properties.objectid)))) {
     throw new Error(`${name} prepared snapshot does not preserve source identities`);
   }
+  assertSourceAttributes(geojson, original.geojson);
   return { source, geojson, receipt: { ...original.receipt, cleanSha256: prepared.cleanSha256,
     accepted: geojson.features.length, rejected: 0, preparation: prepared,
     selection: { ...original.receipt.selection, kind: 'Island extent, recorded geometry repair and subdivision' } } };
