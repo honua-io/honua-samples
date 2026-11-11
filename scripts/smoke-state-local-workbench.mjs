@@ -10,6 +10,9 @@ const errors = [];
 page.on('pageerror', (error) => { errors.push(error.message); console.error(error.message); });
 try {
   await page.goto(`${server.url}/state-local/`);
+  await expect(page.getByRole('link', { name: 'How switching works', exact: true })).toHaveAttribute('href', '/state-local/switching/');
+  await expect(page.getByRole('link', { name: 'Switching guide', exact: true }).first()).toHaveAttribute('href', '/state-local/switching/');
+  await expect(page.locator('#heroMap[data-map-ready="true"]')).toHaveCount(1, { timeout: 30000 });
   await expect(page.locator('.jcard')).toHaveCount(4);
   await expect(page.locator('.maplibregl-canvas')).toHaveCount(5);
   await expect(page.locator('[data-map-ready="true"]')).toHaveCount(5, { timeout: 30000 });

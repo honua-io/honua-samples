@@ -114,7 +114,7 @@
     <a href="01-overview.html" aria-current="page">Overview</a><a href="02-property.html">Property</a><a href="03-311.html">311</a><a href="04-emergency.html">Preparedness</a><a href="05-public-works.html">Public works</a><a href="12-workbench.html">Workbench</a><a href="https://docs.honua.io/">Console</a><a href="/state-local/data/approved/manifest.json">Catalog</a><a href="https://github.com/honua-io/honua-samples/tree/0e19d4968a6a285d5d3e2ef1fe43017222661626/samples/maui-property-planning">Agent</a>
   </nav>
   <span class="spacer"></span>
-  <a class="btn ghost hide-sm" aria-disabled="true" title="Coming soon">Switching guide · Coming soon</a>
+  <a class="btn ghost hide-sm" href="/state-local/switching/">Switching guide</a>
   <span class="env"><span class="dot"></span>Demo environment</span>
 </header>
 <div class="demostrip" role="note">
@@ -131,7 +131,7 @@
       <p class="lede">Honua serves your data, publishes your open data hub, builds your public apps and dashboards, runs administration, and gives staff an AI agent that cites every answer. It replaces the GIS stack end to end, and the tools you already run keep working on day one.</p>
       <div class="row wrap" style="margin-top:20px;gap:10px">
         <a class="btn primary lg" href="#journeys">See the four journeys</a>
-        <a class="btn lg" aria-disabled="true" title="Switching guide · Coming soon">Coming soon</a>
+        <a class="btn lg" href="/state-local/switching/">How switching works</a>
       </div>
       <div class="facts-row">
         <div><div class="v">2,538</div><div class="l">real parcels in the Kahului view</div></div>
@@ -206,7 +206,7 @@
       <a href="/state-local/data/approved/manifest.json"><svg class="ico"><use href="#i-grid"/></svg><div><b>Snapshot catalogue</b><span>Verified sources, attribution, checksums and snapshot downloads</span></div></a>
       <a href="12-workbench.html"><svg class="ico"><use href="#i-chart"/></svg><div><b>Analysis workbench</b><span>Parcel and demo 311 snapshots: linked charts, filters, export and Demo answer</span></div></a>
       <a aria-disabled="true" title="Coming soon"><svg class="ico"><use href="#i-code"/></svg><div><b>SDK explorer · Coming soon</b><span>Runnable JavaScript, Python and .NET examples for your own services</span></div></a>
-      <a aria-disabled="true" title="Coming soon"><svg class="ico"><use href="#i-route"/></svg><div><b>Switching guide · Coming soon</b><span>Product mapping and the migration path</span></div></a>
+      <a href="/state-local/switching/"><svg class="ico"><use href="#i-route"/></svg><div><b>Switching guide</b><span>Product mapping and the migration path</span></div></a>
     </div>
   </section>
 
@@ -262,7 +262,7 @@
         <div class="panel"><div class="panel-b">
           <div class="kicker">What changes for staff</div>
           <p style="margin-top:6px">A layer URL changes in each tool once. Validate data, symbology and saved maps before migration. New apps are built in Studio, and the old ones are retired when nobody opens them.</p>
-          <a class="btn sm" style="margin-top:12px" aria-disabled="true" title="Coming soon">Migration path · Coming soon <svg class="ico"><use href="#i-arrow-r"/></svg></a>
+          <a class="btn sm" style="margin-top:12px" href="/state-local/switching/">Migration path <svg class="ico"><use href="#i-arrow-r"/></svg></a>
         </div></div>
       </div>
     </div>
@@ -297,7 +297,7 @@
     HM.add(map, id, data);
     themed(map, { id, type: "circle", source: id, paint: { "circle-color": color, "circle-radius": radius, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
   }
-  HM.create(document.getElementById("heroMap"), {
+  const hero = HM.create(document.getElementById("heroMap"), {
     view: "wide", padding: 10, cooperative: true,
     onload: (m) => {
       HM.overlays(m, ["zoning", "flood", "tsunami"], "roads-casing");
@@ -307,7 +307,7 @@
       m.on("click", "shelters", (e) => new maplibregl.Popup({ offset: 8 }).setLngLat(e.lngLat).setHTML(`<b>${e.features[0].properties.name}</b><br><span class="muted">School exercise anchor · ${e.features[0].properties.addr}</span>`).addTo(m));
       m.on("mouseenter", "shelters", () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", "shelters", () => (m.getCanvas().style.cursor = ""));
-      m.getContainer().dataset.mapReady = "true";
+      m.once("idle", () => { m.getContainer().dataset.mapReady = "true"; });
     },
   });
   const MINI = {
@@ -323,10 +323,10 @@
       pts(m, "br", HD.bridges, "--c-text-2", 4.5);
     } },
   };
-  document.querySelectorAll("[data-mini]").forEach((el) => {
+  hero?.once("idle", () => document.querySelectorAll("[data-mini]").forEach((el) => {
     const cfg = MINI[el.dataset.mini];
-    HM.create(el, { bounds: cfg.bounds, padding: 0, interactive: false, labels: false, onload: (m) => { HM.overlays(m, cfg.layers, "roads-casing"); cfg.after && cfg.after(m); m.getContainer().dataset.mapReady = "true"; } });
-  });
+    HM.create(el, { bounds: cfg.bounds, padding: 0, interactive: false, labels: false, onload: (m) => { HM.overlays(m, cfg.layers, "roads-casing"); cfg.after && cfg.after(m); m.once("idle", () => { m.getContainer().dataset.mapReady = "true"; }); } });
+  }));
 })();
 </script>
 </body>
