@@ -214,6 +214,13 @@ async function dataOriginAnswers(dataOrigin) {
   }
 }
 
+const TILE_PATH = /^\/(?:api\/v1\/tiles\/pmtiles\/|ogc\/tiles\/collections\/[^/]+\/tiles\/[^/]+\/\d+\/\d+\/\d+(?:[?.]|$))/u;
+
+function isDataOriginTileRequest(dataOrigin, url) {
+  if (!dataOrigin || !url.startsWith(`${dataOrigin}/`)) return false;
+  return TILE_PATH.test(url.slice(dataOrigin.length));
+}
+
 async function smokeOwnApp(browser, origin, app) {
   if (!(await dataOriginAnswers(app.dataOrigins?.[0]))) {
     process.stdout.write(`::warning title=own sample unverified::${app.id}: data origin ${app.dataOrigins[0]} did not answer; the embed was published but not verified\n`);
@@ -234,10 +241,10 @@ async function smokeOwnApp(browser, origin, app) {
   });
   page.on("requestfailed", (request) => {
     const errorText = request.failure()?.errorText ?? "";
-    // MapLibre cancels PMTiles range requests a resize or pan supersedes. That
-    // is the client working, not a failure; the rendered-features proof below
-    // still requires the tiles to draw.
-    if (errorText === "net::ERR_ABORTED" && dataOrigin && request.url().startsWith(`${dataOrigin}/api/v1/tiles/pmtiles/`)) return;
+    // MapLibre cancels tile requests a resize or pan supersedes. That is the
+    // client working, not a failure; the rendered-features proof below still
+    // requires the tiles to draw.
+    if (errorText === "net::ERR_ABORTED" && isDataOriginTileRequest(dataOrigin, request.url())) return;
     failures.push(`requestfailed: ${request.method()} ${request.url()} ${errorText}`);
   });
   page.on("response", (response) => {
