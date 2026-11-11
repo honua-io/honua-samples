@@ -29,6 +29,10 @@ test('gallery preserves the separately built landing and checks Switching links'
     await validateStateLocalLinks(siteDir);
     await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<SCRIPT>const example = `<a href="newline-end.html">`;</SCRIPT\n><a href="#main">Main</a>');
     await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="attr-end.html">`;</script foo="bar"><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
+    await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = `<a href="tab-end.html">`;</script\t\n bar><a href="#main">Main</a>');
+    await validateStateLocalLinks(siteDir);
     await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script>const example = "https://example.invalid/unclosed";<a href="after-unclosed.html"></a>');
     await assert.rejects(validateStateLocalLinks(siteDir), /after-unclosed.html/);
     await writeFile(path.join(siteDir, 'state-local/switching/index.html'), '<script src="missing.js"></script>');
