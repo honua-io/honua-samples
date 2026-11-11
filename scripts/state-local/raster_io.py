@@ -32,5 +32,3 @@ def write_json(path, value):
 def output_digest(path):
     return {"sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             "bytes": path.stat().st_size}
-
-
