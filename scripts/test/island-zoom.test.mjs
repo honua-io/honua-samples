@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { islandTileExtent, islandTileLayers, islandTileMinZoom } from '../state-local/approved/sources.mjs';
 
@@ -37,11 +37,26 @@ test('no island map layer draws an archive below the zoom it was exported from',
   }
 });
 
-test('shared page overlays never attach a trimmed archive', () => {
-  // honua-map.js attaches island archives by name for overlays (parcels stay page GeoJSON).
-  for (const name of Object.keys(islandTileMinZoom)) {
-    if (name === 'parcels') continue;
-    assert.doesNotMatch(honuaMap, new RegExp(`add\\(map, "[\\w-]+", "${name}"\\)`), name);
-  }
+test('no page or shared script attaches a trimmed archive outside island-map.js', async () => {
+  // honua-map.js add(map, id, data) resolves HD.<name> or "<name>" to the island archive of that name
+  // (parcels excepted: pages keep their own GeoJSON parcels). HI.source(name) returns the archive directly.
   assert.match(honuaMap, /name !== "parcels" \? HI\.source\(name\)/);
+  const trimmed = Object.keys(islandTileMinZoom).filter((name) => name !== 'parcels').join('|');
+  const viaAdd = new RegExp(`\\badd\\(\\s*\\w+\\s*,\\s*["'][\\w-]+["']\\s*,\\s*(?:HD\\.(?:${trimmed})\\b|["'](?:${trimmed})["'])`);
+  const viaSource = new RegExp(`\\b(?:HI\\.)?source\\(\\s*["'](?:${Object.keys(islandTileMinZoom).join('|')})["']\\s*\\)`);
+  const files = [];
+  for (const directory of ['shared', 'samples/maui-emergency', 'scripts/state-local']) {
+    for (const file of await readdir(new URL(`${directory}/`, root), { recursive: true })) {
+      const relative = `${directory}/${file}`;
+      if (/\.(html|js|mjs)$/.test(file) && !relative.includes('node_modules') && relative !== 'shared/state-local/island-map.js') {
+        files.push(relative);
+      }
+    }
+  }
+  assert.ok(files.some((file) => file.endsWith('04-emergency.html')), 'page sources are scanned');
+  for (const file of files) {
+    const text = await readFile(new URL(file, root), 'utf8');
+    assert.doesNotMatch(text, viaAdd, file);
+    assert.doesNotMatch(text, viaSource, file);
+  }
 });

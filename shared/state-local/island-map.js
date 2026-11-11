@@ -13,11 +13,12 @@
     maplibregl.addProtocol('pmtiles', protocol.tile);
   }
 
-  // Chromium's HTTP cache can return another request's bytes for concurrent range reads of one archive
-  // ("Unable to parse the tile" on the property page). pmtiles.js bypasses that cache only on Windows,
-  // so bypass it on every Chromium browser. The CDN still caches; MapLibre keeps loaded tiles in memory.
+  // Chromium's HTTP cache can return another request's bytes for concurrent range reads of one static
+  // island archive ("Unable to parse the tile" on the property page). pmtiles 4.5.0 bypasses that cache
+  // only on Windows, so bypass it for these archives on every Chromium browser. The static-site CDN still
+  // caches, and MapLibre keeps loaded tiles in memory. Other archives (the street basemap) keep defaults.
   const chromium = /Chrome|Chromium|Edg|OPR|Brave/.test(navigator.userAgent);
-  function archive(url) {
+  function islandArchive(url) {
     register();
     if (!protocol.get(url)) {
       const fetchSource = new pmtiles.FetchSource(url);
@@ -28,7 +29,7 @@
   }
 
   function source(name) {
-    if (tiled.has(name)) return { type: 'vector', url: archive(new URL(name + '.pmtiles', root).href) };
+    if (tiled.has(name)) return { type: 'vector', url: islandArchive(new URL(name + '.pmtiles', root).href) };
     if (small.has(name)) return { type: 'geojson', data: new URL(name + '.geojson', root).href };
     return null;
   }
@@ -46,7 +47,7 @@
   }
 
   function streets(map) {
-    map.addSource('streets', { type: 'vector', url: archive('https://demo.honua.io/api/v1/tiles/pmtiles/maui-basemap') });
+    map.addSource('streets', { type: 'vector', url: 'pmtiles://https://demo.honua.io/api/v1/tiles/pmtiles/maui-basemap' });
     streetLayer(map, { id: 'land', type: 'fill', 'source-layer': 'earth', paint: { 'fill-color': '--map-land' } });
     streetLayer(map, { id: 'street-parks', type: 'fill', 'source-layer': 'landuse', filter: ['in', ['get', 'kind'], ['literal', ['park', 'forest', 'nature_reserve']]], paint: { 'fill-color': '--map-zone-base-park', 'fill-opacity': 0.65 } });
     streetLayer(map, { id: 'street-water', type: 'fill', 'source-layer': 'water', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': '--map-water' } });

@@ -8,7 +8,7 @@ import { copyManifestFiles, lockedArchive } from '../../shared/state-local/locke
 import { islandDisplay } from '../state-local/approved/island-display.mjs';
 import { verifyTileArchive } from '../state-local/approved/pack-island.mjs';
 import { verifyIslandManifest } from '../state-local/approved/build-island.mjs';
-import { islandSources, islandTileBudgetBytes, islandTileLayers } from '../state-local/approved/sources.mjs';
+import { islandSources, islandTileBudgetBytes, islandTileExtent, islandTileLayers } from '../state-local/approved/sources.mjs';
 import { withIslandPoints } from '../../shared/state-local/island-points.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
@@ -79,7 +79,11 @@ test('tile archives over the budget are rejected even with a matching receipt', 
 test('island manifests need the exact layer set, format and tile budget', () => {
   const files = Object.fromEntries(Object.keys(islandSources).map((name) =>
     [`${name}.${islandTileLayers.includes(name) ? 'pmtiles' : 'geojson'}`, { bytes: 1, sha256: 'x' }]));
-  const valid = { format: 'honua.samples.island-display.v1', files };
+  const sources = Object.fromEntries(islandTileLayers.map((name) => {
+    const { minZoom, maxZoom } = islandTileExtent(name);
+    return [name, { tiles: { minZoom, maxZoom } }];
+  }));
+  const valid = { format: 'honua.samples.island-display.v1', files, sources };
   verifyIslandManifest(valid);
   const count = Object.keys(islandSources).length;
   assert.throws(() => verifyIslandManifest({ ...valid, format: 'other' }), new RegExp(`all ${count} verified layers`));
@@ -87,6 +91,11 @@ test('island manifests need the exact layer set, format and tile budget', () => 
   assert.throws(() => verifyIslandManifest({ ...valid, files: withoutSchools }), /verified layers/);
   assert.throws(() => verifyIslandManifest({ ...valid, files: { ...files, 'extra.geojson': { bytes: 1 } } }), /verified layers/);
   assert.throws(() => verifyIslandManifest({ ...valid, files: { ...files, 'parcels.pmtiles': { bytes: islandTileBudgetBytes + 1 } } }), /100 MB budget/);
+  // An archive exported from a different zoom range than the island map draws is refused.
+  assert.throws(() => verifyIslandManifest({ ...valid, sources: { ...sources, parcels: { tiles: { minZoom: 8, maxZoom: 14 } } } }),
+    /parcels archive covers z8-14; the island map expects z13-14/);
+  const { roads: _roads, ...withoutRoads } = sources;
+  assert.throws(() => verifyIslandManifest({ ...valid, sources: withoutRoads }), /roads archive covers zundefined/);
 });
 
 test('locked archives with parent or absolute member paths are refused before extraction', async (t) => {
