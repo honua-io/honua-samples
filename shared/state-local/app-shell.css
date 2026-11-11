@@ -29,8 +29,10 @@ body.app-shell {
 .app-workbench .wb > .right { overflow: hidden; }
 .app-workbench .right > :not(.rbody), .app-workbench .nlq > * { flex-shrink: 0; }
 .app-workbench .nlq-sugg { overflow-y: hidden; }
-.app-workbench .center { grid-template-rows: minmax(0, 1fr) minmax(100px, 36%); overflow: hidden; }
-.app-explorer #pvPanel { grid-template-rows: minmax(0, 1fr) minmax(0, 32%); overflow: hidden; }
+@media (min-width: 641px) {
+  .app-workbench .center { grid-template-rows: minmax(0, 1fr) minmax(100px, 36%); overflow: hidden; }
+  .app-explorer #pvPanel { grid-template-rows: minmax(0, 1fr) minmax(0, 32%); overflow: hidden; }
+}
 .app-explorer .pvb { max-height: none; }
 .app-explorer #mdPanel { overflow: auto; }
 .app-requests .page, .app-works .pw-main {
@@ -64,13 +66,15 @@ body.app-shell {
   .app-emergency .layout { grid-template-columns: 260px minmax(0, 1fr) 310px; }
   .app-emergency #map { height: auto; order: 0; }
 }
-@media (max-width: 1000px) {
+@media (max-width: 1000px) and (min-width: 641px) {
   .app-workbench .wb { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 3fr) minmax(0, 2fr); }
   .app-workbench .wb > .nlq { grid-column: 1 / -1 !important; grid-row: 1 !important; max-height: 100px; overflow: auto; }
   .app-workbench .wb > .center { grid-column: 1 / -1 !important; grid-row: 2 !important; }
   .app-workbench .wb > .left { grid-column: 1 !important; grid-row: 3 !important; overflow: auto; }
   .app-workbench .wb > .right { grid-column: 2 !important; grid-row: 3 !important; overflow: hidden; }
   .app-workbench .rbody { overflow: auto; }
+}
+@media (max-width: 1000px) and (min-width: 641px) {
   .app-explorer .sx { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
   .app-explorer .sx > .center { grid-column: 1 / -1; grid-row: 1; min-height: 0; overflow: hidden !important; }
   .app-explorer .sx > .left { max-height: none; grid-column: 1; grid-row: 2; }
@@ -94,4 +98,8 @@ body.app-shell {
   .department-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
   .app-requests .ph, .app-works .pagehead { flex-shrink: 0; gap: 8px; margin-bottom: 10px; }
   .app-requests .ph .sub, .app-works .pagehead p { display: none; }
+}
+@media (max-width: 640px) {
+  body.app-explorer, body.app-workbench { height: auto; overflow: auto; }
+  .app-explorer .sx, .app-workbench .wb { overflow: visible; }
 }

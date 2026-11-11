@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 
 const routes = ['property', '311', 'public-works', 'emergency', 'workbench', 'sdk-explorer'];
+// Phones get the approved mockup's scrolling sample list instead of a fixed shell.
+const phoneFlowRoutes = new Map([
+  ['sdk-explorer', ['.sx > .left', '.sx > .center']],
+  ['workbench', ['.wb > .nlq', '.wb > .center']],
+]);
 const viewports = [{ width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 390, height: 844 }];
 
 async function uncoveredMapPoint(page) {
@@ -35,6 +40,18 @@ async function verifyViewport(page, viewport) {
   assert.ok(after.panels.length > 0 && after.panels.every(Boolean), 'Long panels scroll internally');
 }
 
+async function verifyPhoneFlow(page, viewport, [first, second]) {
+  await page.waitForFunction(() => window.HM?.maps[0]?.loaded(), { timeout: 60_000 });
+  const layout = await page.evaluate(([a, b]) => ({
+    width: document.documentElement.scrollWidth,
+    tops: [a, b].map((selector) => document.querySelector(selector).getBoundingClientRect().top),
+    mapWidth: HM.maps[0].getContainer().getBoundingClientRect().width,
+  }), [first, second]);
+  assert.equal(layout.width, viewport.width, 'No page horizontal overflow');
+  assert.ok(layout.tops[0] < layout.tops[1], `${first} precedes ${second} as in the mockup`);
+  assert.ok(layout.mapWidth > viewport.width * 0.9, 'Map spans the phone width');
+}
+
 export async function verifyAppShells(context, baseUrl) {
   for (const viewport of viewports) for (const theme of ['light', 'dark']) for (const route of routes) {
     const page = await context.newPage();
@@ -42,7 +59,8 @@ export async function verifyAppShells(context, baseUrl) {
       await page.setViewportSize(viewport);
       await page.addInitScript(value => localStorage.setItem('honua-theme', value), theme);
       await page.goto(`${baseUrl}/state-local/${route}/`);
-      await verifyViewport(page, viewport);
+      if (viewport.width <= 640 && phoneFlowRoutes.has(route)) await verifyPhoneFlow(page, viewport, phoneFlowRoutes.get(route));
+      else await verifyViewport(page, viewport);
       console.log(`PASS app shell: ${route} ${viewport.width} ${theme}`);
     } finally { await page.close(); }
   }
