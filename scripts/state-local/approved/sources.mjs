@@ -39,4 +39,8 @@ export const islandSources = Object.fromEntries(Object.entries(approvedSources).
 }]));
 
 export const islandTileLayers = ['parcels', 'zoning', 'dfirm', 'tsunami', 'roads', 'contours'];
+// Lowest zoom each archive is drawn at by shared/state-local/island-map.js. Tiles below it are never
+// requested, so exporting them only adds bytes (parcels z8-12 alone were most of the parcel archive).
+export const islandTileMinZoom = { parcels: 13, roads: 12, contours: 11 };
+export const islandTileExtent = (name) => ({ bbox: mauiBounds, minZoom: islandTileMinZoom[name] ?? 8, maxZoom: 14 });
 export const islandTileBudgetBytes = 100_000_000;
