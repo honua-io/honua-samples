@@ -5,8 +5,8 @@ body.app-shell {
   flex-direction: column;
   overflow: hidden;
 }
-:where(.app-shell *, .app-shell *::before, .app-shell *::after) { min-width: 0; }
 :where(.app-shell *) {
+  min-width: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--c-border-strong) var(--c-surface);
   overscroll-behavior: contain;
