@@ -33,6 +33,9 @@ Default filter: `record_type = 'work_order' AND status = 'exercise_scheduled'`.
 
 ## Real-server contract check
 
+Generate a [receipt-bound stock MCP client setup and question](../../docs/state-local-mcp.md)
+for the agent moment. Setup generation does not mark the stock-client journey complete.
+
 ```sh
 HONUA_BASE_URL=http://localhost:8080 \
 HONUA_ADMIN_API_KEY=your-local-admin-key \

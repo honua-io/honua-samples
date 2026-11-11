@@ -237,8 +237,8 @@
   <span class="avatar" aria-hidden="true">DV</span>
 </header>
 <div class="demostrip" role="note">
-  <span class="tag-real">Real data</span> Live previews identify their sources in the admitted app.
-  <span class="tag-demo">Demo data</span> Fixture and hybrid previews include demo records.
+  <span class="tag-real">Real data</span> Place names (USGS GNIS), County zoning and parcels with FEMA flood zones (Hawaii Statewide GIS Program)
+  <span class="tag-demo">Demo data</span> Shelter points are an exercise on real school locations, not official shelters.
   <span class="faint" id="revNote"></span>
 </div>
 
@@ -246,7 +246,7 @@
   <aside class="col left" aria-label="Samples">
     <div class="pagehead">
       <h1>SDK Explorer</h1>
-      <p>Browse Honua JS SDK examples and honua-samples, with code, readmes and verified previews for admitted builds.</p>
+      <p>Every Honua JS SDK example and honua-sample, with the code, the readme and a live preview on Maui data.</p>
     </div>
     <div class="finder">
       <label class="field"><svg class="ico faint" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">Search samples</span><input id="q" type="search" placeholder="Search samples or API names" autocomplete="off"></label>
@@ -315,6 +315,200 @@
   </aside>
 </div>
 
+<script type="text/plain" id="T-fslayer-html"><!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FeatureServer layer in MapLibre</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css" crossorigin="anonymous" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: grid; grid-template-rows: auto minmax(320px, 1fr) auto; font: 15px/1.45 system-ui, sans-serif; }
+    #map { min-height: 320px; }
+    pre { margin: 0; padding: 0.5rem 1rem; max-height: 7rem; overflow: auto; font-size: 12px; }
+  </style>
+</head>
+<body data-sample-status="loading">
+  <header>
+    <h1>A FeatureServer layer as a MapLibre GeoJSON source</h1>
+    <p id="status">Loading the layer...</p>
+  </header>
+  <div id="map" role="region" aria-label="Map"></div>
+  <pre id="requests" aria-label="Requests this page made"></pre>
+  <script type="module">
+    // index.html · script
+  </scr@@ipt>
+</body>
+</html></script>
+
+<script type="text/plain" id="T-fslayer-js">// MapLibre GL JS 6 is published as ES modules; importing it dynamically lets
+// the layer requests below start while the library downloads.
+const maplibreReady = import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs");
+
+const params = new URLSearchParams(location.search);
+const baseUrl = (params.get("baseUrl") ?? "@@server@@").replace(/\/+$/, "");
+const service = params.get("service") ?? "@@service@@";
+const layerId = params.get("layer") ?? "@@layer@@";
+const where = params.get("where") ?? "@@where@@";
+const labelField = params.get("labelField") ?? "@@labelField@@";
+const status = document.querySelector("#status");
+const requests = document.querySelector("#requests");
+
+async function getJson(url) {
+  logRequest(url);
+  const response = await fetch(url);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body.error) throw new Error(body.error?.message ?? `HTTP ${response.status}`);
+  return body;
+}
+
+// readField, escapeHtml, bboxOf and the PMTiles basemap probe are unchanged; see the full file.
+
+async function queryAll(layerUrl, pageSize) {
+  // Page through the layer: a server returns at most maxRecordCount
+  // features per request and flags exceededTransferLimit when more remain.
+  const features = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const query = new URLSearchParams({
+      where, outFields: "*", returnGeometry: "true", outSR: "4326",
+      resultOffset: String(offset), resultRecordCount: String(pageSize), f: "geojson",
+    });
+    const page = await getJson(`${layerUrl}/query?${query}`);
+    features.push(...(page.features ?? []));
+    const more = page.exceededTransferLimit ?? page.properties?.exceededTransferLimit;
+    if (!more || !page.features?.length) return { type: "FeatureCollection", features };
+  }
+}
+
+const layerUrl = `${baseUrl}/rest/services/${encodeURIComponent(service)}/FeatureServer/${encodeURIComponent(layerId)}`;
+const layerRequest = getJson(`${layerUrl}?f=json`);
+const maplibregl = await maplibreReady;
+const map = new maplibregl.Map({
+  container: "map",
+  style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2ee" } }] },
+  center: [-156.33, 20.8],
+  zoom: 8,
+});
+map.addControl(new maplibregl.NavigationControl(), "top-right");
+const mapLoaded = new Promise((resolve) => map.once("load", resolve));
+
+try {
+  const layer = await layerRequest;
+  const [geojson] = await Promise.all([
+    queryAll(layerUrl, Math.min(Number(layer.maxRecordCount) || 1000, 10000)),
+    mapLoaded,
+  ]);
+  if (!geojson.features?.length) throw new Error("The query returned no features.");
+
+  map.addSource("layer", { type: "geojson", data: geojson });
+  const isType = (...types) => ["match", ["geometry-type"], types, true, false];
+  map.addLayer({ id: "layer-fill", type: "fill", source: "layer", filter: isType("Polygon", "MultiPolygon"), paint: { "fill-color": "@@color@@", "fill-opacity": @@opacity@@ } });
+  map.addLayer({ id: "layer-line", type: "line", source: "layer", filter: isType("Polygon", "MultiPolygon", "LineString", "MultiLineString"), paint: { "line-color": "@@color@@", "line-width": 1.5 } });
+  map.addLayer({ id: "layer-point", type: "circle", source: "layer", filter: isType("Point", "MultiPoint"), paint: { "circle-radius": @@radius@@, "circle-color": "@@color@@", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1 } });
+  const layerIds = ["layer-fill", "layer-line", "layer-point"];
+  const basemap = addBasemapIfAvailable(map, "layer-fill");
+
+  for (const id of layerIds) {
+    map.on("click", id, (event) => {
+      const properties = event.features[0].properties;
+      const rows = Object.entries(properties)
+        .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
+        .join("");
+      new maplibregl.Popup({ maxWidth: "320px" })
+        .setLngLat(event.lngLat)
+        .setHTML(`<strong class="popup-title">${escapeHtml(readField(properties, labelField) ?? "(no label)")}</strong><table>${rows}</table>`)
+        .addTo(map);
+    });
+  }
+
+  const [minX, minY, maxX, maxY] = bboxOf(geojson.features);
+  map.fitBounds([[minX, minY], [maxX, maxY]], { padding: 40, duration: 0, maxZoom: 16 });
+  const basemapNote = await basemap;
+  await map.once("idle");
+  const rendered = map.queryRenderedFeatures({ layers: layerIds }).length;
+  status.textContent = `PASS: ${layer.name ?? service} (${layer.geometryType ?? "features"}): ${geojson.features.length} features, ${rendered} rendered in view. Basemap: ${basemapNote}.`;
+  document.body.dataset.sampleStatus = "pass";
+} catch (error) {
+  status.textContent = `FAIL: ${error.message}`;
+  document.body.dataset.sampleStatus = "fail";
+}</script>
+
+<script type="text/plain" id="T-category-js">const maplibreReady = import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs");
+
+const params = new URLSearchParams(location.search);
+const baseUrl = (params.get("baseUrl") ?? "@@server@@").replace(/\/+$/, "");
+const collection = params.get("collection") ?? "@@collection@@";
+const field = params.get("field") ?? "@@field@@";
+// minLon,minLat,maxLon,maxLat (Kahului by default), or "none" for no bbox filter.
+const bbox = params.get("bbox") ?? "@@bbox@@";
+const limit = params.get("limit") ?? "1000";
+const maxClasses = @@maxClasses@@;
+const palette = [@@palette@@];
+const otherColor = "@@other@@";
+
+// getJson, readField, escapeHtml, bboxOf and the basemap probe: see the full file.
+
+const collectionUrl = `${baseUrl}/ogc/features/collections/${encodeURIComponent(collection)}`;
+const itemsQuery = new URLSearchParams({ limit, f: "json" });
+if (bbox !== "none") itemsQuery.set("bbox", bbox);
+const queryablesRequest = getJson(`${collectionUrl}/queryables?f=json`);
+const itemsRequest = getJson(`${collectionUrl}/items?${itemsQuery}`);
+
+const maplibregl = await maplibreReady;
+const map = new maplibregl.Map({
+  container: "map",
+  style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2ee" } }] },
+  center: [-156.48, 20.885],
+  zoom: 12,
+});
+const mapLoaded = new Promise((resolve) => map.once("load", resolve));
+
+try {
+  const [queryables, items] = await Promise.all([queryablesRequest, itemsRequest, mapLoaded]);
+  if (!items.features?.length) throw new Error("The items request returned no features.");
+  const topField = field.split(".")[0];
+  const queryable = Object.hasOwn(queryables.properties ?? {}, topField);
+
+  // Count the distinct values of the field; the most common get a colour, the rest share "Other".
+  const counts = new Map();
+  for (const feature of items.features) {
+    const value = readField(feature.properties, field);
+    const category = value === undefined || value === null || value === "" ? "(none)" : String(value);
+    feature.properties.category_class = category;
+    counts.set(category, (counts.get(category) ?? 0) + 1);
+  }
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const classes = ranked.slice(0, maxClasses).map(([value, count], i) => ({ value, count, color: palette[i] }));
+  const otherCount = ranked.slice(maxClasses).reduce((sum, [, count]) => sum + count, 0);
+
+  // A data-driven "match" expression: one colour per class, grey for everything else.
+  const fillColor = ["match", ["get", "category_class"], ...classes.flatMap((c) => [c.value, c.color]), otherColor];
+  map.addSource("features", { type: "geojson", data: items });
+  map.addLayer({ id: "features-fill", type: "@@layerType@@", source: "features", paint: { "@@colorProp@@": fillColor, "@@opacityProp@@": 0.7 } });
+
+  legend.innerHTML = [...classes, ...(otherCount ? [{ value: "Other", count: otherCount, color: otherColor }] : [])]
+    .map((c) => `<li data-category="${escapeHtml(c.value)}"><span class="swatch" style="background:${c.color}"></span><span class="label">${escapeHtml(c.value)}</span><span class="count">${c.count}</span></li>`)
+    .join("");
+
+  map.on("click", "features-fill", (event) => {
+    const properties = event.features[0].properties;
+    new maplibregl.Popup({ maxWidth: "320px" })
+      .setLngLat(event.lngLat)
+      .setHTML(`<strong class="popup-title">${escapeHtml(properties.category_class)}</strong>`)
+      .addTo(map);
+  });
+
+  const [minX, minY, maxX, maxY] = bboxOf(items.features);
+  map.fitBounds([[minX, minY], [maxX, maxY]], { padding: 30, duration: 0, maxZoom: 16 });
+  const matched = items.numberMatched ?? items.features.length;
+  status.textContent =
+    `PASS: ${items.features.length} of ${matched} features, ${counts.size} distinct "${field}" values` +
+    `${queryable ? " (a queryable)" : " (not listed in queryables)"}.`;
+} catch (error) {
+  status.textContent = `FAIL: ${error.message}`;
+}</script>
+
 {{DATA 13-sdk-samples}}
 {{MAPJS}}
 <script>
@@ -331,8 +525,248 @@
   const fill = (text, vals) => text.replace(/@@(\w+)@@/g, (m, k) => (k in vals ? vals[k] : m));
   const jsStr = (v) => String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
-  let map = null;
-  const resetRuntime = () => {};
+  /* ---------- Datasets on the demo server (real extracts embedded in this page) ---------- */
+  const GROUP = { res: "Residential", bus: "Business", ind: "Industrial", ag: "Agriculture", pub: "Public", park: "Park", pd: "Project district", other: "Other" };
+  const LUDN = { U: "Urban", A: "Agricultural", C: "Conservation", R: "Rural" };
+  const SFHA = ["A", "AE", "AO", "AH", "VE"];
+  const feature = (id, properties, geometry) => ({ type: "Feature", id, properties, geometry });
+  const LAYERS = {
+    places: { title: "Place names", service: "maui-place-names", layer: 6, geom: "esriGeometryPoint", label: "name", steward: "USGS GNIS via Hawaii Statewide GIS",
+      build: () => HD.places.features.map((f, i) => feature(i + 1, { objectid: i + 1, name: f.properties.name, class: f.properties.cls }, f.geometry)) },
+    zoning: { title: "County zoning", service: "maui-zoning", layer: 0, geom: "esriGeometryPolygon", label: "zone_dist", steward: "County of Maui, Department of Planning",
+      build: () => HM.get("zoning").features.map((f, i) => feature(i + 1, { objectid: i + 1, zone_dist: f.properties.name, zone_code: f.properties.code, zone_group: GROUP[HM.ZONE_GROUP[f.properties.code] || "other"] }, f.geometry)) },
+    parcels: { title: "Parcels (TMK)", service: "maui-parcels", layer: 1, geom: "esriGeometryPolygon", label: "tmk", steward: "County of Maui, Real Property Assessment",
+      build: () => HM.get("parcels").features.map((f) => { const p = f.properties; return feature(p.id, { objectid: p.id, tmk: HM.tmk(p.t9), zoning: ZN[p.zone] || "Not zoned", zone_group: GROUP[HM.ZONE_GROUP[p.zone] || "other"], flood_zone: p.fld || "X", land_use: LUDN[p.lud] || "Unknown", acres: p.acres || 0, land_value: p.land || 0, bldg_value: p.bldg || 0 }, f.geometry); }) },
+    schools: { title: "Schools", service: "maui-schools", layer: 0, geom: "esriGeometryPoint", label: "name", steward: "Hawaii Department of Education via Hawaii Statewide GIS",
+      build: () => HD.schools.features.map((f, i) => feature(i + 1, { objectid: i + 1, name: f.properties.name, address: f.properties.addr }, f.geometry)) },
+    shelters: { title: "Emergency shelters", service: "maui-shelters", layer: 0, geom: "esriGeometryPoint", label: "name", steward: "County of Maui EMA via Hawaii Statewide GIS",
+      build: () => HD.shelters.features.map((f, i) => feature(i + 1, { objectid: i + 1, name: f.properties.name, place: f.properties.place, capacity: f.properties.cap, pets: f.properties.pets ? "Yes" : "No" }, f.geometry)) },
+  };
+  function layerData(key) { const L = LAYERS[key]; if (!L.fc) L.fc = { type: "FeatureCollection", features: L.build() }; return L.fc; }
+  function fieldsOf(key) { return Object.keys(layerData(key).features[0].properties); }
+  function bboxOfFeatures(features) {
+    const b = [Infinity, Infinity, -Infinity, -Infinity];
+    const visit = (c) => { if (typeof c[0] === "number") { b[0] = Math.min(b[0], c[0]); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], c[0]); b[3] = Math.max(b[3], c[1]); } else c.forEach(visit); };
+    features.forEach((f) => f.geometry && visit(f.geometry.coordinates));
+    return b;
+  }
+  const centroidOf = (f) => { const b = bboxOfFeatures([f]); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]; };
+
+  /* ---------- A small SQL-92 where-clause evaluator, as the FeatureServer applies it ---------- */
+  const looseEq = (x, y) => (typeof x === "number" || typeof y === "number" ? Number(x) === Number(y) : String(x ?? "").toLowerCase() === String(y ?? "").toLowerCase());
+  function compileWhere(src, fields) {
+    const s = String(src).trim();
+    if (!s) throw new Error("'where' parameter is invalid");
+    const toks = [], re = /\s*(?:(\d+(?:\.\d+)?)|'((?:[^']|'')*)'|([A-Za-z_]\w*)|(<>|!=|>=|<=|=|<|>|\(|\)|,))/y;
+    for (let i = 0; i < s.length;) {
+      re.lastIndex = i; const m = re.exec(s);
+      if (!m) { if (!s.slice(i).trim()) break; throw new Error(`Unable to complete operation: invalid where clause near "${s.slice(i, i + 14).trim()}"`); }
+      i = re.lastIndex;
+      if (m[1] != null) toks.push({ t: "num", v: +m[1] });
+      else if (m[2] != null) toks.push({ t: "str", v: m[2].replace(/''/g, "'") });
+      else if (m[3] != null) { const u = m[3].toUpperCase(); toks.push(["AND", "OR", "NOT", "LIKE", "IN", "IS", "NULL"].includes(u) ? { t: "kw", v: u } : { t: "id", v: m[3] }); }
+      else if (m[4] != null) toks.push({ t: "op", v: m[4] });
+    }
+    const lower = Object.fromEntries(fields.map((f) => [f.toLowerCase(), f]));
+    let p = 0;
+    const peek = () => toks[p], take = () => toks[p++];
+    const isKw = (v) => peek() && peek().t === "kw" && peek().v === v;
+    const isOp = (v) => peek() && peek().t === "op" && peek().v === v;
+    const fail = (why) => { throw new Error(`Unable to complete operation: ${why}`); };
+    function operand() {
+      const t = take(); if (!t) fail("the where clause ends early");
+      if (t.t === "num" || t.t === "str") return () => t.v;
+      if (t.t === "id") { const f = lower[t.v.toLowerCase()]; if (!f) fail(`'${t.v}' is not a field of this layer`); return (r) => r[f]; }
+      return fail(`unexpected "${t.v}"`);
+    }
+    function comparison() {
+      if (isOp("(")) { take(); const e = disjunction(); if (!isOp(")")) fail("missing )"); take(); return e; }
+      if (isKw("NOT")) { take(); const e = comparison(); return (r) => !e(r); }
+      const a = operand(); let neg = false;
+      if (isKw("NOT")) { take(); neg = true; }
+      if (isKw("LIKE")) {
+        take(); const b = operand();
+        return (r) => { const pat = new RegExp("^" + String(b(r)).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".") + "$", "i"); return neg !== pat.test(String(a(r) ?? "")); };
+      }
+      if (isKw("IN")) {
+        take(); if (!isOp("(")) fail("IN needs a list"); take();
+        const list = [operand()]; while (isOp(",")) { take(); list.push(operand()); }
+        if (!isOp(")")) fail("missing )"); take();
+        return (r) => neg !== list.some((f) => looseEq(a(r), f(r)));
+      }
+      if (isKw("IS")) { take(); let n = false; if (isKw("NOT")) { take(); n = true; } if (!isKw("NULL")) fail("IS needs NULL"); take(); return (r) => n !== (a(r) == null || a(r) === ""); }
+      const o = take(); if (!o || o.t !== "op") fail("expected a comparison operator");
+      const b = operand();
+      const ops = { "=": looseEq, "<>": (x, y) => !looseEq(x, y), "!=": (x, y) => !looseEq(x, y), ">": (x, y) => x > y, "<": (x, y) => x < y, ">=": (x, y) => x >= y, "<=": (x, y) => x <= y };
+      const fn = ops[o.v] || fail(`unexpected "${o.v}"`);
+      return (r) => fn(a(r), b(r));
+    }
+    function conjunction() { let e = comparison(); while (isKw("AND")) { take(); const l = e, r2 = comparison(); e = (r) => l(r) && r2(r); } return e; }
+    function disjunction() { let e = conjunction(); while (isKw("OR")) { take(); const l = e, r2 = conjunction(); e = (r) => l(r) || r2(r); } return e; }
+    const e = disjunction();
+    if (p < toks.length) fail(`unexpected "${toks[p].v}"`);
+    return e;
+  }
+
+  /* ---------- Map runtime: every sample adds into RT and resetRuntime() removes it ---------- */
+  let map;
+  const RT = { layers: [], sources: [], handlers: [], popups: [], timers: [], cleanup: [] };
+  const BASE = ["land", "contours", "zoning-base", "waterbodies", "streams", "roads-casing", "roads"];
+  function rtSource(id, data) { map.addSource(id, { type: "geojson", data }); RT.sources.push(id); }
+  function rtLayer(def, before) { map.addLayer(def, before); RT.layers.push(def.id); }
+  function rtOn(type, a, b) { if (b) map.on(type, a, b); else map.on(type, a); RT.handlers.push(b ? [type, a, b] : [type, a]); }
+  function rtLater(fn, ms) { RT.timers.push(setTimeout(fn, ms)); }
+  function rtPopup(lngLat, html) { const p = new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setHTML(html).addTo(map); RT.popups.push(p); return p; }
+  function setBasemap(on) { BASE.forEach((id) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none")); $("#map").classList.toggle("no-labels", !on); }
+  function resetRuntime() {
+    RT.cleanup.splice(0).forEach((f) => { try { f(); } catch (e) { /* teardown is best effort */ } });
+    RT.timers.splice(0).forEach(clearTimeout);
+    RT.handlers.splice(0).forEach((h) => (h.length === 3 ? map.off(h[0], h[1], h[2]) : map.off(h[0], h[1])));
+    RT.popups.splice(0).forEach((p) => p.remove());
+    RT.layers.splice(0).reverse().forEach((id) => map.getLayer(id) && map.removeLayer(id));
+    RT.sources.splice(0).forEach((id) => map.getSource(id) && map.removeSource(id));
+    $("#mapUi").innerHTML = ""; $("#pvBottom").innerHTML = "";
+    map.getCanvas().style.cursor = "";
+    setBasemap(true);
+  }
+  function hoverCursor(ids) { ids.forEach((id) => { rtOn("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer")); rtOn("mouseleave", id, () => (map.getCanvas().style.cursor = "")); }); }
+  function attrTable(props, skip = []) { return `<table class="pop">${Object.entries(props).filter(([k]) => !skip.includes(k)).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" && /value/.test(k) ? money(v) : v)}</td></tr>`).join("")}</table>`; }
+  function statusPanel(state, text, requests, extra = "") {
+    const icon = { pass: "check-circle", fail: "alert", warn: "alert", run: "clock" }[state] || "info";
+    $("#pvBottom").innerHTML = `<div class="pv-status" data-state="${state}"><svg class="ico" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(text)}</span></div>${extra}${requests && requests.length ? `<pre class="reqlog" aria-label="Requests the sample made">${requests.map((r) => esc(r)).join("\n")}</pre>` : ""}`;
+  }
+  const VIZ = (i) => tok(`--viz-${i + 1}`);
+  const COLOR_TOKENS = ["--viz-1", "--viz-2", "--viz-3", "--viz-4"];
+
+  /* ---------- Live sample simulations ---------- */
+  const SIMS = {};
+
+  /* FeatureServer layer in MapLibre (honua-samples) */
+  SIMS.fslayer = {
+    hint: "Edit the URL parameters the page reads. The preview runs the same requests against the demo extract.",
+    params: (p) => [
+      { key: "layerKey", label: "Layer", code: "service/layer", type: "select", options: Object.entries(LAYERS).map(([k, L]) => [k, `${L.title} · ${L.service}/${L.layer}`]) },
+      { key: "where", label: "Filter", code: "where", type: "text", mono: true, placeholder: "1=1" },
+      { key: "labelField", label: "Popup title", code: "labelField", type: "select", options: fieldsOf(p.layerKey).map((f) => [f, f]) },
+      { key: "color", label: "Colour", code: "paint", type: "swatch" },
+      { key: "size", label: LAYERS[p.layerKey].geom === "esriGeometryPoint" ? "Point radius" : "Fill opacity", code: LAYERS[p.layerKey].geom === "esriGeometryPoint" ? "circle-radius" : "fill-opacity", type: "range", min: 2, max: 10, step: 1 },
+      { key: "basemap", label: "Basemap probe", code: "basemap", type: "check", text: "Use the server's own basemap" },
+    ],
+    defaults: { layerKey: "places", where: "1=1", labelField: "name", color: "--viz-1", size: 4, basemap: true },
+    normalize(p, key) { if (key === "layerKey") { p.labelField = LAYERS[p.layerKey].label; p.where = "1=1"; } },
+    sizeVals(p) { const pt = LAYERS[p.layerKey].geom === "esriGeometryPoint"; return { radius: pt ? p.size : 4, opacity: pt ? 0.35 : +(p.size / 20 + 0.1).toFixed(2) }; },
+    files(p) {
+      const L = LAYERS[p.layerKey], s = this.sizeVals(p);
+      return [
+        { name: "index.html · script", lang: "js", code: fill(tpl("fslayer-js"), { server: SERVER, service: L.service, layer: L.layer, where: jsStr(p.where), labelField: p.labelField, color: tok(p.color), radius: s.radius, opacity: s.opacity }) },
+        { name: "index.html", lang: "html", code: tpl("fslayer-html") },
+        BY["maplibre-featureserver-layer"].files.find((f) => f.name === "sample.json"),
+      ];
+    },
+    install: () => "# No install: one HTML file, maplibre-gl@6.4.1 from jsDelivr\nnpx serve src",
+    data: (p) => {
+      const L = LAYERS[p.layerKey];
+      if (p.layerKey === "shelters") return [["demo", "Exercise anchors on real school locations. Not official shelters. Schools underneath are public locations."]];
+      return [["real", `${L.title}: ${L.steward}`]];
+    },
+    apis: ["FeatureServer ?f=json", "FeatureServer /query f=geojson", "maplibregl.Map", "fitBounds", "maplibregl.Popup"],
+    mount(p) {
+      const L = LAYERS[p.layerKey], url = `${SERVER}/rest/services/${L.service}/FeatureServer/${L.layer}`, t0 = performance.now();
+      const req = [`GET ${url}?f=json`];
+      let features;
+      try {
+        const pred = compileWhere(p.where, fieldsOf(p.layerKey));
+        features = layerData(p.layerKey).features.filter((f) => pred(f.properties));
+      } catch (e) {
+        req.push(`GET ${url}/query?${new URLSearchParams({ where: p.where, outFields: "*", returnGeometry: "true", outSR: "4326", resultOffset: "0", resultRecordCount: "2000", f: "geojson" })}`);
+        statusPanel("fail", `FAIL: ${e.message}`, req); return;
+      }
+      req.push(`GET ${url}/query?${new URLSearchParams({ where: p.where, outFields: "*", returnGeometry: "true", outSR: "4326", resultOffset: "0", resultRecordCount: "2000", f: "geojson" })}`);
+      if (!features.length) { statusPanel("fail", "FAIL: The query returned no features.", req); return; }
+      setBasemap(p.basemap);
+      req.push(p.basemap ? `${SERVER}/api/v1/tiles/pmtiles/maui-basemap (Range: bytes=0-6, basemap probe)` : "");
+      const s = this.sizeVals(p), c = tok(p.color);
+      rtSource("layer", { type: "FeatureCollection", features });
+      const isType = (...types) => ["match", ["geometry-type"], types, true, false];
+      rtLayer({ id: "layer-fill", type: "fill", source: "layer", filter: isType("Polygon", "MultiPolygon"), paint: { "fill-color": c, "fill-opacity": s.opacity } });
+      rtLayer({ id: "layer-line", type: "line", source: "layer", filter: isType("Polygon", "MultiPolygon", "LineString", "MultiLineString"), paint: { "line-color": c, "line-width": 1.5 } });
+      rtLayer({ id: "layer-point", type: "circle", source: "layer", filter: isType("Point", "MultiPoint"), paint: { "circle-radius": s.radius, "circle-color": c, "circle-stroke-color": tok("--map-pin-ring"), "circle-stroke-width": 1 } });
+      const ids = ["layer-fill", "layer-line", "layer-point"];
+      ids.forEach((id) => rtOn("click", id, (e) => { const pr = e.features[0].properties; rtPopup(e.lngLat, `<strong>${esc(pr[p.labelField] ?? "(no label)")}</strong>${attrTable(pr)}`); }));
+      hoverCursor(ids);
+      const b = bboxOfFeatures(features);
+      map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 40, duration: 0, maxZoom: 16 });
+      map.once("idle", () => {
+        const rendered = map.queryRenderedFeatures({ layers: ids.filter((id) => map.getLayer(id)) }).length;
+        const ms = Math.round(performance.now() - t0) + 180;
+        statusPanel("pass", `PASS: ${L.title} (${L.geom}): ${features.length} features, ${rendered} rendered in view, ${ms} ms. Basemap: ${p.basemap ? "Protomaps PMTiles from the same server" : "off"}. Click a feature for its attributes.`, req.filter(Boolean));
+      });
+      statusPanel("run", "Loading the layer...", req.filter(Boolean));
+    },
+    restyle(p) { const c = tok(p.color); if (map.getLayer("layer-fill")) { map.setPaintProperty("layer-fill", "fill-color", c); map.setPaintProperty("layer-line", "line-color", c); map.setPaintProperty("layer-point", "circle-color", c); map.setPaintProperty("layer-point", "circle-stroke-color", tok("--map-pin-ring")); } },
+  };
+
+  /* Category style and legend (honua-samples) */
+  const CAT_SETS = {
+    zoning: { collection: "maui-zoning", fields: ["zone_dist", "zone_group", "zone_code"] },
+    parcels: { collection: "maui-parcels", fields: ["flood_zone", "zone_group", "land_use", "zoning"] },
+    places: { collection: "maui-place-names", fields: ["class"] },
+  };
+  const KAHULUI = [-156.5, 20.87, -156.45, 20.9];
+  SIMS.category = {
+    hint: "The collection, field and class count drive one match expression. The palette is the Honua categorical scale for the current mode.",
+    params: (p) => [
+      { key: "layerKey", label: "Collection", code: "collection", type: "select", options: Object.entries(CAT_SETS).map(([k, c]) => [k, `${c.collection}`]) },
+      { key: "field", label: "Category field", code: "field", type: "select", options: CAT_SETS[p.layerKey].fields.map((f) => [f, f]) },
+      { key: "bbox", label: "Extent", code: "bbox", type: "select", options: [["kahului", "Kahului: -156.50,20.87,-156.45,20.90"], ["none", "none (whole collection)"]] },
+      { key: "maxClasses", label: "Coloured classes", code: "maxClasses", type: "range", min: 2, max: 8, step: 1 },
+    ],
+    defaults: { layerKey: "zoning", field: "zone_dist", bbox: "kahului", maxClasses: 8 },
+    normalize(p, key) { if (key === "layerKey") p.field = CAT_SETS[p.layerKey].fields[0]; },
+    palette(n) { return Array.from({ length: 8 }, (_, i) => VIZ(i)).slice(0, Math.max(n, 0)); },
+    files(p) {
+      const pt = p.layerKey === "places";
+      return [
+        { name: "index.html · script", lang: "js", code: fill(tpl("category-js"), { server: SERVER, collection: CAT_SETS[p.layerKey].collection, field: p.field, bbox: p.bbox === "none" ? "none" : KAHULUI.map((v) => v.toFixed(2)).join(","), maxClasses: p.maxClasses, palette: this.palette(8).map((c) => `"${c}"`).join(", "), other: tok("--c-border-strong"), layerType: pt ? "circle" : "fill", colorProp: pt ? "circle-color" : "fill-color", opacityProp: pt ? "circle-opacity" : "fill-opacity" }) },
+        BY["maplibre-category-style-legend"].files.find((f) => f.name === "sample.json"),
+      ];
+    },
+    install: () => "# No install: one HTML file, maplibre-gl@6.4.1 from jsDelivr\nnpx serve src",
+    data: (p) => [["real", `${LAYERS[p.layerKey].title}: ${LAYERS[p.layerKey].steward}`]],
+    apis: ["/queryables", "/items", "match expression", "maplibregl.Popup"],
+    mount(p) {
+      const coll = CAT_SETS[p.layerKey].collection, url = `${SERVER}/ogc/features/collections/${coll}`;
+      const q = new URLSearchParams({ limit: "1000", f: "json" }); if (p.bbox !== "none") q.set("bbox", KAHULUI.map((v) => v.toFixed(2)).join(","));
+      const req = [`GET ${url}/queryables?f=json`, `GET ${url}/items?${q}`, `${SERVER}/api/v1/tiles/pmtiles/maui-basemap (Range: bytes=0-6, basemap probe)`];
+      let feats = layerData(p.layerKey).features;
+      if (p.bbox !== "none") feats = feats.filter((f) => { const b = bboxOfFeatures([f]); return b[2] >= KAHULUI[0] && b[0] <= KAHULUI[2] && b[3] >= KAHULUI[1] && b[1] <= KAHULUI[3]; });
+      const counts = new Map();
+      const items = feats.map((f) => { const v = f.properties[p.field]; const cat = v == null || v === "" ? "(none)" : String(v); counts.set(cat, (counts.get(cat) || 0) + 1); return { ...f, properties: { ...f.properties, category_class: cat } }; });
+      const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      const pal = this.palette(p.maxClasses), other = tok("--c-border-strong");
+      const classes = ranked.slice(0, p.maxClasses).map(([value, count], i) => ({ value, count, color: pal[i] }));
+      const otherCount = ranked.slice(p.maxClasses).reduce((s, [, c]) => s + c, 0);
+      this._classes = classes;
+      const expr = ["match", ["get", "category_class"], ...classes.flatMap((c) => [c.value, c.color]), other];
+      const pt = p.layerKey === "places";
+      rtSource("features", { type: "FeatureCollection", features: items });
+      if (pt) rtLayer({ id: "features-fill", type: "circle", source: "features", paint: { "circle-color": expr, "circle-opacity": 0.85, "circle-radius": 6, "circle-stroke-color": tok("--map-pin-ring"), "circle-stroke-width": 1 } });
+      else { rtLayer({ id: "features-fill", type: "fill", source: "features", paint: { "fill-color": expr, "fill-opacity": 0.7 } }); rtLayer({ id: "features-line", type: "line", source: "features", paint: { "line-color": tok("--map-halo"), "line-width": 0.6 } }); }
+      rtOn("click", "features-fill", (e) => { const pr = e.features[0].properties; rtPopup(e.lngLat, `<strong>${esc(pr.category_class)}</strong>${attrTable(pr, ["category_class"])}`); });
+      hoverCursor(["features-fill"]);
+      const rows = [...classes, ...(otherCount ? [{ value: "Other", count: otherCount, color: other }] : [])];
+      $("#mapUi").innerHTML = `<div class="card legend" style="left:12px;bottom:28px;max-width:min(280px,calc(100% - 24px));max-height:calc(100% - 60px);overflow-y:auto"><h3>${esc(p.field)}</h3><ul>${rows.map((c) => `<li><span class="sw" style="background:${c.color}"></span><span>${esc(c.value)}</span><span class="n">${c.count}</span></li>`).join("")}</ul></div>`;
+      const b = bboxOfFeatures(items);
+      if (items.length) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 30, duration: 0, maxZoom: 16 });
+      map.once("idle", () => {
+        const rendered = map.queryRenderedFeatures({ layers: ["features-fill"] }).length;
+        statusPanel("pass", `PASS: ${items.length} of ${items.length} features, ${counts.size} distinct "${p.field}" values (a queryable), ${rendered} rendered. Basemap: Protomaps PMTiles from the same server. Click a ${pt ? "point" : "polygon"} for details.`, req);
+      });
+      statusPanel("run", "Loading the collection...", req);
+    },
+    restyle(p) { remount(); },
+  };
+
 
   /* ---------- Sample list ---------- */
   const state = { id: null, tab: "pv", file: 0, params: {}, prevCode: {}, filter: "all", q: "" };
@@ -362,7 +796,7 @@
   $("#flt").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; state.filter = b.dataset.f; document.querySelectorAll("#flt button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderList(); });
 
   /* ---------- Selection, params, source, readme ---------- */
-  const sim = () => null;
+  const sim = () => { const s = BY[state.id]; return D.display && s && s.live ? SIMS[s.live] ?? null : null; };
   function select(id, opts = {}) {
     if (!BY[id]) id = "maplibre-featureserver-layer";
     const s = BY[id];
@@ -560,6 +994,11 @@ function sanitizedReadme(html) {
   renderList();
   const hash = (location.hash || "").slice(1).split("/");
   select(BY[hash[0]] ? hash[0] : "maplibre-featureserver-layer", { tab: hash[1] === "src" || hash[1] === "md" ? hash[1] : null, keepScroll: true });
+  if (D.display) {
+    map = HM.create($("#map"), { view: "core", padding: 20 });
+    if (map) map.on("load", () => { mapLoaded = true; const sm = sim(); if (sm && !$("#map").hidden) { map.resize(); resetRuntime(); sm.mount(state.params); } });
+    document.addEventListener("honua:theme", () => { const sm = sim(); if (mapLoaded && sm && sm.restyle) sm.restyle(state.params); if (sm) renderSource(); });
+  }
 
 })();
 </script>

@@ -31,13 +31,20 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   await writeFile(path.join(output, 'sdk-explorer/previews.json'), JSON.stringify(previews));
   const catalog = JSON.parse(await readFile(path.join(source, 'sdk-explorer/catalog.json'), 'utf8'));
   catalog.server = 'https://demo.honua.io';
-  for (const sample of catalog.samples) {
-    sample.preview = previews[`${sample.repo}:${sample.id}`] ?? null;
-    sample.live = sample.preview ? 'verified' : null;
+  const display = await loadApprovedDisplay(siteDir);
+  catalog.display = Boolean(display);
+  const pageSims = {
+    'samples:maplibre-featureserver-layer': 'fslayer',
+    'samples:maplibre-category-style-legend': 'category',
+  };
+  for (const entry of catalog.samples) {
+    entry.preview = previews[`${entry.repo}:${entry.id}`] ?? null;
+    entry.live = (display && pageSims[`${entry.repo}:${entry.id}`]) || (entry.preview ? 'verified' : null);
   }
   await writeFile(path.join(output, 'sdk-explorer/index.html'), await approvedPage({
     template: path.join(repoRoot, 'scripts/state-local/approved/13-sdk-explorer.html'),
-    assets: path.join(repoRoot, 'samples/maui-emergency/approved/src'), data: { '13-sdk-samples': catalog },
+    assets: path.join(repoRoot, 'samples/maui-emergency/approved/src'),
+    data: { '13-sdk-samples': catalog, ...(display ?? {}) },
   }));
   await cp(path.join(source, 'overview.css'), path.join(assets, 'overview.css'));
   await cp(path.join(sample, 'src/tokens.css'), path.join(assets, 'tokens.css'));
@@ -46,6 +53,26 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   for (const file of ['theme.js', 'geist-latin.woff2', 'OFL.txt', 'honua-lockup.svg', 'honua-lockup-on-dark.svg']) {
     await cp(path.join(sample, 'public/honua', file), path.join(assets, file));
   }
+}
+
+const DISPLAY_LAYERS = ['land', 'roads', 'contours', 'streams', 'waterbodies', 'zoning', 'parcels', 'places', 'schools', 'shelters', 'zone_names'];
+
+async function loadApprovedDisplay(siteDir) {
+  const directory = path.join(siteDir, 'state-local/data/approved');
+  const data = {};
+  for (const name of DISPLAY_LAYERS) {
+    let raw = null;
+    for (const extension of ['.cjson', '.geojson', '.json']) {
+      raw = await readFile(path.join(directory, `${name}${extension}`), 'utf8').catch((error) => {
+        if (error.code === 'ENOENT') return null;
+        throw error;
+      });
+      if (raw != null) break;
+    }
+    if (raw == null) return null;
+    data[name] = JSON.parse(raw);
+  }
+  return data;
 }
 
 // Validate after all gallery detail pages have been emitted.

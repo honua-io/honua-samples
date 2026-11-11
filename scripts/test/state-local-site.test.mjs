@@ -32,6 +32,29 @@ test('Explorer includes only admitted apps and preserves their build provenance'
   } finally { await rm(siteDir, { recursive: true, force: true }); }
 });
 
+test('approved display snapshots turn the two admitted Explorer previews into in-page sims', async () => {
+  const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-display-'));
+  try {
+    const display = path.join(siteDir, 'state-local/data/approved');
+    await mkdir(display, { recursive: true });
+    const collection = { type: 'FeatureCollection', features: [] };
+    for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'places', 'schools', 'shelters']) {
+      await writeFile(path.join(display, `${name}.geojson`), JSON.stringify(collection));
+    }
+    await writeFile(path.join(display, 'zoning.cjson'), '{}');
+    await writeFile(path.join(display, 'parcels.cjson'), '{}');
+    await writeFile(path.join(display, 'zone_names.json'), '{}');
+    await buildStateLocalSite({ repoRoot, siteDir, cards: [] });
+    const html = await readFile(path.join(siteDir, 'state-local/sdk-explorer/index.html'), 'utf8');
+    assert.match(html, /SIMS\.fslayer/);
+    assert.match(html, /Point radius/);
+    assert.match(html, /"live":"fslayer"/);
+    assert.match(html, /"live":"category"/);
+    assert.doesNotMatch(html, /"live":"firstmap"/);
+    assert.match(html, /Exercise anchors on real school locations/);
+  } finally { await rm(siteDir, { recursive: true, force: true }); }
+});
+
 test('link validation ignores inline source examples while checking actual markup', async () => {
   const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-links-'));
   try {
