@@ -57,6 +57,8 @@ ROUTES = {"02-property.html": "/state-local/property/", "10-property-mobile.html
 
 def build(name):
     src = read(os.path.join(PAGES, name))
+    shell = read(os.path.join(ROOT, "../../../shared/state-local/app-shell.css"))
+    src = src.replace("</head>", f"<style>{shell}</style></head>", 1)
     uses_map = "{{MAPJS}}" in src
     src = src.replace("{{HEAD}}", head(uses_map))
     src = src.replace("{{ICONS}}", read(os.path.join(SRC, "icons.svg")))

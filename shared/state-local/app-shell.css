@@ -1,0 +1,96 @@
+body.app-shell {
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-shell *, .app-shell *::before, .app-shell *::after { min-width: 0; }
+.app-shell * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-border-strong) var(--c-surface);
+  overscroll-behavior: contain;
+}
+.app-shell > .appbar, .app-shell > .demostrip,
+.app-shell > .xbanner, .app-shell > .statusbar { flex-shrink: 0; }
+.app-shell .appbar { position: relative; }
+.app-shell .demostrip { max-height: 72px; overflow: auto; }
+.app-emergency .xbanner { flex-wrap: wrap; max-height: 100px; overflow: auto; }
+.app-emergency .xbanner .t { white-space: normal; }
+.app-emergency .statusbar { height: auto; max-height: 54px; padding: 4px 10px; gap: 4px 12px; flex-wrap: wrap; white-space: normal; overflow: auto; }
+.app-emergency .statusbar > span { flex-wrap: wrap; }
+.app-shell .layout, .app-shell .wb, .app-shell .sx {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.app-shell .map { min-height: 0; }
+.app-property .side { min-height: 0; }
+.app-workbench .wb > .right { overflow: hidden; }
+.app-workbench .right > :not(.rbody), .app-workbench .nlq > * { flex-shrink: 0; }
+.app-workbench .nlq-sugg { overflow-y: hidden; }
+.app-workbench .center { grid-template-rows: minmax(0, 1fr) minmax(100px, 36%); overflow: hidden; }
+.app-explorer #pvPanel { grid-template-rows: minmax(0, 1fr) minmax(0, 32%); overflow: hidden; }
+.app-explorer .pvb { max-height: none; }
+.app-explorer #mdPanel { overflow: auto; }
+.app-requests .page, .app-works .pw-main {
+  width: 100%;
+  max-width: none;
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.department-workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 36%);
+  gap: 16px;
+  overflow: hidden;
+}
+.department-panel { min-height: 0; overflow: auto; padding-right: 4px; }
+.app-requests .mapwrap, .app-works #map { height: 100%; min-height: 0; }
+.department-panel .grid-a, .department-panel .grid-b,
+.department-panel .grid-c, .department-panel .grid,
+.department-panel .grid2 { grid-template-columns: minmax(0, 1fr); }
+.department-panel .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.app-works #assetPanel { max-height: none !important; }
+.app-works .kanban { grid-template-columns: minmax(0, 1fr); }
+.app-shell .tblwrap, .app-shell .tbl-scroll { overflow: auto; }
+@media (max-width: 1240px) and (min-width: 901px) {
+  .app-emergency .layout { grid-template-columns: 260px minmax(0, 1fr) 310px; }
+  .app-emergency #map { height: auto; order: 0; }
+}
+@media (max-width: 1000px) {
+  .app-workbench .wb { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 3fr) minmax(0, 2fr); }
+  .app-workbench .wb > .nlq { grid-column: 1 / -1 !important; grid-row: 1 !important; max-height: 100px; overflow: auto; }
+  .app-workbench .wb > .center { grid-column: 1 / -1 !important; grid-row: 2 !important; }
+  .app-workbench .wb > .left { grid-column: 1 !important; grid-row: 3 !important; overflow: auto; }
+  .app-workbench .wb > .right { grid-column: 2 !important; grid-row: 3 !important; overflow: hidden; }
+  .app-workbench .rbody { overflow: auto; }
+  .app-explorer .sx { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
+  .app-explorer .sx > .center { grid-column: 1 / -1; grid-row: 1; min-height: 0; overflow: hidden !important; }
+  .app-explorer .sx > .left { max-height: none; grid-column: 1; grid-row: 2; }
+  .app-explorer .sx > .right { grid-column: 2; grid-row: 2; overflow: auto !important; }
+  .app-explorer .shead { max-height: 120px; flex-shrink: 0; overflow: auto; }
+}
+@media (max-width: 900px) {
+  .app-shell .appbar { padding-inline: 10px; gap: 8px; }
+  .app-shell .appbar .appnav { display: none; }
+  .app-shell .wordmark { flex: 1; }
+  .app-shell .wordmark small { white-space: normal; }
+  .app-property .layout, .app-emergency .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .app-property #map, .app-emergency #map { height: auto; order: -1; }
+  .app-emergency .layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); }
+  .app-emergency #map { grid-column: 1 / -1; }
+  .app-emergency .col { overflow: auto; }
+  .app-requests .page, .app-works .pw-main { padding: 10px; }
+  .department-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .app-requests .ph, .app-works .pagehead { max-height: 110px; overflow: auto; flex-shrink: 0; }
+}

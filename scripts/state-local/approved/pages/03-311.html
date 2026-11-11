@@ -73,7 +73,7 @@
   }
 </style>
 </head>
-<body>
+<body class="app-shell app-requests">
 <a class="skip-link" href="#main">Skip to dashboard</a>
 {{ICONS}}
 <header class="appbar">
@@ -109,11 +109,8 @@
       <a class="btn" href="/state-local/data/approved/requests.csv" download><svg class="ico"><use href="#i-download"/></svg>Export</a>
     </div>
   </div>
-
-  <section class="kpis" style="--k:5" aria-label="Key figures" id="kpis"></section>
-
-  <div class="grid-a">
-    <section class="mapwrap" aria-label="Request map">
+<div class="department-workspace">
+<section class="mapwrap" aria-label="Request map">
       <div id="map"></div>
       <div class="maptools">
         <div class="seg" role="group" aria-label="Map style"><button aria-pressed="true" id="mHeat">Heat + open</button><button aria-pressed="false" id="mPts">Open only</button></div>
@@ -126,6 +123,12 @@
         <div class="lg-row"><span class="lg-ln" style="border-color:var(--c-text-3);border-top-style:dashed"></span>Council district</div>
       </div>
     </section>
+<aside class="department-panel" aria-label="Operations dashboard">
+
+  <section class="kpis" style="--k:5" aria-label="Key figures" id="kpis"></section>
+
+  <div class="grid-a">
+
 
     <div class="col">
       <section class="ai-card brief" aria-labelledby="briefH">
@@ -189,6 +192,9 @@
       </section>
     </div>
   </div>
+
+</aside>
+</div>
 </main>
 
 <div class="scrim" id="scrim"></div>

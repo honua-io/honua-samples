@@ -11,7 +11,8 @@ export async function approvedPage({ template, assets, data }) {
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script><style>${css}</style>`;
-  const html = await readFile(template, 'utf8');
+  const shell = await readFile(new URL('./app-shell.css', import.meta.url), 'utf8');
+  const html = (await readFile(template, 'utf8')).replace('</head>', `<style>${shell}</style></head>`);
   return html.replace('{{HEAD}}', () => head).replace('{{ICONS}}', () => icons).replace('{{MAPJS}}', () => kit)
     .replace(/\{\{DATA [^}]*\}\}/g, () => `<script>window.HD=${JSON.stringify(data).replaceAll('</', '<\\/')};</script>`);
 }
