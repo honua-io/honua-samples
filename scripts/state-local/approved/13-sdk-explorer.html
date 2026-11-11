@@ -919,7 +919,7 @@ try {
     const out = []; let line = "";
     const push = (text, cls) => { text.split("\n").forEach((seg, i) => { if (i) { out.push(line); line = ""; } if (seg) line += cls ? `<span class="${cls}">${esc(seg)}</span>` : esc(seg); }); };
     if (lang === "html") {
-      const re = /(<!--[\s\S]*?-->)|(<\/?[A-Za-z][\w-]*)|(\s[\w:-]+)(?==)|("[^"]*")|(\/?>)/g; let i = 0, m;
+      const re = /(<!--[\s\S]*?--!?>)|(<\/?[A-Za-z][\w-]*)|(\s[\w:-]+)(?==)|("[^"]*")|(\/?>)/g; let i = 0, m;
       while ((m = re.exec(code))) { if (m.index > i) push(code.slice(i, m.index)); if (m[1]) push(m[1], "t-c"); else if (m[2]) push(m[2], "t-tag"); else if (m[3]) push(m[3], "t-at"); else if (m[4]) push(m[4], "t-s"); else push(m[5], "t-tag"); i = re.lastIndex; }
       push(code.slice(i)); out.push(line); return out;
     }

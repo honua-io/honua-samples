@@ -120,6 +120,14 @@ function parcelRecord(html) {
   return context.result;
 }
 
+test('source highlighting closes an HTML comment on the browser comment-end error', async () => {
+  const html = await readFile(path.join(repoRoot, 'scripts/state-local/approved/13-sdk-explorer.html'), 'utf8');
+  assert.ok(html.includes('<!--[\\s\\S]*?--!?>'));
+  const comment = /<!--[\s\S]*?--!?>/;
+  assert.equal('<!-- kept --!>'.match(comment)[0], '<!-- kept --!>');
+  assert.equal('<!-- kept -->'.match(comment)[0], '<!-- kept -->');
+});
+
 test('an admitted catalog app stays verified when no display snapshot is loaded', async () => {
   const siteDir = await mkdtemp(path.join(tmpdir(), 'state-local-verified-'));
   try {
