@@ -426,7 +426,7 @@
   }
   document.querySelector("#dt thead").addEventListener("click", (e) => { const th = e.target.closest("th"); if (!th) return; const f = th.dataset.sort; S.sort = S.sort && S.sort[0] === f ? [f, -S.sort[1]] : [f, 1]; renderTable(filtered()); });
   document.querySelector("#dt thead").addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.click(); });
-  document.querySelector("#dt tbody").addEventListener("click", (e) => { const tr = e.target.closest("tr"); if (!tr) return; const L = LAYERS[S.layer]; const id = L.rows[0][L.idField].constructor === Number ? +tr.dataset.id : tr.dataset.id; select([id], !e.shiftKey && !e.metaKey, true); });
+  document.querySelector("#dt tbody").addEventListener("click", (e) => { const tr = e.target.closest("tr"); if (!tr) return; const L = LAYERS[S.layer]; const id = L.rows[0][L.idField].constructor === Number ? +tr.dataset.id : tr.dataset.id; select([id], { replace: !e.shiftKey && !e.metaKey, fly: true }); });
   document.getElementById("tq").addEventListener("input", (e) => { S.tq = e.target.value; renderTable(filtered()); });
   document.getElementById("selOnly").addEventListener("click", (e) => { S.selOnly = !S.selOnly; e.currentTarget.setAttribute("aria-pressed", S.selOnly); renderTable(filtered()); });
   // ---- charts (SVG) ----
@@ -457,7 +457,7 @@
       const H = 120, max = Math.max(1, ...bins.map((b) => b.n)), bw = (W - 10) / bins.length; const act = S.chartF[key(c)];
       const inAct = (b) => !act || (c.t === "time" ? b.x1 >= act.v[0] && b.x0 <= act.v[1] : b.x1 > act.v[0] && b.x0 < act.v[1]);
       el.innerHTML = `<svg viewBox="0 -4 ${W} ${H + 26}" role="img" aria-label="${escapeHtml(chartTitle(c, L))}" style="cursor:crosshair;touch-action:none">` + `<line x1="0" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--viz-grid)"/>` + bins.map((b, i) => { const h = (b.n / max) * H, hm = (b.m / max) * H; return `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" style="fill:var(--c-surface-2)"/><rect x="${i * bw + 1}" y="${H - hm}" width="${bw - 2}" height="${hm}" style="fill:${inAct(b) ? color : "var(--c-surface-3)"}"><title>${c.t === "time" ? b.x0 : xlab(b.x0) + "–" + xlab(b.x1)}: ${b.m}</title></rect>`; }).join("") + `<text x="0" y="${H + 16}">${xlab(bins[0].x0)}</text><text x="${W}" y="${H + 16}" text-anchor="end">${c.t === "hist" ? xlab(bins[bins.length - 1].x1) + "+" : xlab(bins[bins.length - 1].x1)}</text><text x="${W}" y="8" text-anchor="end">max ${max}</text><rect class="brush" x="0" y="0" width="0" height="${H}" style="fill:var(--c-info);fill-opacity:.14;stroke:var(--c-info)" stroke-width="1"/></svg>`;
-      brush(el.querySelector("svg"), H, (a, b) => { const i0 = Math.max(0, Math.floor(a / bw)), i1 = Math.min(bins.length - 1, Math.floor(b / bw)); if (i1 < i0) { delete S.chartF[key(c)]; } else S.chartF[key(c)] = c.t === "time" ? { f: c.f, op: "between-date", v: [bins[i0].x0, bins[i1].x1] } : { f: c.f, op: "between", v: [bins[i0].x0, i1 === bins.length - 1 ? Infinity : bins[i1].x1] }; refresh(); });
+      brush(el.querySelector("svg"), H, (a, b) => { if (b < a) { delete S.chartF[key(c)]; refresh(); return; } const i0 = Math.max(0, Math.floor(a / bw)), i1 = Math.min(bins.length - 1, Math.floor(b / bw)); if (i1 < i0) { delete S.chartF[key(c)]; } else S.chartF[key(c)] = c.t === "time" ? { f: c.f, op: "between-date", v: [bins[i0].x0, bins[i1].x1] } : { f: c.f, op: "between", v: [bins[i0].x0, i1 === bins.length - 1 ? Infinity : bins[i1].x1] }; refresh(); });
       el.insertAdjacentHTML("beforeend", `<div class="hint">${act ? "Drag again to change, click to clear." : "Drag across the bars to filter."}</div>`);
     } else if (c.t === "scatter") {
       const H = 150, lx = (v) => Math.log10(Math.max(v, 1e3)), xs = all.map((r) => lx(r[c.f])), ys = all.map((r) => lx(r[c.g]));
@@ -500,7 +500,11 @@
     document.getElementById("nShown").textContent = rows.length.toLocaleString();
     document.getElementById("nOf").textContent = `of ${LAYERS[S.layer].rows.length.toLocaleString()} ${LAYERS[S.layer].sum}`;
   }
-  function select(ids, replace, fly) {
+  function selectionLayers() {
+    if (S.layer !== "parcels") return ["reqs"];
+    return document.getElementById("v3d").getAttribute("aria-pressed") === "true" ? ["p3d"] : ["pf-hit"];
+  }
+  function select(ids, { replace = false, fly = false } = {}) {
     if (replace) S.sel.clear(); ids.forEach((id) => S.sel.add(id));
     renderTable(filtered()); renderMap(filtered()); if (S.charts.some((c) => c.t === "scatter")) renderCharts();
     if (fly && ids.length === 1) { const L = LAYERS[S.layer]; const r = L.rows.find((x) => x[L.idField] === ids[0]); if (r) map.easeTo({ center: r.c, zoom: Math.max(map.getZoom(), 16), duration: 600 }); }
@@ -523,12 +527,12 @@
     m.addLayer({ id: "draw-pt", type: "circle", source: "draw", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4, "circle-color": HM.cssVar("--c-surface"), "circle-stroke-color": HM.cssVar("--c-info"), "circle-stroke-width": 2 } });
     m.on("click", (e) => {
       if (mode === "select") {
-        const fs = m.queryRenderedFeatures(e.point, { layers: S.layer === "parcels" ? ["pf-hit"] : ["reqs"] });
-        if (fs.length) select([fs[0].properties.id], !e.originalEvent.shiftKey, false); else { S.sel.clear(); select([], true, false); }
+        const fs = m.queryRenderedFeatures(e.point, { layers: selectionLayers() });
+        if (fs.length) select([fs[0].properties.id], { replace: !e.originalEvent.shiftKey }); else select([], { replace: true });
       } else { measurePts.push([e.lngLat.lng, e.lngLat.lat]); drawSketch(); }
     });
     m.on("dblclick", (e) => { if (mode !== "select") { e.preventDefault(); finishSketch(); } });
-    m.on("mousemove", (e) => { if (mode !== "select") { m.getCanvas().style.cursor = "crosshair"; return; } const fs = m.queryRenderedFeatures(e.point, { layers: S.layer === "parcels" ? ["pf-hit"] : ["reqs"] }); m.getCanvas().style.cursor = fs.length ? "pointer" : ""; });
+    m.on("mousemove", (e) => { if (mode !== "select") { m.getCanvas().style.cursor = "crosshair"; return; } const fs = m.queryRenderedFeatures(e.point, { layers: selectionLayers() }); m.getCanvas().style.cursor = fs.length ? "pointer" : ""; });
     document.querySelectorAll("[data-ovl]").forEach((cb) => cb.addEventListener("change", () => HM.toggle(m, cb.dataset.ovl.split(","), cb.checked)));
     applyBasemap();
     refresh();

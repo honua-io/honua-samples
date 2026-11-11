@@ -288,7 +288,7 @@
 {{MAPJS}}
 <script>
 (() => {
-  function pts(map, id, data, color, radius) {
+  function pts(map, { id, data, color, radius }) {
     HM.add(map, id, data);
     HM.themed(map, { id, type: "circle", source: id, paint: { "circle-color": color, "circle-radius": radius, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
   }
@@ -297,8 +297,8 @@
     onload: (m) => {
       HM.overlays(m, ["zoning", "flood", "tsunami"], "roads-casing");
       m.setPaintProperty("zoning", "fill-opacity", 0.35);
-      pts(m, "fire", HD.fire, "--c-danger", 6);
-      pts(m, "shelters", HD.shelters, "--c-ok", 6.5);
+      pts(m, { id: "fire", data: HD.fire, color: "--c-danger", radius: 6 });
+      pts(m, { id: "shelters", data: HD.shelters, color: "--c-ok", radius: 6.5 });
       m.on("click", "shelters", (e) => new maplibregl.Popup({ offset: 8 }).setLngLat(e.lngLat).setHTML(`<b>${e.features[0].properties.name}</b><br><span class="muted">School exercise anchor · ${e.features[0].properties.addr}</span>`).addTo(m));
       m.on("mouseenter", "shelters", () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", "shelters", () => (m.getCanvas().style.cursor = ""));
@@ -311,11 +311,11 @@
       HM.add(m, "req", HM.points(HD.demo.requests.filter((r) => r.status !== "Closed"), (r) => ({ t: r.type })));
       HM.themed(m, { id: "req", type: "circle", source: "req", paint: { "circle-radius": 3.2, "circle-color": ["match", ["get", "t"], "Drainage / flooding", "--viz-3", "Pothole", "--viz-2", "--viz-1"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 0.8 } });
     } },
-    em: { bounds: [[-156.505, 20.866], [-156.445, 20.904]], layers: ["tsunami"], after: (m) => pts(m, "shel", HD.shelters, "--c-ok", 5) },
+    em: { bounds: [[-156.505, 20.866], [-156.445, 20.904]], layers: ["tsunami"], after: (m) => pts(m, { id: "shel", data: HD.shelters, color: "--c-ok", radius: 5 }) },
     pw: { bounds: [[-156.5, 20.87], [-156.458, 20.897]], layers: ["flood"], after: (m) => {
       HM.add(m, "as", HM.points(HD.demo.assets, (a) => ({ c: a.cond })));
       HM.themed(m, { id: "as", type: "circle", source: "as", paint: { "circle-radius": 3.4, "circle-color": ["step", ["get", "c"], "--c-danger", 3, "--viz-2", 4, "--c-ok"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 0.8 } });
-      pts(m, "br", HD.bridges, "--c-text-2", 4.5);
+      pts(m, { id: "br", data: HD.bridges, color: "--c-text-2", radius: 4.5 });
     } },
   };
   hero?.once("idle", () => document.querySelectorAll("[data-mini]").forEach((el) => {
