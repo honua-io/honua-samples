@@ -3,6 +3,7 @@ const root = document.documentElement;
 function renderToggle() {
   const dark = root.dataset.theme === "dark";
   for (const toggle of document.querySelectorAll(".theme-toggle")) {
+    toggle.setAttribute("aria-pressed", String(dark));
     toggle.textContent = dark ? "Light mode" : "Dark mode";
     toggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
   }

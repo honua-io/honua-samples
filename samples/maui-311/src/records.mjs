@@ -1,3 +1,4 @@
+import { csvCell } from '../../../shared/state-local/csv.mjs';
 import { exerciseTimeline } from '../../../shared/state-local/exercise-time.mjs';
 import { assertExerciseProvenance } from './exercise-provenance.mjs';
 
@@ -62,12 +63,6 @@ export function exportGeojson(records) {
   return { type: 'FeatureCollection', name: 'DEMO DATA — fictional 311 exercise requests',
     features: records.map(({ properties, geometry }) => ({ type: 'Feature', geometry,
       properties: contractFields(properties) })) };
-}
-
-function csvCell(value) {
-  const text = String(value ?? '');
-  const safe = /^[\s]*[=+@-]/.test(text) ? `'${text}` : text;
-  return `"${safe.replaceAll('"', '""')}"`;
 }
 
 export function exportCsv(records) {

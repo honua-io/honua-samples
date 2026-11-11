@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDK Explorer · Honua</title>
+<meta name="description" content="Browse pinned Honua SDK examples and honua-samples: source, readmes and verified previews for admitted builds.">
+{{HEAD}}
+<style>[aria-disabled="true"]{opacity:.55;cursor:default}</style>
+<style>
+  body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
+  .sx { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; }
+  .sx > .col { position: relative; min-height: 0; overflow-y: auto; background: var(--c-surface); }
+  .left { border-right: 1px solid var(--c-border); display: flex; flex-direction: column; overflow: hidden !important; }
+  .right { border-left: 1px solid var(--c-border); }
+  .center { display: flex; flex-direction: column; overflow: hidden !important; background: var(--c-bg); min-width: 0; }
+
+  /* left: sample list */
+  .pagehead { padding: 18px 18px 12px; }
+  .pagehead h1 { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; }
+  .pagehead p { color: var(--c-text-2); font-size: 13px; margin-top: 4px; }
+  .finder { padding: 0 18px 12px; border-bottom: 1px solid var(--c-rule); }
+  .finder .field { height: 34px; }
+  .finder .seg { margin-top: 10px; flex-wrap: wrap; }
+  .finder .seg button { height: 26px; padding: 0 8px; font-size: 12px; }
+  .list { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 6px 10px 18px; }
+  .cat { margin-top: 10px; }
+  .cat h2 { font-size: 12px; font-weight: 600; color: var(--c-text-3); padding: 8px 8px 4px; display: flex; gap: 6px; align-items: baseline; }
+  .cat h2 .ct { margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .item { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius-md); padding: 7px 8px; }
+  .item:hover { background: var(--c-surface-2); }
+  .item[aria-pressed="true"] { background: var(--c-selected); border-color: var(--c-accent-soft); }
+  .item .t { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--c-text); }
+  .item .t span:first-child { flex: 1; min-width: 0; }
+  .item .s { display: flex; gap: 6px; align-items: center; margin-top: 2px; font-family: var(--font-mono); font-size: 12px; color: var(--c-text-3); overflow: hidden; }
+  .item .s span { flex: none; white-space: nowrap; }
+  .item .s em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .item.dim .t { color: var(--c-text-3); }
+  .chip.sm { height: 18px; padding: 0 6px; font-size: 11.5px; }
+  .empty { padding: 24px 12px; color: var(--c-text-3); font-size: 13px; text-align: center; }
+
+  /* centre */
+  .shead { padding: 16px 20px 0; background: var(--c-surface); border-bottom: 1px solid var(--c-border); }
+  .shead .row1 { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .shead h2 { font-size: 19px; letter-spacing: -0.015em; }
+  .shead .desc { color: var(--c-text-2); font-size: 14px; margin-top: 4px; max-width: 80ch; }
+  .shead .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+  .shead .path { font-family: var(--font-mono); font-size: 12px; color: var(--c-text-3); }
+  .shead .tabs { padding: 0; margin-top: 10px; border-bottom: 0; }
+  .panels { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .panels > [role="tabpanel"] { flex: 1; min-height: 0; }
+  #pvPanel { display: grid; grid-template-rows: minmax(300px, 1fr) auto; }
+  #pvPanel[hidden], #srcPanel[hidden], #mdPanel[hidden] { display: none; }
+  .map { min-height: 0; }
+  .map.no-labels .maplabel { display: none; }
+  .mapui { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+  .mapui > * { pointer-events: auto; }
+  .card { position: absolute; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 12px 14px; font-size: 13px; }
+  .card h3 { font-size: 13px; margin-bottom: 6px; }
+  .pvb { position: relative; overflow-y: auto; max-height: 260px; min-height: 0; background: var(--c-surface); border-top: 1px solid var(--c-border); }
+  .pv-status { display: flex; gap: 8px; align-items: flex-start; padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--c-rule); }
+  .pv-status .ico { margin-top: 2px; color: var(--c-text-3); }
+  .pv-status[data-state="pass"] .ico { color: var(--c-ok); }
+  .pv-status[data-state="fail"] { background: var(--c-danger-tint); }
+  .pv-status[data-state="fail"] .ico { color: var(--c-danger); }
+  .pv-status[data-state="warn"] { background: var(--c-warn-tint); }
+  .pv-status[data-state="warn"] .ico { color: var(--c-warn); }
+  .reqlog { margin: 0; padding: 10px 16px 12px; font-family: var(--font-mono); font-size: 12px; color: var(--c-text-2); white-space: pre-wrap; word-break: break-all; line-height: 1.55; }
+  .reqlog b { color: var(--c-text); font-weight: 500; }
+  .runlocal { position: relative; overflow-y: auto; padding: 28px; }
+  .runlocal .box { max-width: 640px; margin: 0 auto; background: var(--c-surface); border: 1px solid var(--c-rule); border-radius: var(--radius-lg); padding: 20px 22px; }
+  .runlocal h3 { font-size: 16px; }
+  .runlocal p { color: var(--c-text-2); margin-top: 6px; }
+
+  /* source */
+  #srcPanel { display: flex; flex-direction: column; background: var(--c-surface); }
+  .srcbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--c-rule); flex-wrap: wrap; }
+  .srcbar .seg { flex-wrap: wrap; }
+  .srcbar .seg button { font-family: var(--font-mono); font-size: 12px; }
+  .srcbar .note { font-size: 12px; color: var(--c-text-3); margin-left: auto; }
+  .code { position: relative; flex: 1; min-height: 0; overflow: auto; background: var(--c-surface-2); }
+  .code pre { margin: 0; padding: 12px 0; font: 12.5px/1.6 var(--font-mono); color: var(--c-text); tab-size: 2; min-width: max-content; }
+  .code .ln { display: block; padding: 0 20px 0 0; white-space: pre; }
+  .code .ln::before { content: attr(data-n); display: inline-block; width: 44px; padding-right: 14px; text-align: right; color: var(--c-text-3); user-select: none; border-right: 2px solid transparent; margin-right: 14px; }
+  .code .ln.mod::before { border-right-color: var(--c-accent); color: var(--c-accent-ink); }
+  .code .ln.flash { animation: flash 2.4s var(--ease-standard); }
+  @keyframes flash { 0%, 30% { background: var(--c-diff-add-bg); } 100% { background: transparent; } }
+  .t-k { color: var(--c-accent-ink); font-weight: 500; }
+  .t-s { color: var(--c-warn-ink); }
+  .t-c { color: var(--c-text-3); font-style: italic; }
+  .t-n { color: var(--c-info-ink); }
+  .t-a { color: var(--c-link); font-weight: 600; }
+  .t-tag { color: var(--c-danger-ink); }
+  .t-at { color: var(--c-info-ink); }
+  .t-key { color: var(--c-ok-ink); }
+
+  /* readme */
+  #mdPanel { position: relative; overflow-y: auto; background: var(--c-surface); }
+  .md { max-width: 76ch; padding: 20px 28px 40px; font-size: 15px; line-height: 1.6; }
+  .md h3 { font-size: 16px; margin: 22px 0 6px; }
+  .md h4 { font-size: 14px; margin: 18px 0 6px; }
+  .md p, .md ul, .md ol { margin: 8px 0; }
+  .md ul, .md ol { padding-left: 22px; }
+  .md li { margin: 3px 0; }
+  .md code { font-size: 13px; background: var(--c-surface-2); padding: 1px 5px; border-radius: 4px; }
+  .md pre.md-code { font: 12.5px/1.55 var(--font-mono); background: var(--c-surface-2); border-radius: var(--radius-md); padding: 12px 14px; overflow-x: auto; white-space: pre; }
+  .md .md-tbl { border-collapse: collapse; font-size: 13px; margin: 10px 0; display: block; overflow-x: auto; }
+  .md .md-tbl td { border: 1px solid var(--c-rule); padding: 6px 10px; vertical-align: top; }
+  .md .md-tbl tr:first-child td { color: var(--c-text-3); }
+  .md .src { font-size: 12px; color: var(--c-text-3); border-top: 1px solid var(--c-rule); padding-top: 12px; margin-top: 24px; }
+
+  /* right: try it */
+  .sec { padding: 16px 18px; border-bottom: 1px solid var(--c-rule); }
+  .sec h2 { font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .sec h2 .x { margin-left: auto; }
+  .sec .hint { font-size: 12px; color: var(--c-text-3); margin-top: 2px; }
+  .prm { margin-top: 12px; }
+  .prm label, .prm .lbl { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--c-text-3); margin-bottom: 4px; }
+  .prm label code { color: var(--c-text-2); }
+  .prm select, .prm input[type="text"] { width: 100%; height: 32px; border: 1px solid var(--c-border-strong); border-radius: var(--radius-md); padding: 0 8px; background: var(--c-surface); font-size: 13px; min-width: 0; }
+  .prm input[type="text"].mono { font-family: var(--font-mono); font-size: 12.5px; }
+  .prm input[type="range"] { width: 100%; accent-color: var(--c-accent); margin: 2px 0 0; }
+  .prm label.chk { justify-content: flex-start; margin: 0; }
+  .prm .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--c-text); cursor: pointer; }
+  .prm .chk input { accent-color: var(--c-accent); margin: 0; width: 15px; height: 15px; }
+  .prm .err { font-size: 12px; color: var(--c-danger-ink); margin-top: 4px; }
+  .sws { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sws button { width: 30px; height: 30px; border-radius: var(--radius-md); border: 2px solid transparent; padding: 0; display: grid; place-items: center; background: transparent; }
+  .sws button span { width: 20px; height: 20px; border-radius: 4px; display: block; }
+  .sws button[aria-pressed="true"] { border-color: var(--c-text); }
+  .snip { position: relative; font-family: var(--font-mono); font-size: 12px; background: var(--c-surface-2); border-radius: var(--radius-md); padding: 10px 40px 10px 12px; white-space: pre-wrap; word-break: break-word; margin-top: 8px; line-height: 1.55; color: var(--c-text); }
+  .snip .cp { position: absolute; top: 4px; right: 4px; }
+  .snip .c { color: var(--c-text-3); }
+  .links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .links .btn { justify-content: flex-start; }
+  .apis { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .apis code { font-size: 12px; padding: 2px 7px; border-radius: 4px; background: var(--c-neutral-soft); color: var(--c-neutral-ink); }
+  .ver { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--c-accent-soft); color: var(--c-accent-ink); font: 500 12px var(--font-mono); white-space: nowrap; }
+  .datas { display: grid; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--c-text-2); }
+  .datas div { display: flex; gap: 8px; align-items: flex-start; }
+  .datas .tag-real, .datas .tag-demo { margin-top: 1px; }
+
+  /* sample-specific map UI */
+  .steps { list-style: none; margin: 0; padding: 0; min-width: 250px; }
+  .steps li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding: 5px 0; align-items: start; font-size: 13px; }
+  .steps li .ico { width: 15px; height: 15px; margin-top: 2px; color: var(--c-text-3); }
+  .steps li[data-s="ok"] .ico { color: var(--c-ok); }
+  .steps li[data-s="fail"] .ico { color: var(--c-danger); }
+  .steps li small { display: block; color: var(--c-text-3); font-size: 12px; font-family: var(--font-mono); overflow-wrap: anywhere; }
+  .legend ul { list-style: none; margin: 0; padding: 0; }
+  .legend li { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; align-items: center; padding: 2px 0; font-size: 12.5px; }
+  .legend li .sw { width: 14px; height: 10px; border-radius: 2px; }
+  .legend li .n { color: var(--c-text-3); font-variant-numeric: tabular-nums; }
+  .toolbar { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap; max-width: calc(100% - 70px); }
+  .toolgrp { display: flex; gap: 2px; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 3px; flex-wrap: wrap; }
+  .toolgrp button { border: 0; background: transparent; height: 30px; padding: 0 10px; border-radius: 5px; font-size: 13px; font-weight: 500; color: var(--c-text-2); display: inline-flex; gap: 6px; align-items: center; }
+  .toolgrp button:hover:not(:disabled) { background: var(--c-surface-2); color: var(--c-text); }
+  .toolgrp button[aria-pressed="true"] { background: var(--c-accent-soft); color: var(--c-accent-ink); }
+  .toolgrp button:disabled { opacity: .45; cursor: default; }
+  .toolgrp button.primary { background: var(--c-accent); color: var(--c-on-accent); }
+  .maphint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: calc(100% - 24px); }
+  .stgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 16px; padding: 12px 16px; border-bottom: 1px solid var(--c-rule); }
+  .stgrid div { font-size: 12px; color: var(--c-text-3); }
+  .stgrid b { display: block; font-size: 13px; color: var(--c-text); font-weight: 500; font-family: var(--font-mono); }
+  .oplog { list-style: none; margin: 0; padding: 8px 16px 12px; font-family: var(--font-mono); font-size: 12px; color: var(--c-text-2); }
+  .oplog li { padding: 3px 0; border-top: 1px solid var(--c-rule); }
+  .oplog li:first-child { border-top: 0; }
+  .ask { top: 12px; left: 12px; width: min(440px, calc(100% - 70px)); max-height: calc(100% - 24px); overflow-y: auto; }
+  .ask .sugg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ask .sugg button { border: 1px solid var(--c-border); background: var(--c-surface); border-radius: var(--radius-pill); font-size: 12.5px; padding: 4px 10px; color: var(--c-text-2); text-align: left; }
+  .ask .sugg button:hover { background: var(--c-surface-2); color: var(--c-text); }
+  .ask form { display: flex; gap: 6px; }
+  .ask form .field { flex: 1; height: 34px; }
+  .ask .ctx { font-size: 12px; color: var(--c-text-3); margin-top: 8px; }
+  .review { margin-top: 10px; border: 1px solid var(--c-ai-line); background: var(--c-ai-soft); border-radius: var(--radius-md); padding: 12px; }
+  .review p { font-size: 13px; }
+  .review details { margin-top: 8px; font-size: 12px; }
+  .review summary { cursor: pointer; color: var(--c-link); }
+  .review pre { font: 12px/1.5 var(--font-mono); background: var(--c-surface); border-radius: var(--radius-sm); padding: 8px 10px; white-space: pre-wrap; margin: 6px 0 0; color: var(--c-text); }
+  .review .row { margin-top: 10px; }
+  .clar { margin-top: 10px; display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--c-warn-line); background: var(--c-warn-tint); border-radius: var(--radius-md); font-size: 13px; }
+  .clar .ico { color: var(--c-warn); margin-top: 2px; }
+  .clar.refuse { border-color: var(--c-danger-line); background: var(--c-danger-tint); }
+  .clar.refuse .ico { color: var(--c-danger); }
+  .rtbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rtbl th { position: sticky; top: 0; background: var(--c-surface); text-align: left; font-weight: 500; color: var(--c-text-3); font-size: 12px; padding: 7px 12px; border-bottom: 1px solid var(--c-rule); z-index: 1; }
+  .rtbl td { padding: 6px 12px; border-bottom: 1px solid var(--c-rule); font-variant-numeric: tabular-nums; }
+  .rtbl td.n, .rtbl th.n { text-align: right; }
+  .rtbl tr[aria-selected="true"] td { background: var(--c-selected); }
+  .rtbl tbody tr { cursor: pointer; }
+  .rtbl tbody tr:hover td { background: var(--c-zebra); }
+  .linked { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 1.2fr); }
+  .linked > div { min-width: 0; }
+  .linked .chartbox { padding: 12px 16px; border-right: 1px solid var(--c-rule); }
+  .linked .chartbox h3 { font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .linked .chartbox h3 .x { margin-left: auto; }
+  .barrow { display: grid; grid-template-columns: minmax(90px, 34%) 1fr 62px; gap: 8px; align-items: center; width: 100%; border: 0; background: transparent; padding: 3px 4px; border-radius: 4px; font-size: 12.5px; text-align: left; }
+  .barrow:hover { background: var(--c-surface-2); }
+  .barrow[aria-pressed="true"] { background: var(--c-selected); }
+  .barrow .tr { height: 10px; background: var(--c-surface-2); border-radius: 3px; overflow: hidden; }
+  .barrow .tr span { display: block; height: 100%; border-radius: 3px; }
+  .barrow .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--c-text-2); }
+  .barrow.off { opacity: .45; }
+  .evid { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--c-rule); font-size: 13px; }
+  .evid code { font-size: 12px; color: var(--c-text-3); }
+  .maplibregl-popup-content table.pop { border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+  .maplibregl-popup-content table.pop td { padding: 1px 8px 1px 0; vertical-align: top; }
+  .maplibregl-popup-content table.pop td:first-child { color: var(--c-text-3); }
+
+  @media (max-width: 1280px) { .sx { grid-template-columns: 270px minmax(0, 1fr) 310px; } }
+  @media (max-width: 1000px) {
+    body { height: auto; overflow: auto; }
+    .sx { grid-template-columns: 1fr; overflow: visible; }
+    .sx > .col { overflow: visible !important; border: 0; }
+    .sx > .left { max-height: 420px; overflow: hidden !important; border-bottom: 1px solid var(--c-border); }
+    .center { min-height: 760px; }
+    .linked { grid-template-columns: 1fr; }
+    .linked .chartbox { border-right: 0; border-bottom: 1px solid var(--c-rule); }
+  }
+  @media (max-width: 640px) {
+    .shead { padding: 14px 14px 0; }
+    .card.ask { width: calc(100% - 24px); }
+    .toolbar { max-width: calc(100% - 24px); top: 56px; }
+    .links { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#samplePanels">Skip to the selected sample</a>
+{{ICONS}}
+<header class="appbar">
+  <a class="wordmark" href="/state-local/"><strong>Honua SDK Explorer</strong><small>Maui demo server</small></a>
+  <nav class="appnav" aria-label="Developers">
+    <a href="#" aria-current="page">Samples</a><a href="https://honua-io.github.io/honua-sdk-js/" target="_blank" rel="noopener">API reference</a><a aria-disabled="true" title="Coming soon">Workbench</a><a aria-disabled="true" title="Coming soon">Catalog</a>
+  </nav>
+  <span class="spacer"></span>
+  <span class="env hide-sm" title="SDK source snapshot version"><span class="dot"></span>@honua/sdk-js <span id="verTop"></span></span>
+  <span class="avatar" aria-hidden="true">DV</span>
+</header>
+<div class="demostrip" role="note">
+  <span class="tag-real">Real data</span> Place names (USGS GNIS), County zoning and parcels with FEMA flood zones (Hawaii Statewide GIS Program)
+  <span class="tag-demo">Demo data</span> Shelter points are an exercise on real school locations, not official shelters.
+  <span class="faint" id="revNote"></span>
+</div>
+
+<div class="sx">
+  <aside class="col left" aria-label="Samples">
+    <div class="pagehead">
+      <h1>SDK Explorer</h1>
+      <p>Every Honua JS SDK example and honua-sample, with the code, the readme and a live preview on Maui data.</p>
+    </div>
+    <div class="finder">
+      <label class="field"><svg class="ico faint" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">Search samples</span><input id="q" type="search" placeholder="Search samples or API names" autocomplete="off"></label>
+      <div class="seg" role="group" aria-label="Show" id="flt">
+        <button type="button" aria-pressed="true" data-f="all">All</button>
+        <button type="button" aria-pressed="false" data-f="live">Live preview</button>
+        <button type="button" aria-pressed="false" data-f="js">JS/TS</button>
+        <button type="button" aria-pressed="false" data-f="rest">No SDK</button>
+        <button type="button" aria-pressed="false" data-f="other">Python, .NET</button>
+      </div>
+    </div>
+    <nav class="list" id="list" aria-label="Sample list"></nav>
+  </aside>
+
+  <main class="col center" aria-label="Selected sample">
+    <div class="shead">
+      <div class="row1"><div class="grow"><h2 id="sTitle"></h2><p class="desc" id="sDesc"></p></div></div>
+      <div class="meta" id="sMeta"></div>
+      <div class="tabs" role="tablist" aria-label="Sample views">
+        <button role="tab" id="tabPv" aria-controls="pvPanel" aria-selected="true">Preview</button>
+        <button role="tab" id="tabSrc" aria-controls="srcPanel" aria-selected="false" tabindex="-1">Source</button>
+        <button role="tab" id="tabMd" aria-controls="mdPanel" aria-selected="false" tabindex="-1">Readme</button>
+      </div>
+    </div>
+    <div class="panels" id="samplePanels">
+      <section role="tabpanel" id="pvPanel" aria-labelledby="tabPv">
+        <div class="map" id="map" role="region" aria-label="Live preview map"><div class="mapui" id="mapUi"></div></div>
+        <div class="pvb" id="pvBottom" aria-live="polite"></div>
+      </section>
+      <section role="tabpanel" id="srcPanel" aria-labelledby="tabSrc" hidden>
+        <div class="srcbar">
+          <div class="seg" id="fileTabs" role="group" aria-label="Files"></div>
+          <button class="btn sm" type="button" id="copyBtn"><svg class="ico"><use href="#i-copy"/></svg><span>Copy</span></button>
+          <span class="note" id="srcNote"></span>
+        </div>
+        <div class="code" id="code" tabindex="0" aria-label="Source code"></div>
+      </section>
+      <section role="tabpanel" id="mdPanel" aria-labelledby="tabMd" hidden><article class="md" id="md"></article></section>
+    </div>
+  </main>
+
+  <aside class="col right" aria-label="Try it">
+    <section class="sec" aria-labelledby="tryH">
+      <h2 id="tryH">Try it <span class="x ver" id="verBadge"></span></h2>
+      <p class="hint" id="tryHint"></p>
+      <div id="params"></div>
+    </section>
+    <section class="sec" aria-labelledby="instH">
+      <h2 id="instH">Install</h2>
+      <div id="install"></div>
+      <div class="links">
+        <a class="btn" aria-disabled="true" title="Coming soon"><svg class="ico"><use href="#i-server"/></svg>Open in Console</a>
+        <a class="btn" aria-disabled="true" title="Coming soon"><svg class="ico"><use href="#i-grid"/></svg>Studio · coming soon</a>
+        <a class="btn" id="ghLink" href="#" target="_blank" rel="noopener"><svg class="ico"><use href="#i-code"/></svg>View on GitHub</a>
+        <a class="btn" id="sbLink" href="#" target="_blank" rel="noopener"><svg class="ico"><use href="#i-external"/></svg>StackBlitz</a>
+      </div>
+    </section>
+    <section class="sec" aria-labelledby="apiH">
+      <h2 id="apiH">SDK names in this sample</h2>
+      <div class="apis" id="apis"></div>
+    </section>
+    <section class="sec" aria-labelledby="dataH">
+      <h2 id="dataH">Data in the preview</h2>
+      <div class="datas" id="datas"></div>
+    </section>
+  </aside>
+</div>
+
+<script type="text/plain" id="T-fslayer-html"><!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FeatureServer layer in MapLibre</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css" crossorigin="anonymous" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: grid; grid-template-rows: auto minmax(320px, 1fr) auto; font: 15px/1.45 system-ui, sans-serif; }
+    #map { min-height: 320px; }
+    pre { margin: 0; padding: 0.5rem 1rem; max-height: 7rem; overflow: auto; font-size: 12px; }
+  </style>
+</head>
+<body data-sample-status="loading">
+  <header>
+    <h1>A FeatureServer layer as a MapLibre GeoJSON source</h1>
+    <p id="status">Loading the layer...</p>
+  </header>
+  <div id="map" role="region" aria-label="Map"></div>
+  <pre id="requests" aria-label="Requests this page made"></pre>
+  <script type="module">
+    // index.html · script
+  </scr@@ipt>
+</body>
+</html></script>
+
+<script type="text/plain" id="T-fslayer-js">// MapLibre GL JS 6 is published as ES modules; importing it dynamically lets
+// the layer requests below start while the library downloads.
+const maplibreReady = import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs");
+
+const params = new URLSearchParams(location.search);
+const baseUrl = (params.get("baseUrl") ?? "@@server@@").replace(/\/+$/, "");
+const service = params.get("service") ?? "@@service@@";
+const layerId = params.get("layer") ?? "@@layer@@";
+const where = params.get("where") ?? "@@where@@";
+const labelField = params.get("labelField") ?? "@@labelField@@";
+const status = document.querySelector("#status");
+const requests = document.querySelector("#requests");
+
+async function getJson(url) {
+  logRequest(url);
+  const response = await fetch(url);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body.error) throw new Error(body.error?.message ?? `HTTP ${response.status}`);
+  return body;
+}
+
+// readField, escapeHtml, bboxOf and the PMTiles basemap probe are unchanged; see the full file.
+
+async function queryAll(layerUrl, pageSize) {
+  // Page through the layer: a server returns at most maxRecordCount
+  // features per request and flags exceededTransferLimit when more remain.
+  const features = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const query = new URLSearchParams({
+      where, outFields: "*", returnGeometry: "true", outSR: "4326",
+      resultOffset: String(offset), resultRecordCount: String(pageSize), f: "geojson",
+    });
+    const page = await getJson(`${layerUrl}/query?${query}`);
+    features.push(...(page.features ?? []));
+    const more = page.exceededTransferLimit ?? page.properties?.exceededTransferLimit;
+    if (!more || !page.features?.length) return { type: "FeatureCollection", features };
+  }
+}
+
+const layerUrl = `${baseUrl}/rest/services/${encodeURIComponent(service)}/FeatureServer/${encodeURIComponent(layerId)}`;
+const layerRequest = getJson(`${layerUrl}?f=json`);
+const maplibregl = await maplibreReady;
+const map = new maplibregl.Map({
+  container: "map",
+  style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2ee" } }] },
+  center: [-156.33, 20.8],
+  zoom: 8,
+});
+map.addControl(new maplibregl.NavigationControl(), "top-right");
+const mapLoaded = new Promise((resolve) => map.once("load", resolve));
+
+try {
+  const layer = await layerRequest;
+  const [geojson] = await Promise.all([
+    queryAll(layerUrl, Math.min(Number(layer.maxRecordCount) || 1000, 10000)),
+    mapLoaded,
+  ]);
+  if (!geojson.features?.length) throw new Error("The query returned no features.");
+
+  map.addSource("layer", { type: "geojson", data: geojson });
+  const isType = (...types) => ["match", ["geometry-type"], types, true, false];
+  map.addLayer({ id: "layer-fill", type: "fill", source: "layer", filter: isType("Polygon", "MultiPolygon"), paint: { "fill-color": "@@color@@", "fill-opacity": @@opacity@@ } });
+  map.addLayer({ id: "layer-line", type: "line", source: "layer", filter: isType("Polygon", "MultiPolygon", "LineString", "MultiLineString"), paint: { "line-color": "@@color@@", "line-width": 1.5 } });
+  map.addLayer({ id: "layer-point", type: "circle", source: "layer", filter: isType("Point", "MultiPoint"), paint: { "circle-radius": @@radius@@, "circle-color": "@@color@@", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1 } });
+  const layerIds = ["layer-fill", "layer-line", "layer-point"];
+  const basemap = addBasemapIfAvailable(map, "layer-fill");
+
+  for (const id of layerIds) {
+    map.on("click", id, (event) => {
+      const properties = event.features[0].properties;
+      const rows = Object.entries(properties)
+        .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
+        .join("");
+      new maplibregl.Popup({ maxWidth: "320px" })
+        .setLngLat(event.lngLat)
+        .setHTML(`<strong class="popup-title">${escapeHtml(readField(properties, labelField) ?? "(no label)")}</strong><table>${rows}</table>`)
+        .addTo(map);
+    });
+  }
+
+  const [minX, minY, maxX, maxY] = bboxOf(geojson.features);
+  map.fitBounds([[minX, minY], [maxX, maxY]], { padding: 40, duration: 0, maxZoom: 16 });
+  const basemapNote = await basemap;
+  await map.once("idle");
+  const rendered = map.queryRenderedFeatures({ layers: layerIds }).length;
+  status.textContent = `PASS: ${layer.name ?? service} (${layer.geometryType ?? "features"}): ${geojson.features.length} features, ${rendered} rendered in view. Basemap: ${basemapNote}.`;
+  document.body.dataset.sampleStatus = "pass";
+} catch (error) {
+  status.textContent = `FAIL: ${error.message}`;
+  document.body.dataset.sampleStatus = "fail";
+}</script>
+
+<script type="text/plain" id="T-category-js">const maplibreReady = import("https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs");
+
+const params = new URLSearchParams(location.search);
+const baseUrl = (params.get("baseUrl") ?? "@@server@@").replace(/\/+$/, "");
+const collection = params.get("collection") ?? "@@collection@@";
+const field = params.get("field") ?? "@@field@@";
+// minLon,minLat,maxLon,maxLat (Kahului by default), or "none" for no bbox filter.
+const bbox = params.get("bbox") ?? "@@bbox@@";
+const limit = params.get("limit") ?? "1000";
+const maxClasses = @@maxClasses@@;
+const palette = [@@palette@@];
+const otherColor = "@@other@@";
+
+// getJson, readField, escapeHtml, bboxOf and the basemap probe: see the full file.
+
+const collectionUrl = `${baseUrl}/ogc/features/collections/${encodeURIComponent(collection)}`;
+const itemsQuery = new URLSearchParams({ limit, f: "json" });
+if (bbox !== "none") itemsQuery.set("bbox", bbox);
+const queryablesRequest = getJson(`${collectionUrl}/queryables?f=json`);
+const itemsRequest = getJson(`${collectionUrl}/items?${itemsQuery}`);
+
+const maplibregl = await maplibreReady;
+const map = new maplibregl.Map({
+  container: "map",
+  style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": "#eef2ee" } }] },
+  center: [-156.48, 20.885],
+  zoom: 12,
+});
+const mapLoaded = new Promise((resolve) => map.once("load", resolve));
+
+try {
+  const [queryables, items] = await Promise.all([queryablesRequest, itemsRequest, mapLoaded]);
+  if (!items.features?.length) throw new Error("The items request returned no features.");
+  const topField = field.split(".")[0];
+  const queryable = Object.hasOwn(queryables.properties ?? {}, topField);
+
+  // Count the distinct values of the field; the most common get a colour, the rest share "Other".
+  const counts = new Map();
+  for (const feature of items.features) {
+    const value = readField(feature.properties, field);
+    const category = value === undefined || value === null || value === "" ? "(none)" : String(value);
+    feature.properties.category_class = category;
+    counts.set(category, (counts.get(category) ?? 0) + 1);
+  }
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const classes = ranked.slice(0, maxClasses).map(([value, count], i) => ({ value, count, color: palette[i] }));
+  const otherCount = ranked.slice(maxClasses).reduce((sum, [, count]) => sum + count, 0);
+
+  // A data-driven "match" expression: one colour per class, grey for everything else.
+  const fillColor = ["match", ["get", "category_class"], ...classes.flatMap((c) => [c.value, c.color]), otherColor];
+  map.addSource("features", { type: "geojson", data: items });
+  map.addLayer({ id: "features-fill", type: "@@layerType@@", source: "features", paint: { "@@colorProp@@": fillColor, "@@opacityProp@@": 0.7 } });
+
+  legend.innerHTML = [...classes, ...(otherCount ? [{ value: "Other", count: otherCount, color: otherColor }] : [])]
+    .map((c) => `<li data-category="${escapeHtml(c.value)}"><span class="swatch" style="background:${c.color}"></span><span class="label">${escapeHtml(c.value)}</span><span class="count">${c.count}</span></li>`)
+    .join("");
+
+  map.on("click", "features-fill", (event) => {
+    const properties = event.features[0].properties;
+    new maplibregl.Popup({ maxWidth: "320px" })
+      .setLngLat(event.lngLat)
+      .setHTML(`<strong class="popup-title">${escapeHtml(properties.category_class)}</strong>`)
+      .addTo(map);
+  });
+
+  const [minX, minY, maxX, maxY] = bboxOf(items.features);
+  map.fitBounds([[minX, minY], [maxX, maxY]], { padding: 30, duration: 0, maxZoom: 16 });
+  const matched = items.numberMatched ?? items.features.length;
+  status.textContent =
+    `PASS: ${items.features.length} of ${matched} features, ${counts.size} distinct "${field}" values` +
+    `${queryable ? " (a queryable)" : " (not listed in queryables)"}.`;
+} catch (error) {
+  status.textContent = `FAIL: ${error.message}`;
+}</script>
+
+{{DATA 13-sdk-samples}}
+{{MAPJS}}
+<script>
+(() => {
+  const D = HD["13-sdk-samples"], ZN = HD.zone_names;
+  const SERVER = D.server, VER = D.version;
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const tok = (n) => HM.cssVar(n);
+  const fmt = (n) => Number(n).toLocaleString("en-US");
+  const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
+  const BY = Object.fromEntries(D.samples.map((s) => [s.id, s]));
+  const tpl = (id) => document.getElementById("T-" + id).textContent.replace("</scr@@ipt>", "</" + "script>");
+  const fill = (text, vals) => text.replace(/@@(\w+)@@/g, (m, k) => (k in vals ? vals[k] : m));
+  const jsStr = (v) => String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+
+  /* ---------- Datasets on the demo server (real extracts embedded in this page) ---------- */
+  const GROUP = { res: "Residential", bus: "Business", ind: "Industrial", ag: "Agriculture", pub: "Public", park: "Park", pd: "Project district", other: "Other" };
+  const LUDN = { U: "Urban", A: "Agricultural", C: "Conservation", R: "Rural" };
+  const SFHA = ["A", "AE", "AO", "AH", "VE"];
+  const feature = (id, properties, geometry) => ({ type: "Feature", id, properties, geometry });
+  const LAYERS = {
+    places: { title: "Place names", service: "maui-place-names", layer: 6, geom: "esriGeometryPoint", label: "name", steward: "USGS GNIS via Hawaii Statewide GIS",
+      build: () => HD.places.features.map((f, i) => feature(i + 1, { objectid: i + 1, name: f.properties.name, class: f.properties.cls }, f.geometry)) },
+    zoning: { title: "County zoning", service: "maui-zoning", layer: 0, geom: "esriGeometryPolygon", label: "zone_dist", steward: "County of Maui, Department of Planning",
+      build: () => HM.get("zoning").features.map((f, i) => feature(i + 1, { objectid: i + 1, zone_dist: f.properties.name, zone_code: f.properties.code, zone_group: GROUP[HM.ZONE_GROUP[f.properties.code] || "other"] }, f.geometry)) },
+    parcels: { title: "Parcels (TMK)", service: "maui-parcels", layer: 1, geom: "esriGeometryPolygon", label: "tmk", steward: "County of Maui, Real Property Assessment",
+      build: () => HM.get("parcels").features.map((f) => { const p = f.properties; return feature(p.id, { objectid: p.id, tmk: HM.tmk(p.t9), zoning: ZN[p.zone] || "Not zoned", zone_group: GROUP[HM.ZONE_GROUP[p.zone] || "other"], flood_zone: p.fld || "X", land_use: LUDN[p.lud] || "Unknown", acres: p.acres || 0, land_value: p.land || 0, bldg_value: p.bldg || 0 }, f.geometry); }) },
+    schools: { title: "Schools", service: "maui-schools", layer: 0, geom: "esriGeometryPoint", label: "name", steward: "Hawaii Department of Education via Hawaii Statewide GIS",
+      build: () => HD.schools.features.map((f, i) => feature(i + 1, { objectid: i + 1, name: f.properties.name, address: f.properties.addr }, f.geometry)) },
+    shelters: { title: "Emergency shelters", service: "maui-shelters", layer: 0, geom: "esriGeometryPoint", label: "name", steward: "County of Maui EMA via Hawaii Statewide GIS",
+      build: () => HD.shelters.features.map((f, i) => feature(i + 1, { objectid: i + 1, name: f.properties.name, place: f.properties.place, capacity: f.properties.cap, pets: f.properties.pets ? "Yes" : "No" }, f.geometry)) },
+  };
+  function layerData(key) { const L = LAYERS[key]; if (!L.fc) L.fc = { type: "FeatureCollection", features: L.build() }; return L.fc; }
+  function fieldsOf(key) { return Object.keys(layerData(key).features[0].properties); }
+  function bboxOfFeatures(features) {
+    const b = [Infinity, Infinity, -Infinity, -Infinity];
+    const visit = (c) => { if (typeof c[0] === "number") { b[0] = Math.min(b[0], c[0]); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], c[0]); b[3] = Math.max(b[3], c[1]); } else c.forEach(visit); };
+    features.forEach((f) => f.geometry && visit(f.geometry.coordinates));
+    return b;
+  }
+  const centroidOf = (f) => { const b = bboxOfFeatures([f]); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]; };
+
+  /* ---------- A small SQL-92 where-clause evaluator, as the FeatureServer applies it ---------- */
+  const looseEq = (x, y) => (typeof x === "number" || typeof y === "number" ? Number(x) === Number(y) : String(x ?? "").toLowerCase() === String(y ?? "").toLowerCase());
+  function compileWhere(src, fields) {
+    const s = String(src).trim();
+    if (!s) throw new Error("'where' parameter is invalid");
+    const toks = [], re = /\s*(?:(\d+(?:\.\d+)?)|'((?:[^']|'')*)'|([A-Za-z_]\w*)|(<>|!=|>=|<=|=|<|>|\(|\)|,))/y;
+    for (let i = 0; i < s.length;) {
+      re.lastIndex = i; const m = re.exec(s);
+      if (!m) { if (!s.slice(i).trim()) break; throw new Error(`Unable to complete operation: invalid where clause near "${s.slice(i, i + 14).trim()}"`); }
+      i = re.lastIndex;
+      if (m[1] != null) toks.push({ t: "num", v: +m[1] });
+      else if (m[2] != null) toks.push({ t: "str", v: m[2].replace(/''/g, "'") });
+      else if (m[3] != null) { const u = m[3].toUpperCase(); toks.push(["AND", "OR", "NOT", "LIKE", "IN", "IS", "NULL"].includes(u) ? { t: "kw", v: u } : { t: "id", v: m[3] }); }
+      else if (m[4] != null) toks.push({ t: "op", v: m[4] });
+    }
+    const lower = Object.fromEntries(fields.map((f) => [f.toLowerCase(), f]));
+    let p = 0;
+    const peek = () => toks[p], take = () => toks[p++];
+    const isKw = (v) => peek() && peek().t === "kw" && peek().v === v;
+    const isOp = (v) => peek() && peek().t === "op" && peek().v === v;
+    const fail = (why) => { throw new Error(`Unable to complete operation: ${why}`); };
+    function operand() {
+      const t = take(); if (!t) fail("the where clause ends early");
+      if (t.t === "num" || t.t === "str") return () => t.v;
+      if (t.t === "id") { const f = lower[t.v.toLowerCase()]; if (!f) fail(`'${t.v}' is not a field of this layer`); return (r) => r[f]; }
+      return fail(`unexpected "${t.v}"`);
+    }
+    function comparison() {
+      if (isOp("(")) { take(); const e = disjunction(); if (!isOp(")")) fail("missing )"); take(); return e; }
+      if (isKw("NOT")) { take(); const e = comparison(); return (r) => !e(r); }
+      const a = operand(); let neg = false;
+      if (isKw("NOT")) { take(); neg = true; }
+      if (isKw("LIKE")) {
+        take(); const b = operand();
+        return (r) => { const pat = new RegExp("^" + String(b(r)).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".") + "$", "i"); return neg !== pat.test(String(a(r) ?? "")); };
+      }
+      if (isKw("IN")) {
+        take(); if (!isOp("(")) fail("IN needs a list"); take();
+        const list = [operand()]; while (isOp(",")) { take(); list.push(operand()); }
+        if (!isOp(")")) fail("missing )"); take();
+        return (r) => neg !== list.some((f) => looseEq(a(r), f(r)));
+      }
+      if (isKw("IS")) { take(); let n = false; if (isKw("NOT")) { take(); n = true; } if (!isKw("NULL")) fail("IS needs NULL"); take(); return (r) => n !== (a(r) == null || a(r) === ""); }
+      const o = take(); if (!o || o.t !== "op") fail("expected a comparison operator");
+      const b = operand();
+      const ops = { "=": looseEq, "<>": (x, y) => !looseEq(x, y), "!=": (x, y) => !looseEq(x, y), ">": (x, y) => x > y, "<": (x, y) => x < y, ">=": (x, y) => x >= y, "<=": (x, y) => x <= y };
+      const fn = ops[o.v] || fail(`unexpected "${o.v}"`);
+      return (r) => fn(a(r), b(r));
+    }
+    function conjunction() { let e = comparison(); while (isKw("AND")) { take(); const l = e, r2 = comparison(); e = (r) => l(r) && r2(r); } return e; }
+    function disjunction() { let e = conjunction(); while (isKw("OR")) { take(); const l = e, r2 = conjunction(); e = (r) => l(r) || r2(r); } return e; }
+    const e = disjunction();
+    if (p < toks.length) fail(`unexpected "${toks[p].v}"`);
+    return e;
+  }
+
+  /* ---------- Map runtime: every sample adds into RT and resetRuntime() removes it ---------- */
+  let map;
+  const RT = { layers: [], sources: [], handlers: [], popups: [], timers: [], cleanup: [] };
+  const BASE = ["land", "contours", "zoning-base", "waterbodies", "streams", "roads-casing", "roads"];
+  function rtSource(id, data) { map.addSource(id, { type: "geojson", data }); RT.sources.push(id); }
+  function rtLayer(def, before) { map.addLayer(def, before); RT.layers.push(def.id); }
+  function rtOn(type, a, b) { if (b) map.on(type, a, b); else map.on(type, a); RT.handlers.push(b ? [type, a, b] : [type, a]); }
+  function rtLater(fn, ms) { RT.timers.push(setTimeout(fn, ms)); }
+  function rtPopup(lngLat, html) { const p = new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setHTML(html).addTo(map); RT.popups.push(p); return p; }
+  function setBasemap(on) { BASE.forEach((id) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none")); $("#map").classList.toggle("no-labels", !on); }
+  function resetRuntime() {
+    RT.cleanup.splice(0).forEach((f) => { try { f(); } catch (e) { /* teardown is best effort */ } });
+    RT.timers.splice(0).forEach(clearTimeout);
+    RT.handlers.splice(0).forEach((h) => (h.length === 3 ? map.off(h[0], h[1], h[2]) : map.off(h[0], h[1])));
+    RT.popups.splice(0).forEach((p) => p.remove());
+    RT.layers.splice(0).reverse().forEach((id) => map.getLayer(id) && map.removeLayer(id));
+    RT.sources.splice(0).forEach((id) => map.getSource(id) && map.removeSource(id));
+    $("#mapUi").innerHTML = ""; $("#pvBottom").innerHTML = "";
+    map.getCanvas().style.cursor = "";
+    setBasemap(true);
+  }
+  function hoverCursor(ids) { ids.forEach((id) => { rtOn("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer")); rtOn("mouseleave", id, () => (map.getCanvas().style.cursor = "")); }); }
+  function attrTable(props, skip = []) { return `<table class="pop">${Object.entries(props).filter(([k]) => !skip.includes(k)).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(typeof v === "number" && /value/.test(k) ? money(v) : v)}</td></tr>`).join("")}</table>`; }
+  function statusPanel(state, text, requests, extra = "") {
+    const icon = { pass: "check-circle", fail: "alert", warn: "alert", run: "clock" }[state] || "info";
+    $("#pvBottom").innerHTML = `<div class="pv-status" data-state="${state}"><svg class="ico" aria-hidden="true"><use href="#i-${icon}"/></svg><span>${esc(text)}</span></div>${extra}${requests && requests.length ? `<pre class="reqlog" aria-label="Illustrative requests. This preview did not call the server.">${requests.map((r) => esc(r)).join("\n")}</pre>` : ""}`;
+  }
+  const VIZ = (i) => tok(`--viz-${i + 1}`);
+  const COLOR_TOKENS = ["--viz-1", "--viz-2", "--viz-3", "--viz-4"];
+
+  /* ---------- Live sample simulations ---------- */
+  const SIMS = {};
+
+  /* FeatureServer layer in MapLibre (honua-samples) */
+  SIMS.fslayer = {
+    hint: "Edit the parameters. This preview filters the embedded snapshot. The request list is illustrative and is not sent.",
+    params: (p) => [
+      { key: "layerKey", label: "Layer", code: "service/layer", type: "select", options: Object.entries(LAYERS).map(([k, L]) => [k, `${L.title} · ${L.service}/${L.layer}`]) },
+      { key: "where", label: "Filter", code: "where", type: "text", mono: true, placeholder: "1=1" },
+      { key: "labelField", label: "Popup title", code: "labelField", type: "select", options: fieldsOf(p.layerKey).map((f) => [f, f]) },
+      { key: "color", label: "Colour", code: "paint", type: "swatch" },
+      { key: "size", label: LAYERS[p.layerKey].geom === "esriGeometryPoint" ? "Point radius" : "Fill opacity", code: LAYERS[p.layerKey].geom === "esriGeometryPoint" ? "circle-radius" : "fill-opacity", type: "range", min: 2, max: 10, step: 1 },
+      { key: "basemap", label: "Basemap", code: "basemap", type: "check", text: "Show the embedded basemap" },
+    ],
+    defaults: { layerKey: "places", where: "1=1", labelField: "name", color: "--viz-1", size: 4, basemap: true },
+    normalize(p, key) { if (key === "layerKey") { p.labelField = LAYERS[p.layerKey].label; p.where = "1=1"; } },
+    sizeVals(p) { const pt = LAYERS[p.layerKey].geom === "esriGeometryPoint"; return { radius: pt ? p.size : 4, opacity: pt ? 0.35 : +(p.size / 20 + 0.1).toFixed(2) }; },
+    files(p) {
+      const L = LAYERS[p.layerKey], s = this.sizeVals(p);
+      return [
+        { name: "index.html · script", lang: "js", code: fill(tpl("fslayer-js"), { server: SERVER, service: L.service, layer: L.layer, where: jsStr(p.where), labelField: p.labelField, color: tok(p.color), radius: s.radius, opacity: s.opacity }) },
+        { name: "index.html", lang: "html", code: tpl("fslayer-html") },
+        BY["maplibre-featureserver-layer"].files.find((f) => f.name === "sample.json"),
+      ];
+    },
+    install: () => "# No install: one HTML file, maplibre-gl@6.4.1 from jsDelivr\nnpx serve src",
+    data: (p) => {
+      const L = LAYERS[p.layerKey];
+      if (p.layerKey === "shelters") return [["demo", "Exercise anchors on real school locations. Not official shelters. Schools underneath are public locations."]];
+      return [["real", `${L.title}: ${L.steward}`]];
+    },
+    apis: ["FeatureServer ?f=json", "FeatureServer /query f=geojson", "maplibregl.Map", "fitBounds", "maplibregl.Popup"],
+    mount(p) {
+      const L = LAYERS[p.layerKey], url = `${SERVER}/rest/services/${L.service}/FeatureServer/${L.layer}`;
+      const req = [`Illustrative GET ${url}?f=json`];
+      let features;
+      try {
+        const pred = compileWhere(p.where, fieldsOf(p.layerKey));
+        features = layerData(p.layerKey).features.filter((f) => pred(f.properties));
+      } catch (e) {
+        req.push(`Illustrative GET ${url}/query?${new URLSearchParams({ where: p.where, outFields: "*", returnGeometry: "true", outSR: "4326", resultOffset: "0", resultRecordCount: "2000", f: "geojson" })}`);
+        statusPanel("fail", `FAIL: ${e.message}`, req); return;
+      }
+      req.push(`Illustrative GET ${url}/query?${new URLSearchParams({ where: p.where, outFields: "*", returnGeometry: "true", outSR: "4326", resultOffset: "0", resultRecordCount: "2000", f: "geojson" })}`);
+      if (!features.length) { statusPanel("fail", "FAIL: The query returned no features.", req); return; }
+      setBasemap(p.basemap);
+      const s = this.sizeVals(p), c = tok(p.color);
+      rtSource("layer", { type: "FeatureCollection", features });
+      const isType = (...types) => ["match", ["geometry-type"], types, true, false];
+      rtLayer({ id: "layer-fill", type: "fill", source: "layer", filter: isType("Polygon", "MultiPolygon"), paint: { "fill-color": c, "fill-opacity": s.opacity } });
+      rtLayer({ id: "layer-line", type: "line", source: "layer", filter: isType("Polygon", "MultiPolygon", "LineString", "MultiLineString"), paint: { "line-color": c, "line-width": 1.5 } });
+      rtLayer({ id: "layer-point", type: "circle", source: "layer", filter: isType("Point", "MultiPoint"), paint: { "circle-radius": s.radius, "circle-color": c, "circle-stroke-color": tok("--map-pin-ring"), "circle-stroke-width": 1 } });
+      const ids = ["layer-fill", "layer-line", "layer-point"];
+      ids.forEach((id) => rtOn("click", id, (e) => { const pr = e.features[0].properties; rtPopup(e.lngLat, `<strong>${esc(pr[p.labelField] ?? "(no label)")}</strong>${attrTable(pr)}`); }));
+      hoverCursor(ids);
+      const b = bboxOfFeatures(features);
+      map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 40, duration: 0, maxZoom: 16 });
+      map.once("idle", () => {
+        const rendered = map.queryRenderedFeatures({ layers: ids.filter((id) => map.getLayer(id)) }).length;
+        statusPanel("pass", `Snapshot: ${L.title} (${L.geom}): ${features.length} features from the embedded extract, ${rendered} drawn. No server request was made. Click a feature for its attributes.`, req.filter(Boolean));
+      });
+      statusPanel("run", "Loading the layer...", req.filter(Boolean));
+    },
+    restyle(p) { const c = tok(p.color); if (map.getLayer("layer-fill")) { map.setPaintProperty("layer-fill", "fill-color", c); map.setPaintProperty("layer-line", "line-color", c); map.setPaintProperty("layer-point", "circle-color", c); map.setPaintProperty("layer-point", "circle-stroke-color", tok("--map-pin-ring")); } },
+  };
+
+  /* Category style and legend (honua-samples) */
+  const CAT_SETS = {
+    zoning: { collection: "maui-zoning", fields: ["zone_dist", "zone_group", "zone_code"] },
+    parcels: { collection: "maui-parcels", fields: ["flood_zone", "zone_group", "land_use", "zoning"] },
+    places: { collection: "maui-place-names", fields: ["class"] },
+  };
+  const KAHULUI = [-156.5, 20.87, -156.45, 20.9];
+  SIMS.category = {
+    hint: "The collection, field and class count drive one match expression. The palette is the Honua categorical scale for the current mode.",
+    params: (p) => [
+      { key: "layerKey", label: "Collection", code: "collection", type: "select", options: Object.entries(CAT_SETS).map(([k, c]) => [k, `${c.collection}`]) },
+      { key: "field", label: "Category field", code: "field", type: "select", options: CAT_SETS[p.layerKey].fields.map((f) => [f, f]) },
+      { key: "bbox", label: "Extent", code: "bbox", type: "select", options: [["kahului", "Kahului: -156.50,20.87,-156.45,20.90"], ["none", "none (whole collection)"]] },
+      { key: "maxClasses", label: "Coloured classes", code: "maxClasses", type: "range", min: 2, max: 8, step: 1 },
+    ],
+    defaults: { layerKey: "zoning", field: "zone_dist", bbox: "kahului", maxClasses: 8 },
+    normalize(p, key) { if (key === "layerKey") p.field = CAT_SETS[p.layerKey].fields[0]; },
+    palette(n) { return Array.from({ length: 8 }, (_, i) => VIZ(i)).slice(0, Math.max(n, 0)); },
+    files(p) {
+      const pt = p.layerKey === "places";
+      return [
+        { name: "index.html · script", lang: "js", code: fill(tpl("category-js"), { server: SERVER, collection: CAT_SETS[p.layerKey].collection, field: p.field, bbox: p.bbox === "none" ? "none" : KAHULUI.map((v) => v.toFixed(2)).join(","), maxClasses: p.maxClasses, palette: this.palette(8).map((c) => `"${c}"`).join(", "), other: tok("--c-border-strong"), layerType: pt ? "circle" : "fill", colorProp: pt ? "circle-color" : "fill-color", opacityProp: pt ? "circle-opacity" : "fill-opacity" }) },
+        BY["maplibre-category-style-legend"].files.find((f) => f.name === "sample.json"),
+      ];
+    },
+    install: () => "# No install: one HTML file, maplibre-gl@6.4.1 from jsDelivr\nnpx serve src",
+    data: (p) => [["real", `${LAYERS[p.layerKey].title}: ${LAYERS[p.layerKey].steward}`]],
+    apis: ["/queryables", "/items", "match expression", "maplibregl.Popup"],
+    mount(p) {
+      const coll = CAT_SETS[p.layerKey].collection, url = `${SERVER}/ogc/features/collections/${coll}`;
+      const q = new URLSearchParams({ limit: "1000", f: "json" }); if (p.bbox !== "none") q.set("bbox", KAHULUI.map((v) => v.toFixed(2)).join(","));
+      const req = [`Illustrative GET ${url}/queryables?f=json`, `Illustrative GET ${url}/items?${q}`];
+      let feats = layerData(p.layerKey).features;
+      if (p.bbox !== "none") feats = feats.filter((f) => { const b = bboxOfFeatures([f]); return b[2] >= KAHULUI[0] && b[0] <= KAHULUI[2] && b[3] >= KAHULUI[1] && b[1] <= KAHULUI[3]; });
+      const counts = new Map();
+      const items = feats.map((f) => { const v = f.properties[p.field]; const cat = v == null || v === "" ? "(none)" : String(v); counts.set(cat, (counts.get(cat) || 0) + 1); return { ...f, properties: { ...f.properties, category_class: cat } }; });
+      const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      const pal = this.palette(p.maxClasses), other = tok("--c-border-strong");
+      const classes = ranked.slice(0, p.maxClasses).map(([value, count], i) => ({ value, count, color: pal[i] }));
+      const otherCount = ranked.slice(p.maxClasses).reduce((s, [, c]) => s + c, 0);
+      this._classes = classes;
+      const expr = ["match", ["get", "category_class"], ...classes.flatMap((c) => [c.value, c.color]), other];
+      const pt = p.layerKey === "places";
+      rtSource("features", { type: "FeatureCollection", features: items });
+      if (pt) rtLayer({ id: "features-fill", type: "circle", source: "features", paint: { "circle-color": expr, "circle-opacity": 0.85, "circle-radius": 6, "circle-stroke-color": tok("--map-pin-ring"), "circle-stroke-width": 1 } });
+      else { rtLayer({ id: "features-fill", type: "fill", source: "features", paint: { "fill-color": expr, "fill-opacity": 0.7 } }); rtLayer({ id: "features-line", type: "line", source: "features", paint: { "line-color": tok("--map-halo"), "line-width": 0.6 } }); }
+      rtOn("click", "features-fill", (e) => { const pr = e.features[0].properties; rtPopup(e.lngLat, `<strong>${esc(pr.category_class)}</strong>${attrTable(pr, ["category_class"])}`); });
+      hoverCursor(["features-fill"]);
+      const rows = [...classes, ...(otherCount ? [{ value: "Other", count: otherCount, color: other }] : [])];
+      $("#mapUi").innerHTML = `<div class="card legend" style="left:12px;bottom:28px;max-width:min(280px,calc(100% - 24px));max-height:calc(100% - 60px);overflow-y:auto"><h3>${esc(p.field)}</h3><ul>${rows.map((c) => `<li><span class="sw" style="background:${c.color}"></span><span>${esc(c.value)}</span><span class="n">${c.count}</span></li>`).join("")}</ul></div>`;
+      const b = bboxOfFeatures(items);
+      if (items.length) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 30, duration: 0, maxZoom: 16 });
+      map.once("idle", () => {
+        const rendered = map.queryRenderedFeatures({ layers: ["features-fill"] }).length;
+        statusPanel("pass", `Snapshot: ${items.length} features from the embedded extract, ${counts.size} distinct "${p.field}" values, ${rendered} drawn. No server request was made. Click a ${pt ? "point" : "polygon"} for details.`, req);
+      });
+      statusPanel("run", "Loading the collection...", req);
+    },
+    restyle(p) { remount(); },
+  };
+
+
+  /* ---------- Sample list ---------- */
+  const state = { id: null, tab: "pv", file: 0, params: {}, prevCode: {}, filter: "all", q: "" };
+  const isJs = (s) => s.langs.some((l) => ["TypeScript", "React", "Web components", "Node", "HTML"].includes(l)) && !s.langs.some((l) => ["Python", ".NET"].includes(l));
+  const usesSdk = (s) => s.repo === "sdk-js" || s.files.some((f) => /@honua\/sdk-js|honua_sdk|create-honua-app/.test(f.code));
+  function matches(s) {
+    const f = state.filter;
+    if (f === "live" && !s.live) return false;
+    if (f === "js" && !isJs(s)) return false;
+    if (f === "rest" && (usesSdk(s) || s.status === "Moved" || s.status === "Retired")) return false;
+    if (f === "other" && !s.langs.some((l) => ["Python", ".NET"].includes(l))) return false;
+    if (!state.q) return true;
+    const hay = [s.id, s.title, s.desc, s.path, ...s.apis, ...s.langs, CATNAME[s.cat]].join(" ").toLowerCase();
+    return state.q.toLowerCase().split(/\s+/).every((w) => hay.includes(w));
+  }
+  const CATNAME = Object.fromEntries(D.categories.map((c) => [c.id, c.name]));
+  function renderList() {
+    const html = D.categories.map((c) => {
+      const items = D.samples.filter((s) => s.cat === c.id && matches(s)).sort((a, b) => (!!b.live - !!a.live) || (!!a.moved - !!b.moved));
+      if (!items.length) return "";
+      return `<section class="cat" aria-labelledby="cat-${c.id}"><h2 id="cat-${c.id}">${esc(c.name)}<span class="ct">${items.length}</span></h2>${items.map((s) => `<button type="button" class="item${s.status === "Moved" || s.status === "Retired" ? " dim" : ""}" data-id="${s.id}" aria-pressed="${s.id === state.id}"><span class="t"><span>${esc(s.title)}</span>${s.live ? `<span class="chip sm accent">Live</span>` : s.status ? `<span class="chip sm">${esc(s.status)}</span>` : ""}</span><span class="s"><em>${esc(s.id)}</em><span>·</span><span>${s.repo === "sdk-js" ? "sdk-js" : "samples"}</span></span></button>`).join("")}</section>`;
+    }).join("");
+    $("#list").innerHTML = html || `<p class="empty">No samples match "${esc(state.q)}".</p>`;
+  }
+  $("#list").addEventListener("click", (e) => { const b = e.target.closest(".item"); if (b) select(b.dataset.id); });
+  $("#q").addEventListener("input", (e) => { state.q = e.target.value.trim(); renderList(); });
+  $("#flt").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; state.filter = b.dataset.f; document.querySelectorAll("#flt button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderList(); });
+
+  /* ---------- Selection, params, source, readme ---------- */
+  const sim = () => { const s = BY[state.id]; return D.display && s && s.live ? SIMS[s.live] ?? null : null; };
+  function select(id, opts = {}) {
+    if (!BY[id]) id = "maplibre-featureserver-layer";
+    const s = BY[id];
+    state.id = id; state.file = 0; state.prevCode = {};
+    const sm = sim();
+    state.params = sm ? { ...sm.defaults } : {};
+    renderList();
+    $("#sTitle").textContent = s.title;
+    $("#sDesc").textContent = s.desc;
+    const st = s.status ? `<span class="chip ${s.status === "Experimental" ? "warn" : ""}">${esc(s.status)}${s.moved ? ` → <button class="btn ghost sm" style="height:18px;padding:0 4px" type="button" data-goto="${s.moved}">${esc(BY[s.moved].title)}</button>` : ""}</span>` : "";
+    $("#sMeta").innerHTML = `${s.live ? `<span class="chip accent">Live preview</span>` : `<span class="chip">Source and readme</span>`}${st}${s.langs.map((l) => `<span class="chip">${esc(l)}</span>`).join("")}<span class="path">${esc(s.path)}</span>`;
+    const g = $("#sMeta").querySelector("[data-goto]"); if (g) g.addEventListener("click", () => select(g.dataset.goto));
+    $("#ghLink").href = s.url;
+    const sb = $("#sbLink"); sb.style.display = s.playground ? "" : "none"; sb.href = s.url.replace("https://github.com/", "https://stackblitz.com/github/");
+    renderRight();
+    renderPreview();
+    renderSource();
+    renderReadme();
+    if (opts.tab) activateTab(opts.tab);
+    writeHash();
+    if (!opts.keepScroll) { const it = $(`#list .item[data-id="${id}"]`), box = $("#list"); if (it && (it.offsetTop < box.scrollTop || it.offsetTop + it.offsetHeight > box.scrollTop + box.clientHeight)) box.scrollTop = it.offsetTop - 40; }
+  }
+  function activateTab(t) { const b = { pv: "#tabPv", src: "#tabSrc", md: "#tabMd" }[t]; if (b) $(b).click(); }
+  function writeHash() { try { history.replaceState(null, "", `#${state.id}${state.tab !== "pv" ? "/" + state.tab : ""}`); } catch (e) { /* file:// or sandboxed frames may refuse */ } }
+  document.querySelectorAll('.shead [role="tab"]').forEach((b) => b.addEventListener("click", () => { state.tab = { tabPv: "pv", tabSrc: "src", tabMd: "md" }[b.id]; if (state.tab === "pv" && map) setTimeout(() => map.resize(), 0); writeHash(); }));
+
+  function renderRight() {
+    const s = BY[state.id], sm = sim();
+    $("#tryHint").textContent = sm ? sm.hint : s.status === "Moved" || s.status === "Retired" ? "This folder is a redirect stub. Open the replacement sample instead." : "Open Source or README for the pinned files and setup instructions. A preview is shown only when a current runnable build is admitted.";
+    $("#params").innerHTML = sm ? sm.params(state.params).map(paramHtml).join("") : runLocalHtml(s);
+    if (sm) bindParams();
+    $("#install").innerHTML = snippet(sm ? sm.install() : installFor(s));
+    $("#apis").innerHTML = (sm ? sm.apis : s.apis).map((a) => `<code>${esc(a)}</code>`).join("") || `<span class="faint">None: plain HTTP requests.</span>`;
+    const data = sm ? sm.data(state.params) : s.preview
+      ? [[s.preview.dataMode === "public-live" || s.preview.dataMode === "live" ? "real" : "demo", `${s.preview.dataModeLabel}; built from ${s.preview.commit ?? "unknown commit"}. Fixture and hybrid modes include demo records.`]]
+      : [["none", "Source and README only; no verified preview in this deployment."]];
+    $("#datas").innerHTML = data.map(([k, t]) => `<div>${k === "real" ? `<span class="tag-real">Real</span>` : k === "demo" ? `<span class="tag-demo">Demo</span>` : `<span class="chip sm">n/a</span>`}<span>${esc(t)}</span></div>`).join("");
+  }
+  function runLocalHtml(s) {
+    if (!s.run) return `<p class="faint" style="margin-top:10px;font-size:13px">No run command: see the readme.</p>`;
+    return `<div class="prm"><span class="lbl">Run it</span>${snippet(s.run)}</div>`;
+  }
+  function installFor(s) {
+    if (s.langs.includes("Python")) return s.files.some((f) => f.name === "requirements.txt") ? "pip install -r requirements.txt   # honua-sdk" : "# Python standard library only\npython src/run.py";
+    if (s.langs.includes(".NET")) return "# .NET 10 SDK\n" + (s.run || "dotnet run");
+    if (s.repo === "samples" && !s.files.some((f) => /@honua\/sdk-js|create-honua-app/.test(f.code))) return `# No SDK needed: plain HTTP against the server\n${s.run}`;
+    if (/create honua-app/.test(s.run)) return s.run;
+    const extra = s.id === "react-quickstart" ? " react react-dom" : s.id === "sketch-editing" ? " terra-draw terra-draw-maplibre-gl-adapter" : "";
+    return `npm install @honua/sdk-js maplibre-gl${extra}\n# core client only: npm install @honua/sdk`;
+  }
+  function snippet(text) {
+    const lines = String(text).split("\n").map((l) => (l.startsWith("#") ? `<span class="c">${esc(l)}</span>` : esc(l))).join("\n");
+    return `<div class="snip" data-text="${esc(text)}">${lines}<button class="iconbtn cp" type="button" aria-label="Copy" title="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg></button></div>`;
+  }
+  document.addEventListener("click", (e) => { const b = e.target.closest(".snip .cp"); if (b) copyText(b.closest(".snip").dataset.text, b); });
+  function paramHtml(sp) {
+    const v = state.params[sp.key], id = "p-" + sp.key;
+    const lab = `<label for="${id}"><span>${esc(sp.label)}</span><code>${esc(sp.code)}</code></label>`;
+    if (sp.type === "select") return `<div class="prm">${lab}<select id="${id}" data-k="${sp.key}">${sp.options.map(([o, t]) => `<option value="${esc(o)}"${String(o) === String(v) ? " selected" : ""}>${esc(t)}</option>`).join("")}</select></div>`;
+    if (sp.type === "text") return `<div class="prm">${lab}<input type="text" id="${id}" data-k="${sp.key}" value="${esc(v)}" class="${sp.mono ? "mono" : ""}" placeholder="${esc(sp.placeholder || "")}" spellcheck="false" autocomplete="off"><div class="err" id="${id}-err" hidden></div></div>`;
+    if (sp.type === "range") return `<div class="prm"><label for="${id}"><span>${esc(sp.label)}: <b class="num" id="${id}-v">${esc(v)}</b></span><code>${esc(sp.code)}</code></label><input type="range" id="${id}" data-k="${sp.key}" min="${sp.min}" max="${sp.max}" step="${sp.step}" value="${esc(v)}"></div>`;
+    if (sp.type === "check") return `<div class="prm"><span class="lbl"><span>${esc(sp.label)}</span><code>${esc(sp.code)}</code></span><label class="chk"><input type="checkbox" id="${id}" data-k="${sp.key}"${v ? " checked" : ""}>${esc(sp.text)}</label></div>`;
+    if (sp.type === "swatch") return `<div class="prm"><span class="lbl"><span>${esc(sp.label)}</span><code>${esc(sp.code)}</code></span><div class="sws" role="group" aria-label="${esc(sp.label)}">${COLOR_TOKENS.map((t, i) => `<button type="button" data-k="${sp.key}" data-v="${t}" aria-pressed="${t === v}" aria-label="Categorical colour ${i + 1}" title="${t}"><span style="background:var(${t})"></span></button>`).join("")}</div></div>`;
+    return "";
+  }
+  let debounce;
+  function bindParams() {
+    $("#params").querySelectorAll("select[data-k]").forEach((el) => el.addEventListener("change", () => { state.params[el.dataset.k] = el.value; paramsChanged(el.dataset.k); }));
+    $("#params").querySelectorAll("input[type=checkbox][data-k]").forEach((el) => el.addEventListener("change", () => { state.params[el.dataset.k] = el.checked; paramsChanged(el.dataset.k); }));
+    $("#params").querySelectorAll("input[type=range][data-k]").forEach((el) => el.addEventListener("input", () => { state.params[el.dataset.k] = +el.value; $(`#p-${el.dataset.k}-v`).textContent = el.value; clearTimeout(debounce); debounce = setTimeout(() => paramsChanged(el.dataset.k), 120); }));
+    $("#params").querySelectorAll("input[type=text][data-k]").forEach((el) => el.addEventListener("input", () => { state.params[el.dataset.k] = el.value; clearTimeout(debounce); debounce = setTimeout(() => paramsChanged(el.dataset.k, true), 350); }));
+    $("#params").querySelectorAll(".sws button").forEach((el) => el.addEventListener("click", () => { state.params[el.dataset.k] = el.dataset.v; el.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === el))); paramsChanged(el.dataset.k); }));
+  }
+  function paramsChanged(key, fromText) {
+    const sm = sim(); if (!sm) return;
+    if (sm.normalize) sm.normalize(state.params, key);
+    if (!fromText && (key === "layerKey" || key === "ep")) { $("#params").innerHTML = sm.params(state.params).map(paramHtml).join(""); bindParams(); }
+    if (sm.softKeys && sm.softKeys.includes(key)) sm.soft(state.params); else remount();
+    renderSource(true);
+    const d = sm.data(state.params);
+    $("#datas").innerHTML = d.map(([k, t]) => `<div>${k === "real" ? `<span class="tag-real">Real</span>` : `<span class="tag-demo">Demo</span>`}<span>${esc(t)}</span></div>`).join("");
+    if (key === "where" || key === "maxFeatures") showWhereError();
+  }
+  function showWhereError() {
+    const el = $("#p-where-err"); if (!el) return;
+    const s = BY[state.id];
+    const key = s.live === "firstmap" ? FM_ENDPOINTS[state.params.ep].layerKey : state.params.layerKey;
+    try { compileWhere(state.params.where, fieldsOf(key)); el.hidden = true; } catch (e) { el.hidden = false; el.textContent = e.message + `. Fields: ${fieldsOf(key).join(", ")}`; }
+  }
+  function remount() { if (!map || !mapLoaded) return; resetRuntime(); const sm = sim(); if (sm) sm.mount(state.params); }
+
+  let mapLoaded = false;
+  function renderPreview() {
+    const s = BY[state.id], sm = sim();
+    const pv = $("#pvPanel");
+    const local = pv.querySelector(".runlocal"); if (local) local.remove();
+    $("#map").hidden = !sm; $("#pvBottom").hidden = !sm;
+    pv.style.gridTemplateRows = sm ? "" : "minmax(0, 1fr)";
+    if (map) resetRuntime();
+    if (sm) { if (mapLoaded) { map.resize(); sm.mount(state.params); } return; }
+    if (s.preview) {
+      const url = new URL(s.preview.url, location.origin);
+      if (url.origin !== location.origin) throw new Error("Preview must be on this site");
+      const frame = document.createElement("iframe"); frame.className = "runlocal";
+      frame.src = url.href; frame.title = `${s.title} — running sample`;
+      frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms allow-popups");
+      frame.style.cssText = "display:block;width:100%;height:100%;border:0;padding:0";
+      pv.appendChild(frame); return;
+    }
+    const box = document.createElement("div"); box.className = "runlocal";
+    const moved = s.moved ? `<p style="margin-top:14px"><button class="btn primary" type="button" data-goto="${s.moved}">Open ${esc(BY[s.moved].title)}</button></p>` : "";
+    box.innerHTML = `<div class="box"><h3>${s.status === "Moved" || s.status === "Retired" ? esc(s.status) : "Runs outside this page"}</h3><p>${esc(s.desc)}</p>${s.run ? `<div class="snip" style="margin-top:14px">${esc(s.run)}</div>` : ""}<p>${s.playground ? `Open it in StackBlitz to run it with no install, or read the source and readme here.` : `The source and readme tabs show the real files from ${esc(s.path)} in the pinned source snapshot.`}</p>${moved}<p class="faint" style="font-size:12px;margin-top:14px">Live previews on this page: ${D.samples.filter((x) => x.live).map((x) => `<button class="btn ghost sm" type="button" data-goto="${x.id}">${esc(x.title)}</button>`).join(" ")}</p></div>`;
+    box.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => select(b.dataset.goto)));
+    pv.appendChild(box);
+  }
+
+  /* ---------- Source view with highlighting and change marks ---------- */
+  const KW = { js: "import|from|export|const|let|var|function|async|await|return|if|else|for|of|in|new|try|catch|throw|type|interface|typeof|class|extends|null|undefined|true|false|void|default|as|declare|readonly", py: "import|from|def|return|if|else|elif|for|in|with|as|try|except|raise|None|True|False|and|or|not|print|class|lambda", sh: "export|if|then|fi|for|do|done|cd|set", cs: "using|namespace|public|private|static|class|var|new|return|await|async|void|string|int|bool|true|false|null|record|sealed" };
+  KW.ts = KW.js;
+  function apiSet() { const s = BY[state.id], sm = sim(); const names = new Set(); (sm ? sm.apis : s.apis).forEach((a) => a.split(/[^A-Za-z0-9_]+/).forEach((w) => w.length > 3 && names.add(w))); return names; }
+  function hlCode(code, lang, apis) {
+    const out = []; let line = "";
+    const push = (text, cls) => { text.split("\n").forEach((seg, i) => { if (i) { out.push(line); line = ""; } if (seg) line += cls ? `<span class="${cls}">${esc(seg)}</span>` : esc(seg); }); };
+    if (lang === "html") {
+      const re = /(<!--[\s\S]*?--!?>)|(<\/?[A-Za-z][\w-]*)|(\s[\w:-]+)(?==)|("[^"]*")|(\/?>)/g; let i = 0, m;
+      while ((m = re.exec(code))) { if (m.index > i) push(code.slice(i, m.index)); if (m[1]) push(m[1], "t-c"); else if (m[2]) push(m[2], "t-tag"); else if (m[3]) push(m[3], "t-at"); else if (m[4]) push(m[4], "t-s"); else push(m[5], "t-tag"); i = re.lastIndex; }
+      push(code.slice(i)); out.push(line); return out;
+    }
+    if (lang === "json") {
+      const re = /("(?:\\.|[^"\\])*")(\s*:)?|\b(-?\d+(?:\.\d+)?)\b|\b(true|false|null)\b/g; let i = 0, m;
+      while ((m = re.exec(code))) { if (m.index > i) push(code.slice(i, m.index)); if (m[1]) { push(m[1], m[2] ? "t-key" : "t-s"); if (m[2]) push(m[2]); } else if (m[3]) push(m[3], "t-n"); else push(m[4], "t-k"); i = re.lastIndex; }
+      push(code.slice(i)); out.push(line); return out;
+    }
+    const kw = KW[lang] || KW.js;
+    const cmt = lang === "py" || lang === "sh" || lang === "txt" ? "#[^\\n]*" : "\\/\\/[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/";
+    const re = new RegExp(`(${cmt})|("(?:\\\\.|[^"\\\\\\n])*"|'(?:\\\\.|[^'\\\\\\n])*'|\`(?:\\\\.|[^\`\\\\])*\`)|\\b(\\d[\\d_.]*)\\b|\\b(${kw})\\b|([A-Za-z_$][\\w$]*)`, "g");
+    let i = 0, m;
+    while ((m = re.exec(code))) {
+      if (m.index > i) push(code.slice(i, m.index));
+      if (m[1]) push(m[1], "t-c"); else if (m[2]) push(m[2], "t-s"); else if (m[3]) push(m[3], "t-n"); else if (m[4]) push(m[4], "t-k"); else push(m[5], apis.has(m[5]) ? "t-a" : "");
+      i = re.lastIndex;
+    }
+    push(code.slice(i)); out.push(line); return out;
+  }
+  function currentFiles() { const s = BY[state.id], sm = sim(); return (sm ? sm.files(state.params) : s.files).filter(Boolean); }
+  function renderSource(changed) {
+    const s = BY[state.id], sm = sim(), files = currentFiles();
+    if (state.file >= files.length) state.file = 0;
+    $("#fileTabs").innerHTML = files.map((f, i) => `<button type="button" data-i="${i}" aria-pressed="${i === state.file}">${esc(f.name)}</button>`).join("") || `<span class="faint" style="padding:4px 8px;font-size:12px">No source files</span>`;
+    $("#fileTabs").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { state.file = +b.dataset.i; renderSource(); }));
+    const f = files[state.file];
+    $("#copyBtn").disabled = !f;
+    if (!f) { $("#code").innerHTML = `<p class="faint" style="padding:16px">${s.moved ? `This folder only holds a redirect README. See ${esc(BY[s.moved].title)}.` : "This folder holds only a README."}</p>`; $("#srcNote").textContent = ""; return; }
+    const defaults = sm ? (sm._defaultFiles ||= sm.files(sm.defaults)).find((d) => d && d.name === f.name) : null;
+    const base = defaults ? defaults.code.split("\n") : null;
+    const prev = state.prevCode[f.name] ? state.prevCode[f.name].split("\n") : null;
+    const lines = hlCode(f.code, f.lang, apiSet());
+    const raw = f.code.split("\n");
+    let mods = 0;
+    $("#code").innerHTML = `<pre><code>${lines.map((l, i) => { const mod = base && base.length === raw.length && base[i] !== raw[i]; const fl = changed && prev && prev.length === raw.length && prev[i] !== raw[i]; if (mod) mods++; return `<span class="ln${mod ? " mod" : ""}${fl ? " flash" : ""}" data-n="${i + 1}">${l || " "}</span>`; }).join("")}</code></pre>`;
+    files.forEach((x) => (state.prevCode[x.name] = x.code));
+    $("#srcNote").textContent = sm ? (mods ? `${mods} line${mods === 1 ? "" : "s"} changed by Try it` : "Trimmed from trunk; endpoint points at the demo server") : `Pinned source snapshot: ${s.path}`;
+    if (changed) { const first = $("#code .ln.flash"), box = $("#code"); if (first && state.tab === "src" && (first.offsetTop < box.scrollTop || first.offsetTop > box.scrollTop + box.clientHeight - 30)) box.scrollTop = first.offsetTop - 60; }
+  }
+  $("#copyBtn").addEventListener("click", (e) => { const f = currentFiles()[state.file]; if (f) copyText(f.code, e.currentTarget); });
+  function copyText(text, btn) {
+    const done = (ok) => { const sp = btn.querySelector("span"); const old = sp ? sp.textContent : btn.title; if (sp) sp.textContent = ok ? "Copied" : "Press Ctrl+C"; btn.title = ok ? "Copied" : "Copy failed"; setTimeout(() => { if (sp) sp.textContent = old; btn.title = "Copy"; }, 1600); };
+    try { navigator.clipboard.writeText(text).then(() => done(true), () => done(fallbackCopy(text))); } catch (e) { done(fallbackCopy(text)); }
+  }
+  function fallbackCopy(text) { try { const t = document.createElement("textarea"); t.value = text; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); const ok = document.execCommand("copy"); t.remove(); return ok; } catch (e) { return false; } }
+
+function sanitizedReadme(html) {
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const allowed = new Set(['P','H1','H2','H3','H4','UL','OL','LI','PRE','CODE','B','STRONG','EM','A','BR','TABLE','TBODY','THEAD','TR','TH','TD']);
+  function copy(source) {
+    if (source.nodeType === Node.TEXT_NODE) return document.createTextNode(source.textContent);
+    const target = document.createElement(allowed.has(source.nodeName) ? source.nodeName.toLowerCase() : 'span');
+    if (source.nodeName === 'A') {
+      const href = source.getAttribute('href');
+      if (/^https?:\/\//i.test(href ?? '')) { target.href = href; target.target = '_blank'; target.rel = 'noopener noreferrer'; }
+    }
+    target.append(...[...source.childNodes].map(copy)); return target;
+  }
+  return [...parsed.body.childNodes].map(copy);
+}
+  function renderReadme() {
+    const s = BY[state.id];
+    $("#md").replaceChildren(...sanitizedReadme(s.readme || `<p>${esc(s.desc)}</p>`));
+    $("#md").insertAdjacentHTML("beforeend", `<p class="src">Pinned README from <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.path)}</a>.</p>`);
+  }
+
+  /* ---------- Boot ---------- */
+  $("#verTop").textContent = VER;
+  $("#verBadge").textContent = `SDK ${VER}`;
+  $("#revNote").textContent = `· ${D.samples.length} samples from pinned snapshots, ${D.sdkRev.split(" ")[1]}`;
+  $("#revNote").title = `honua-sdk-js ${D.sdkRev}, honua-samples ${D.samplesRev}; source snapshots are unmodified; preview provenance is shown separately`;
+  renderList();
+  const hash = (location.hash || "").slice(1).split("/");
+  select(BY[hash[0]] ? hash[0] : "maplibre-featureserver-layer", { tab: hash[1] === "src" || hash[1] === "md" ? hash[1] : null, keepScroll: true });
+  if (D.display) {
+    map = HM.create($("#map"), { view: "core", padding: 20 });
+    if (map) map.on("load", () => { mapLoaded = true; const sm = sim(); if (sm && !$("#map").hidden) { map.resize(); resetRuntime(); sm.mount(state.params); } });
+    document.addEventListener("honua:theme", () => { const sm = sim(); if (mapLoaded && sm && sm.restyle) sm.restyle(state.params); if (sm) renderSource(); });
+  }
+
+})();
+</script>
+</body>
+</html>

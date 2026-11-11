@@ -1,0 +1,6 @@
+.skip { position: absolute; top: -80px; z-index: 10; padding: 12px; background: var(--c-surface); }.skip:focus { top: 12px; }
+.topbar { min-height: 64px; display: flex; align-items: center; gap: 24px; padding: 10px 24px; border-bottom: 1px solid var(--c-border); background: var(--c-topbar-bg); }
+.brand { display: flex; align-items: center; }.app-name { border-left: 1px solid var(--c-border); padding-left: 20px; color: var(--c-text-2); }
+nav { display: flex; gap: 24px; }nav a { color: var(--c-text-2); text-decoration: none; padding: 10px 0; }nav a:hover { color: var(--c-link); text-decoration: underline; }.theme-toggle { margin-left: auto; }
+@media (max-width: 1000px) { .topbar { flex-wrap: wrap; gap: 16px; }nav { order: 3; width: 100%; } }
+@media (max-width: 640px) { .topbar { padding-left: 16px; padding-right: 16px; gap: 12px; }.app-name { font-size: 12px; padding-left: 12px; }.theme-toggle { font-size: 12px; } }

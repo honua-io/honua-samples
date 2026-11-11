@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('honua-theme')==='dark'?'dark':'light'}catch{}</script>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark"><title>Maui Workbench · Numeric depth · Honua</title>
+  <link rel="stylesheet" href="/state-local/assets/tokens.css"><link rel="stylesheet" href="/state-local/assets/shared.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to numeric depth</a>
+  <header class="topbar"><a class="brand" href="../../state-local/" aria-label="Honua state and local demos"><img class="logo-light" src="/state-local/assets/honua-lockup.svg" alt="Honua" width="94" height="24"><img class="logo-dark" src="/state-local/assets/honua-lockup-on-dark.svg" alt="Honua" width="94" height="24"></a><span class="app-name">Maui · Workbench</span><button class="theme-toggle" type="button" aria-label="Switch to dark mode">Dark mode</button></header>
+  <main id="main">
+    <div class="heading"><h1>Explore modeled depth</h1><p>Lahaina · NOAA sea-level scenario · <a id="analysis-link" href="./analysis.html">County records analysis</a></p></div>
+    <p class="notice">Planning and screening only. Not a forecast, evacuation instruction or safety classification.</p>
+    <div class="workspace">
+      <aside aria-label="Raster source"><h2>Data layer</h2><h3>Ocean-connected inundation</h3><dl><dt>Scenario</dt><dd>+3 ft sea level above MHHW</dd><dt>Measurement</dt><dd>Depth in metres above ground</dd><dt>Source model vintage</dt><dd>Not independently verified</dd><dt>Grid</dt><dd>EPSG:3857 · nearest-neighbour reprojection</dd></dl><p>NoData means no modeled depth value. It does not mean zero depth or safety.</p><button type="button" id="load-depth">Load numeric raster</button><p id="load-status" role="status">Loads on request. No external basemap tiles.</p></aside>
+      <section class="map-panel" aria-labelledby="map-heading"><h2 id="map-heading">Lahaina depth grid</h2><p id="map-help">After loading, hover or click a cell. Focus the map and use arrow keys to inspect adjacent cells.</p><div class="canvas-frame"><canvas id="depth-map" width="768" height="1024" tabindex="0" aria-label="Numeric depth grid, north at top" aria-describedby="map-help" aria-disabled="true"></canvas></div><p class="extent">156.690°W – 156.668°W · 20.868°N – 20.895°N</p></section>
+      <aside aria-label="Numeric inspection"><h2>Cell inspection</h2><output id="cell-value" aria-live="polite">No cell selected</output><p id="cell-location">Load the raster to inspect its numeric values.</p><h3>Depth · metres above ground</h3><ol class="legend"><li><span class="swatch shallow"></span>0 to &lt;0.5 m</li><li><span class="swatch middle"></span>0.5 to &lt;1 m</li><li><span class="swatch deep"></span>1 to &lt;2 m</li><li><span class="swatch deepest"></span>2 m or deeper</li><li><span class="swatch unknown"></span>NoData · unknown</li></ol><p>Colour represents these depth bands. Numeric inspection retains Float32 values rather than reading display colours.</p></aside>
+    </div>
+    <footer><p>NOAA Office for Coastal Management, Sea Level Rise Viewer. <a href="https://coast.noaa.gov/slrdata/Depth_Rasters/HI/HI_Maui_slr_depth_3ft.tif">Original numeric source</a> · <a href="https://www.fisheries.noaa.gov/inport/item/48106">Dataset metadata</a> · <a href="https://oceanservice.noaa.gov/about/faq.html">Public-domain policy</a></p><p>The +3 ft above MHHW scenario is separate from the State’s 3.2 ft sea-level-rise exposure-area polygons. This numeric view is one Workbench feature; linked query, charts and export are not connected here.</p></footer>
+  </main>
+  <script src="/state-local/assets/theme.js"></script><script type="module" src="/src/main.mjs"></script>
+</body></html>
