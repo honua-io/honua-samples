@@ -120,6 +120,12 @@ function parcelRecord(html) {
   return context.result;
 }
 
+test('the approved overview links to the published SDK Explorer', async () => {
+  const html = await readFile(path.join(repoRoot, 'scripts/state-local/approved/pages/01-overview.html'), 'utf8');
+  assert.match(html, /href="\/state-local\/sdk-explorer\/"/);
+  assert.doesNotMatch(html, /SDK explorer · Coming soon/);
+});
+
 test('source highlighting closes an HTML comment on the browser comment-end error', async () => {
   const html = await readFile(path.join(repoRoot, 'scripts/state-local/approved/13-sdk-explorer.html'), 'utf8');
   assert.ok(html.includes('<!--[\\s\\S]*?--!?>'));
