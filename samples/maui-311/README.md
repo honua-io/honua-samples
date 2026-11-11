@@ -50,6 +50,9 @@ does not expose an Open311 endpoint or claim those gates have passed.
 
 ## Published SDK queries
 
+Generate a [receipt-bound stock MCP client setup and question](../../docs/state-local-mcp.md)
+for the agent moment. Setup generation does not mark the stock-client journey complete.
+
 Query `maui-demo-requests` with the same filter in JavaScript, Python and .NET.
 These examples are one bounded, read-only query, not the complete Studio/MCP demo.
 They print the source citation and all returned attributes, including exercise labels.

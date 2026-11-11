@@ -79,6 +79,9 @@ Default filter: `record_type = 'exercise_shelter' AND status <> 'exercise_closed
 
 ## Real-server contract check
 
+Generate a [receipt-bound stock MCP client setup and question](../../docs/state-local-mcp.md)
+for the agent moment. Setup generation does not mark the stock-client journey complete.
+
 The browser contract runs through the capability-keyed sample manifest against a
 disposable, default PostGIS-only candidate server:
 
