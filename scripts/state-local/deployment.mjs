@@ -4,7 +4,7 @@ import { adminFetch } from "../lib/admin-api.mjs";
 import { layersPath, listLayers } from "./import.mjs";
 import { readSnapshot } from "./snapshot.mjs";
 
-function receiptPath(directory, name) {
+export function receiptPath(directory, name) {
   if (!/^[a-z0-9][a-z0-9_-]*$/.test(name)) throw new Error("Invalid deployment source name");
   return path.join(directory, `${name}.deployment.json`);
 }

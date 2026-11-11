@@ -5,7 +5,7 @@ import { serverEnv } from '../../lib/admin-api.mjs';
 import { ensureConnection } from '../../lib/sample-connection.mjs';
 import { ensureDepartments } from '../departments.mjs';
 import { stageVerifiedSnapshot, sourceLicense } from '../import.mjs';
-import { verifyLayer, saveDeployment, readDeployment } from '../deployment.mjs';
+import { verifyLayer, saveDeployment, readDeployment, receiptPath } from '../deployment.mjs';
 import { islandSources } from './sources.mjs';
 import { readIslandSnapshot } from './island-snapshot.mjs';
 
@@ -21,7 +21,7 @@ export async function readIslandDeployment(env, options) {
 
 async function stageLayer(env, options) {
   const { name, directory, connection, snapshot } = options;
-  const filename = path.join(directory, `${name}.deployment.json`);
+  const filename = receiptPath(directory, name);
   try {
     await stat(filename);
   } catch (error) {

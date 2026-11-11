@@ -74,17 +74,22 @@ test('island staging preflights every snapshot before creating any server resour
     connection: 'managed', deploymentDirectory: path.join(options.directory, 'deployments') }), /ENOENT/);
 });
 
-test('resumed island deployments refuse an enabled layer', async (t) => {
-  const { options } = await snapshot(t);
-  const receipt = { format: 'honua.samples.deployment.v1', source: 'roads', baseUrl: 'https://server.test', connection: 'managed',
-    cleanSha256: 'checksum', serviceName: 'roads', layerId: 1, schema: 'public', table: 'roads', folderId: 'works' };
-  await writeFile(path.join(options.directory, 'roads.deployment.json'), JSON.stringify(receipt));
-  t.mock.method(globalThis, 'fetch', async (url) => Response.json({ data: { items: url.includes('/services/?q=')
-    ? [{ ...receipt, folderName: 'Public Works', publicName: 'roads' }]
-    : [{ ...receipt, enabled: true, license: 'LicenseRef-Hawaii-Statewide-GIS-Public-Domain', licenseUrl: islandSources.roads.licenseUrl, attribution: islandSources.roads.attribution, description: 'SHA-256 checksum' }] } }));
-  await assert.rejects(readIslandDeployment({ baseUrl: receipt.baseUrl }, { name: 'roads',
-    directory: options.directory, connection: receipt.connection, cleanSha256: receipt.cleanSha256 }), /remain disabled/);
-});
+for (const mismatch of ['enabled', 'license', 'licenseUrl', 'attribution']) {
+  test(`resumed island deployments reject changed ${mismatch}`, async (t) => {
+    const { options } = await snapshot(t);
+    const receipt = { format: 'honua.samples.deployment.v1', source: 'roads', baseUrl: 'https://server.test', connection: 'managed',
+      cleanSha256: 'checksum', serviceName: 'roads', layerId: 1, schema: 'public', table: 'roads', folderId: 'works' };
+    await writeFile(path.join(options.directory, 'roads.deployment.json'), JSON.stringify(receipt));
+    const layer = { ...receipt, enabled: false, license: 'LicenseRef-Hawaii-Statewide-GIS-Public-Domain',
+      licenseUrl: islandSources.roads.licenseUrl, attribution: islandSources.roads.attribution, description: 'SHA-256 checksum' };
+    layer[mismatch] = mismatch === 'enabled' ? true : 'changed';
+    t.mock.method(globalThis, 'fetch', async (url) => Response.json({ data: { items: url.includes('/services/?q=')
+      ? [{ ...receipt, folderName: 'Public Works', publicName: 'roads' }] : [layer] } }));
+    await assert.rejects(readIslandDeployment({ baseUrl: receipt.baseUrl }, { name: 'roads',
+      directory: options.directory, connection: receipt.connection, cleanSha256: receipt.cleanSha256 }),
+    mismatch === 'enabled' ? /remain disabled/ : new RegExp(`${mismatch} does not match its source`));
+  });
+}
 
 test('prepared snapshots reject edited attributes even with a recomputed manifest', async (t) => {
   const { options, collection, manifest } = await snapshot(t);

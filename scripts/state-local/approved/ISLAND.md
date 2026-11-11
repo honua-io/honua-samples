@@ -80,8 +80,8 @@ Every requested tile must be processed with no failures or warnings; empty ocean
 tiles may be omitted. The export checks the PMTiles v3 header, exact byte count,
 100 MB per-archive budget and SHA-256. Signed download URLs are excluded from saved
 receipts. Local file downloads require the explicit shared storage root and cannot
-escape it through symlinks. Server-side exports in `pmtiles/` expire under the
-server's 24-hour archive TTL; delete the isolated Docker build volume after use. HTTPS downloads never receive the administrator key.
+escape it through symlinks. Delete the isolated Docker build volume after use.
+HTTPS downloads never receive the administrator key.
 Existing archives are reused only when their receipt and checksum match the
 prepared source. An archive without its receipt is refused for manual inspection.
 

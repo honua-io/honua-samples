@@ -14,6 +14,15 @@ function assertSourceAttributes(collection, original) {
   }
 }
 
+export function assertPreservesSources(collection, original) {
+  const ids = new Set(collection.features.map((feature) => String(feature.properties.source_objectid)));
+  if (ids.size !== original.features.length
+    || original.features.some((feature) => !ids.has(String(feature.properties.objectid)))) {
+    throw new Error('Prepared snapshot does not preserve source identities');
+  }
+  assertSourceAttributes(collection, original);
+}
+
 export async function readIslandSnapshot(options) {
   const { name, directory, sourceDirectory } = options;
   const source = islandSources[name];
@@ -30,12 +39,8 @@ export async function readIslandSnapshot(options) {
   }
   const geojson = JSON.parse(bytes);
   assertDefaultImportGeometry(geojson);
-  const ids = new Set(geojson.features.map((feature) => String(feature.properties.source_objectid)));
-  if (geojson.features.length !== prepared.outputFeatures || ids.size !== original.geojson.features.length
-    || original.geojson.features.some((feature) => !ids.has(String(feature.properties.objectid)))) {
-    throw new Error(`${name} prepared snapshot does not preserve source identities`);
-  }
-  assertSourceAttributes(geojson, original.geojson);
+  if (geojson.features.length !== prepared.outputFeatures) throw new Error('Prepared feature count does not match manifest');
+  assertPreservesSources(geojson, original.geojson);
   return { source, geojson, receipt: { ...original.receipt, cleanSha256: prepared.cleanSha256,
     accepted: geojson.features.length, rejected: 0, preparation: prepared,
     selection: { ...original.receipt.selection, kind: 'Island extent, recorded geometry repair and subdivision' } } };

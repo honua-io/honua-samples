@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertPreservesSources } from './island-snapshot.mjs';
 import { islandSources } from './sources.mjs';
 import { readMauiSnapshot } from '../maui-snapshot.mjs';
 import { assertDefaultImportGeometry } from '../import-geometry.mjs';
@@ -30,11 +31,7 @@ export async function prepareIsland(options) {
     const bytes = await readFile(outputPath);
     const collection = JSON.parse(bytes);
     assertDefaultImportGeometry(collection);
-    const sourceIds = new Set(collection.features.map((feature) => String(feature.properties.source_objectid)));
-    if (sourceIds.size !== snapshot.geojson.features.length
-      || snapshot.geojson.features.some((feature) => !sourceIds.has(String(feature.properties.objectid)))) {
-      throw new Error(`${name} subdivision lost or introduced source IDs`);
-    }
+    assertPreservesSources(collection, snapshot.geojson);
     manifest.layers[name] = { ...changes, sourceSha256: snapshot.receipt.cleanSha256,
       cleanSha256: sha256(bytes), bytes: bytes.length, license: source.license,
       licenseUrl: source.licenseUrl, attribution: source.attribution, sourceUrl: source.url };
