@@ -26,14 +26,18 @@ export async function lockedArchive(lock, directory) {
   return manifest;
 }
 
+export async function readVerifiedFile({ directory, file, integrity }) {
+  const bytes = await readFile(path.join(directory, file));
+  if (bytes.length !== integrity.bytes || sha256(bytes) !== integrity.sha256) throw new Error(`${file} integrity failed`);
+  return bytes;
+}
+
 export async function copyManifestFiles(options) {
   const { manifest, directory, output, pattern } = options;
   await mkdir(output, { recursive: true });
   for (const [file, integrity] of Object.entries(manifest.files)) {
     if (!pattern.test(file)) throw new Error('Invalid snapshot filename');
-    const bytes = await readFile(path.join(directory, file));
-    if (bytes.length !== integrity.bytes || sha256(bytes) !== integrity.sha256) throw new Error(`${file} integrity failed`);
-    await writeFile(path.join(output, file), bytes);
+    await writeFile(path.join(output, file), await readVerifiedFile({ directory, file, integrity }));
   }
   await writeFile(path.join(output, 'manifest.json'), JSON.stringify(manifest, null, 2));
 }
