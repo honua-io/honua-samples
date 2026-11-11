@@ -192,7 +192,7 @@
   <span class="avatar" aria-hidden="true">AN</span>
 </header>
 <div class="demostrip" role="note">
-  <span>Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="../data/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span>Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
   <span class="tag-real">Real data</span> Parcels with zoning, flood, State land use and SMA (Hawaii Statewide GIS Program); building footprints unavailable in this snapshot
   <span class="tag-demo">Demo data</span> 311 requests and agent plans
   <span class="faint">· Snapshot preview · Demo answer · local rules, not an MCP call. "Show SDK controls" maps planned integrations and gaps</span>
@@ -430,7 +430,6 @@
   document.getElementById("selOnly").addEventListener("click", (e) => { S.selOnly = !S.selOnly; e.currentTarget.setAttribute("aria-pressed", S.selOnly); renderTable(filtered()); });
   // ---- charts (SVG) ----
   const W = 340;
-  function chartDefs() { return S.charts; }
   function binsOf(vals, n, clipQ) { const s = [...vals].sort((a, b) => a - b); const lo = s[0] || 0, hi = s[Math.floor((s.length - 1) * (clipQ || 1))] || 1; const step = (hi - lo) / n || 1; const b = Array.from({ length: n }, (_, i) => ({ x0: lo + i * step, x1: lo + (i + 1) * step, n: 0 })); vals.forEach((v) => { const i = Math.min(n - 1, Math.max(0, Math.floor((v - lo) / step))); b[i].n++; }); return b; }
   function renderCharts() {
     const L = LAYERS[S.layer];
@@ -452,7 +451,7 @@
       el.insertAdjacentHTML("beforeend", `<div class="hint">Gray is the unfiltered total. Shift-click to pick several.</div>`);
     } else if (c.t === "hist" || c.t === "time") {
       let bins, xlab;
-      if (c.t === "hist") { bins = binsOf(all.map((r) => r[c.f]), 24, 0.95); const fb = binsOf(rows.map((r) => r[c.f]), 24, 0.95); bins.forEach((b) => (b.m = rows.filter((r) => r[c.f] >= b.x0 && (r[c.f] < b.x1 || b === bins[bins.length - 1])).length)); xlab = (v) => (c.f === "acres" ? v.toFixed(2) : money(v)); }
+      if (c.t === "hist") { bins = binsOf(all.map((r) => r[c.f]), 24, 0.95); bins.forEach((b) => (b.m = rows.filter((r) => r[c.f] >= b.x0 && (r[c.f] < b.x1 || b === bins[bins.length - 1])).length)); xlab = (v) => (c.f === "acres" ? v.toFixed(2) : money(v)); }
       else { const t0 = new Date(all.map((r) => r.created).sort()[0] + "T00:00"); const wk = (d) => Math.floor((new Date(d + "T00:00") - t0) / 6048e5); const nW = wk("2026-11-09") + 1; bins = Array.from({ length: nW }, (_, i) => { const a = new Date(+t0 + i * 6048e5); return { x0: a.toISOString().slice(0, 10), x1: new Date(+a + 6048e5 - 864e5).toISOString().slice(0, 10), n: 0, m: 0 }; }); all.forEach((r) => bins[Math.min(nW - 1, wk(r.created))].n++); rows.forEach((r) => bins[Math.min(nW - 1, wk(r.created))].m++); xlab = (v) => new Date(v + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
       const H = 120, max = Math.max(1, ...bins.map((b) => b.n)), bw = (W - 10) / bins.length; const act = S.chartF[key(c)];
       const inAct = (b) => !act || (c.t === "time" ? b.x1 >= act.v[0] && b.x0 <= act.v[1] : b.x1 > act.v[0] && b.x0 < act.v[1]);
@@ -463,7 +462,7 @@
       const H = 150, lx = (v) => Math.log10(Math.max(v, 1e3)), xs = all.map((r) => lx(r[c.f])), ys = all.map((r) => lx(r[c.g]));
       const x0 = 3, x1 = Math.max(...xs), y0 = 3, y1 = Math.max(...ys); const X = (v) => 30 + ((lx(v) - x0) / (x1 - x0)) * (W - 36), Y = (v) => H - ((lx(v) - y0) / (y1 - y0)) * (H - 6);
       const inRows = new Set(rows.map((r) => r.id));
-      const pts = all.filter((_, i) => i % 1 === 0).map((r) => `<circle cx="${X(r[c.f]).toFixed(1)}" cy="${Y(r[c.g]).toFixed(1)}" r="${S.sel.has(r.id) ? 3.6 : 2}" style="fill:${inRows.has(r.id) ? (S.sel.has(r.id) ? "var(--map-select-line)" : color) : "var(--c-surface-3)"}" fill-opacity="${inRows.has(r.id) ? 0.55 : 0.6}"/>`).join("");
+      const pts = all.map((r) => `<circle cx="${X(r[c.f]).toFixed(1)}" cy="${Y(r[c.g]).toFixed(1)}" r="${S.sel.has(r.id) ? 3.6 : 2}" style="fill:${inRows.has(r.id) ? (S.sel.has(r.id) ? "var(--map-select-line)" : color) : "var(--c-surface-3)"}" fill-opacity="${inRows.has(r.id) ? 0.55 : 0.6}"/>`).join("");
       el.innerHTML = `<svg viewBox="0 -4 ${W} ${H + 26}" role="img" aria-label="${chartTitle(c, L)}" style="cursor:crosshair;touch-action:none"><line x1="30" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--viz-grid)"/><line x1="30" x2="30" y1="0" y2="${H}" style="stroke:var(--viz-grid)"/>${pts}<text x="30" y="${H + 16}">$1k</text><text x="${W}" y="${H + 16}" text-anchor="end">${LABEL(L, c.f)} (log) $${Math.round(10 ** x1 / 1e6)}M</text><text x="0" y="10">${money(10 ** y1)}</text><text x="0" y="${H}">$1k</text><rect class="brush" x="0" y="0" width="0" height="${H}" style="fill:var(--c-info);fill-opacity:.14;stroke:var(--c-info)" stroke-width="1"/></svg>`;
       brush(el.querySelector("svg"), H, (a, b) => { const inv = (px) => 10 ** (x0 + ((px - 30) / (W - 36)) * (x1 - x0)); if (b - a < 4) delete S.chartF["scatter:" + c.f]; else S.chartF["scatter:" + c.f] = { f: c.f, op: "between", v: [inv(a), inv(b)] }; refresh(); });
       el.insertAdjacentHTML("beforeend", `<div class="hint">Log scales; each dot is a parcel. Drag to filter by ${LABEL(L, c.f).toLowerCase()}. 2-D brushing is an SDK gap.</div>`);
@@ -476,7 +475,6 @@
     svg.addEventListener("pointermove", (e) => { if (x0 == null) return; const x = px(e); r.setAttribute("x", Math.min(x, x0)); r.setAttribute("width", Math.abs(x - x0)); });
     svg.addEventListener("pointerup", (e) => { if (x0 == null) return; const x = px(e); const a = Math.min(x, x0), b = Math.max(x, x0); x0 = null; done(a, b - a < 3 ? a - 1 : b); });
   }
-  // date range test
   document.getElementById("charts").addEventListener("click", (e) => { const b = e.target.closest("[data-cx]"); if (!b) return; const c = S.charts[+b.dataset.cx]; delete S.chartF[key(c)]; delete S.chartF["scatter:" + c.f]; S.charts.splice(+b.dataset.cx, 1); refresh(); });
   function fillChartFields() { const L = LAYERS[S.layer], t = document.getElementById("cType").value; const opts = t === "bar" ? L.cat : t === "time" ? (L.time ? [L.time] : []) : t === "scatter" ? (L.num.length > 1 ? ["land"] : []) : L.num; document.getElementById("cField").innerHTML = opts.length ? opts.map((f) => `<option value="${f}">${LABEL(L, f)}</option>`).join("") : `<option value="">Not available for this layer</option>`; }
   document.getElementById("cType").addEventListener("change", fillChartFields);
@@ -575,9 +573,8 @@
   }
   document.getElementById("v2d").addEventListener("click", () => set3d(false));
   document.getElementById("v3d").addEventListener("click", () => set3d(true));
-  // basemap
   // Basemap: Auto follows the UI theme (tokens); Light/Dark pin the map palette; Plain drops land cover and contours.
-  const PAGE_PAINT = () => ({ "sma-line": { "line-color": HM.cssVar("--hz-slr") }, "pf-hit": { "fill-color": HM.cssVar("--map-select") }, p3d: { "fill-extrusion-color": HM.cssVar("--viz-seq-2") }, bld: { "fill-extrusion-color": HM.cssVar("--c-surface-3") },
+  const PAGE_PAINT = () => ({ "sma-line": { "line-color": HM.cssVar("--hz-slr") }, "pf-hit": { "fill-color": HM.cssVar("--map-select") }, p3d: { "fill-extrusion-color": HM.cssVar("--viz-seq-2") },
     reqs: { "circle-color": HM.cssVar("--viz-2"), "circle-stroke-color": HM.cssVar("--map-pin-ring") }, "reqs-sel": { "circle-stroke-color": HM.cssVar("--map-select-line") },
     "draw-fill": { "fill-color": HM.cssVar("--c-info") }, "draw-line": { "line-color": HM.cssVar("--c-info") }, "draw-pt": { "circle-color": HM.cssVar("--c-surface"), "circle-stroke-color": HM.cssVar("--c-info") } });
   const MAP_PALETTE = { light: { water: "#c9dfe8", land: "#f4f2ec", road: "#ffffff", cas: "#d6cfbf", hwy: "#fbe2a0", hcas: "#d2a54c" }, dark: { water: "#0a2230", land: "#0f1d24", road: "#2a3e48", cas: "#17262e", hwy: "#6b5432", hcas: "#3d3020" } };
@@ -607,7 +604,7 @@
     if (map && map.getLayer("p3d")) { const on = document.getElementById("v3d").getAttribute("aria-pressed") === "true"; HM.toggle(map, ["p3d"], on && l === "parcels"); }
     refresh();
   }
-  function refresh() { const rows = filtered(); renderFilterUI(); renderTable(rows); renderCharts(); renderMap(rows); if (typeof renderNL === "function" && lastPlan) renderNL(); }
+  function refresh() { const rows = filtered(); renderFilterUI(); renderTable(rows); renderCharts(); renderMap(rows); if (lastPlan) renderNL(); }
   // ---- natural-language query bar (createNlMapControl / createAskMapSession → proposeMapPlan → approveNlMapPlan → executeMapPlan) ----
   const SUGGEST = [
     "parcels over 0.25 acres outside the flood zone, by zone group",
@@ -746,7 +743,7 @@
       <h3>Plan <span class="faint" style="font-weight:400;font-size:12px">proposeMapPlan · read-only · ${p.hash}</span></h3>
       <ol class="steps"><li><b>listSources</b>{ match: "${p.layer === "parcels" ? "parcels" : "311"}" }<span class="ok">${p.cites.length} layer${p.cites.length > 1 ? "s" : ""}</span></li><li><b>setFilter</b>{ layer: "${CITE[p.layer]}", lang: "cql2-text" }<span class="ok">${filtered().length} features</span></li>${p.group ? `<li><b>addWidget</b>{ kind: "${p.chartKind === "time" ? "time-series" : p.chartKind === "hist" ? "histogram" : "category"}", field: "${p.group}" }<span class="ok">proposed</span></li>` : ""}<li><b>summarizeSelection</b>{ }<span class="ok">ready</span></li></ol>
       <h3>Filter (CQL2)</h3><div class="cql" style="margin-top:0">${cqlText().replace(/</g, "&lt;")}</div>
-      ${p.group ? `<h3>Chart spec</h3><div class="spec">${JSON.stringify({ mark: p.chartKind === "time" ? "bar" : "bar", encoding: p.chartKind === "time" ? { x: { field: "created", timeUnit: "yearweek", type: "temporal" }, y: { aggregate: "count" } } : p.chartKind === "hist" ? { x: { field: p.group, bin: true }, y: { aggregate: "count" } } : { y: { field: p.group, type: "nominal" }, x: { aggregate: "count" } } }, null, 2)}</div>` : ""}
+      ${p.group ? `<h3>Chart spec</h3><div class="spec">${JSON.stringify({ mark: "bar", encoding: p.chartKind === "time" ? { x: { field: "created", timeUnit: "yearweek", type: "temporal" }, y: { aggregate: "count" } } : p.chartKind === "hist" ? { x: { field: p.group, bin: true }, y: { aggregate: "count" } } : { y: { field: p.group, type: "nominal" }, x: { aggregate: "count" } } }, null, 2)}</div>` : ""}
       <div class="row wrap" style="gap:6px;margin-top:12px">${p.cites.map((c) => `<span class="cite">${c}</span>`).join("")}</div>
       <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Shown before anything runs</span><span><svg class="ico"><use href="#i-check"/></svg>Changes your view only, never the data</span><span><svg class="ico"><use href="#i-check"/></svg>Cites every layer it read</span></div>`;
   }
@@ -829,10 +826,10 @@
     } catch {
       setLayer(defaultState.layer); Object.assign(S, defaultState); lastPlan = defaultPlan; proposal = defaultProposal;
       document.getElementById("tq").value = S.tq; setTimeInputs(); refresh(); renderNL();
-      document.getElementById("shareLink").textContent = "This shared view is invalid. The default snapshot is shown.";
+      const notice = document.getElementById("nlqMiss");
+      notice.textContent = "This shared view is invalid. The default snapshot is shown."; notice.hidden = false;
     }
   }
-  // wire date-aware attribute test and boot
   setLayer("parcels");
   runNL(document.getElementById("nlqIn").value); HIST.length = 0; updUndo();
   function adoptChart(p) {

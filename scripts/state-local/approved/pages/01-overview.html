@@ -118,7 +118,7 @@
   <span class="env"><span class="dot"></span>Demo environment</span>
 </header>
 <div class="demostrip" role="note">
-  <span>Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="../data/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span>Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
   <span class="tag-real">Real data</span> Parcels, zoning, flood, tsunami, sea-level rise, roads, schools and bridges (Hawaii Statewide GIS Program)
   <span class="tag-demo">Demo data</span> 311 requests, work orders, assets and agent conversations
 </div>
@@ -271,7 +271,7 @@
   <section class="band" aria-labelledby="oH">
     <div class="sec-h"><h2 id="oH">What the county gets</h2><p>Estimates from the demo records. Method notes under each figure.</p></div>
     <div class="outcomes">
-      <div><div class="v">Illustrative</div><div class="l">staff time saved per week on 311 triage</div><p>About 36 requests a week (468 over 90 days); duplicate checks, routing and status replies drafted by the agent save about 13 minutes per request. Demo estimate.</p></div>
+      <div><div class="v">Illustrative</div><div class="l">staff time saved per week on 311 triage</div><p>About 36 requests a week (469 over 90 days); duplicate checks, routing and status replies drafted by the agent save about 13 minutes per request. Demo estimate.</p></div>
       <div><div class="v">Illustrative</div><div class="l">to a cited situation report</div><p>The agent drafts the sitrep from snapshot layers; the planning chief reviews and approves. Typical manual compilation runs about 2 hours. Demo estimate.</p></div>
       <div><div class="v">1</div><div class="l">platform instead of five products</div><p>Server, portal and hub, app builder, admin and AI assistant in one subscription. Fewer licences, contracts and renewals.</p></div>
       <div><div class="v">0</div><div class="l">silent AI writes</div><p>Every agent change is a proposal with citations. One named person approves it in Console, and the audit log records both.</p></div>
@@ -288,14 +288,9 @@
 {{MAPJS}}
 <script>
 (() => {
-  const TV = (v) => (typeof v === "string" && v.startsWith("--") ? HM.cssVar(v) : Array.isArray(v) ? v.map(TV) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, TV(x)])) : v);
-  function themed(map, layer, before) {
-    const spec = layer.paint; map.addLayer({ ...layer, paint: TV(spec) }, before);
-    map.on("honua:theme", () => Object.entries(spec).forEach(([k, v]) => map.setPaintProperty(layer.id, k, TV(v))));
-  }
   function pts(map, id, data, color, radius) {
     HM.add(map, id, data);
-    themed(map, { id, type: "circle", source: id, paint: { "circle-color": color, "circle-radius": radius, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
+    HM.themed(map, { id, type: "circle", source: id, paint: { "circle-color": color, "circle-radius": radius, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
   }
   const hero = HM.create(document.getElementById("heroMap"), {
     view: "wide", padding: 10, cooperative: true,
@@ -314,12 +309,12 @@
     property: { bounds: [[-156.4775, 20.884], [-156.4625, 20.8935]], layers: ["zoning", "flood", "parcels"], after: (m) => { m.setFeatureState({ source: "parcels", id: 27904 }, { sel: true }); m.setFilter("parcels-sel", ["==", ["get", "id"], 27904]); } },
     "311": { bounds: [[-156.51, 20.868], [-156.455, 20.9]], layers: ["council"], after: (m) => {
       HM.add(m, "req", HM.points(HD.demo.requests.filter((r) => r.status !== "Closed"), (r) => ({ t: r.type })));
-      themed(m, { id: "req", type: "circle", source: "req", paint: { "circle-radius": 3.2, "circle-color": ["match", ["get", "t"], "Drainage / flooding", "--viz-3", "Pothole", "--viz-2", "--viz-1"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 0.8 } });
+      HM.themed(m, { id: "req", type: "circle", source: "req", paint: { "circle-radius": 3.2, "circle-color": ["match", ["get", "t"], "Drainage / flooding", "--viz-3", "Pothole", "--viz-2", "--viz-1"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 0.8 } });
     } },
     em: { bounds: [[-156.505, 20.866], [-156.445, 20.904]], layers: ["tsunami"], after: (m) => pts(m, "shel", HD.shelters, "--c-ok", 5) },
     pw: { bounds: [[-156.5, 20.87], [-156.458, 20.897]], layers: ["flood"], after: (m) => {
       HM.add(m, "as", HM.points(HD.demo.assets, (a) => ({ c: a.cond })));
-      themed(m, { id: "as", type: "circle", source: "as", paint: { "circle-radius": 3.4, "circle-color": ["step", ["get", "c"], "--c-danger", 3, "--viz-2", 4, "--c-ok"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 0.8 } });
+      HM.themed(m, { id: "as", type: "circle", source: "as", paint: { "circle-radius": 3.4, "circle-color": ["step", ["get", "c"], "--c-danger", 3, "--viz-2", 4, "--c-ok"], "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 0.8 } });
       pts(m, "br", HD.bridges, "--c-text-2", 4.5);
     } },
   };

@@ -20,10 +20,11 @@ try {
   await expect(page.locator('#nShown')).not.toBeEmpty();
   const defaultCount = await page.locator('#nShown').textContent();
   await page.locator('[data-l="requests"]').click();
+  const unfilteredRequests = await page.locator('#nShown').textContent();
   await page.locator('.chart .bar').first().click();
   await page.locator('#dt th[data-sort="type"]').click();
   const count = await page.locator('#nShown').textContent();
-  assert.ok(Number(count.replaceAll(',', '')) < 468);
+  assert.ok(Number(count.replaceAll(',', '')) < Number(unfilteredRequests.replaceAll(',', '')));
   await page.locator('#shareBtn').click();
   const link = await page.locator('#shareLink').textContent();
   assert.ok(link.startsWith(`${server.url}/state-local/workbench/#s=`));
@@ -54,7 +55,8 @@ try {
   for (const invalid of [{ attr: [{ f: 'zgroup', op: 'in', v: 1 }] }, { spatial: [] }, { charts: [{ t: 'time', f: 'land' }] }]) {
     await visitState({ ...parcels, ...invalid });
     await expect(page.locator('#nShown')).toHaveText(defaultCount);
-    await expect(page.locator('#shareLink')).toContainText('invalid');
+    await expect(page.locator('#nlqMiss')).toBeVisible();
+    await expect(page.locator('#nlqMiss')).toContainText('invalid');
   }
   await visitState({ ...parcels, is3d: true, view: { ...parcels.view, pitch: 58 } });
   await expect(page.locator('#v3d')).toHaveAttribute('aria-pressed', 'true');
