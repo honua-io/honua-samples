@@ -380,7 +380,7 @@
     const term = document.getElementById("catQ").value.toLowerCase();
     document.getElementById("lyrList").innerHTML = CATALOG.filter((c) => (LAYERS[c[0]] ? LAYERS[c[0]].name : c[0]).toLowerCase().includes(term)).map((c) => {
       const L = LAYERS[c[0]];
-      if (L) return `<button type="button" class="lyr" data-l="${escapeHtml(c[0])}" aria-pressed="${S.layer === c[0]}"><span class="sw" style="background:${L.color}"></span><span><span class="nm">${L.name}</span><br><span class="meta">${L.meta}</span></span>${L.demo ? '<span class="tag-demo r">Demo</span>' : '<span class="tag-real r">Real</span>'}</button>`;
+      if (L) return `<button type="button" class="lyr" data-l="${escapeHtml(c[0])}" aria-pressed="${S.layer === c[0]}"><span class="sw" style="background:${L.color}"></span><span><span class="nm">${escapeHtml(L.name)}</span><br><span class="meta">${L.meta}</span></span>${L.demo ? '<span class="tag-demo r">Demo</span>' : '<span class="tag-real r">Real</span>'}</button>`;
       return `<button type="button" class="lyr" disabled style="opacity:.7"><span class="sw" style="background:var(--c-surface-3)"></span><span><span class="nm">${escapeHtml(c[0])}</span><br><span class="meta">${escapeHtml(c[2])} · add as overlay</span></span></button>`;
     }).join("");
   }
@@ -733,11 +733,11 @@
     const L = LAYERS[p.layer];
     box.hidden = false;
     box.innerHTML = `<h3>How I read “${escapeHtml(p.text)}”</h3>
-      <ul>${[`<li>Layer: <b>${L.name}</b> (<code>${CITE[p.layer]}</code>)</li>`, ...p.read.map(([ph, w]) => `<li>“${escapeHtml(ph)}” → ${escapeHtml(w)}</li>`)].join("")}${p.ignored.length ? `<li class="faint">Not used: ${[...new Set(p.ignored)].map((w) => "“" + escapeHtml(w) + "”").join(", ")}</li>` : ""}</ul>
+      <ul>${[`<li>Layer: <b>${escapeHtml(L.name)}</b> (<code>${escapeHtml(CITE[p.layer])}</code>)</li>`, ...p.read.map(([ph, w]) => `<li>“${escapeHtml(ph)}” → ${escapeHtml(w)}</li>`)].join("")}${p.ignored.length ? `<li class="faint">Not used: ${[...new Set(p.ignored)].map((w) => "“" + escapeHtml(w) + "”").join(", ")}</li>` : ""}</ul>
       <h3>Plan, read-only</h3>
       <ul>
         <li><code>createAskMapSession</code> → <code>proposeMapPlan</code>: <code>listSources</code>, <code>setFilter</code> (CQL2 text, ${p.clauses.length + (p.time ? 1 : 0)} clause${p.clauses.length + (p.time ? 1 : 0) === 1 ? "" : "s"})${p.group ? ", <code>addWidget</code> (chart, proposed)" : ""}, <code>summarizeSelection</code></li>
-        <li><code>approveNlMapPlan</code>: pressing Run approved plan <code>${p.hash}</code> (<code>hashNlMapPlan</code>). It changes your view only, never the data.</li>
+        <li><code>approveNlMapPlan</code>: pressing Run approved plan <code>${escapeHtml(p.hash)}</code> (<code>hashNlMapPlan</code>). It changes your view only, never the data.</li>
         <li><code>executeMapPlan</code>: ${filtered().length.toLocaleString()} of ${L.rows.length.toLocaleString()} ${L.sum} match. The chart waits for you to add it.</li>
       </ul>
       <p class="faint" style="font-size:13px">Edit any chip to change a clause; Undo restores the view before this question.</p>`;
@@ -745,8 +745,8 @@
   function renderPlanTab(p) {
     const L = LAYERS[p.layer];
     document.getElementById("plan").innerHTML = `<div class="q">${escapeHtml(p.text)}</div>
-      <h3>Plan <span class="faint" style="font-weight:400;font-size:12px">proposeMapPlan · read-only · ${p.hash}</span></h3>
-      <ol class="steps"><li><b>listSources</b>{ match: "${p.layer === "parcels" ? "parcels" : "311"}" }<span class="ok">${p.cites.length} layer${p.cites.length > 1 ? "s" : ""}</span></li><li><b>setFilter</b>{ layer: "${CITE[p.layer]}", lang: "cql2-text" }<span class="ok">${filtered().length} features</span></li>${p.group ? `<li><b>addWidget</b>{ kind: "${p.chartKind === "time" ? "time-series" : p.chartKind === "hist" ? "histogram" : "category"}", field: "${escapeHtml(p.group)}" }<span class="ok">proposed</span></li>` : ""}<li><b>summarizeSelection</b>{ }<span class="ok">ready</span></li></ol>
+      <h3>Plan <span class="faint" style="font-weight:400;font-size:12px">proposeMapPlan · read-only · ${escapeHtml(p.hash)}</span></h3>
+      <ol class="steps"><li><b>listSources</b>{ match: "${p.layer === "parcels" ? "parcels" : "311"}" }<span class="ok">${p.cites.length} layer${p.cites.length > 1 ? "s" : ""}</span></li><li><b>setFilter</b>{ layer: "${escapeHtml(CITE[p.layer])}", lang: "cql2-text" }<span class="ok">${filtered().length} features</span></li>${p.group ? `<li><b>addWidget</b>{ kind: "${p.chartKind === "time" ? "time-series" : p.chartKind === "hist" ? "histogram" : "category"}", field: "${escapeHtml(p.group)}" }<span class="ok">proposed</span></li>` : ""}<li><b>summarizeSelection</b>{ }<span class="ok">ready</span></li></ol>
       <h3>Filter (CQL2)</h3><div class="cql" style="margin-top:0">${escapeHtml(cqlText())}</div>
       ${p.group ? `<h3>Chart spec</h3><div class="spec">${escapeHtml(JSON.stringify({ mark: "bar", encoding: p.chartKind === "time" ? { x: { field: "created", timeUnit: "yearweek", type: "temporal" }, y: { aggregate: "count" } } : p.chartKind === "hist" ? { x: { field: p.group, bin: true }, y: { aggregate: "count" } } : { y: { field: p.group, type: "nominal" }, x: { aggregate: "count" } } }, null, 2))}</div>` : ""}
       <div class="row wrap" style="gap:6px;margin-top:12px">${p.cites.map((c) => `<span class="cite">${escapeHtml(c)}</span>`).join("")}</div>

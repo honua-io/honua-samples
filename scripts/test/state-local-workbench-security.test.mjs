@@ -22,7 +22,7 @@ function harness() {
     LABEL: (L, f) => L.cols.find((c) => c[0] === f)[1],
     money: String, HM: { money: String }, updOps() {}, cqlText: () => attack,
     filtered: () => layer.rows, CITE: { requests: 'requests' }, proposal: null,
-    lastPlan: { layer: 'requests', text: attack, cites: [attack], read: [[attack, attack]], ignored: [attack], clauses: [], group: 'type', hash: '123' },
+    lastPlan: { layer: 'requests', text: attack, cites: [attack], read: [[attack, attack]], ignored: [attack], clauses: [], group: 'type', hash: attack },
   });
   vm.runInContext(escapeSource, context);
   return { context, elements };
@@ -49,6 +49,7 @@ test('agent explanations, citations and plans escape markup while retaining read
   for (const id of ['chips', 'nlqCites', 'nlqExp', 'plan']) {
     assert.ok(elements.get(id).innerHTML.includes(encoded), id);
     assert.ok(!elements.get(id).innerHTML.includes('<img'), id);
+    if (id === 'nlqExp' || id === 'plan') assert.ok(!elements.get(id).innerHTML.includes(attack), `${id} escapes plan identity`);
   }
 });
 
