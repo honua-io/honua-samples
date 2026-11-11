@@ -89,10 +89,15 @@ function snapshotForm(snapshot) {
 }
 
 export async function stageSnapshot(env, options) {
-  const { name, directory, connection } = options;
+  const source = getSource(options.name);
+  const snapshot = await readSnapshot(options.name, options.directory);
+  return stageVerifiedSnapshot(env, { ...options, source, ...snapshot });
+}
+
+export async function stageVerifiedSnapshot(env, options) {
+  const { name, connection, source, receipt, geojson } = options;
   if (!connection) throw new Error("HONUA_SAMPLE_CONNECTION must name this server's managed import database");
-  const source = getSource(name);
-  const { receipt, geojson } = await readSnapshot(name, directory);
+  assertDefaultImportGeometry(geojson);
   const folderId = await departmentFolder(env, source.department);
   const runId = options.runId ?? randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);

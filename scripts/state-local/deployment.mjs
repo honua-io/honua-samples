@@ -73,6 +73,26 @@ function publicReadOnly(policy) {
   return policy?.allowAnonymous === true && policy.allowAnonymousWrite === false;
 }
 
+async function setLayerState(env, options) {
+  const { receipt, enabled } = options;
+  await adminFetch(env, { method: "PUT",
+    apiPath: `${layersPath(receipt.connection)}/${receipt.layerId}/enabled?serviceName=${encodeURIComponent(receipt.serviceName)}`,
+    body: { enabled } });
+  const { layer } = await verifyLayer(env, receipt);
+  if (layer.enabled !== enabled) throw new Error("Requested layer state was not confirmed");
+}
+
+export async function withTemporaryLayer(env, receipt, operation) {
+  const { layer } = await verifyLayer(env, receipt);
+  if (layer.enabled !== false) throw new Error("Temporary export requires a disabled staged layer");
+  try {
+    await setLayerState(env, { receipt, enabled: true });
+    return await operation();
+  } finally {
+    await setLayerState(env, { receipt, enabled: false });
+  }
+}
+
 export async function activateDeployment(env, options) {
   const receipt = await readDeployment(env, options);
   const { layer: current } = await verifyLayer(env, receipt);
@@ -82,9 +102,7 @@ export async function activateDeployment(env, options) {
       body: { allowAnonymous: true, allowAnonymousWrite: false } });
   }
   if (current.enabled !== true) {
-    await adminFetch(env, { method: "PUT",
-      apiPath: `${layersPath(receipt.connection)}/${receipt.layerId}/enabled?serviceName=${encodeURIComponent(receipt.serviceName)}`,
-      body: { enabled: true } });
+    await setLayerState(env, { receipt, enabled: true });
   }
   return activeDeployment(env, options);
 }

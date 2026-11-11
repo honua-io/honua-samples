@@ -1,0 +1,6 @@
+services:
+  honua:
+    environment:
+      FileStorage__LocalStorage__BasePath: "${HONUA_TILE_STORAGE_ROOT:?Set an absolute shared archive directory}"
+    volumes:
+      - "${HONUA_TILE_STORAGE_ROOT}:${HONUA_TILE_STORAGE_ROOT}"
