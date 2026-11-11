@@ -342,6 +342,7 @@
       charts: [{ t: "time", f: "created" }, { t: "bar", f: "type" }, { t: "bar", f: "hazard" }] },
   };
   const CATALOG = [["parcels", 1], ["requests", 1], ["Zoning", 0, `${HM.get("zoning").features.length} snapshot polygons`], ["FEMA flood zones", 0, `${HM.get("dfirm").features.length} snapshot polygons`], ["Tsunami evacuation zones", 0, `${HM.get("tsunami").features.length} snapshot polygons`], ["Exercise sites", 0, "School exercise anchors"], ["NBI bridges", 0, "Snapshot overlay"]];
+  function escapeHtml(value) { return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
   const LABEL = (L, f) => (L.cols.find((c) => c[0] === f) || [f, f])[1];
   // ---- state ----
   const S = { layer: "parcels", attr: [], chartF: {}, spatial: null, time: null, sort: null, tq: "", sel: new Set(), selOnly: false, charts: [], agentFilter: null };
@@ -379,8 +380,8 @@
     const term = document.getElementById("catQ").value.toLowerCase();
     document.getElementById("lyrList").innerHTML = CATALOG.filter((c) => (LAYERS[c[0]] ? LAYERS[c[0]].name : c[0]).toLowerCase().includes(term)).map((c) => {
       const L = LAYERS[c[0]];
-      if (L) return `<button type="button" class="lyr" data-l="${c[0]}" aria-pressed="${S.layer === c[0]}"><span class="sw" style="background:${L.color}"></span><span><span class="nm">${L.name}</span><br><span class="meta">${L.meta}</span></span>${L.demo ? '<span class="tag-demo r">Demo</span>' : '<span class="tag-real r">Real</span>'}</button>`;
-      return `<button type="button" class="lyr" disabled style="opacity:.7"><span class="sw" style="background:var(--c-surface-3)"></span><span><span class="nm">${c[0]}</span><br><span class="meta">${c[2]} · add as overlay</span></span></button>`;
+      if (L) return `<button type="button" class="lyr" data-l="${escapeHtml(c[0])}" aria-pressed="${S.layer === c[0]}"><span class="sw" style="background:${L.color}"></span><span><span class="nm">${L.name}</span><br><span class="meta">${L.meta}</span></span>${L.demo ? '<span class="tag-demo r">Demo</span>' : '<span class="tag-real r">Real</span>'}</button>`;
+      return `<button type="button" class="lyr" disabled style="opacity:.7"><span class="sw" style="background:var(--c-surface-3)"></span><span><span class="nm">${escapeHtml(c[0])}</span><br><span class="meta">${escapeHtml(c[2])} · add as overlay</span></span></button>`;
     }).join("");
   }
   document.getElementById("catQ").addEventListener("input", renderLayers);
@@ -388,10 +389,10 @@
   function renderFilterUI() {
     const L = LAYERS[S.layer];
     const rows = [...S.attr.map((a, i) => ({ a, src: "manual", i })), ...Object.entries(S.chartF).map(([k, a]) => ({ a, src: "chart", k }))];
-    document.getElementById("fRows").innerHTML = rows.map(({ a, src, i, k }) => `<div class="frow ${src === "chart" ? "src-chart" : a.agent ? "src-agent" : ""}"><div><div class="k">${src === "chart" ? "From chart" : a.agent ? "From agent" : "Attribute"}</div><b>${LABEL(L, a.f)}</b> ${a.op} ${a.op === "between" ? (L.cols.find((c) => c[0] === a.f)[2] === "money" ? money(a.v[0]) + "–" + money(a.v[1]) : a.v.map((x) => (+x).toFixed(2)).join("–")) : Array.isArray(a.v) ? a.v.join(", ") : a.v}</div><button class="iconbtn" type="button" aria-label="Remove condition" data-rm="${src === "chart" ? "c:" + k : "a:" + i}"><svg class="ico"><use href="#i-x"/></svg></button></div>`).join("") +
+    document.getElementById("fRows").innerHTML = rows.map(({ a, src, i, k }) => `<div class="frow ${src === "chart" ? "src-chart" : a.agent ? "src-agent" : ""}"><div><div class="k">${src === "chart" ? "From chart" : a.agent ? "From agent" : "Attribute"}</div><b>${escapeHtml(LABEL(L, a.f))}</b> ${escapeHtml(a.op)} ${escapeHtml(a.op === "between" ? (L.cols.find((c) => c[0] === a.f)[2] === "money" ? money(a.v[0]) + "–" + money(a.v[1]) : a.v.map((x) => (+x).toFixed(2)).join("–")) : Array.isArray(a.v) ? a.v.join(", ") : a.v)}</div><button class="iconbtn" type="button" aria-label="Remove condition" data-rm="${escapeHtml(src === "chart" ? "c:" + k : "a:" + i)}"><svg class="ico"><use href="#i-x"/></svg></button></div>`).join("") +
       (S.spatial ? `<div class="frow"><div><div class="k">Spatial</div><b>Inside drawn area</b> (${S.spatial.length - 1} vertices)</div><button class="iconbtn" type="button" aria-label="Remove area" data-rm="s"><svg class="ico"><use href="#i-x"/></svg></button></div>` : "");
     const ff = document.getElementById("fField");
-    ff.innerHTML = L.cols.filter((c) => c[0] !== "id" && c[0] !== "tmk" && c[0] !== L.time).map((c) => `<option value="${c[0]}">${c[1]}</option>`).join("");
+    ff.innerHTML = L.cols.filter((c) => c[0] !== "id" && c[0] !== "tmk" && c[0] !== L.time).map((c) => `<option value="${escapeHtml(c[0])}">${escapeHtml(c[1])}</option>`).join("");
     updOps();
     document.getElementById("timeBox").hidden = !L.time;
     document.getElementById("cql").textContent = cqlText();
@@ -401,7 +402,7 @@
   function updOps() {
     const L = LAYERS[S.layer], f = document.getElementById("fField").value, isNum = L.num.includes(f);
     document.getElementById("fOp").innerHTML = (isNum ? [">", "<", "≥", "="] : ["=", "≠", "contains"]).map((o) => `<option>${o}</option>`).join("");
-    document.getElementById("fVals").innerHTML = isNum ? "" : [...new Set(L.rows.map((r) => r[f]))].sort().slice(0, 40).map((v) => `<option value="${v}">`).join("");
+    document.getElementById("fVals").innerHTML = isNum ? "" : [...new Set(L.rows.map((r) => r[f]))].sort().slice(0, 40).map((v) => `<option value="${escapeHtml(v)}">`).join("");
     document.getElementById("fVal").value = isNum ? (f === "acres" ? "0.25" : "500000") : ([...new Set(L.rows.map((r) => r[f]))].sort()[0] || "");
   }
   document.getElementById("fField").addEventListener("change", updOps);
@@ -417,9 +418,9 @@
     if (S.tq) { const t = S.tq.toLowerCase(); rs = rs.filter((r) => L.cols.some((c) => String(r[c[0]]).toLowerCase().includes(t))); }
     if (S.selOnly) rs = rs.filter((r) => S.sel.has(r[L.idField]));
     if (S.sort) { const [f, d] = S.sort; rs = [...rs].sort((a, b) => (a[f] > b[f] ? 1 : a[f] < b[f] ? -1 : 0) * d); }
-    document.querySelector("#dt thead").innerHTML = "<tr>" + L.cols.map((c) => `<th scope="col" data-sort="${c[0]}" class="${["money", "num"].includes(c[2]) ? "n" : ""}" aria-sort="${S.sort && S.sort[0] === c[0] ? (S.sort[1] > 0 ? "ascending" : "descending") : "none"}" tabindex="0">${c[1]}</th>`).join("") + "</tr>";
+    document.querySelector("#dt thead").innerHTML = "<tr>" + L.cols.map((c) => `<th scope="col" data-sort="${escapeHtml(c[0])}" class="${["money", "num"].includes(c[2]) ? "n" : ""}" aria-sort="${S.sort && S.sort[0] === c[0] ? (S.sort[1] > 0 ? "ascending" : "descending") : "none"}" tabindex="0">${escapeHtml(c[1])}</th>`).join("") + "</tr>";
     const shown = rs.slice(0, 250);
-    document.querySelector("#dt tbody").innerHTML = shown.map((r) => `<tr data-id="${r[L.idField]}" aria-selected="${S.sel.has(r[L.idField])}">` + L.cols.map((c) => `<td class="${["money", "num"].includes(c[2]) ? "n" : ""} ${c[2] === "mono" ? "mono" : ""}">${fmt(r[c[0]], c[2])}</td>`).join("") + "</tr>").join("");
+    document.querySelector("#dt tbody").innerHTML = shown.map((r) => `<tr data-id="${escapeHtml(r[L.idField])}" aria-selected="${S.sel.has(r[L.idField])}">` + L.cols.map((c) => `<td class="${["money", "num"].includes(c[2]) ? "n" : ""} ${c[2] === "mono" ? "mono" : ""}">${escapeHtml(fmt(r[c[0]], c[2]))}</td>`).join("") + "</tr>").join("");
     document.getElementById("more").textContent = rs.length > shown.length ? `Showing ${shown.length} of ${rs.length.toLocaleString()} rows; the SDK table pages the rest from the server.` : "";
     document.getElementById("tCount").textContent = `${rs.length.toLocaleString()} rows${S.sel.size ? ` · ${S.sel.size} selected` : ""}`;
   }
@@ -434,7 +435,7 @@
   function renderCharts() {
     const L = LAYERS[S.layer];
     document.getElementById("nCharts").textContent = S.charts.length;
-    document.getElementById("charts").innerHTML = S.charts.map((c, idx) => `<div class="chart" data-ci="${idx}"><div class="chart-h"><h3>${chartTitle(c, L)}</h3><span class="sub">${c.agent ? "added by agent" : ""}</span><span class="x"><span class="sdk">${c.t === "scatter" ? "chartWidgetToVegaLiteSpec (point)" : c.t === "hist" ? "showHistogram · range-brush" : c.t === "time" ? "time-series · temporal-brush" : "&lt;honua-chart kind=bar&gt;"}</span><button class="iconbtn" type="button" aria-label="Remove chart" data-cx="${idx}"><svg class="ico"><use href="#i-x"/></svg></button></span></div><div class="cbody"></div></div>`).join("");
+    document.getElementById("charts").innerHTML = S.charts.map((c, idx) => `<div class="chart" data-ci="${idx}"><div class="chart-h"><h3>${escapeHtml(chartTitle(c, L))}</h3><span class="sub">${c.agent ? "added by agent" : ""}</span><span class="x"><span class="sdk">${c.t === "scatter" ? "chartWidgetToVegaLiteSpec (point)" : c.t === "hist" ? "showHistogram · range-brush" : c.t === "time" ? "time-series · temporal-brush" : "&lt;honua-chart kind=bar&gt;"}</span><button class="iconbtn" type="button" aria-label="Remove chart" data-cx="${idx}"><svg class="ico"><use href="#i-x"/></svg></button></span></div><div class="cbody"></div></div>`).join("");
     S.charts.forEach((c, idx) => drawChart(c, document.querySelector(`[data-ci="${idx}"] .cbody`), L));
   }
   function chartTitle(c, L) { return c.t === "bar" ? `${S.layer === "parcels" ? "Parcels" : "Requests"} by ${LABEL(L, c.f).toLowerCase()}` : c.t === "hist" ? `${LABEL(L, c.f)} distribution` : c.t === "time" ? "Requests per week" : `${LABEL(L, c.f)} vs ${LABEL(L, c.g).toLowerCase()}`; }
@@ -446,7 +447,7 @@
       const cnt = {}, tot = {}; rows.forEach((r) => (cnt[r[c.f]] = (cnt[r[c.f]] || 0) + 1)); all.forEach((r) => (tot[r[c.f]] = (tot[r[c.f]] || 0) + 1));
       const cats = Object.keys(tot).sort((a, b) => tot[b] - tot[a]).slice(0, 7); const max = Math.max(1, ...cats.map((k) => tot[k]));
       const act = S.chartF[key(c)]; const rowH = 24;
-      el.innerHTML = `<svg viewBox="0 0 ${W} ${cats.length * rowH}" role="img" aria-label="${chartTitle(c, L)}">` + cats.map((k, i) => { const on = !act || act.v.includes(k); const wAll = (tot[k] / max) * 170, w = ((cnt[k] || 0) / max) * 170; return `<g class="bar" data-cat="${encodeURIComponent(k)}" transform="translate(0 ${i * rowH})"><title>${k}: ${cnt[k] || 0}</title><text x="0" y="15" style="fill:var(--c-text-2);font-size:12px">${k.length > 22 ? k.slice(0, 21) + "…" : k}</text><rect x="140" y="5" width="${wAll}" height="14" rx="3" style="fill:var(--c-surface-2)"/><rect x="140" y="5" width="${Math.max(w, 0)}" height="14" rx="3" style="fill:${on ? color : "var(--c-surface-3)"}"/><text x="${140 + Math.max(wAll, w) + 6}" y="16" style="font-size:11.5px">${(cnt[k] || 0).toLocaleString()}</text></g>`; }).join("") + "</svg>";
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${cats.length * rowH}" role="img" aria-label="${escapeHtml(chartTitle(c, L))}">` + cats.map((k, i) => { const on = !act || act.v.includes(k); const wAll = (tot[k] / max) * 170, w = ((cnt[k] || 0) / max) * 170; return `<g class="bar" data-cat="${encodeURIComponent(k)}" transform="translate(0 ${i * rowH})"><title>${escapeHtml(k)}: ${cnt[k] || 0}</title><text x="0" y="15" style="fill:var(--c-text-2);font-size:12px">${escapeHtml(k.length > 22 ? k.slice(0, 21) + "…" : k)}</text><rect x="140" y="5" width="${wAll}" height="14" rx="3" style="fill:var(--c-surface-2)"/><rect x="140" y="5" width="${Math.max(w, 0)}" height="14" rx="3" style="fill:${on ? color : "var(--c-surface-3)"}"/><text x="${140 + Math.max(wAll, w) + 6}" y="16" style="font-size:11.5px">${(cnt[k] || 0).toLocaleString()}</text></g>`; }).join("") + "</svg>";
       el.querySelectorAll(".bar").forEach((g) => g.addEventListener("click", (e) => { const k = decodeURIComponent(g.dataset.cat); const cur = S.chartF[key(c)]; let v = cur ? [...cur.v] : []; if (e.shiftKey || e.metaKey) v = v.includes(k) ? v.filter((x) => x !== k) : [...v, k]; else v = cur && cur.v.length === 1 && cur.v[0] === k ? [] : [k]; if (v.length) S.chartF[key(c)] = { f: c.f, op: "in", v }; else delete S.chartF[key(c)]; refresh(); }));
       el.insertAdjacentHTML("beforeend", `<div class="hint">Gray is the unfiltered total. Shift-click to pick several.</div>`);
     } else if (c.t === "hist" || c.t === "time") {
@@ -455,7 +456,7 @@
       else { const t0 = new Date(all.map((r) => r.created).sort()[0] + "T00:00"); const wk = (d) => Math.floor((new Date(d + "T00:00") - t0) / 6048e5); const nW = wk("2026-11-09") + 1; bins = Array.from({ length: nW }, (_, i) => { const a = new Date(+t0 + i * 6048e5); return { x0: a.toISOString().slice(0, 10), x1: new Date(+a + 6048e5 - 864e5).toISOString().slice(0, 10), n: 0, m: 0 }; }); all.forEach((r) => bins[Math.min(nW - 1, wk(r.created))].n++); rows.forEach((r) => bins[Math.min(nW - 1, wk(r.created))].m++); xlab = (v) => new Date(v + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
       const H = 120, max = Math.max(1, ...bins.map((b) => b.n)), bw = (W - 10) / bins.length; const act = S.chartF[key(c)];
       const inAct = (b) => !act || (c.t === "time" ? b.x1 >= act.v[0] && b.x0 <= act.v[1] : b.x1 > act.v[0] && b.x0 < act.v[1]);
-      el.innerHTML = `<svg viewBox="0 -4 ${W} ${H + 26}" role="img" aria-label="${chartTitle(c, L)}" style="cursor:crosshair;touch-action:none">` + `<line x1="0" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--viz-grid)"/>` + bins.map((b, i) => { const h = (b.n / max) * H, hm = (b.m / max) * H; return `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" style="fill:var(--c-surface-2)"/><rect x="${i * bw + 1}" y="${H - hm}" width="${bw - 2}" height="${hm}" style="fill:${inAct(b) ? color : "var(--c-surface-3)"}"><title>${c.t === "time" ? b.x0 : xlab(b.x0) + "–" + xlab(b.x1)}: ${b.m}</title></rect>`; }).join("") + `<text x="0" y="${H + 16}">${xlab(bins[0].x0)}</text><text x="${W}" y="${H + 16}" text-anchor="end">${c.t === "hist" ? xlab(bins[bins.length - 1].x1) + "+" : xlab(bins[bins.length - 1].x1)}</text><text x="${W}" y="8" text-anchor="end">max ${max}</text><rect class="brush" x="0" y="0" width="0" height="${H}" style="fill:var(--c-info);fill-opacity:.14;stroke:var(--c-info)" stroke-width="1"/></svg>`;
+      el.innerHTML = `<svg viewBox="0 -4 ${W} ${H + 26}" role="img" aria-label="${escapeHtml(chartTitle(c, L))}" style="cursor:crosshair;touch-action:none">` + `<line x1="0" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--viz-grid)"/>` + bins.map((b, i) => { const h = (b.n / max) * H, hm = (b.m / max) * H; return `<rect x="${i * bw + 1}" y="${H - h}" width="${bw - 2}" height="${h}" style="fill:var(--c-surface-2)"/><rect x="${i * bw + 1}" y="${H - hm}" width="${bw - 2}" height="${hm}" style="fill:${inAct(b) ? color : "var(--c-surface-3)"}"><title>${c.t === "time" ? b.x0 : xlab(b.x0) + "–" + xlab(b.x1)}: ${b.m}</title></rect>`; }).join("") + `<text x="0" y="${H + 16}">${xlab(bins[0].x0)}</text><text x="${W}" y="${H + 16}" text-anchor="end">${c.t === "hist" ? xlab(bins[bins.length - 1].x1) + "+" : xlab(bins[bins.length - 1].x1)}</text><text x="${W}" y="8" text-anchor="end">max ${max}</text><rect class="brush" x="0" y="0" width="0" height="${H}" style="fill:var(--c-info);fill-opacity:.14;stroke:var(--c-info)" stroke-width="1"/></svg>`;
       brush(el.querySelector("svg"), H, (a, b) => { const i0 = Math.max(0, Math.floor(a / bw)), i1 = Math.min(bins.length - 1, Math.floor(b / bw)); if (i1 < i0) { delete S.chartF[key(c)]; } else S.chartF[key(c)] = c.t === "time" ? { f: c.f, op: "between-date", v: [bins[i0].x0, bins[i1].x1] } : { f: c.f, op: "between", v: [bins[i0].x0, i1 === bins.length - 1 ? Infinity : bins[i1].x1] }; refresh(); });
       el.insertAdjacentHTML("beforeend", `<div class="hint">${act ? "Drag again to change, click to clear." : "Drag across the bars to filter."}</div>`);
     } else if (c.t === "scatter") {
@@ -463,9 +464,9 @@
       const x0 = 3, x1 = Math.max(...xs), y0 = 3, y1 = Math.max(...ys); const X = (v) => 30 + ((lx(v) - x0) / (x1 - x0)) * (W - 36), Y = (v) => H - ((lx(v) - y0) / (y1 - y0)) * (H - 6);
       const inRows = new Set(rows.map((r) => r.id));
       const pts = all.map((r) => `<circle cx="${X(r[c.f]).toFixed(1)}" cy="${Y(r[c.g]).toFixed(1)}" r="${S.sel.has(r.id) ? 3.6 : 2}" style="fill:${inRows.has(r.id) ? (S.sel.has(r.id) ? "var(--map-select-line)" : color) : "var(--c-surface-3)"}" fill-opacity="${inRows.has(r.id) ? 0.55 : 0.6}"/>`).join("");
-      el.innerHTML = `<svg viewBox="0 -4 ${W} ${H + 26}" role="img" aria-label="${chartTitle(c, L)}" style="cursor:crosshair;touch-action:none"><line x1="30" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--viz-grid)"/><line x1="30" x2="30" y1="0" y2="${H}" style="stroke:var(--viz-grid)"/>${pts}<text x="30" y="${H + 16}">$1k</text><text x="${W}" y="${H + 16}" text-anchor="end">${LABEL(L, c.f)} (log) $${Math.round(10 ** x1 / 1e6)}M</text><text x="0" y="10">${money(10 ** y1)}</text><text x="0" y="${H}">$1k</text><rect class="brush" x="0" y="0" width="0" height="${H}" style="fill:var(--c-info);fill-opacity:.14;stroke:var(--c-info)" stroke-width="1"/></svg>`;
+      el.innerHTML = `<svg viewBox="0 -4 ${W} ${H + 26}" role="img" aria-label="${escapeHtml(chartTitle(c, L))}" style="cursor:crosshair;touch-action:none"><line x1="30" x2="${W}" y1="${H}" y2="${H}" style="stroke:var(--viz-grid)"/><line x1="30" x2="30" y1="0" y2="${H}" style="stroke:var(--viz-grid)"/>${pts}<text x="30" y="${H + 16}">$1k</text><text x="${W}" y="${H + 16}" text-anchor="end">${escapeHtml(LABEL(L, c.f))} (log) $${Math.round(10 ** x1 / 1e6)}M</text><text x="0" y="10">${money(10 ** y1)}</text><text x="0" y="${H}">$1k</text><rect class="brush" x="0" y="0" width="0" height="${H}" style="fill:var(--c-info);fill-opacity:.14;stroke:var(--c-info)" stroke-width="1"/></svg>`;
       brush(el.querySelector("svg"), H, (a, b) => { const inv = (px) => 10 ** (x0 + ((px - 30) / (W - 36)) * (x1 - x0)); if (b - a < 4) delete S.chartF["scatter:" + c.f]; else S.chartF["scatter:" + c.f] = { f: c.f, op: "between", v: [inv(a), inv(b)] }; refresh(); });
-      el.insertAdjacentHTML("beforeend", `<div class="hint">Log scales; each dot is a parcel. Drag to filter by ${LABEL(L, c.f).toLowerCase()}. 2-D brushing is an SDK gap.</div>`);
+      el.insertAdjacentHTML("beforeend", `<div class="hint">Log scales; each dot is a parcel. Drag to filter by ${escapeHtml(LABEL(L, c.f).toLowerCase())}. 2-D brushing is an SDK gap.</div>`);
     }
   }
   function brush(svg, H, done) {
@@ -691,7 +692,7 @@
     const miss = document.getElementById("nlqMiss");
     if (!plan.ok) {
       miss.hidden = false; document.getElementById("nlqOut").hidden = true;
-      miss.innerHTML = `<svg class="ico"><use href="#i-alert"/></svg><div>I can't map <b>“${text.replace(/</g, "&lt;")}”</b> to these layers yet. Try a field and a condition, for example <button type="button" data-try="parcels over 0.5 acres inside the SMA">parcels over 0.5 acres inside the SMA</button> or <button type="button" data-try="open potholes in District 3 in the last 30 days">open potholes in District 3 in the last 30 days</button>. Nothing on the map changed.</div>`;
+      miss.innerHTML = `<svg class="ico"><use href="#i-alert"/></svg><div>I can't map <b>“${escapeHtml(text)}”</b> to these layers yet. Try a field and a condition, for example <button type="button" data-try="parcels over 0.5 acres inside the SMA">parcels over 0.5 acres inside the SMA</button> or <button type="button" data-try="open potholes in District 3 in the last 30 days">open potholes in District 3 in the last 30 days</button>. Nothing on the map changed.</div>`;
       return;
     }
     miss.hidden = true; pushHist();
@@ -704,31 +705,31 @@
   function chipText(a) {
     const L = LAYERS[S.layer], lab = LABEL(L, a.f);
     const val = a.op === "between" ? a.v.map((x) => (["land", "bldg"].includes(a.f) ? money(x) : (+x).toFixed(2))).join("–") : Array.isArray(a.v) ? a.v.join(", ") : ["land", "bldg"].includes(a.f) && !isNaN(+a.v) ? HM.money(+a.v) : a.v;
-    return `<b>${lab}</b> ${a.op === "≠" ? "≠" : a.op === "not in" ? "not in" : a.op} ${val}`;
+    return `<b>${escapeHtml(lab)}</b> ${escapeHtml(a.op)} ${escapeHtml(val)}`;
   }
   function renderNL() {
     const out = document.getElementById("nlqOut");
     if (!lastPlan) { out.hidden = true; document.getElementById("nlqExp").hidden = true; return; }
     out.hidden = false;
     const L = LAYERS[S.layer];
-    const chips = S.attr.map((a, i) => `<span class="qchip" role="listitem"><button type="button" class="ql" data-qe="${i}" title="Edit this clause">${chipText(a)}</button><button type="button" class="qx" data-qr="${i}" aria-label="Remove ${LABEL(L, a.f)} clause"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
-    if (S.time) chips.push(`<span class="qchip" role="listitem"><span class="ql"><b>Opened</b> ${S.time[0]} → ${S.time[1]}</span><button type="button" class="qx" data-qr="time" aria-label="Remove date range"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
-    if (proposal) chips.push(`<span class="qchip grp" role="listitem"><span class="ql">${proposal.t === "time" ? "<b>Chart</b> per week" : proposal.t === "hist" ? "<b>Histogram</b> " + LABEL(L, proposal.f) : "<b>Group by</b> " + LABEL(L, proposal.f)}</span><button type="button" class="qx" data-qr="group" aria-label="Remove grouping"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
+    const chips = S.attr.map((a, i) => `<span class="qchip" role="listitem"><button type="button" class="ql" data-qe="${i}" title="Edit this clause">${chipText(a)}</button><button type="button" class="qx" data-qr="${i}" aria-label="Remove ${escapeHtml(LABEL(L, a.f))} clause"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
+    if (S.time) chips.push(`<span class="qchip" role="listitem"><span class="ql"><b>Opened</b> ${escapeHtml(S.time[0])} → ${escapeHtml(S.time[1])}</span><button type="button" class="qx" data-qr="time" aria-label="Remove date range"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
+    if (proposal) chips.push(`<span class="qchip grp" role="listitem"><span class="ql">${proposal.t === "time" ? "<b>Chart</b> per week" : proposal.t === "hist" ? "<b>Histogram</b> " + escapeHtml(LABEL(L, proposal.f)) : "<b>Group by</b> " + escapeHtml(LABEL(L, proposal.f))}</span><button type="button" class="qx" data-qr="group" aria-label="Remove grouping"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
     document.getElementById("chips").innerHTML = (chips.join("") || `<span class="muted">No conditions: all ${L.sum}.</span>`) + `<span class="muted" style="font-size:13px;margin-left:4px">${filtered().length.toLocaleString()} of ${L.rows.length.toLocaleString()} ${L.sum}</span>`;
-    document.getElementById("nlqCites").innerHTML = lastPlan.cites.map((c) => `<span class="cite">${c}</span>`).join("");
+    document.getElementById("nlqCites").innerHTML = lastPlan.cites.map((c) => `<span class="cite">${escapeHtml(c)}</span>`).join("");
     document.getElementById("nlqCql").textContent = cqlText();
     const prop = document.getElementById("nlqProp");
     const already = proposal && S.charts.some((c) => c.t === proposal.t && c.f === proposal.f && c.agent);
     prop.hidden = !proposal;
-    if (proposal) prop.innerHTML = `<svg class="ico"><use href="#i-chart"/></svg><span>${already ? "Added: " : "Proposed: "}<b>${chartTitle(proposal, L)}</b></span>${already ? `<svg class="ico" style="color:var(--c-ok);margin-right:6px"><use href="#i-check"/></svg>` : `<button class="btn sm primary" type="button" id="propOk">Add chart</button><button class="btn sm ghost" type="button" id="propNo">Dismiss</button>`}<span class="sdk">addWidget</span>`;
+    if (proposal) prop.innerHTML = `<svg class="ico"><use href="#i-chart"/></svg><span>${already ? "Added: " : "Proposed: "}<b>${escapeHtml(chartTitle(proposal, L))}</b></span>${already ? `<svg class="ico" style="color:var(--c-ok);margin-right:6px"><use href="#i-check"/></svg>` : `<button class="btn sm primary" type="button" id="propOk">Add chart</button><button class="btn sm ghost" type="button" id="propNo">Dismiss</button>`}<span class="sdk">addWidget</span>`;
     if (document.getElementById("nlqExplainBtn").getAttribute("aria-pressed") === "true") renderExplain();
   }
   function renderExplain() {
     const p = lastPlan, box = document.getElementById("nlqExp"); if (!p) { box.hidden = true; return; }
     const L = LAYERS[p.layer];
     box.hidden = false;
-    box.innerHTML = `<h3>How I read “${p.text.replace(/</g, "&lt;")}”</h3>
-      <ul>${[`<li>Layer: <b>${L.name}</b> (<code>${CITE[p.layer]}</code>)</li>`, ...p.read.map(([ph, w]) => `<li>“${ph}” → ${w}</li>`)].join("")}${p.ignored.length ? `<li class="faint">Not used: ${[...new Set(p.ignored)].map((w) => "“" + w + "”").join(", ")}</li>` : ""}</ul>
+    box.innerHTML = `<h3>How I read “${escapeHtml(p.text)}”</h3>
+      <ul>${[`<li>Layer: <b>${L.name}</b> (<code>${CITE[p.layer]}</code>)</li>`, ...p.read.map(([ph, w]) => `<li>“${escapeHtml(ph)}” → ${escapeHtml(w)}</li>`)].join("")}${p.ignored.length ? `<li class="faint">Not used: ${[...new Set(p.ignored)].map((w) => "“" + escapeHtml(w) + "”").join(", ")}</li>` : ""}</ul>
       <h3>Plan, read-only</h3>
       <ul>
         <li><code>createAskMapSession</code> → <code>proposeMapPlan</code>: <code>listSources</code>, <code>setFilter</code> (CQL2 text, ${p.clauses.length + (p.time ? 1 : 0)} clause${p.clauses.length + (p.time ? 1 : 0) === 1 ? "" : "s"})${p.group ? ", <code>addWidget</code> (chart, proposed)" : ""}, <code>summarizeSelection</code></li>
@@ -739,12 +740,12 @@
   }
   function renderPlanTab(p) {
     const L = LAYERS[p.layer];
-    document.getElementById("plan").innerHTML = `<div class="q">${p.text.replace(/</g, "&lt;")}</div>
+    document.getElementById("plan").innerHTML = `<div class="q">${escapeHtml(p.text)}</div>
       <h3>Plan <span class="faint" style="font-weight:400;font-size:12px">proposeMapPlan · read-only · ${p.hash}</span></h3>
-      <ol class="steps"><li><b>listSources</b>{ match: "${p.layer === "parcels" ? "parcels" : "311"}" }<span class="ok">${p.cites.length} layer${p.cites.length > 1 ? "s" : ""}</span></li><li><b>setFilter</b>{ layer: "${CITE[p.layer]}", lang: "cql2-text" }<span class="ok">${filtered().length} features</span></li>${p.group ? `<li><b>addWidget</b>{ kind: "${p.chartKind === "time" ? "time-series" : p.chartKind === "hist" ? "histogram" : "category"}", field: "${p.group}" }<span class="ok">proposed</span></li>` : ""}<li><b>summarizeSelection</b>{ }<span class="ok">ready</span></li></ol>
-      <h3>Filter (CQL2)</h3><div class="cql" style="margin-top:0">${cqlText().replace(/</g, "&lt;")}</div>
-      ${p.group ? `<h3>Chart spec</h3><div class="spec">${JSON.stringify({ mark: "bar", encoding: p.chartKind === "time" ? { x: { field: "created", timeUnit: "yearweek", type: "temporal" }, y: { aggregate: "count" } } : p.chartKind === "hist" ? { x: { field: p.group, bin: true }, y: { aggregate: "count" } } : { y: { field: p.group, type: "nominal" }, x: { aggregate: "count" } } }, null, 2)}</div>` : ""}
-      <div class="row wrap" style="gap:6px;margin-top:12px">${p.cites.map((c) => `<span class="cite">${c}</span>`).join("")}</div>
+      <ol class="steps"><li><b>listSources</b>{ match: "${p.layer === "parcels" ? "parcels" : "311"}" }<span class="ok">${p.cites.length} layer${p.cites.length > 1 ? "s" : ""}</span></li><li><b>setFilter</b>{ layer: "${CITE[p.layer]}", lang: "cql2-text" }<span class="ok">${filtered().length} features</span></li>${p.group ? `<li><b>addWidget</b>{ kind: "${p.chartKind === "time" ? "time-series" : p.chartKind === "hist" ? "histogram" : "category"}", field: "${escapeHtml(p.group)}" }<span class="ok">proposed</span></li>` : ""}<li><b>summarizeSelection</b>{ }<span class="ok">ready</span></li></ol>
+      <h3>Filter (CQL2)</h3><div class="cql" style="margin-top:0">${escapeHtml(cqlText())}</div>
+      ${p.group ? `<h3>Chart spec</h3><div class="spec">${escapeHtml(JSON.stringify({ mark: "bar", encoding: p.chartKind === "time" ? { x: { field: "created", timeUnit: "yearweek", type: "temporal" }, y: { aggregate: "count" } } : p.chartKind === "hist" ? { x: { field: p.group, bin: true }, y: { aggregate: "count" } } : { y: { field: p.group, type: "nominal" }, x: { aggregate: "count" } } }, null, 2))}</div>` : ""}
+      <div class="row wrap" style="gap:6px;margin-top:12px">${p.cites.map((c) => `<span class="cite">${escapeHtml(c)}</span>`).join("")}</div>
       <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Shown before anything runs</span><span><svg class="ico"><use href="#i-check"/></svg>Changes your view only, never the data</span><span><svg class="ico"><use href="#i-check"/></svg>Cites every layer it read</span></div>`;
   }
   // chip edit / remove
@@ -753,7 +754,7 @@
     if (rm) { pushHist(); const k = rm.dataset.qr; if (k === "time") S.time = null; else if (k === "group") proposal = null; else S.attr.splice(+k, 1); setTimeInputs(); refresh(); renderNL(); return; }
     if (ed) {
       const i = +ed.dataset.qe, a = S.attr[i]; const cur = Array.isArray(a.v) ? a.v.join(", ") : a.v;
-      ed.outerHTML = `<span class="ql"><b>${LABEL(LAYERS[S.layer], a.f)}</b> ${a.op}</span><input data-qi="${i}" value="${String(cur).replace(/"/g, "&quot;")}" aria-label="Edit value for ${LABEL(LAYERS[S.layer], a.f)}">`;
+      ed.outerHTML = `<span class="ql"><b>${escapeHtml(LABEL(LAYERS[S.layer], a.f))}</b> ${escapeHtml(a.op)}</span><input data-qi="${i}" value="${escapeHtml(cur)}" aria-label="Edit value for ${escapeHtml(LABEL(LAYERS[S.layer], a.f))}">`;
       const inp = document.querySelector(`[data-qi="${i}"]`); inp.focus(); inp.select();
       const commit = () => { const v = inp.value.trim(); if (v && v !== String(cur)) { pushHist(); if (a.op === "between") { const nums = v.split(/\s*(?:[-–]|to|and)\s*/).map((x) => parseFloat(x.replace(/[$,]/g, ""))).filter((x) => !isNaN(x)); if (nums.length >= 2) a.v = nums.slice(0, 2); else if (nums.length === 1) { a.op = ">"; a.v = String(nums[0]); } } else a.v = Array.isArray(a.v) ? v.split(/\s*,\s*/) : v.replace(/[$,]/g, ""); refresh(); } renderNL(); };
       inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(); } if (ev.key === "Escape") renderNL(); });
