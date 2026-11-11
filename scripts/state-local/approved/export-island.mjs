@@ -5,14 +5,12 @@ import { serverEnv } from '../../lib/admin-api.mjs';
 import { sha256 } from '../../lib/checksum.mjs';
 import { exportTileArchive } from '../tile-archive.mjs';
 import { withTemporaryLayer } from '../deployment.mjs';
-import { mauiBounds } from '../maui-sources.mjs';
-import { islandSources, islandTileLayers } from './sources.mjs';
+import { islandSources, islandTileExtent, islandTileLayers } from './sources.mjs';
 import { readIslandSnapshot } from './island-snapshot.mjs';
 import { readIslandDeployment } from './stage-island.mjs';
 
-const extent = { bbox: mauiBounds, minZoom: 8, maxZoom: 14 };
-
 async function existingArchive(directory, layer) {
+  const extent = islandTileExtent(layer.source);
   let receipt;
   try {
     receipt = JSON.parse(await readFile(path.join(directory, `${layer.source}.tiles.json`), 'utf8'));
@@ -42,7 +40,7 @@ async function exportLayer(env, options) {
     if (error.code !== 'ENOENT') throw error;
   }
   const result = await withTemporaryLayer(env, layer, () => exportTileArchive(env,
-    { ...extent, serviceId: layer.serviceName, layerId: layer.layerId, localStorageRoot }));
+    { ...islandTileExtent(layer.source), serviceId: layer.serviceName, layerId: layer.layerId, localStorageRoot }));
   const source = islandSources[layer.source];
   const receipt = { format: 'honua.samples.island-tiles.v1', source: layer.source,
     cleanSha256: layer.cleanSha256, license: source.license, licenseUrl: source.licenseUrl,

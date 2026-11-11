@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { lockedArchive, copyManifestFiles, islandFilePattern } from '../../../shared/state-local/locked-archive.mjs';
-import { islandSources, islandTileBudgetBytes, islandTileLayers } from './sources.mjs';
+import { islandSources, islandTileBudgetBytes, islandTileExtent, islandTileLayers } from './sources.mjs';
 
 export function verifyIslandManifest(manifest) {
   const expected = Object.keys(islandSources).map((name) => `${name}.${islandTileLayers.includes(name) ? 'pmtiles' : 'geojson'}`).sort();
@@ -10,6 +10,13 @@ export function verifyIslandManifest(manifest) {
   }
   if (islandTileLayers.some((name) => manifest.files[`${name}.pmtiles`].bytes > islandTileBudgetBytes)) {
     throw new Error(`Island archive exceeds the approved ${islandTileBudgetBytes / 1_000_000} MB budget`);
+  }
+  for (const name of islandTileLayers) {
+    const tiles = manifest.sources?.[name]?.tiles;
+    const { minZoom, maxZoom } = islandTileExtent(name);
+    if (tiles?.minZoom !== minZoom || tiles?.maxZoom !== maxZoom) {
+      throw new Error(`${name} archive covers z${tiles?.minZoom}-${tiles?.maxZoom}; the island map expects z${minZoom}-${maxZoom}`);
+    }
   }
 }
 

@@ -13,8 +13,17 @@
     maplibregl.addProtocol('pmtiles', protocol.tile);
   }
 
+  // Chromium's HTTP cache can hand concurrent range reads of one static archive another request's bytes, and
+  // pmtiles bypasses that cache only on Windows, so island archives bypass it on every Chromium browser.
+  const chromium = /Chrome|Chromium|Edg|OPR|Brave/.test(navigator.userAgent);
+  function islandArchive(url) {
+    register();
+    if (!protocol.get(url)) protocol.add(new pmtiles.PMTiles(Object.assign(new pmtiles.FetchSource(url), { chromeWindowsNoCache: chromium })));
+    return 'pmtiles://' + url;
+  }
+
   function source(name) {
-    if (tiled.has(name)) return { type: 'vector', url: 'pmtiles://' + new URL(name + '.pmtiles', root).href };
+    if (tiled.has(name)) return { type: 'vector', url: islandArchive(new URL(name + '.pmtiles', root).href) };
     if (small.has(name)) return { type: 'geojson', data: new URL(name + '.geojson', root).href };
     return null;
   }
