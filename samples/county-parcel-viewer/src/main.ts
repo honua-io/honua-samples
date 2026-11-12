@@ -220,6 +220,7 @@ async function lookupTmk(digits: string, { mode, example = false, focus = true }
 }
 
 async function lookupId(id: string | number): Promise<void> {
+  clearInvalid();
   const lookup = beginLookup("Loading the selected parcel…");
   try {
     const parcel = await parcelById(config, id, lookup.signal);

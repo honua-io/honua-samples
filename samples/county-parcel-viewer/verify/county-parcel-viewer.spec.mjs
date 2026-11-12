@@ -218,6 +218,7 @@ test("TMK input: dashes normalize, a missing parcel says so, junk sends no reque
     await expect(page.locator("#q")).toHaveValue("2-1-5-010:077");
   }
 
+  await expect(page.locator("#browse-status")).toContainText("25 parcels loaded");
   const before = seen.length;
   await page.locator("#q").fill("abc'; or 1=1");
   await page.locator("#find").click();
@@ -232,7 +233,12 @@ test("TMK input: dashes normalize, a missing parcel says so, junk sends no reque
   await page.goto(appUrl({ tmk: "12345" }));
   await expect(page.locator("#q-error")).toHaveText("Not a valid TMK (9 digits, e.g. 215010777)");
   await page.waitForTimeout(500);
-  expect(queries(() => true)).toEqual([]);
+  await expect(page.locator("#browse-status")).toContainText("25 parcels loaded");
+  const lookupRequests = queries((request) => {
+    const query = new URL(request.url).searchParams;
+    return query.get("where") !== "1=1" || query.get("returnGeometry") !== "false";
+  });
+  expect(lookupRequests, "invalid shared TMK sends no parcel lookup; the browser still loads its page").toEqual([]);
 });
 
 test("a large parcel's zoning and flood candidates are POSTed with its polygon", async ({ page }) => {
@@ -563,38 +569,58 @@ test("parcel browser links bounded pages, inspection, filter and exports", async
   await expect(page.locator("#parcel-inspection")).toContainText(`Showing ${EXAMPLE_TMK}`);
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true })));
   expect((await page.locator(".work").boundingBox()).height).toBeLessThanOrEqual(900);
-  const first = page.locator("#parcel-table [data-row-key]").first();
-  const tmk = await first.locator('[data-field="tmk_txt"]').textContent();
+  const first = page.locator('#parcel-table td[data-field="tmk_txt"]').first();
+  const tmk = await first.textContent();
+  await page.locator("#q").fill("12345");
+  await page.locator("#find").click();
+  await expect(page.locator("#q")).toHaveAttribute("aria-invalid", "true");
+  const previousTmk = await page.locator("body").getAttribute("data-tmk");
+  await first.dispatchEvent("pointerdown", { pointerType: "touch", button: 0, pointerId: 17, isPrimary: true });
+  await first.dispatchEvent("pointercancel", { pointerType: "touch", pointerId: 17 });
+  await expect(page.locator("body")).toHaveAttribute("data-tmk", previousTmk);
+  await expect(page.locator("#q")).toHaveAttribute("aria-invalid", "true");
   await first.click();
+  await expect(page.locator("#q")).not.toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#q-error")).toBeHidden();
   await expect(page.locator("body")).toHaveAttribute("data-tmk", tmk);
   await expect(page.locator("#parcel-inspection")).toContainText(`Showing ${tmk}`);
   await page.locator("#filter-tmk").fill(tmk);
   await page.getByRole("button", { name: "Apply filter", exact: true }).click();
   await expect(page.locator("#browse-status")).toContainText("1 parcels loaded");
-  const csvReady = page.waitForEvent("download");
-  await page.locator("#export-csv").click();
-  const csv = await csvReady;
-  expect(csv.suggestedFilename()).toBe("maui-parcels.csv");
-  expect(await readFile(await csv.path(), "utf8")).toContain(tmk);
-  await expect(page.locator("#export-status")).toContainText("Exported 1 rows");
-  const geoReady = page.waitForEvent("download");
-  await page.locator("#export-geojson").click();
-  const geo = await geoReady;
-  expect(geo.suggestedFilename()).toBe(`maui-parcel-${tmk}.geojson`);
-  const collection = JSON.parse(await readFile(await geo.path(), "utf8"));
-  expect(collection.type).toBe("FeatureCollection");
-  expect(collection.features).toHaveLength(1);
-  expect(collection.features[0].properties.tmk_txt).toBe(tmk);
-  expect(collection.features[0].id).toBeDefined();
-  expect(collection.features[0].geometry.coordinates.length).toBeGreaterThan(0);
-  await expect(page.locator("#export-status")).toContainText("re-queried by stable source ID");
-  await page.getByRole("button", { name: "Clear filter", exact: true }).click();
-  await expect(page.locator("#browse-status")).toContainText("25 parcels loaded");
-  const boundedExport = page.waitForEvent("download");
-  await page.locator("#export-csv").click();
-  const bounded = await boundedExport;
-  expect((await readFile(await bounded.path(), "utf8")).trim().split(/\r?\n/u)).toHaveLength(101);
-  await expect(page.locator("#export-status")).toContainText("Exported 100 rows");
+  if (DATA_BASE === "https://demo.honua.io") {
+    const csvReady = page.waitForEvent("download");
+    await page.locator("#export-csv").click();
+    const csv = await csvReady;
+    expect(csv.suggestedFilename()).toBe("maui-parcels.csv");
+    expect(await readFile(await csv.path(), "utf8")).toContain(tmk);
+    await expect(page.locator("#export-status")).toContainText("Exported 1 rows");
+    const geoReady = page.waitForEvent("download");
+    await page.locator("#export-geojson").click();
+    const geo = await geoReady;
+    expect(geo.suggestedFilename()).toBe(`maui-parcel-${tmk}.geojson`);
+    const collection = JSON.parse(await readFile(await geo.path(), "utf8"));
+    expect(collection.type).toBe("FeatureCollection");
+    expect(collection.features).toHaveLength(1);
+    expect(collection.features[0].properties.tmk_txt).toBe(tmk);
+    expect(collection.features[0].id).toBeDefined();
+    expect(collection.features[0].geometry.coordinates.length).toBeGreaterThan(0);
+    await expect(page.locator("#export-status")).toContainText("re-queried by stable source ID");
+    await page.getByRole("button", { name: "Clear filter", exact: true }).click();
+    await expect(page.locator("#browse-status")).toContainText("25 parcels loaded");
+    const boundedExport = page.waitForEvent("download");
+    await page.locator("#export-csv").click();
+    const bounded = await boundedExport;
+    expect((await readFile(await bounded.path(), "utf8")).trim().split(/\r?\n/u)).toHaveLength(101);
+    await expect(page.locator("#export-status")).toContainText("Exported 100 rows");
+  } else {
+    const downloads = [];
+    page.on("download", (download) => downloads.push(download));
+    for (const selector of ["#export-csv", "#export-geojson"]) {
+      await page.locator(selector).click();
+      await expect(page.locator("#export-status")).toContainText("Only the public Maui demo parcel layer can be exported here");
+    }
+    expect(downloads).toHaveLength(0);
+  }
   const browseQueries = queries((r) => new URL(r.url).searchParams.get("returnGeometry") === "false");
   expect(browseQueries.length).toBeGreaterThan(0);
   for (const request of browseQueries) expect(Number(new URL(request.url).searchParams.get("resultRecordCount"))).toBeLessThanOrEqual(25);
@@ -626,4 +652,59 @@ test("parcel browser clears stale selection and reports empty and failed filters
   await page.getByRole("button", { name: "Clear filter", exact: true }).click();
   await page.waitForTimeout(100);
   expect(seen.length).toBe(count);
+});
+
+
+test("custom parcel layers explain export denial without downloading", async ({ page }) => {
+  const alternate = `${DATA_BASE}/rest/services/custom-parcels/FeatureServer/1`;
+  await page.route(`${alternate}**`, async (route) => {
+    const response = await route.fetch({ url: route.request().url().replace(alternate, PARCELS) });
+    await route.fulfill({ response });
+  });
+  const downloads = [];
+  page.on("download", (download) => downloads.push(download));
+  await page.goto(appUrl({ parcelsUrl: alternate }));
+  await expect(page.locator("#browse-status")).toContainText("25 parcels loaded");
+  await expect(page.locator("#export-geojson")).toBeEnabled();
+  for (const selector of ["#export-csv", "#export-geojson"]) {
+    await page.locator(selector).click();
+    await expect(page.locator("#export-status")).toContainText("Only the public Maui demo parcel layer can be exported here");
+  }
+  expect(downloads).toHaveLength(0);
+});
+
+
+test("touch drag does not select and first completed tap selects a parcel", async ({ page, context, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP provides native touch input for this regression");
+  await page.goto(appUrl());
+  await expect(page.locator("#browse-status")).toContainText("25 parcels loaded");
+  await settled(page);
+  const first = page.locator('#parcel-table td[data-field="tmk_txt"]').first();
+  await first.scrollIntoViewIfNeeded();
+  const bounds = await first.boundingBox();
+  const x = bounds.x + 40;
+  const y = bounds.y + bounds.height / 2;
+  const before = await page.locator("body").getAttribute("data-tmk");
+  const session = await context.newCDPSession(page);
+  await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+  await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y - 60 }] });
+  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(page.locator("body")).toHaveAttribute("data-tmk", before);
+  await page.waitForTimeout(500); // Let touch-scroll inertia and virtual rows settle.
+  const tap = await page.locator("#parcel-table").evaluate((table) => {
+    const rows = table.shadowRoot.querySelectorAll('td[data-field="tmk_txt"]');
+    for (const row of rows) {
+      const bounds = row.getBoundingClientRect();
+      if (bounds.height && bounds.y >= 0 && bounds.bottom < innerHeight) {
+        return { x: bounds.x, y: bounds.y, height: bounds.height, tmk: row.textContent };
+      }
+    }
+    return null;
+  });
+  expect(tap).not.toBeNull();
+  const tmk = tap.tmk;
+  await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: tap.x + 40, y: tap.y + tap.height / 2 }] });
+  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(page.locator("body")).toHaveAttribute("data-tmk", tmk);
+  await session.detach();
 });

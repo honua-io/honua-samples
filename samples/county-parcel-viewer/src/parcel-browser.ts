@@ -96,12 +96,30 @@ function connectExports(options: {
 
 function connectPointerSelection(table: HonuaFeatureTable, signal: AbortSignal): void {
   // SDK 0.3.2 can replace a focused row before its click fires. Remove after upgrading the SDK.
-  element("parcel-table").addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
+  const host = element("parcel-table");
+  let tap: { id: number; key: string; x: number; y: number } | undefined;
+  host.addEventListener("pointerdown", (event) => {
+    tap = undefined;
+    if (event.button !== 0 || !event.isPrimary) return;
     const path = event.composedPath();
     if (path.some((node) => node instanceof Element && node.matches("a, button, input, select, textarea, [contenteditable]"))) return;
     const row = path.find((node) => node instanceof HTMLElement && node.dataset.rowKey) as HTMLElement | undefined;
-    if (row?.dataset.rowKey) table.select([row.dataset.rowKey], { replace: true });
+    const key = row?.dataset.rowKey;
+    if (!key) return;
+    if (event.pointerType === "mouse") table.select([key], { replace: true });
+    else tap = { id: event.pointerId, key, x: event.clientX, y: event.clientY };
+  }, { signal });
+  host.addEventListener("pointermove", (event) => {
+    if (tap && (event.pointerId !== tap.id || Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 8)) tap = undefined;
+  }, { signal });
+  host.addEventListener("pointercancel", () => { tap = undefined; }, { signal });
+  host.addEventListener("pointerup", (event) => {
+    const completed = tap;
+    tap = undefined;
+    if (completed && event.pointerId === completed.id
+      && Math.hypot(event.clientX - completed.x, event.clientY - completed.y) <= 8) {
+      table.select([completed.key], { replace: true });
+    }
   }, { signal });
 }
 
