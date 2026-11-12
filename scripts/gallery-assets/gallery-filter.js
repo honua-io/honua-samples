@@ -45,10 +45,6 @@
     });
 
     var count = (state.q ? 1 : 0) + state.kind.length + state.caps.length + state.sdk.length + state.edition.length + state.source.length + (state.run ? 1 : 0);
-    all(".content-kind-section").forEach(function (section) {
-      var cards = all(".card[data-id]", section);
-      section.hidden = cards.length ? !cards.some(function (card) { return !card.hidden; }) : count > 0;
-    });
 
     var status = document.getElementById("filter-status"); if (status) status.textContent = count ? "Showing " + visible + " of " + total + " samples." : "Showing all " + total + " samples.";
     var active = document.getElementById("filter-active-count"); if (active) active.textContent = String(count);

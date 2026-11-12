@@ -7,31 +7,31 @@ import {
   publicSampleIds,
 } from "../lib/gallery-public-portfolio.mjs";
 
-test("the gallery portfolio classifies the 32 SDK and 24 owned cards", async () => {
+test("the gallery portfolio classifies the 32 SDK and 21 owned cards", async () => {
   const portfolio = await loadGalleryPublicPortfolio();
   const counts = portfolio.entries.reduce((result, entry) => {
     result[entry.disposition] = (result[entry.disposition] ?? 0) + 1;
     return result;
   }, {});
-  assert.equal(portfolio.entries.length, 56);
+  assert.equal(portfolio.entries.length, 53);
   assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-sdk-js").length, 32);
-  assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 24);
-  assert.deepEqual(counts, { "internal-qualification": 28, "rework-map-first": 11, moved: 12, public: 5 });
+  assert.equal(portfolio.entries.filter((entry) => entry.sourceRepo === "honua-samples").length, 21);
+  assert.deepEqual(counts, { "internal-qualification": 26, "rework-map-first": 11, moved: 12, public: 4 });
   for (const id of ["gp-local-dev", "plugin-endpoint", "stac-ops", "maui-data-pipeline",
-    "maui-property-planning", "maui-emergency", "maui-311", "maui-public-works", "maui-workbench"]) {
+    "maui-emergency", "maui-311", "maui-public-works", "maui-workbench"]) {
     const entry = portfolio.entries.find((candidate) => candidate.sourceRepo === "honua-samples" && candidate.id === id);
     assert.equal(entry?.disposition, "internal-qualification", id);
   }
   // SDK sample cards are out of the gallery; their old URLs render moved pages.
   assert.deepEqual(publicSampleIds(portfolio, "honua-sdk-js"), []);
   assert.equal(movedEntries(portfolio, "honua-sdk-js").length, 12);
-  // The county parcel viewer and the four map-first browser samples are the owned public cards.
+  // The county parcel viewer and the three map-first browser samples are the owned public cards.
   assert.deepEqual(
     portfolio.entries
       .filter((entry) => entry.sourceRepo === "honua-samples" && entry.disposition === "public")
       .map((entry) => entry.id)
       .sort(),
-    ["county-parcel-viewer", "esri-leaflet-featurelayer", "maplibre-category-style-legend", "maplibre-featureserver-layer", "maplibre-ogc-tiles-mvt"],
+    ["county-parcel-viewer", "maplibre-category-style-legend", "maplibre-featureserver-layer", "maplibre-ogc-tiles-mvt"],
   );
 });
 

@@ -17,8 +17,8 @@
       ]
     },
     {
-      "id": "browser-featureserver-query",
-      "capabilities": ["import.file", "serve.geoservices-featureserver"],
+      "id": "maplibre-featureserver-layer",
+      "capabilities": ["serve.geoservices-featureserver"],
       "outcome": "pass",
       "durationMs": 2150,
       "serverVersion": "1.2.3",
