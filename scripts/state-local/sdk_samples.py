@@ -28,7 +28,6 @@ SDK_REPO, SAMPLES_REPO = "sdk-js", "samples"
 CATALOG = [
     ("maplibre-quickstart", SDK_REPO, "start", "First Map: endpoint to inspected map", "The canonical five-minute journey: connect, discover, explain, query and mount one source on MapLibre.", ["createHonua", "honua.connect", "connection.inspect", "connection.explain", "connection.query", "connection.mount", "maplibreRenderer"], ['TypeScript'], {}),
     ("hello-featureserver-rest", SAMPLES_REPO, "start", "Query a public FeatureServer", "Read three real Maui building features with plain fetch(). No account, key or SDK.", ["FeatureServer /query"], ['Node'], {}),
-    ("browser-featureserver-query", SAMPLES_REPO, "start", "Query a FeatureServer in the browser", "Discover a public FeatureServer layer and read three features with browser fetch(). No build step.", ["FeatureServer ?f=json", "FeatureServer /query"], ['HTML'], {}),
     ("oauth-signin", SDK_REPO, "start", "OAuth2 sign-in with PKCE", "Sign in with authorization code and PKCE against a mock identity provider, then call a bearer-protected API.", ["oauth2", "HonuaClient", "HonuaAuthError"], ['TypeScript'], {}),
     ("standalone-quickstart", SDK_REPO, "start", "Standalone quickstart", "Moved: the anonymous URL mode of First Map replaces it.", [], ['TypeScript'], {"status": "Moved", "moved": "maplibre-quickstart"}),
     ("endpoint-to-map", SDK_REPO, "start", "Endpoint to map", "Moved: consolidated into First Map.", [], ['TypeScript'], {"status": "Moved", "moved": "maplibre-quickstart"}),
@@ -43,7 +42,6 @@ CATALOG = [
     ("imagery-cog-quickstart", SDK_REPO, "maps", "Imagery and terrain journey", "Search STAC by extent, date and cloud cover, open a COG on MapLibre and sample an elevation profile.", ["connect", "HonuaClient.stac().search", "openStacCogAsset", "mountStacCogAssetToMapLibre", "sampleElevationProfile"], ['TypeScript'], {}),
 
     ("maui-311", SAMPLES_REPO, "maps", "311 operations", "Labelled service-request exercises over public Maui geography.", ["HonuaClient"], ['TypeScript'], {}),
-    ("maui-property-planning", SAMPLES_REPO, "query", "Property and planning", "Parcel lookup and public planning overlays, with source attribution.", ["HonuaClient"], ['TypeScript'], {}),
     ("maui-emergency", SAMPLES_REPO, "maps", "Emergency preparedness exercise", "Public geography and explicitly fictional shelter and road-status records.", ["HonuaClient"], ['TypeScript'], {}),
     ("maui-public-works", SAMPLES_REPO, "maps", "Public works assets", "Public road and bridge sources with labelled inspection exercises.", ["HonuaClient"], ['TypeScript'], {}),
     ("county-parcel-viewer", SAMPLES_REPO, "query", "County parcel viewer", "Find a parcel by TMK, address or click and see the zoning and FEMA flood zones that cover it, with shares.", ["connect", "QueryBuilder", "HonuaGeocodingClient", "esriGeometryToGeoJSON", "registerPmtilesSource"], ['TypeScript'], {}),
@@ -77,7 +75,6 @@ CATALOG = [
     ("odata-query-rest", SAMPLES_REPO, "interop", "Read spatial features with OData v4", "Discover one public layer and read three features through OData with plain fetch().", ["OData $metadata", "$top", "$filter"], ['Node'], {}),
     ("ogc-features-python", SAMPLES_REPO, "interop", "Read OGC API Features with Python", "Standard-library Python: discover a collection and read two GeoJSON features.", ["/collections", "/items"], ['Python'], {}),
     ("wms-getmap-check", SAMPLES_REPO, "interop", "Verify a WMS GetMap response", "Publish three points locally, enable WMS and check GetCapabilities and a real 317 x 241 GetMap PNG.", ["WMS GetCapabilities", "WMS GetMap"], ['Node'], {}),
-    ("esri-leaflet-featurelayer", SAMPLES_REPO, "interop", "Stock esri-leaflet FeatureLayer on Honua", "Unmodified Leaflet and esri-leaflet draw a filtered Honua FeatureServer layer with popups.", ["L.esri.featureLayer"], ['HTML'], {}),
     ("migration-workbench", SDK_REPO, "interop", "ArcGIS migration workbench", "Evidence viewer for honua-migrate output; the migrated app runs on the client-compat shims.", ["MapCompat", "MapViewCompat", "FeatureLayerCompat", "FeatureTableCompat", "PopupCompat"], ['TypeScript'], {}),
     ("geoservices-source-app", SDK_REPO, "interop", "GeoServices source app", "A tiny ArcGIS JS parcel viewer used as the input to the migration end-to-end test.", ["(ArcGIS JS API input)"], ['TypeScript'], {"status": "Test fixture"}),
 

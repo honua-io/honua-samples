@@ -111,27 +111,9 @@ const OWN_REPO = "honua-io/honua-samples";
 const CAPABILITIES_CATALOG_URL = "https://honua.io/capabilities.html";
 
 const CONTENT_KINDS = [
-  {
-    id: "example",
-    slug: "examples",
-    label: "Examples",
-    singular: "Example",
-    description: "Focused, runnable code that teaches one API or protocol concept.",
-  },
-  {
-    id: "walkthrough",
-    slug: "walkthroughs",
-    label: "Walkthroughs",
-    singular: "Walkthrough",
-    description: "Task-oriented sequences that explain the decisions between each working step.",
-  },
-  {
-    id: "project",
-    slug: "projects",
-    label: "Projects",
-    singular: "Project",
-    description: "Production-shaped applications where the complete GitHub repository is the primary artifact.",
-  },
+  { id: "example", label: "Examples", singular: "Example" },
+  { id: "walkthrough", label: "Walkthroughs", singular: "Walkthrough" },
+  { id: "project", label: "Projects", singular: "Project" },
 ];
 const CONTENT_KIND_BY_ID = new Map(CONTENT_KINDS.map((kind) => [kind.id, kind]));
 const SDK_CONTENT_KIND_OVERRIDES = new Map([
@@ -303,7 +285,7 @@ async function main() {
     ...sdkCards.filter((c) => !c.bundleRunnable),
   ];
 
-  const contentSections = groupByContentKind(cards, keyByKey);
+  const taskGroups = groupByDeveloperTask(cards);
   const generatedAt = new Date().toISOString();
   const bundleNotice = bundleState.degraded
     ? `Sample bundle fetch degraded this deploy: ${bundleState.degradedReason} -- no sdk-js samples are embedded; each shows "no runnable build published yet".`
@@ -326,7 +308,7 @@ async function main() {
 
   await copyAssets();
   await buildStateLocalSite({ repoRoot: REPO_ROOT, siteDir: SITE_DIR, cards });
-  const indexHtml = renderIndexPage({ contentSections, cards, keyByKey, generatedAt, sourceCommit, bundleNotice });
+  const indexHtml = renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommit, bundleNotice });
   assertNoDuplicateArticles(indexHtml);
   await writeFile(path.join(SITE_DIR, "index.html"), indexHtml, "utf8");
 
@@ -698,28 +680,52 @@ function assertUniqueCardIdentities(cards) {
   }
 }
 
-// ---- category grouping ---------------------------------------------------
+// ---- developer-task grouping ---------------------------------------------
 
 const OTHER_CATEGORY = "Other (no canonical capability yet)";
 
-// One <article> per logical sample (honua-io/honua-samples#16): each card is
-// assigned to exactly ONE section -- its deterministic primary category (the
-// alphabetically first category among its capability keys' categories, with
-// the "Other" bucket always last). Before this rule, a card whose
-// capabilities spanned N categories rendered N times, which is precisely the
-// duplication the issue observed live (39 articles for 32 identities, e.g.
-// cesium-route-playback three times). The card's FULL capability set stays
-// on the card (data-capabilities + chips + detail page), so capability
-// filters in non-primary categories still match it (REQ-003), and the
-// index's filter counts now count logical samples, not DOM clones (NFR-001).
-function primaryCategory(card, keyByKey) {
-  const categories = new Set();
-  for (const key of card.capabilities) {
-    const record = keyByKey.get(key);
-    categories.add(record ? record.category : OTHER_CATEGORY);
-  }
-  if (categories.size === 0) return OTHER_CATEGORY;
-  return [...categories].sort(compareCategoryNames)[0];
+const DEVELOPER_TASKS = [
+  { goal: "build-map", label: "Draw your data on a map" },
+  { goal: "query-data", label: "Query and filter features" },
+  { goal: "connect-data", label: "Connect to your data" },
+  { goal: "analyze-data", label: "Analyze data" },
+  { goal: "operate-realtime", label: "Work with realtime data" },
+  { goal: "explore-imagery-3d", label: "Work with imagery, rasters and 3D" },
+  { goal: "migrate-app", label: "Move an existing app to Honua" },
+  { goal: "automate-workflow", label: "Run processing jobs" },
+];
+const OTHER_TASK = { goal: "other", label: "More samples" };
+const GOAL_BY_CAPABILITY_NAMESPACE = new Map([
+  ["serve", "query-data"],
+  ["process", "automate-workflow"],
+  ["raster", "explore-imagery-3d"],
+]);
+
+// A sample's goal comes from its manifest; job pages and SDK entries carry no
+// goal, so theirs follows from their capability namespaces.
+function developerGoal(card) {
+  if (card.learning?.goal) return card.learning.goal;
+  const namespaces = card.capabilities.map((key) => key.split(".")[0]).sort();
+  return namespaces.map((namespace) => GOAL_BY_CAPABILITY_NAMESPACE.get(namespace)).find(Boolean) ?? OTHER_TASK.goal;
+}
+
+// Each card lands in exactly one task group, so the index renders one
+// <article> per sample; its full capability set stays on the card for the
+// capability filters.
+function groupByDeveloperTask(cards) {
+  const knownGoals = new Set(DEVELOPER_TASKS.map((task) => task.goal));
+  const goalOf = (card) => {
+    const goal = developerGoal(card);
+    return knownGoals.has(goal) ? goal : OTHER_TASK.goal;
+  };
+  return [...DEVELOPER_TASKS, OTHER_TASK]
+    .map((task) => ({
+      name: task.label,
+      cards: cards
+        .filter((card) => goalOf(card) === task.goal)
+        .sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id)),
+    }))
+    .filter((group) => group.cards.length > 0);
 }
 
 function compareCategoryNames(a, b) {
@@ -729,28 +735,7 @@ function compareCategoryNames(a, b) {
   return a.localeCompare(b);
 }
 
-function groupByCategory(cards, keyByKey) {
-  const buckets = new Map();
-  for (const card of cards) {
-    const category = primaryCategory(card, keyByKey);
-    if (!buckets.has(category)) buckets.set(category, []);
-    buckets.get(category).push(card);
-  }
-  const categoryNames = Array.from(buckets.keys()).sort(compareCategoryNames);
-  return categoryNames.map((name) => ({
-    name,
-    cards: buckets.get(name).sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id)),
-  }));
-}
-
 // ---- rendering: shared chrome -----------------------------------------
-
-function groupByContentKind(cards, keyByKey) {
-  return CONTENT_KINDS.map((kind) => {
-    const kindCards = cards.filter((card) => card.contentKind === kind.id);
-    return { ...kind, cards: kindCards, categories: groupByCategory(kindCards, keyByKey) };
-  });
-}
 
 function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCommit, bundleNotice }) {
   const assetPrefix = depth === 0 ? "assets" : "../".repeat(depth) + "assets";
@@ -768,9 +753,8 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
 <header class="site-header">
   <a class="brand" href="${homeHref}">Honua Samples</a>
   <nav aria-label="Primary navigation">
-    <a href="${homeHref}#examples">Examples</a>
-    <a href="${homeHref}#walkthroughs">Walkthroughs</a>
-    <a href="${homeHref}#projects">Projects</a>
+    <a href="${homeHref}#journeys">County journeys</a>
+    <a href="${homeHref}#build">Build it yourself</a>
     <a href="${CAPABILITIES_CATALOG_URL}">Capability catalog</a>
     <a href="https://github.com/${OWN_REPO}" target="_blank" rel="noopener noreferrer">honua-samples ↗</a>
     <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js ↗</a>
@@ -881,42 +865,62 @@ function renderHeadlessPanel(card) {
 
 // ---- rendering: index ---------------------------------------------------
 
-function renderIndexPage({ contentSections, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }) {
-  const ownCount = cards.filter((c) => c.kind === "own").length;
-  const jobCount = cards.filter((c) => c.kind === "job").length;
-  const sdkCount = cards.filter((c) => c.kind === "sdk").length;
-  const starterSpecs = [
-    { id: "maplibre-quickstart", number: "01", eyebrow: "JavaScript + MapLibre", action: "Render a map" },
-    { id: "browser-featureserver-query", number: "02", eyebrow: "Browser + plain REST", action: "Query FeatureServer" },
-    { id: "ogc-features-python", number: "03", eyebrow: "Python standard library", action: "Walk OGC Features" },
-  ];
-  const starters = starterSpecs
-    .map((spec) => ({ ...spec, card: cards.find((card) => card.id === spec.id) }))
-    .filter((starter) => starter.card);
+const STATE_LOCAL_JOURNEYS = [
+  {
+    path: "./state-local/property/",
+    eyebrow: "Public app",
+    title: "Property and planning",
+    summary: "Find a Maui parcel by TMK and read the zoning, FEMA flood and tsunami overlays that cover it, with source details. Its code is the County parcel viewer sample below.",
+  },
+  {
+    path: "./state-local/311/",
+    eyebrow: "Dashboard",
+    title: "311 operations",
+    summary: "Service requests on real Maui streets by district, type and SLA, with location facts at intake.",
+  },
+  {
+    path: "./state-local/emergency/",
+    eyebrow: "Public map and EOC view",
+    title: "Emergency preparedness exercise",
+    summary: "Tsunami zones, school exercise anchors and simulated road status, in a public view and an EOC-only view.",
+  },
+  {
+    path: "./state-local/public-works/",
+    eyebrow: "Operations",
+    title: "Public works assets",
+    summary: "Storm drains, culverts, signals and NBI bridge ratings, with inspections and a work order board.",
+  },
+  {
+    path: "./state-local/workbench/",
+    eyebrow: "Analysis",
+    title: "Data analysis workbench",
+    summary: "Linked table, charts and map over Maui parcels and 311 requests, with filters, 3D, measure, draw and export.",
+  },
+  {
+    path: "./state-local/switching/",
+    eyebrow: "Migration guide",
+    title: "Switching from ArcGIS",
+    summary: "How each ArcGIS product maps to Honua, and the migration path that keeps existing clients working.",
+  },
+];
 
+function renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommit, bundleNotice }) {
   const bodyHtml = `
 <section class="intro">
   <div class="intro-copy">
-    <p class="eyebrow">State and local government</p><p><a class="button primary" href="./state-local/">Honua for Maui County — explore the county journeys ↗</a></p><p class="eyebrow">Supporting code catalog / ${cards.length} maintained entries</p>
-    <h1>Make the first request. See the exact result.</h1>
-    <p>Small, reproducible examples across Honua Server and the JavaScript SDK. Run a verified browser build when one exists, then inspect the source and evidence.</p>
-    <div class="intro-actions"><a class="button primary" href="#examples">Start with examples</a><a class="button" href="#catalog">Search all content</a></div>
+    <p class="eyebrow">State and local government</p>
+    <h1>Honua for Maui County.</h1>
+    <p>County journeys on real Maui data: property, 311, emergency preparedness, public works and analysis. Open a journey, then build the same thing from the code samples below.</p>
+    <div class="intro-actions"><a class="button primary" href="./state-local/">Open the county overview</a><a class="button" href="#build">Build it yourself</a></div>
   </div>
-  <dl class="catalog-stats" aria-label="Catalog composition">
-    <div><dt>${ownCount}</dt><dd>server samples executed by this repository</dd></div>
-    <div><dt>${jobCount}</dt><dd>server-first tasks with cross-SDK references</dd></div>
-    <div><dt>${sdkCount}</dt><dd>SDK entries admitted from the producer handoff</dd></div>
-  </dl>
 </section>
-<nav class="content-kind-nav" aria-label="Developer content types">
-  ${contentSections.map(renderContentKindNavItem).join("\n")}
-</nav>
-${starters.length ? `<section class="starter-section" aria-labelledby="starter-heading">
-  <div class="section-heading"><div><p class="eyebrow">Recommended starts</p><h2 id="starter-heading">Choose the client you already have.</h2></div><p>Each path produces a concrete result before it introduces the wider platform.</p></div>
-  <div class="starter-grid">${starters.map(renderStarterCard).join("\n")}</div>
-</section>` : ""}
-<section id="catalog" class="catalog-section" aria-labelledby="catalog-heading">
-  <div class="catalog-heading"><div><p class="eyebrow">Full catalog</p><h2 id="catalog-heading">Find one concept.</h2></div><div class="catalog-search"><label for="filter-search">Search samples</label><input id="filter-search" type="search" placeholder="Try: geocode, OGC, React..." autocomplete="off" /><kbd>/</kbd></div></div>
+<section id="journeys" class="starter-section" aria-labelledby="journeys-heading">
+  <div class="section-heading"><div><p class="eyebrow">Use-case journeys</p><h2 id="journeys-heading">Start with a county job.</h2></div><p>Each journey is a complete county workflow on Maui data.</p></div>
+  <div class="starter-grid">${STATE_LOCAL_JOURNEYS.map(renderJourneyCard).join("\n")}</div>
+</section>
+<section id="build" class="catalog-section" aria-labelledby="build-heading">
+  <div class="catalog-heading"><div><p class="eyebrow">Build it yourself</p><h2 id="build-heading">Code samples by task.</h2></div><div class="catalog-search"><label for="filter-search">Search samples</label><input id="filter-search" type="search" placeholder="Try: OGC, tiles, geoprocessing..." autocomplete="off" /><kbd>/</kbd></div></div>
+  <p>Each sample appears once, under the task it teaches. To read the source of every SDK sample, open the <a href="./state-local/sdk-explorer/">SDK Explorer</a>.</p>
   <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="catalog-filters">Filters <span id="filter-active-count">0</span></button>
 <div class="layout">
   <aside id="catalog-filters" class="filters">
@@ -925,7 +929,7 @@ ${starters.length ? `<section class="starter-section" aria-labelledby="starter-h
   <div class="results">
     <p id="filter-status" aria-live="polite">Showing all ${cards.length} samples.</p>
     <div id="empty-state" class="empty-state" hidden><strong>No sample matches that combination.</strong><span>Clear a filter or search for a protocol, SDK, or capability.</span></div>
-    ${contentSections.map((section) => renderContentKindSection(section)).join("\n")}
+    ${taskGroups.map(renderCategorySection).join("\n")}
   </div>
 </div>
 </section>
@@ -933,7 +937,7 @@ ${starters.length ? `<section class="starter-section" aria-labelledby="starter-h
 
   return pageShell({
     title: "Honua Samples Gallery",
-    description: "The canonical Honua sample gallery -- runnable server samples and the honua-sdk-js catalog, capability-keyed.",
+    description: "Honua county journeys on real Maui data, and the code samples to build them yourself.",
     bodyHtml,
     depth: 0,
     generatedAt,
@@ -942,16 +946,11 @@ ${starters.length ? `<section class="starter-section" aria-labelledby="starter-h
   });
 }
 
-function renderContentKindNavItem(section) {
-  return `<a href="#${escapeAttr(section.slug)}"><span>${escapeHtml(section.label)}</span><strong>${section.cards.length}</strong><small>${escapeHtml(section.description)}</small></a>`;
-}
-
-function renderStarterCard({ card, number, eyebrow, action }) {
-  const time = card.learning?.estimatedMinutes ? `${card.learning.estimatedMinutes} min` : card.bundleRunnable ? "Run in browser" : "Source available";
-  return `<a class="starter-card" href="${card.detailPath}">
-  <span class="starter-number">${escapeHtml(number)}</span><span class="starter-eyebrow">${escapeHtml(eyebrow)}</span>
-  <h3>${escapeHtml(action)}</h3><p>${escapeHtml(card.summary)}</p>
-  <span class="starter-meta">${escapeHtml(time)} <b>Open sample &rarr;</b></span>
+function renderJourneyCard(journey, index) {
+  return `<a class="starter-card" href="${escapeAttr(journey.path)}">
+  <span class="starter-number">${String(index + 1).padStart(2, "0")}</span><span class="starter-eyebrow">${escapeHtml(journey.eyebrow)}</span>
+  <h3>${escapeHtml(journey.title)}</h3><p>${escapeHtml(journey.summary)}</p>
+  <span class="starter-meta">Maui County <b>Open journey &rarr;</b></span>
 </a>`;
 }
 
@@ -1070,16 +1069,6 @@ function renderCardEvidenceBadges(card) {
   if (fixture?.status) badges.push(chip(`fixture: ${fixture.status}`, "fixture-state"));
   if (live?.status) badges.push(chip(`live: ${live.status}`, `live-state-${live.status}`));
   return badges.join("");
-}
-
-function renderContentKindSection(section) {
-  const body = section.cards.length
-    ? section.categories.map((category) => renderCategorySection(category)).join("\n")
-    : `<div class="content-kind-empty"><strong>No maintained ${escapeHtml(section.label.toLowerCase())} yet.</strong><span>A repository will appear here only after it meets the ${escapeHtml(section.singular.toLowerCase())} content contract.</span></div>`;
-  return `<section id="${escapeAttr(section.slug)}" class="content-kind-section" data-kind-section="${escapeAttr(section.id)}">
-  <div class="content-kind-heading"><div><p class="eyebrow">${escapeHtml(section.singular)} contract</p><h2>${escapeHtml(section.label)}</h2></div><p>${escapeHtml(section.description)}</p><span>${section.cards.length}</span></div>
-  ${body}
-</section>`;
 }
 
 // ---- rendering: own sample detail page ----------------------------------
