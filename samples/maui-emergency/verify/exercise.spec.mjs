@@ -181,6 +181,44 @@ test('zone lookup uses real-server geometry for interior, hole, boundary and out
   await expect(page.locator('#location-answer')).toContainText('Zone check unavailable');
 });
 
+test('location denial during startup survives completion of the initial snapshot load', async ({ page, context }) => {
+  await context.clearPermissions();
+  let releaseSnapshot;
+  const heldSnapshot = new Promise((resolve) => { releaseSnapshot = resolve; });
+  await page.route('**/data/exercise-data.json', async (route) => {
+    await heldSnapshot;
+    await route.continue();
+  });
+  try {
+    await page.goto(new URL('/maui-emergency/app/', browser.server.url).href);
+    await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'loading');
+    await page.getByRole('button', { name: 'Use my location' }).click();
+    await expect(page.locator('#location-answer')).toContainText('Could not access');
+    releaseSnapshot();
+    await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
+    await expect(page.locator('#location-answer')).toContainText('Could not access');
+  } finally { releaseSnapshot(); }
+});
+
+test('a pending geolocation response cannot replace a newer coordinate check', async ({ page }) => {
+  await ready(page);
+  await page.evaluate(() => {
+    navigator.geolocation.getCurrentPosition = (success, failure) => {
+      window.pendingLocation = { success, failure };
+    };
+  });
+  await page.getByRole('button', { name: 'Use my location' }).click();
+  await page.getByLabel('Latitude, longitude').fill('20.85, -156.5');
+  await page.getByRole('button', { name: 'Check location', exact: true }).click();
+  await expect(page.locator('#location-answer')).toContainText('intersects mapped regular');
+  await page.evaluate(() => {
+    window.pendingLocation.success({ coords: { latitude: 20.92, longitude: -156.52 } });
+    window.pendingLocation.failure();
+  });
+  await expect(page.locator('#location-answer')).toContainText('intersects mapped regular');
+  await expect(page.getByLabel('Latitude, longitude')).toHaveValue('20.85, -156.5');
+});
+
 test('theme changes repaint map background and preserve distinguishable operational colors', async ({ page }) => {
   await ready(page);
   const canvas = page.locator('#map canvas');

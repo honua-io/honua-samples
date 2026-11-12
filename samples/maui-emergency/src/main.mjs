@@ -26,6 +26,7 @@ let verifiedAt;
 let selectedId;
 let context;
 let checkedPoint;
+let locationRevision = 0;
 
 function select(feature) {
   selectedId = feature.id;
@@ -80,6 +81,7 @@ function freshnessText() {
 async function load() {
   if (loading) return;
   loading = true;
+  const startingLocationRevision = locationRevision;
   context = undefined;
   answer.textContent = 'Zone check unavailable while exercise resources are being verified.';
   clearTimeout(timer);
@@ -93,7 +95,7 @@ async function load() {
     records = snapshot ? snapshot.records : await loadExercise(source);
     try { context = snapshot ? snapshot.context : await loadContext(location.search); }
     catch (error) { answer.textContent = `Zone check unavailable: ${error.message}. Check the approved receipts and refresh.`; }
-    if (context && !checkedPoint) answer.textContent = `Connected ${context.zones.length} tsunami zone features and ${context.roads.length} road features. Enter coordinates to inspect the geography.`;
+    if (context && !checkedPoint && locationRevision === startingLocationRevision) answer.textContent = `Connected ${context.zones.length} tsunami zone features and ${context.roads.length} road features. Enter coordinates to inspect the geography.`;
     if (!source.snapshot) verifiedAt = Date.now();
     const validation = records.some(({ properties }) => [true, 1].includes(properties.validation_geometry));
     document.querySelectorAll('[data-geometry-source]').forEach((node) => { node.textContent = validation
@@ -133,17 +135,24 @@ function checkLocation(point) {
 }
 document.querySelector('#location-form').addEventListener('submit', (event) => {
   event.preventDefault();
+  locationRevision += 1;
+  checkedPoint = undefined;
   try { checkLocation(parseLocation(document.querySelector('#coordinates').value)); }
   catch (error) { answer.textContent = error.message; }
 });
 document.querySelector('#locate').addEventListener('click', () => {
+  const requestRevision = ++locationRevision;
+  checkedPoint = undefined;
   if (!navigator.geolocation) { answer.textContent = 'Location access unavailable. Enter coordinates instead.'; return; }
   answer.textContent = 'Waiting for location permission…';
   navigator.geolocation.getCurrentPosition(({ coords }) => {
+    if (requestRevision !== locationRevision) return;
     const value = `${coords.latitude}, ${coords.longitude}`;
     document.querySelector('#coordinates').value = value;
     try { checkLocation(parseLocation(value)); } catch (error) { answer.textContent = error.message; }
-  }, () => { answer.textContent = 'Could not access your location. Enter coordinates instead.'; }, { timeout: 10000, maximumAge: 0 });
+  }, () => {
+    if (requestRevision === locationRevision) answer.textContent = 'Could not access your location. Enter coordinates instead.';
+  }, { timeout: 10000, maximumAge: 0 });
 });
 
 try {
