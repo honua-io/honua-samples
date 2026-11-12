@@ -41,8 +41,7 @@ browser against a composed Honua server. The specs are the sample's pass/fail si
 - The single-file map samples (`maplibre-*`) load their libraries from pinned jsDelivr
   URLs of the published npm packages and record, on `<body>`, the feature counts and the navigation-to-rendered time
   (`data-sample-elapsed-ms`). Their public-live specs hold that time under 5 s; `HONUA_SAMPLE_LIVE_BUDGET_MS`
-  widens the budget on an overloaded host. Rendered features are counted with MapLibre's `queryRenderedFeatures`
- .
+  widens the budget on an overloaded host. Rendered features are counted with MapLibre's `queryRenderedFeatures`.
 
 ## Evidence
 

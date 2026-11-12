@@ -714,7 +714,10 @@ function developerGoal(card) {
 // capability filters.
 function groupByDeveloperTask(cards) {
   const knownGoals = new Set(DEVELOPER_TASKS.map((task) => task.goal));
-  const goalOf = (card) => (knownGoals.has(developerGoal(card)) ? developerGoal(card) : OTHER_TASK.goal);
+  const goalOf = (card) => {
+    const goal = developerGoal(card);
+    return knownGoals.has(goal) ? goal : OTHER_TASK.goal;
+  };
   return [...DEVELOPER_TASKS, OTHER_TASK]
     .map((task) => ({
       name: task.label,
