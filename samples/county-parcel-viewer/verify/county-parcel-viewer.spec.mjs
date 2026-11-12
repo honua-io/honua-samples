@@ -303,9 +303,14 @@ test("flood and zoning failures are their own states, never the no-match text, a
 });
 
 test("when the overlap math cannot load, both sections say so", async ({ page }) => {
-  await page.route("**/assets/geometry-*.js", (route) => route.abort("failed"));
+  let blockedLoads = 0;
+  await page.route("**/assets/geometry-ops-*.js", (route) => {
+    blockedLoads += 1;
+    return route.abort("failed");
+  });
   await page.goto(appUrl({ tmk: WAILUKU_TMK }));
   await settled(page);
+  expect(blockedLoads, "the built overlap adapter must remain independently loadable").toBeGreaterThan(0);
   await expect(page.locator("#zoning-body")).toHaveText("Overlap check unavailable");
   await expect(page.locator("#flood-body")).toContainText("Overlap check unavailable");
 });

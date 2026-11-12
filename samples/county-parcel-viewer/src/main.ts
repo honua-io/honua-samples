@@ -32,11 +32,7 @@ const usingDemoParcels = !new URLSearchParams(location.search).get("parcelsUrl")
 
 // The overlap math lives in its own chunk; if it cannot load, both sections
 // say "Overlap check unavailable" instead of guessing (design D9).
-const geometryOps: Promise<GeometryOps> = import("@honua/sdk-js/geometry").then((geometry) => ({
-  intersect: (a, b) => geometry.intersect(a, b),
-  union: (...parts) => geometry.union(...parts),
-  area: (input) => geometry.area(input),
-}));
+const geometryOps: Promise<GeometryOps> = import("./geometry-ops.js").then((module) => module.geometryOps);
 geometryOps.catch(() => {});
 
 
