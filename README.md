@@ -175,16 +175,21 @@ You need, from a clone of this repository:
   `http://localhost:3000`, the one origin `docker/compose.yml` allows through
   CORS.
 - Python 3 on `PATH` as `python` (`ogc-features-python` runs `python src/run.py`).
+- The .NET 10 SDK: the state/local samples verify their JS, Python and .NET
+  snippets against the published SDKs.
 - Internet access: the `public-live` samples query `https://demo.honua.io`.
 - Chromium for the [browser lane](#browser-lane). Playwright is locked in
   `package.json`; `--with-deps` also installs Chromium's system libraries
   (it uses `sudo` on Linux).
 
-Install the browser lane once:
+Install the browser lane and the published state/local SDKs once:
 
 ```bash
 npm ci
 npx playwright install --with-deps chromium
+npm ci --prefix scripts/state-local/sdk
+python3 -m pip install -r scripts/state-local/sdk/requirements.txt
+dotnet restore scripts/state-local/sdk/StateLocal.csproj
 ```
 
 Then start the 2026.1 candidate, run every sample, and stop the stack.
@@ -192,7 +197,7 @@ Licensing is disabled. The admin password is passed to Compose and to the
 browser fixture harness:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e
+export HONUA_SERVER_IMAGE="${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e}"
 export HONUA_ADMIN_PASSWORD="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
 export HONUA_ADMIN_API_KEY="$HONUA_ADMIN_PASSWORD"
 docker compose -f docker/compose.yml up -d --wait
@@ -206,7 +211,7 @@ docker compose -f docker/compose.yml down -v
 ```
 
 `docker/compose.yml` defaults to that same candidate image and sets
-`Licensing__Mode=Disabled`. `HONUA_SERVER_IMAGE` overrides the image. The
+`Licensing__Mode=Disabled`. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it). The
 floating `:trunk` tag is not the 2026.1 candidate. `HONUA_ADMIN_API_KEY`
 must match the composed server's admin password; browser specs use it when
 they create fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
