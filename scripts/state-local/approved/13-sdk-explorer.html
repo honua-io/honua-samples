@@ -615,6 +615,10 @@ try {
   function rtSource(id, data) { map.addSource(id, { type: "geojson", data }); RT.sources.push(id); }
   function rtLayer(def, before) { map.addLayer(def, before); RT.layers.push(def.id); }
   function rtOn(type, a, b) { if (b) map.on(type, a, b); else map.on(type, a); RT.handlers.push(b ? [type, a, b] : [type, a]); }
+  function rtOnce(type, callback) {
+    const handler = (event) => { map.off(type, handler); callback(event); };
+    rtOn(type, handler);
+  }
   function rtLater(fn, ms) { RT.timers.push(setTimeout(fn, ms)); }
   function rtPopup(lngLat, html) { const p = new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setHTML(html).addTo(map); RT.popups.push(p); return p; }
   function setBasemap(on) { map.basemapLayers.forEach((id) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none")); $("#map").classList.toggle("no-labels", !on); }
@@ -695,9 +699,9 @@ try {
       hoverCursor(ids);
       const b = bboxOfFeatures(features);
       if (!restoringCamera) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 40, duration: 0, maxZoom: 16 });
-      map.once("idle", () => {
+      rtOnce("idle", () => {
         const rendered = map.queryRenderedFeatures({ layers: ids.filter((id) => map.getLayer(id)) }).length;
-        statusPanel("pass", `Snapshot: ${L.title} (${L.geom}): ${features.length} features from the embedded extract, ${rendered} drawn. No server request was made. Click a feature for its attributes.`, req.filter(Boolean));
+        statusPanel(rendered > 0 ? "pass" : "warn", `Snapshot: ${L.title} (${L.geom}): ${features.length} features from the embedded extract, ${rendered} drawn. No server request was made. Click a feature for its attributes.`, req.filter(Boolean));
       });
       statusPanel("run", "Loading the layer...", req.filter(Boolean));
     },
@@ -756,9 +760,9 @@ try {
       $("#mapUi").innerHTML = `<div class="card legend" style="left:12px;bottom:28px;max-width:min(280px,calc(100% - 24px));max-height:calc(100% - 60px);overflow-y:auto"><h3>${esc(p.field)}</h3><ul>${rows.map((c) => `<li><span class="sw" style="background:${c.color}"></span><span>${esc(c.value)}</span><span class="n">${c.count}</span></li>`).join("")}</ul></div>`;
       const b = bboxOfFeatures(items);
       if (items.length && !restoringCamera) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 30, duration: 0, maxZoom: 16 });
-      map.once("idle", () => {
+      rtOnce("idle", () => {
         const rendered = map.queryRenderedFeatures({ layers: ["features-fill"] }).length;
-        statusPanel("pass", `Snapshot: ${items.length} features from the embedded extract, ${counts.size} distinct "${p.field}" values, ${rendered} drawn. No server request was made. Click a ${pt ? "point" : "polygon"} for details.`, req);
+        statusPanel(rendered > 0 ? "pass" : "warn", `Snapshot: ${items.length} features from the embedded extract, ${counts.size} distinct "${p.field}" values, ${rendered} drawn. No server request was made. Click a ${pt ? "point" : "polygon"} for details.`, req);
       });
       statusPanel("run", "Loading the collection...", req);
     },

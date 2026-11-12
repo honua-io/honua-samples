@@ -16,7 +16,7 @@
 //     unavailable, clipboard blocked, address search per the server's provider;
 //   - click identify, pushState/popstate, the share and full-screen links.
 
-import { cp, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -549,7 +549,81 @@ test("SHELL-03: gallery frame fits the property shell at desktop and mobile widt
     expect(await page.locator("iframe").evaluate((element) => element.clientHeight)).toBeGreaterThanOrEqual(920);
     expect(await frame.locator("html").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
     if (width > 720) {
-      expect(await frame.locator("html").evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
+      expect((await frame.locator(".work").boundingBox()).height).toBeLessThanOrEqual(900);
     }
+    await frame.locator(".parcel-browser").scrollIntoViewIfNeeded();
+    await expect(frame.locator(".parcel-browser")).toBeVisible();
   }
+});
+
+
+test("parcel browser links bounded pages, inspection, filter and exports", async ({ page }) => {
+  await page.goto(appUrl());
+  await expect(page.locator("#browse-status")).toContainText("25 parcels loaded");
+  await expect(page.locator("#parcel-inspection")).toContainText(`Showing ${EXAMPLE_TMK}`);
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true })));
+  expect((await page.locator(".work").boundingBox()).height).toBeLessThanOrEqual(900);
+  const first = page.locator("#parcel-table [data-row-key]").first();
+  const tmk = await first.locator('[data-field="tmk_txt"]').textContent();
+  await first.click();
+  await expect(page.locator("body")).toHaveAttribute("data-tmk", tmk);
+  await expect(page.locator("#parcel-inspection")).toContainText(`Showing ${tmk}`);
+  await page.locator("#filter-tmk").fill(tmk);
+  await page.getByRole("button", { name: "Apply filter", exact: true }).click();
+  await expect(page.locator("#browse-status")).toContainText("1 parcels loaded");
+  const csvReady = page.waitForEvent("download");
+  await page.locator("#export-csv").click();
+  const csv = await csvReady;
+  expect(csv.suggestedFilename()).toBe("maui-parcels.csv");
+  expect(await readFile(await csv.path(), "utf8")).toContain(tmk);
+  await expect(page.locator("#export-status")).toContainText("Exported 1 rows");
+  const geoReady = page.waitForEvent("download");
+  await page.locator("#export-geojson").click();
+  const geo = await geoReady;
+  expect(geo.suggestedFilename()).toBe(`maui-parcel-${tmk}.geojson`);
+  const collection = JSON.parse(await readFile(await geo.path(), "utf8"));
+  expect(collection.type).toBe("FeatureCollection");
+  expect(collection.features).toHaveLength(1);
+  expect(collection.features[0].properties.tmk_txt).toBe(tmk);
+  expect(collection.features[0].id).toBeDefined();
+  expect(collection.features[0].geometry.coordinates.length).toBeGreaterThan(0);
+  await expect(page.locator("#export-status")).toContainText("re-queried by stable source ID");
+  await page.getByRole("button", { name: "Clear filter", exact: true }).click();
+  await expect(page.locator("#browse-status")).toContainText("25 parcels loaded");
+  const boundedExport = page.waitForEvent("download");
+  await page.locator("#export-csv").click();
+  const bounded = await boundedExport;
+  expect((await readFile(await bounded.path(), "utf8")).trim().split(/\r?\n/u)).toHaveLength(101);
+  await expect(page.locator("#export-status")).toContainText("Exported 100 rows");
+  const browseQueries = queries((r) => new URL(r.url).searchParams.get("returnGeometry") === "false");
+  expect(browseQueries.length).toBeGreaterThan(0);
+  for (const request of browseQueries) expect(Number(new URL(request.url).searchParams.get("resultRecordCount"))).toBeLessThanOrEqual(25);
+  await page.locator("#overlay-zoning").uncheck();
+  await page.locator("#overlay-flood").uncheck();
+  await expect(page.locator("#overlay-zoning")).not.toBeChecked();
+});
+
+test("parcel browser clears stale selection and reports empty and failed filters", async ({ page }) => {
+  await page.goto(appUrl());
+  await expect(page.locator("#export-geojson")).toBeEnabled();
+  await page.locator("#q").fill("999999999");
+  await page.locator("#find").click();
+  await expect(page.locator("#export-geojson")).toBeDisabled();
+  await settled(page);
+  await expect(page.locator("#export-geojson")).toBeDisabled();
+  await page.locator("#filter-tmk").fill("999999999");
+  await page.getByRole("button", { name: "Apply filter", exact: true }).click();
+  await expect(page.locator("#browse-status")).toContainText("No parcels match");
+  await page.route(`${PARCELS}/query?**`, async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("returnGeometry") === "false") await route.fulfill({ status: 503, body: "Unavailable" });
+    else await route.continue();
+  });
+  await page.getByRole("button", { name: "Clear filter", exact: true }).click();
+  await expect(page.locator("#browse-status")).toContainText(/failed/i);
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })));
+  const count = seen.length;
+  await page.getByRole("button", { name: "Clear filter", exact: true }).click();
+  await page.waitForTimeout(100);
+  expect(seen.length).toBe(count);
 });
