@@ -54,7 +54,8 @@ try {
     const snapshotMap = await page.locator('#map').isVisible();
     if (snapshotMap) {
       await expect(page.locator('#pvPanel iframe')).toHaveCount(0);
-      await expect(page.locator('#pvBottom')).toBeVisible();
+      await expect(page.locator('#pvBottom .pv-status')).toHaveAttribute('data-state', 'pass', { timeout: 20000 });
+      await expect(page.locator('#pvBottom')).toContainText(/\b[1-9]\d* drawn/);
       await expect(page.locator('#datas')).not.toContainText(previews[id].commit);
       const source = id.endsWith('maplibre-category-style-legend')
         ? 'County of Maui, Department of Planning'

@@ -15,7 +15,8 @@ import { h, fill } from "./dom.js";
 import { planningPanel } from "./planning.js";
 
 import { EXAMPLE_TMK, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
-import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelByTmk } from "./data.js";
+import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelById, parcelByTmk } from "./data.js";
+import { createParcelBrowser } from "./parcel-browser.js";
 import { createParcelMap, type ParcelMap } from "./map.js";
 import { floodMeaning } from "./meanings.js";
 import { type GeometryOps, type OverlapGroup, countedFlood, countedZoning, overlapByCode, shareLabel } from "./overlap.js";
@@ -31,11 +32,7 @@ const usingDemoParcels = !new URLSearchParams(location.search).get("parcelsUrl")
 
 // The overlap math lives in its own chunk; if it cannot load, both sections
 // say "Overlap check unavailable" instead of guessing (design D9).
-const geometryOps: Promise<GeometryOps> = import("@honua/sdk-js/geometry").then((geometry) => ({
-  intersect: (a, b) => geometry.intersect(a, b),
-  union: (...parts) => geometry.union(...parts),
-  area: (input) => geometry.area(input),
-}));
+const geometryOps: Promise<GeometryOps> = import("./geometry-ops.js").then((module) => module.geometryOps);
 geometryOps.catch(() => {});
 
 
@@ -125,6 +122,8 @@ type HistoryMode = "push" | "replace" | "none";
 let generation = 0;
 let inflight: AbortController | undefined;
 let parcelMap: ParcelMap | undefined;
+let parcelBrowser: Awaited<ReturnType<typeof createParcelBrowser>> | undefined;
+let selectedParcel: Parcel | undefined;
 let startedAt = performance.now();
 
 /** Starts a new lookup: aborts the last one and clears its result first (design D9 "New search"). */
@@ -133,6 +132,8 @@ function beginLookup(statusText: string): { id: number; signal: AbortSignal } {
   inflight = new AbortController();
   generation += 1;
   startedAt = performance.now();
+  selectedParcel = undefined;
+  parcelBrowser?.clear();
   parcelMap?.clearSelection();
   panel.replaceChildren(h("p", { class: "panel-status", role: "status" }, statusText));
   findButton.disabled = true;
@@ -210,6 +211,23 @@ async function lookupTmk(digits: string, { mode, example = false, focus = true }
     if (!current(lookup.id) || lookup.signal.aborted) return;
     panelProblem("The parcel lookup failed. The county parcel layer did not answer; try again in a moment.", { alert: true });
     signal({ searchState: "error" });
+    finishLookup(lookup.id, "fail", message(error));
+  }
+}
+
+async function lookupId(id: string | number): Promise<void> {
+  clearInvalid();
+  const lookup = beginLookup("Loading the selected parcel…");
+  try {
+    const parcel = await parcelById(config, id, lookup.signal);
+    if (!current(lookup.id)) return;
+    if (!parcel) throw new Error("The selected parcel is no longer available.");
+    input.value = parcel.tmk;
+    writeHistory("push", { tmk: parcel.tmk });
+    await showParcel(lookup, parcel, { example: false, focus: false });
+  } catch (error) {
+    if (!current(lookup.id) || lookup.signal.aborted) return;
+    panelProblem(message(error), { alert: true });
     finishLookup(lookup.id, "fail", message(error));
   }
 }
@@ -456,6 +474,8 @@ interface Lookup {
 }
 
 async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { example: boolean; focus: boolean }): Promise<void> {
+  selectedParcel = parcel;
+  parcelBrowser?.select(parcel);
   const sections = renderParcel(parcel, example, lookup.signal);
   signal({ tmk: parcel.tmk, searchState: "found", example: example ? "true" : undefined });
   input.value = example ? parcel.tmk : input.value || parcel.tmk;
@@ -478,6 +498,7 @@ async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { 
     try {
       const candidates = await candidatesFor(config.zoningUrl, parcel, { code: "zone_code", label: "zone_dist", signal: lookup.signal });
       if (!current(lookup.id)) return;
+      parcelMap?.showZoning(candidates.map((candidate) => candidate.geometry));
       const counted = countedZoning(overlapByCode(parcel.geometry, candidates, ops).groups);
       renderZoning(sections.zoning, counted.length ? "success" : "empty", counted);
       signal({ zoningState: counted.length ? "success" : "empty", zoningMain: counted[0]?.code, zoningCodes: counted.map((g) => `${g.code}:${shareLabel(g.share)}`).join(" ") });
@@ -598,6 +619,18 @@ function startMap(): void {
 function start(): void {
   updateFullscreen(null);
   startMap();
+  let closed = false;
+  void createParcelBrowser(config, (id) => void lookupId(id)).then((browser) => {
+    if (closed) { browser.dispose(); return; }
+    parcelBrowser = browser;
+    if (selectedParcel) browser.select(selectedParcel);
+  }).catch((error) => { byId("browse-status").textContent = `Parcel browsing unavailable: ${message(error)}`; });
+  window.addEventListener("pagehide", (event) => {
+    if (event.persisted) return;
+    closed = true;
+    inflight?.abort();
+    parcelBrowser?.dispose();
+  });
   const raw = new URLSearchParams(location.search).get("tmk");
   if (raw !== null) {
     input.value = raw;

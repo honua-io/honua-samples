@@ -18,6 +18,7 @@ import { loggedFetch } from "./request-log.js";
 import { tmkWhere } from "./tmk.js";
 
 export interface Parcel {
+  readonly id?: string | number;
   readonly tmk: string;
   readonly gisAcres: number | null;
   readonly taxAcres: number | null;
@@ -30,6 +31,7 @@ export interface Parcel {
 }
 
 interface LayerHandle {
+  readonly source: import("@honua/sdk-js/contract").CapabilityAwareSource<Record<string, unknown>>;
   readonly client: HonuaClient;
   readonly serviceId: string;
   readonly layerId: number;
@@ -61,7 +63,7 @@ export function layer(url: string): Promise<LayerHandle> {
       const metadata = await client.getLayerMetadata(serviceId, layerId);
       const idField = metadata.objectIdField;
       if (!idField || !/^[a-zA-Z_][a-zA-Z0-9_]*$/u.test(idField)) throw new Error("Layer has no valid object ID field.");
-      return { client, serviceId, layerId, idField, fields: new Set(metadata.fields?.map((field) => field.name)) };
+      return { source: connection.source(), client, serviceId, layerId, idField, fields: new Set(metadata.fields?.map((field) => field.name)) };
     })();
     // A failed discovery is retried on the next call, not cached.
     handle.catch(() => handles.delete(url));
@@ -70,7 +72,7 @@ export function layer(url: string): Promise<LayerHandle> {
   return handle;
 }
 
-function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unknown }): Parcel {
+function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unknown }, idField: string): Parcel {
   const attributes = feature.attributes;
   const esri = feature.geometry as { rings?: number[][][] } | null | undefined;
   const geometry = geoServicesGeometryToGeoJSON(esri as Record<string, unknown> | null);
@@ -79,6 +81,7 @@ function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unk
   if (typeof tmk !== "string" || !tmk.trim()) throw new Error("The parcel has no source TMK; County permit lookup is unavailable.");
   const number = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
   return {
+    id: typeof attributes[idField] === "number" || typeof attributes[idField] === "string" ? attributes[idField] as string | number : undefined,
     tmk,
     gisAcres: number(attributes["gisacres"]),
     taxAcres: number(attributes["taxacres"]),
@@ -99,37 +102,47 @@ function parcelFields(fields: ReadonlySet<string>): string[] {
 export async function parcelByTmk(config: ViewerConfig, digits: string, signal: AbortSignal): Promise<Parcel | null> {
   const where = tmkWhere(digits);
   if (DISPLAY_SNAPSHOT) return displayParcelByTmk(config.parcelsUrl, digits, signal);
-  const { client, serviceId, layerId, fields } = await layer(config.parcelsUrl);
+  const { client, serviceId, layerId, fields, idField } = await layer(config.parcelsUrl);
   const response = await QueryBuilder.for(client, serviceId, layerId)
     .where(where)
-    .outFields(...parcelFields(fields))
+    .outFields(idField, ...parcelFields(fields))
     .returnGeometry(true)
     .limit(2)
     .extraParams({ outSR: 4326 })
     .signal(signal)
     .run();
   const feature = response.features?.[0];
-  return feature ? toParcel(feature) : null;
+  return feature ? toParcel(feature, idField) : null;
+}
+
+/** Resolve a table selection by its source object ID, never its row position. */
+export async function parcelById(config: ViewerConfig, id: string | number, signal: AbortSignal): Promise<Parcel | null> {
+  const { client, serviceId, layerId, fields, idField } = await layer(config.parcelsUrl);
+  const response = await QueryBuilder.for(client, serviceId, layerId)
+    .objectIds(String(id)).outFields(idField, ...parcelFields(fields))
+    .returnGeometry(true).limit(1).extraParams({ outSR: 4326 }).signal(signal).run();
+  const feature = response.features?.[0];
+  return feature ? toParcel(feature, idField) : null;
 }
 
 /** The parcel under a WGS84 point (map click or geocoded address), or null. */
 export async function parcelAtPoint(config: ViewerConfig, lngLat: readonly [number, number], signal: AbortSignal): Promise<Parcel | null> {
   if (DISPLAY_SNAPSHOT) return displayParcelAtPoint(config.parcelsUrl, lngLat, signal);
-  const { client, serviceId, layerId, fields } = await layer(config.parcelsUrl);
+  const { client, serviceId, layerId, fields, idField } = await layer(config.parcelsUrl);
   const filter = point(lngLat[0], lngLat[1], { wkid: 4326 });
   const response = await QueryBuilder.for(client, serviceId, layerId)
     .where("1=1")
     .geometry(filter.geometry)
     .geometryType(filter.geometryType)
     .spatialRel("esriSpatialRelIntersects")
-    .outFields(...parcelFields(fields))
+    .outFields(idField, ...parcelFields(fields))
     .returnGeometry(true)
     .limit(1)
     .extraParams({ outSR: 4326 })
     .signal(signal)
     .run();
   const feature = response.features?.[0];
-  return feature ? toParcel(feature) : null;
+  return feature ? toParcel(feature, idField) : null;
 }
 
 /**

@@ -7,7 +7,8 @@ its number (TMK on Maui), by street address or by clicking it on the map, and se
 - the FEMA flood zones it touches, with FEMA's plain meaning and share, worded so the page never claims a
   flood determination;
 - its assessor record link, acreage, and the fields the county data does not carry (land use, owner);
-- a link to that parcel you can copy and share.
+- a link to that parcel you can copy and share;
+- a linked, paged parcel table and attribute inspection panel, with exact TMK filtering and bounded exports.
 
 It is a Vite app built on the published Honua JavaScript SDK (`@honua/sdk-js@0.3.2`, pinned in
 `package-lock.json`), running on public Maui County demo data. It is not affiliated with the County of Maui.
@@ -39,6 +40,7 @@ and writes the static app to `dist/`; any static file server can host it, at any
 | `src/map.ts` | MapLibre draws the server's Protomaps basemap and the parcel outlines from the static PMTiles archive `maui-parcels-static`, mounted with `registerPmtilesSource` from `@honua/sdk-js/pmtiles` and the `pmtiles` protocol. The selected parcel is a filter on those tiles. |
 | `src/buildings.ts` | The 2D/3D control uses the published SDK's `scene-workspace` extrusion adapter and Overture building PMTiles on the same server. |
 | `src/tmk.ts` | TMK input: spaces, `-`, `:` and `.` are stripped and only `^[0-9]{9}$` is accepted, so `2-1-5-010:077` searches `215010077`. Anything else shows "Not a valid TMK" and sends no request. |
+| `src/parcel-browser.ts` | Public SDK application context, feature table and inspection components. Loads 25 rows per page, exports at most 100 filtered CSV rows or one selected parcel re-queried by stable ID as GeoJSON. Export authorization is limited to the public demo layer; custom sources must supply their own policy. |
 | `src/main.ts` | The results panel, its loading, empty, error and retry states, history (`pushState` per lookup, Back re-renders), and the share links. |
 | `src/request-log.ts` | "Technical details (requests this page made)" lists every FeatureServer and GeocodeServer request and every PMTiles byte-range read. |
 
@@ -54,6 +56,10 @@ The rules the panel applies:
 
 Parcels are drawn only from the PMTiles archive. FeatureServer answers are used for lookups, identify and the
 overlap math, never to draw parcels.
+
+The planning-layer controls show zoning and high-risk flood candidates for the selected parcel, using the same queries as the results panel. They do not download the full datasets.
+
+The pinned SDK 0.3.2 requires explicit attribute fields for inspection and a public `table.select()` pointer handler because focusing a row can replace it before its click fires. Keyboard selection remains native. Remove these compatibility measures after upgrading to a published SDK with those fixes.
 
 ### Address search
 

@@ -75,6 +75,7 @@ export interface ParcelMap {
   select(tmk: string, geometry: GeoJsonGeometry): void;
   clearSelection(): void;
   showFlood(geometries: readonly GeoJsonGeometry[]): void;
+  showZoning(geometries: readonly GeoJsonGeometry[]): void;
   /** True when the selected parcel's outline is in the loaded tiles. */
   selectedOutlineRendered(): boolean;
   /**
@@ -195,12 +196,34 @@ function watchTheme(map: maplibregl.Map): void {
       ["basemap-roads", "line-color", "--map-road"], ["parcel-outlines", "line-color", "--map-parcel"],
       ["parcel-selected-fill", "fill-color", "--map-select"], ["parcel-selected-line", "line-color", "--map-select-line"],
       ["overture-buildings", "fill-extrusion-color", "--map-select"],
+      ["zoning-fill", "fill-color", "--map-select"],
       ["flood-fill", "fill-color", "--hz-flood"], ["flood-line", "line-color", "--hz-flood"],
     ] as const;
     for (const [layer, paint, color] of paints) if (map.getLayer(layer)) map.setPaintProperty(layer, paint, token(color));
   };
   document.addEventListener("honua:theme", restyle);
   map.on("remove", () => document.removeEventListener("honua:theme", restyle));
+}
+
+function setOverlay(map: maplibregl.Map, source: string, geometries: readonly GeoJsonGeometry[]): void {
+  const data = { type: "FeatureCollection", features: geometries.map((geometry) => ({ type: "Feature", properties: {}, geometry })) };
+  (map.getSource(source) as maplibregl.GeoJSONSource | undefined)?.setData(data as Parameters<maplibregl.GeoJSONSource["setData"]>[0]);
+}
+
+function connectOverlayControls(map: maplibregl.Map): void {
+  const lifetime = new AbortController();
+  for (const name of ["zoning", "flood"]) {
+    const control = document.getElementById(`overlay-${name}`) as HTMLInputElement;
+    const update = () => {
+      for (const suffix of ["fill", "line"]) {
+        const id = `${name}-${suffix}`;
+        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", control.checked ? "visible" : "none");
+      }
+    };
+    control.addEventListener("change", update, { signal: lifetime.signal });
+    update();
+  }
+  map.on("remove", () => lifetime.abort());
 }
 
 export function createParcelMap(container: HTMLElement, config: ViewerConfig, events: MapEvents): ParcelMap {
@@ -239,9 +262,12 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
       }
       // Flood zones sit over the selected parcel's fill and under its outline.
       const underOutline = map.getLayer("parcel-selected-line") ? "parcel-selected-line" : undefined;
+      map.addSource("zoning", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({ id: "zoning-fill", type: FILL_LAYER, source: "zoning", paint: { "fill-color": token("--map-select"), "fill-opacity": 0.12 } }, underOutline);
       map.addSource("flood", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "flood-fill", type: FILL_LAYER, source: "flood", paint: { "fill-color": token("--hz-flood"), "fill-opacity": 0.18 } }, underOutline);
       map.addLayer({ id: "flood-line", type: "line", source: "flood", paint: { "line-color": token("--hz-flood"), "line-opacity": 0.6, "line-width": 1, "line-dasharray": [3, 2] } }, underOutline);
+      connectOverlayControls(map);
       events.onBasemap(await addBasemap(map, config));
       installBuildingControl(map, { archiveUrl: config.buildingsUrl, archiveFor: pmtilesArchive });
       resolve();
@@ -294,18 +320,11 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
       selectedTmk = null;
       void ready.then(() => {
         setSelectedFilter("");
-        (map.getSource("flood") as maplibregl.GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [] });
+        for (const source of ["flood", "zoning"]) setOverlay(map, source, []);
       });
     },
-    showFlood(geometries) {
-      void ready.then(() => {
-        const data = {
-          type: "FeatureCollection",
-          features: geometries.map((geometry) => ({ type: "Feature", properties: {}, geometry })),
-        } as unknown as Parameters<maplibregl.GeoJSONSource["setData"]>[0];
-        (map.getSource("flood") as maplibregl.GeoJSONSource | undefined)?.setData(data);
-      });
-    },
+    showFlood(geometries) { void ready.then(() => setOverlay(map, "flood", geometries)); },
+    showZoning(geometries) { void ready.then(() => setOverlay(map, "zoning", geometries)); },
     whenDrawn(timeoutMs) {
       return ready.then(
         () =>

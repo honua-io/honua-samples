@@ -285,7 +285,8 @@ async function main() {
     ...sdkCards.filter((c) => !c.bundleRunnable),
   ];
 
-  const taskGroups = groupByDeveloperTask(cards);
+  const taskGroups = groupByDeveloperTask(cards.filter((card) => card.kind !== "job"));
+  if (jobCards.length) taskGroups.push({ name: "Source walkthroughs", cards: jobCards });
   const generatedAt = new Date().toISOString();
   const bundleNotice = bundleState.degraded
     ? `Sample bundle fetch degraded this deploy: ${bundleState.degradedReason} -- no sdk-js samples are embedded; each shows "no runnable build published yet".`
@@ -526,18 +527,18 @@ function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
     return { state: "draft", label: "Draft — outside the active gallery's verified sample set" };
   }
   if (!result) {
-    return { state: "none", label: "Active — no run results yet" };
+    return { state: "none", label: "Server run not recorded" };
   }
   const date = envelopeGeneratedAt ? envelopeGeneratedAt.slice(0, 10) : "an unknown date";
   if (result.outcome === "pass") {
     return {
       state: "pass",
-      label: `Runs green — verified ${date} against server ${result.serverVersion ?? "unknown"}`,
+      label: `Server run passed ${date} against server ${result.serverVersion ?? "unknown"}`,
     };
   }
   return {
     state: "fail",
-    label: `Last run failed on ${date} (server ${result.serverVersion ?? "unknown"})${result.error ? `: ${result.error}` : ""}`,
+    label: `Server run failed on ${date} (server ${result.serverVersion ?? "unknown"})${result.error ? `: ${result.error}` : ""}`,
   };
 }
 
@@ -1032,7 +1033,7 @@ function renderCard(card) {
       ? runBadgeHtml(card.runBadge)
       : `${chip(`support: ${card.supportTier}`, "support-tier")}${renderCardEvidenceBadges(card)}`;
   const runnableBadge = runnable
-    ? `<span class="badge runnable" title="Runs in the browser on this page">&#9654; Runnable</span>`
+    ? `<span class="badge runnable" title="Browser demo available; server verification is reported separately">&#9654; Browser demo</span>`
     : "";
   const evidenceScope = card.kind === "sdk" ? ` data-evidence-scope="gallery-only"` : "";
   const contentKind = CONTENT_KIND_BY_ID.get(card.contentKind);
