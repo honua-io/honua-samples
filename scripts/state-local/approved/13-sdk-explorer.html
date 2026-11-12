@@ -246,7 +246,7 @@
   <aside class="col left" aria-label="Samples">
     <div class="pagehead">
       <h1>SDK Explorer</h1>
-      <p>Every Honua JS SDK example and honua-sample, with the code, the readme and a live preview on Maui data.</p>
+      <p>Every Honua JS SDK example and honua-sample, with the code, the readme and a live preview on Maui data. The <a id="examplesIndex" target="_blank" rel="noopener">SDK examples index</a> groups the examples by capability.</p>
     </div>
     <div class="finder">
       <label class="field"><svg class="ico faint" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">Search samples</span><input id="q" type="search" placeholder="Search samples or API names" autocomplete="off"></label>
@@ -997,6 +997,7 @@ function sanitizedReadme(html) {
 
   /* ---------- Boot ---------- */
   $("#verTop").textContent = VER;
+  $("#examplesIndex").href = D.examplesIndex;
   $("#verBadge").textContent = `SDK ${VER}`;
   $("#revNote").textContent = `· ${D.samples.length} samples from pinned snapshots, ${D.sdkRev.split(" ")[1]}`;
   $("#revNote").title = `honua-sdk-js ${D.sdkRev}, honua-samples ${D.samplesRev}; source snapshots are unmodified; preview provenance is shown separately`;

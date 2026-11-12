@@ -29,15 +29,12 @@ CATALOG = [
     ("maplibre-quickstart", SDK_REPO, "start", "First Map: endpoint to inspected map", "The canonical five-minute journey: connect, discover, explain, query and mount one source on MapLibre.", ["createHonua", "honua.connect", "connection.inspect", "connection.explain", "connection.query", "connection.mount", "maplibreRenderer"], ['TypeScript'], {}),
     ("hello-featureserver-rest", SAMPLES_REPO, "start", "Query a public FeatureServer", "Read three real Maui building features with plain fetch(). No account, key or SDK.", ["FeatureServer /query"], ['Node'], {}),
     ("oauth-signin", SDK_REPO, "start", "OAuth2 sign-in with PKCE", "Sign in with authorization code and PKCE against a mock identity provider, then call a bearer-protected API.", ["oauth2", "HonuaClient", "HonuaAuthError"], ['TypeScript'], {}),
-    ("standalone-quickstart", SDK_REPO, "start", "Standalone quickstart", "Moved: the anonymous URL mode of First Map replaces it.", [], ['TypeScript'], {"status": "Moved", "moved": "maplibre-quickstart"}),
-    ("endpoint-to-map", SDK_REPO, "start", "Endpoint to map", "Moved: consolidated into First Map.", [], ['TypeScript'], {"status": "Moved", "moved": "maplibre-quickstart"}),
 
     ("maplibre-featureserver-layer", SAMPLES_REPO, "maps", "FeatureServer layer in MapLibre GL JS", "One HTML file loads a FeatureServer layer as GeoJSON, fits the map to it and opens a popup on click.", ["FeatureServer ?f=json", "FeatureServer /query f=geojson", "maplibregl.Map", "fitBounds", "maplibregl.Popup"], ['HTML'], {}),
     ("maplibre-category-style-legend", SAMPLES_REPO, "maps", "Category style and legend from OGC API Features", "Colour features by a category field with one match expression; the legend and popup use the same values.", ["/queryables", "/items", "match expression"], ['HTML'], {}),
     ("maplibre-ogc-tiles-mvt", SAMPLES_REPO, "maps", "OGC API Tiles vector tiles in MapLibre", "Turn a tileset's templated link into a MapLibre vector source; Maui buildings extruded by render_height.", ["/tiles", "fill-extrusion"], ['HTML'], {}),
     ("pmtiles-static", SDK_REPO, "maps", "PMTiles static basemap", "A basemap from one .pmtiles archive on static hosting; the runtime registers pmtiles:// and reads the archive metadata.", ["describePmtilesArchive", "isPmtilesProtocolRegistered", "loadMapPackage", "HonuaClient"], ['TypeScript'], {}),
     ("storytelling-25d-map", SDK_REPO, "maps", "2.5D storytelling map", "A pitched corridor walkthrough: compatibility gating, OGC API Features extrusions, hover and selection.", ["HonuaClient.checkCompatibility", "ogcFeatures().collection().items()", "toMapLibreExtrusionLayer", "createHoverHandler", "createSelectionHandler"], ['TypeScript'], {}),
-    ("terrain-rgb-elevation", SDK_REPO, "maps", "Terrain-RGB elevation", "Terrain-RGB tiles as hillshade and terrain, a point elevation lookup and a profile for a drawn line.", ["HonuaImageService", "decodeTerrainRgbElevation", "applyMapLibreScenePrimitives"], ['TypeScript'], {}),
     ("temporal-playback", SDK_REPO, "maps", "Temporal playback", "Animate a month of events with createTemporalPlayback, styled by a classBreaksRenderer and its legend.", ["createTemporalPlayback", "classBreaksRenderer", "renderer.legendItems"], ['TypeScript'], {}),
     ("imagery-cog-quickstart", SDK_REPO, "maps", "Imagery and terrain journey", "Search STAC by extent, date and cloud cover, open a COG on MapLibre and sample an elevation profile.", ["connect", "HonuaClient.stac().search", "openStacCogAsset", "mountStacCogAssetToMapLibre", "sampleElevationProfile"], ['TypeScript'], {}),
 
@@ -51,12 +48,11 @@ CATALOG = [
     ("overture-geoparquet", SDK_REPO, "query", "Overture columnar lab", "A protocol-neutral spatial query on GeoParquet through DuckDB-WASM, with one bounded policy.", ["GeoparquetRuntime", "createBrowserDuckDbDriver", "geoparquetResolver", "createDataset"], ['TypeScript'], {}),
 
     ("sketch-editing", SDK_REPO, "edit", "Sketch editing with terra-draw", "Draw, edit and delete through one edit-sketch workflow with snapping, undo and redo, then applyEdits.", ["createEditSketchWorkflow", "createSnapIndex", "createTerraDrawSketch", "terraDrawSketchToolCapabilities", "workflow.submit"], ['TypeScript'], {}),
-    ("planning-permitting-workbench", SDK_REPO, "edit", "Planning and permitting journey", "Find a parcel, check metadata, run bounded analysis, submit or recover an edit with attachments, export.", ["createHonua", "createEditSession", "createFeatureEditorWorkflow", "bindChartToExploration", "bindMapExtentToExploration", "intersect", "area"], ['TypeScript'], {}),
-    ("edit-workflow-demo", SDK_REPO, "edit", "Edit workflow demo", "Compatibility sample; the planning and permitting journey now owns the full edit workflow.", ["createEditSession", "createEditSketchWorkflow", "createSnapIndex", "resolveSnapCandidate"], ['TypeScript'], {"status": "Replacement planned", "moved": "planning-permitting-workbench"}),
+    ("edit-workflow-demo", SDK_REPO, "edit", "Edit workflow demo", "Metadata-backed forms, optimistic edits, attachments, conflicts and recovery on one fixture layer.", ["createEditSession", "createEditSketchWorkflow", "createSnapIndex", "resolveSnapCandidate"], ['TypeScript'], {}),
 
     ("spatial-analytics-workbench", SDK_REPO, "analysis", "Linked spatial analysis workbench", "Explain, accept, execute: one query plan links the area, the filter, the map, the table and the chart.", ["createExplorationContext", "connectView", "setAggregation", "setFilter", "selectLinkedViewQueryProjection", "explainQuery"], ['TypeScript'], {}),
+    ("maui-workbench", SAMPLES_REPO, "analysis", "Maui linked analysis workbench", "Parcel and fictional 311 layers share one filter registry across the map, table and status chart, with bounded exports.", ["connect", "createFilterRegistry", "projectFilterRegistryToQuery", "compileOgcApiFeaturesQuery", "createEditSketchWorkflow"], ['TypeScript'], {}),
     ("realtime-incident-dashboard", SDK_REPO, "analysis", "Realtime incident dashboard", "Uses the server stream when advertised, else a visible read-only replay; map, filters, queue and metrics stay linked.", ["createHonuaServerRealtimeSubscription", "createRealtimeFeatureStore", "bindFilterControlsToExploration", "syncMapLayerFilterToExploration", "uniqueValueRenderer"], ['TypeScript'], {}),
-    ("kepler-analytics", SDK_REPO, "analysis", "Kepler analytics", "Retired in September 2026; the page stays for an archived consumer card.", [], ['TypeScript'], {"status": "Retired"}),
 
     ("geoprocessing-job-runner", SDK_REPO, "gp", "Run a buffer job and collect the result", "Execute geometry.buffer through OGC API Processes, follow the job and read its output.", ["HonuaClient", "ogcProcesses().execute", "job.result"], ['TypeScript'], {}),
     ("gp-local-dev", SAMPLES_REPO, "gp", "Local geoprocessing with the Python SDK", "Submit and verify a 500 m planar buffer with the published Python SDK.", ["honua_sdk.HonuaClient", "client.geoprocessing()"], ['Python'], {}),
@@ -262,7 +258,9 @@ def main():
         missing = dirs - ids
         if missing: raise SystemExit(f"Uncatalogued {sub} in {os.path.basename(repo)}: {sorted(missing)}")
     rev = lambda r: git(r, "log", "-1", "--format=%h %cs", "origin/trunk").strip()
+    sdk_revision = revisions["honua-sdk-js"]
     doc = {"version": json.loads(show(sdk_repo, "package.json"))["version"], "sdkRev": rev(sdk_repo), "samplesRev": rev(samples_repo),
+           "examplesIndex": f"https://github.com/honua-io/honua-sdk-js/blob/{sdk_revision}/examples/README.md",
            "categories": [{"id": c, "name": n} for c, n in CATEGORIES], "samples": out}
     dest = args.output
     os.makedirs(os.path.dirname(os.path.abspath(dest)), exist_ok=True)
