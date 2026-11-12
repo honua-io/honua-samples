@@ -4,7 +4,7 @@ import {
   type HonuaFeatureInspectionElement, type HonuaFeatureTableElement,
   type HonuaFeatureTable, type HonuaFeatureTableSecureExportAdapter,
 } from "@honua/sdk-js/web-components";
-import { DEFAULT_BASE_URL, DISPLAY_SNAPSHOT, type ViewerConfig } from "./config.js";
+import { DEFAULT_BASE_URL, DISPLAY_SNAPSHOT, OFFLINE_FIXTURE, type ViewerConfig } from "./config.js";
 import { layer, parcelById, type Parcel } from "./data.js";
 import { normalizeTmk } from "./tmk.js";
 
@@ -23,11 +23,12 @@ function download(content: string, filename: string, type: string): void {
 }
 
 function exportPolicy(config: ViewerConfig, sourceId: string): HonuaFeatureTableSecureExportAdapter {
+  const exportBase = OFFLINE_FIXTURE ? location.origin : DEFAULT_BASE_URL;
   return {
-    id: "maui-public-demo",
-    authorize: (request) => config.parcelsUrl === `${DEFAULT_BASE_URL}/rest/services/maui-parcels/FeatureServer/1`
+    id: OFFLINE_FIXTURE ? "maui-synthetic-fixture" : "maui-public-demo",
+    authorize: (request) => config.parcelsUrl === `${exportBase}/rest/services/maui-parcels/FeatureServer/1`
       && request.sourceId === sourceId && request.maxRows <= EXPORT_ROWS && request.maxBytes <= EXPORT_BYTES
-      ? { authorized: true, authorizationId: "anonymous-public-parcels" }
+      ? { authorized: true, authorizationId: OFFLINE_FIXTURE ? "synthetic-parcels" : "anonymous-public-parcels" }
       : { authorized: false, reason: "Only the public Maui demo parcel layer can be exported here." },
     record: (provenance) => { element("export-status").dataset.provenance = JSON.stringify(provenance); },
   };

@@ -31,6 +31,35 @@ npm run dev
 Open the URL Vite prints. The first load shows an example parcel (TMK 2-3-4-008:053, downtown Wailuku). `npm run build` typechecks
 and writes the static app to `dist/`; any static file server can host it, at any path (`base: "./"`).
 
+### Run with local synthetic data
+
+After `npm ci`, the fixture runs without a live Honua server or external network access:
+
+```bash
+npm run dev:fixture
+```
+
+Try TMKs `234008053`, `234008054` and `234008055`, click a parcel, select a table row, filter the table,
+and download the selected GeoJSON or filtered CSV. The map, overlap results, SDK table, inspection and
+bounded export use the same application paths as the live mode. All geometry, acreage, zoning and flood
+values are synthetic; the page labels them accordingly. They are not county records or land-use guidance.
+Address search, basemap tiles, buildings and additional planning layers are unavailable in this mode.
+Data-source URL overrides are ignored, so a copied live URL cannot send fixture queries to a remote server.
+
+To check the production build locally:
+
+```bash
+npm run test:fixture
+npm run build:fixture
+npm run preview:fixture
+```
+
+`fixture/service.ts` supplies three parcels and a small, explicit GeoServices query subset: metadata,
+TMK/ID equality, point/polygon intersects, field projection, ordering, paging, counts and IDs. Unsupported
+queries return errors. This is a development fixture, not a Honua server implementation or protocol
+qualification. `dist-fixture/` requires the Vite fixture preview middleware; it is not a standalone static
+hosting artifact. The normal build still writes the live application to `dist/`.
+
 ## What the code does
 
 | File | Job |
@@ -40,7 +69,7 @@ and writes the static app to `dist/`; any static file server can host it, at any
 | `src/map.ts` | MapLibre draws the server's Protomaps basemap and the parcel outlines from the static PMTiles archive `maui-parcels-static`, mounted with `registerPmtilesSource` from `@honua/sdk-js/pmtiles` and the `pmtiles` protocol. The selected parcel is a filter on those tiles. |
 | `src/buildings.ts` | The 2D/3D control uses the published SDK's `scene-workspace` extrusion adapter and Overture building PMTiles on the same server. |
 | `src/tmk.ts` | TMK input: spaces, `-`, `:` and `.` are stripped and only `^[0-9]{9}$` is accepted, so `2-1-5-010:077` searches `215010077`. Anything else shows "Not a valid TMK" and sends no request. |
-| `src/parcel-browser.ts` | Public SDK application context, feature table and inspection components. Loads 25 rows per page, exports at most 100 filtered CSV rows or one selected parcel re-queried by stable ID as GeoJSON. Export authorization is limited to the public demo layer; custom sources must supply their own policy. |
+| `src/parcel-browser.ts` | Public SDK application context, feature table and inspection components. Loads 25 rows per page, exports at most 100 filtered CSV rows or one selected parcel re-queried by stable ID as GeoJSON. Export authorization is limited to the public demo layer (or the local fixture in fixture mode); custom sources must supply their own policy. |
 | `src/main.ts` | The results panel, its loading, empty, error and retry states, history (`pushState` per lookup, Back re-renders), and the share links. |
 | `src/request-log.ts` | "Technical details (requests this page made)" lists every FeatureServer and GeocodeServer request and every PMTiles byte-range read. |
 
@@ -54,8 +83,8 @@ The rules the panel applies:
 - A failed zoning or flood query says the check failed and offers a retry. It never shows the no-match text.
 - Percentages are whole numbers; "<1%" appears only when the share really is under 1%.
 
-Parcels are drawn only from the PMTiles archive. FeatureServer answers are used for lookups, identify and the
-overlap math, never to draw parcels.
+In live mode, parcels are drawn only from the PMTiles archive. FeatureServer answers are used for lookups,
+identify and overlap math. The local fixture draws its synthetic polygons from a local GeoJSON endpoint.
 
 The planning-layer controls show zoning and high-risk flood candidates for the selected parcel, using the same queries as the results panel. They do not download the full datasets.
 
@@ -94,6 +123,19 @@ The SDK `scene-workspace` export remains available in the pinned 0.3.x release; 
 successor is `@honua/app-platform/scene-workspace` for a future SDK upgrade.
 
 ## Verification
+
+`verify/county-parcel-fixture.spec.mjs` builds the fixture and drives desktop and phone layouts in Chromium,
+blocking and rejecting any external network request. It verifies rendered features, first-click table
+selection, attribute inspection, map identify, known overlap values, filtered CSV and selected GeoJSON,
+empty lookup recovery and the explicit unavailable address-search state. From the repository root:
+
+```bash
+npm ci
+npx playwright test county-parcel-fixture --project=chromium
+```
+
+These deterministic checks complement live-server verification; they do not prove live PMTiles rendering,
+server behavior or a fresh agent's ability to create the application.
 
 Generate a [receipt-bound stock MCP client setup and question](../../docs/state-local-mcp.md)
 for the agent moment. Setup generation does not mark the stock-client journey complete.

@@ -11,7 +11,7 @@ import {
 } from "@honua/sdk-js/honua";
 import type { GeoJsonGeometry } from "@honua/sdk-js/geometry";
 
-import { DISPLAY_SNAPSHOT, type ViewerConfig } from "./config.js";
+import { DISPLAY_SNAPSHOT, OFFLINE_FIXTURE, type ViewerConfig } from "./config.js";
 import { displayCandidates, displayParcelAtPoint, displayParcelByTmk } from "./display-data.js";
 import type { OverlapCandidate } from "./overlap.js";
 import { loggedFetch } from "./request-log.js";
@@ -219,6 +219,7 @@ async function checkGeocoderProvider(config: ViewerConfig): Promise<string> {
 
 /** Up to five address matches. Throws GeocoderUnavailableError when address search cannot run. */
 export async function geocode(config: ViewerConfig, text: string): Promise<AddressMatch[]> {
+  if (OFFLINE_FIXTURE) throw new GeocoderUnavailableError("Address search is unavailable in the synthetic fixture. Use one of the three sample TMKs.");
   if (DISPLAY_SNAPSHOT) throw new GeocoderUnavailableError("Live data coming. Search by TMK or click a parcel in this snapshot.");
   providerCheck ??= checkGeocoderProvider(config);
   providerCheck.catch(() => (providerCheck = undefined));
