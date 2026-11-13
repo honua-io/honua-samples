@@ -1,14 +1,30 @@
 #!/usr/bin/env node
 // Packs a built publication (descriptor.json, its artifacts and STAC item) into
 // one reproducible archive with an integrity manifest, ready to attach to a
-// release and lock in shared/publications/.
+// release. The demo CDN serves the release's files byte-exact (honua-demo-infra
+// static-data.lock.json); static hosting gzips them and breaks range reads.
 
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256 } from '../lib/checksum.mjs';
-import { publicationFilePattern, verifyDescriptorArtifacts } from './stage-publications.mjs';
+
+export const publicationFilePattern = /^(stac\/)?[a-z0-9_-]+\.(json|parquet|pmtiles)$/;
+const pathSegmentPattern = /^[A-Za-z0-9._-]+$/;
+
+export function verifyDescriptorArtifacts(descriptor, manifest) {
+  for (const segment of [descriptor.publicationId, descriptor.version]) {
+    if (!pathSegmentPattern.test(segment ?? '') || segment.startsWith('.')) throw new Error(`Unsafe publication path segment ${segment}`);
+  }
+  for (const [kind, artifact] of Object.entries(descriptor.artifacts)) {
+    const integrity = Object.hasOwn(manifest.files, artifact.href) ? manifest.files[artifact.href] : undefined;
+    if (integrity?.sha256 !== artifact.sha256 || integrity.bytes !== artifact.bytes) {
+      throw new Error(`${descriptor.publicationId} ${kind} artifact ${artifact.href} does not match the archive manifest`);
+    }
+  }
+  if (!Object.hasOwn(manifest.files, descriptor.links.stac)) throw new Error(`${descriptor.publicationId} STAC item ${descriptor.links.stac} is missing`);
+}
 
 async function publicationFiles(directory) {
   const entries = await readdir(directory, { recursive: true, withFileTypes: true });
