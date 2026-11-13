@@ -30,7 +30,11 @@ async function checkRoute(context, baseUrl, route) {
   try {
     const response = await page.goto(`${baseUrl}/state-local/${route}`);
     assert.equal(response.status(), 200, route);
-    const drawn = await page.waitForFunction(drawnIslandSources, ARCHIVE_PREFIX, { timeout: MAP_SETTLE_TIMEOUT_MS });
+    const drawn = await page.waitForFunction(drawnIslandSources, ARCHIVE_PREFIX, { timeout: MAP_SETTLE_TIMEOUT_MS })
+      .catch(async (error) => {
+        const state = await page.evaluate(() => (window.HM?.maps ?? []).map((map) => ({ loaded: map.loaded(), sources: Object.keys(map.getStyle()?.sources ?? {}) })));
+        throw new Error(`${route}: island layers never drew (${error.message}); maps ${JSON.stringify(state)}; errors ${JSON.stringify(errors.slice(0, 5))}`);
+      });
     const sources = await drawn.jsonValue();
     const decodeErrors = errors.filter((text) => /decod|ETag|pmtiles/i.test(text));
     assert.deepEqual(decodeErrors, [], `${route}: archive read errors`);
