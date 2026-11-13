@@ -39,10 +39,22 @@ const WAILUKU_TMK = "234008053";
 const LARGE_TMK = "249002001";
 // A coastal parcel in a VE flood zone, distinct from the example parcel.
 const COASTAL_TMK = "215010777";
-// OpenStreetMap carries this house number, so its match lands on the parcel
-// rather than on the street centre line.
+// A house-level OpenStreetMap match recorded from the demo geocoder on
+// 13 Nov 2026. The required test replays it, because the live third-party
+// result moves between requests; the live answer is reported as an annotation.
 const OSM_HOUSE_ADDRESS = "2145 Wells St, Wailuku, HI";
 const OSM_HOUSE_TMK = "234008047";
+const OSM_HOUSE_CANDIDATES = {
+  spatialReference: { wkid: 4326, latestWkid: 4326 },
+  candidates: [
+    {
+      address: "2145, Wells Street, Wailuku, Maui County, Hawaii, 96793, United States",
+      location: { x: -156.503009, y: 20.886331, spatialReference: { wkid: 4326, latestWkid: 4326 } },
+      score: 30,
+      attributes: { Provider: "nominatim", class: "place", type: "house" },
+    },
+  ],
+};
 
 test.describe.configure({ mode: "serial" });
 
@@ -335,13 +347,20 @@ test("address search follows the server's geocoder provider", async ({ page }) =
   const metadata = await fetch(`${DATA_BASE}/rest/services/World/GeocodeServer?f=json`).then((response) => response.json());
   const provider = String(metadata.locatorProperties?.Provider ?? "unknown");
   test.info().annotations.push({ type: "geocoder-provider", description: provider });
+  const osm = /nominatim|openstreetmap|\bosm\b/iu.test(provider);
+  if (osm) {
+    const live = await fetch(`${DATA_BASE}/rest/services/World/GeocodeServer/findAddressCandidates?SingleLine=${encodeURIComponent(OSM_HOUSE_ADDRESS)}&f=json`)
+      .then((response) => response.json(), (error) => ({ error: error.message }));
+    test.info().annotations.push({ type: "live-geocoder-candidates", description: JSON.stringify(live.candidates?.map(({ location, attributes }) => [location.x, location.y, attributes.class, attributes.type]) ?? live) });
+    await page.route("**/GeocodeServer/findAddressCandidates**", (route) => route.fulfill({ json: OSM_HOUSE_CANDIDATES }));
+  }
   await page.goto(appUrl());
   await settled(page);
   await page.locator("#q").fill(OSM_HOUSE_ADDRESS);
   await page.locator("#find").click();
   await settled(page);
   const candidates = seen.filter((r) => r.url.includes("/GeocodeServer/findAddressCandidates"));
-  if (/nominatim|openstreetmap|\bosm\b/iu.test(provider)) {
+  if (osm) {
     expect(candidates.length).toBe(1);
     await expect(page.locator("body")).toHaveAttribute("data-search-state", "found");
     await expect(page.locator("body")).toHaveAttribute("data-tmk", OSM_HOUSE_TMK);
