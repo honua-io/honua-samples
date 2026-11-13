@@ -13,3 +13,4 @@ export function serverOrigin(value?: string | null): string;
 export function basemapUrl(value: string | null | undefined, server: string): string;
 export function islandDataUrl(value?: string | null): string;
 export function withStateLocalEndpoints(text: string): string;
+export function deployedOrigin(origin: string): string;

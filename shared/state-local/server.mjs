@@ -7,23 +7,18 @@ export const BASEMAP_ROUTE = '/api/v1/tiles/pmtiles/maui-basemap';
 export const DEFAULT_ISLAND_DATA = '/state-local/data/island/';
 
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+const UNSAFE_CHARACTERS = /['"\\<>\s?#]/u;
 
 export function isLocalServer(url) {
   return LOCAL_HOSTS.includes(url.hostname);
 }
 
-function webUrl(value, setting) {
-  const url = new URL(value, 'https://site.invalid');
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash
-    || /['"\\<>\s]/u.test(value)) {
-    throw new Error(`${setting} must be an http(s) URL without credentials, query, fragment, quotes or spaces`);
+function absoluteUrl(value, setting) {
+  const url = /^https?:\/\//u.test(value) && !UNSAFE_CHARACTERS.test(value) ? new URL(value) : null;
+  if (!url || url.username || url.password || (url.protocol !== 'https:' && !isLocalServer(url))) {
+    throw new Error(`${setting} must be an https URL (http only for localhost) without credentials, query, quotes or spaces`);
   }
   return url;
-}
-
-function absoluteUrl(value, setting) {
-  if (!/^https?:\/\//u.test(value)) throw new Error(`${setting} must be an absolute http(s) URL`);
-  return webUrl(value, setting);
 }
 
 export function serverOrigin(value) {
@@ -38,9 +33,9 @@ export function basemapUrl(value, server) {
 
 export function islandDataUrl(value) {
   const text = value || DEFAULT_ISLAND_DATA;
-  webUrl(text, ISLAND_DATA_SETTING);
-  if (!text.endsWith('/') || !/^(\/[^/]|https?:\/\/)/u.test(text)) {
-    throw new Error(`${ISLAND_DATA_SETTING} must be a site path or http(s) URL ending in /`);
+  const sitePath = /^\/[^/]/u.test(text) && !UNSAFE_CHARACTERS.test(text);
+  if (!text.endsWith('/') || !(sitePath || absoluteUrl(text, ISLAND_DATA_SETTING))) {
+    throw new Error(`${ISLAND_DATA_SETTING} must be a site path or https URL ending in /`);
   }
   return text;
 }
@@ -50,11 +45,17 @@ export const stateLocalServer = serverOrigin(import.meta.env?.VITE_STATE_LOCAL_S
 export const stateLocalBasemap = basemapUrl(env[BASEMAP_SETTING], stateLocalServer);
 export const stateLocalIslandData = islandDataUrl(env[ISLAND_DATA_SETTING]);
 
+export function deployedOrigin(origin) {
+  return origin === DEFAULT_SERVER ? stateLocalServer : origin;
+}
+
 export const PAGE_PLACEHOLDERS = Object.freeze({
   '{{STATE_LOCAL_BASEMAP}}': stateLocalBasemap,
   '{{STATE_LOCAL_ISLAND_DATA}}': stateLocalIslandData,
 });
 
 export function withStateLocalEndpoints(text) {
-  return Object.entries(PAGE_PLACEHOLDERS).reduce((page, [placeholder, value]) => page.replaceAll(placeholder, value), text);
+  const page = Object.entries(PAGE_PLACEHOLDERS).reduce((result, [placeholder, value]) => result.replaceAll(placeholder, value), text);
+  if (page.includes('{{STATE_LOCAL_')) throw new Error('An unknown {{STATE_LOCAL_*}} placeholder remains in the page');
+  return page;
 }

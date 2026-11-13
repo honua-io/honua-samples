@@ -18,7 +18,7 @@ test('settings accept only plain http(s) locations', () => {
   assert.equal(serverOrigin(''), DEFAULT_SERVER);
   assert.equal(serverOrigin(`${REHEARSAL}/`), REHEARSAL);
   assert.equal(serverOrigin('http://localhost:8080'), 'http://localhost:8080');
-  for (const value of [`${REHEARSAL}/api`, 'https://user@rehearsal.example.org', `${REHEARSAL}?a=1`, `${REHEARSAL}#a`, 'ftp://rehearsal.example.org', '/']) {
+  for (const value of [`${REHEARSAL}/api`, 'https://user@rehearsal.example.org', `${REHEARSAL}?a=1`, `${REHEARSAL}#a`, 'ftp://rehearsal.example.org', 'http://rehearsal.example.org', '/']) {
     assert.throws(() => serverOrigin(value), new RegExp(SERVER_SETTING), value);
   }
   assert.equal(basemapUrl('', REHEARSAL), `${REHEARSAL}/api/v1/tiles/pmtiles/maui-basemap`);
@@ -59,4 +59,11 @@ test('the basemap and island archive settings override the page archives alone',
 
 test('an invalid build setting fails the build instead of shipping a broken page', () => {
   assert.throws(() => withSettings({ [SERVER_SETTING]: `${REHEARSAL}/ogc` }, `import './shared/state-local/server.mjs';`), /bare server origin/);
+});
+
+test('gallery provenance names the configured server, not the source default', () => {
+  const origins = withSettings({ [SERVER_SETTING]: REHEARSAL }, `
+    import { dataOriginsOf } from './scripts/lib/own-sample-apps.mjs';
+    console.log(JSON.stringify(dataOriginsOf('fetch("${DEFAULT_SERVER}/rest/services")')));`);
+  assert.deepEqual(origins, [REHEARSAL]);
 });

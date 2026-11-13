@@ -3,8 +3,8 @@ import { stateLocalServer } from "../../../shared/state-local/server.mjs";
 export const OFFLINE_FIXTURE = import.meta.env.MODE === "fixture";
 export const DISPLAY_SNAPSHOT = import.meta.env.VITE_STATE_LOCAL_SNAPSHOT === "1";
 // Where the viewer reads its data. Every default is on the one Honua server
-// chosen at build time (shared/state-local/server.mjs); URL parameters point the same app at another server or at
-// a county's own layers (design R9, R20):
+// chosen at build time (shared/state-local/server.mjs); URL parameters point
+// the same app at another server or at a county's own layers (design R9, R20):
 //
 //   baseUrl         Honua server for every default below
 //   parcelsUrl      FeatureServer layer with tmk_txt, gisacres, taxacres, qpub_link

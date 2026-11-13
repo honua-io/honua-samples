@@ -14,7 +14,10 @@ function watchPage(page, siteOrigin) {
   const endpoints = new Set([stateLocalServer, stateLocalBasemap, new URL(stateLocalIslandData, siteOrigin).href].map((url) => new URL(url).origin));
   endpoints.delete(siteOrigin);
   page.on('pageerror', (error) => seen.errors.push(error.message));
-  page.on('console', (message) => { if (message.type() === 'error') seen.errors.push(message.text()); });
+  page.on('console', (message) => {
+    const missingFavicon = message.location().url?.endsWith('/favicon.ico');
+    if (message.type() === 'error' && !missingFavicon) seen.errors.push(message.text());
+  });
   page.on('request', (request) => {
     const { origin, protocol } = new URL(request.url());
     if (!['http:', 'https:'].includes(protocol)) return;
@@ -34,7 +37,7 @@ for (const journey of JOURNEYS) {
   test(`${journey} loads, draws its map and reads only from the configured endpoints`, async ({ page, baseURL }) => {
     const seen = watchPage(page, new URL(baseURL).origin);
     const response = await page.goto(`/state-local/${journey}/`);
-    expect(response.status()).toBe(200);
+    expect(response?.status()).toBe(200);
     await mapsDrawn(page);
     expect(seen.endpointRequests.length, 'live requests to the configured endpoints').toBeGreaterThan(0);
     expect(seen.otherRequests, 'live requests to any other server').toEqual([]);

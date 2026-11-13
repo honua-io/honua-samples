@@ -32,6 +32,7 @@
 // shows the honest no-bundle panel and --check / the browser smoke go red.
 
 import { sha256 } from "./checksum.mjs";
+import { deployedOrigin } from "../../shared/state-local/server.mjs";
 export { sha256 };
 import { execFileSync } from "node:child_process";
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
@@ -119,7 +120,7 @@ export function dataOriginsOf(text) {
   const origins = new Set();
   for (const match of String(text).matchAll(ORIGIN_PATTERN)) {
     const origin = match[0].toLowerCase();
-    if (!LIBRARY_ORIGINS.includes(origin) && !NAVIGATION_ORIGINS.includes(origin)) origins.add(origin);
+    if (!LIBRARY_ORIGINS.includes(origin) && !NAVIGATION_ORIGINS.includes(origin)) origins.add(deployedOrigin(origin));
   }
   return [...origins].sort();
 }
