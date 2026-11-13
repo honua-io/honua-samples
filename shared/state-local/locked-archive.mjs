@@ -39,7 +39,9 @@ export async function copyManifestFiles(options) {
   await mkdir(output, { recursive: true });
   for (const [file, integrity] of Object.entries(manifest.files)) {
     if (!pattern.test(file)) throw new Error('Invalid snapshot filename');
-    await writeFile(path.join(output, file), await readVerifiedFile({ directory, file, integrity }));
+    const target = path.join(output, file);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, await readVerifiedFile({ directory, file, integrity }));
   }
   await writeFile(path.join(output, 'manifest.json'), JSON.stringify(manifest, null, 2));
 }
