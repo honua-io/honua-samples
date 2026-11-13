@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
+import { withStateLocalEndpoints } from '../../shared/state-local/server.mjs';
 
-const code = await readFile(new URL('../../shared/state-local/island-map.js', import.meta.url), 'utf8');
+const code = withStateLocalEndpoints(await readFile(new URL('../../shared/state-local/island-map.js', import.meta.url), 'utf8'));
 const base = 'https://samples.honua.io/state-local/data/island/';
 const chrome = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36';
 const firefox = 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0';
@@ -53,8 +54,8 @@ test('GeoJSON overlays are untouched', () => {
 
 test('the street basemap keeps default caching', () => {
   // Only the static island archives showed the cache failure; the basemap is served by Honua behind its own CDN.
-  assert.match(code, /url: 'pmtiles:\/\/\{\{STATE_LOCAL_SERVER\}\}\/api\/v1\/tiles\/pmtiles\/maui-basemap'/);
-  assert.doesNotMatch(code, /islandArchive\(\s*'\{\{STATE_LOCAL_SERVER/);
+  assert.match(code, /url: 'pmtiles:\/\/https:\/\/demo\.honua\.io\/api\/v1\/tiles\/pmtiles\/maui-basemap'/);
+  assert.doesNotMatch(code, /islandArchive\(\s*'https:\/\/demo\.honua\.io/);
 });
 
 test('pages load the pmtiles build whose FetchSource honours chromeWindowsNoCache', async () => {

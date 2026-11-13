@@ -37,19 +37,26 @@ node scripts/smoke-state-local-display.mjs
 ## Server endpoint
 
 The journeys read live tiles and services from one Honua server, `https://demo.honua.io`
-by default (`shared/state-local/server.mjs`). Set `VITE_STATE_LOCAL_SERVER` to a bare
-origin when building to point every journey, the sample bindings and the SDK Explorer at
-another server:
+by default. `shared/state-local/server.mjs` holds the defaults and checks these build
+settings:
+
+| Setting | Default | Used by |
+| --- | --- | --- |
+| `VITE_STATE_LOCAL_SERVER` | `https://demo.honua.io` | sample bindings, workbench analysis, parcel viewer, SDK Explorer |
+| `VITE_STATE_LOCAL_BASEMAP` | server + `/api/v1/tiles/pmtiles/maui-basemap` | street basemap PMTiles archive on every journey map |
+| `VITE_STATE_LOCAL_ISLAND_DATA` | `/state-local/data/island/` (same origin) | island PMTiles and GeoJSON archives |
+
+The archive locations must allow cross-origin range requests from the site.
 
 ```sh
-VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org node scripts/state-local/build-display-site.mjs
-VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org node scripts/build-gallery.mjs
+export VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org
+node scripts/state-local/build-display-site.mjs
+node scripts/build-gallery.mjs
 ```
 
-Serve the built `site/` and run the six journeys against that server. The project is
-skipped unless both variables are set:
+Serve the built `site/` and run the six journeys against the same settings. The project
+is skipped unless `VITE_STATE_LOCAL_SERVER` and `STATE_LOCAL_SITE_URL` are both set:
 
 ```sh
-VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org STATE_LOCAL_SITE_URL=http://localhost:8080 \
-  npx playwright test --project state-local-journeys
+STATE_LOCAL_SITE_URL=http://localhost:8080 npx playwright test --project state-local-journeys
 ```

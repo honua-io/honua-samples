@@ -1,7 +1,7 @@
 /* Maui street basemap and Honua-native island archives. Story records remain
    separate GeoJSON sources so parcel selections retain their documented IDs. */
 (function () {
-  const root = new URL('/state-local/data/island/', location.origin);
+  const root = new URL('{{STATE_LOCAL_ISLAND_DATA}}', location.origin);
   const tiled = new Set(['parcels', 'zoning', 'dfirm', 'tsunami', 'roads', 'contours']);
   const small = new Set(['slr32', 'council', 'waterbodies', 'streams', 'fire', 'schools', 'places', 'slud', 'sma', 'mip_growth', 'bridges', 'coastline', 'police', 'hospitals']);
   const bounds = [[-157.55, 20.25], [-155.65, 21.4]];
@@ -41,7 +41,7 @@
   }
 
   function streets(map) {
-    map.addSource('streets', { type: 'vector', url: 'pmtiles://{{STATE_LOCAL_SERVER}}/api/v1/tiles/pmtiles/maui-basemap' });
+    map.addSource('streets', { type: 'vector', url: 'pmtiles://{{STATE_LOCAL_BASEMAP}}' });
     streetLayer(map, { id: 'land', type: 'fill', 'source-layer': 'earth', paint: { 'fill-color': '--map-land' } });
     streetLayer(map, { id: 'street-parks', type: 'fill', 'source-layer': 'landuse', filter: ['in', ['get', 'kind'], ['literal', ['park', 'forest', 'nature_reserve']]], paint: { 'fill-color': '--map-zone-base-park', 'fill-opacity': 0.65 } });
     streetLayer(map, { id: 'street-water', type: 'fill', 'source-layer': 'water', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': '--map-water' } });
