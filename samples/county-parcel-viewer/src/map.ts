@@ -1,4 +1,4 @@
-import { DISPLAY_SNAPSHOT } from "./config.js";
+import { DISPLAY_SNAPSHOT, OFFLINE_FIXTURE } from "./config.js";
 // The map: MapLibre GL JS with every tile read from the one Honua server.
 //   - basemap: the server's Protomaps archive (maui-basemap), or a plain
 //     background when it is unavailable. No SDK or third-party default basemap.
@@ -141,7 +141,8 @@ async function addBasemap(map: maplibregl.Map, config: ViewerConfig): Promise<st
 }
 
 function addParcelOutlines(map: maplibregl.Map, config: ViewerConfig): void {
-  if (DISPLAY_SNAPSHOT) map.addSource("parcels", { type: "geojson", data: config.parcelsUrl });
+  if (DISPLAY_SNAPSHOT || OFFLINE_FIXTURE) map.addSource("parcels", { type: "geojson",
+    data: OFFLINE_FIXTURE ? `${config.baseUrl}/fixture/parcels.geojson` : config.parcelsUrl });
   else addParcelTileSource(map, config);
   if (!map.getSource("parcels")) return;
   addParcelLayers(map);
@@ -161,7 +162,7 @@ function addParcelTileSource(map: maplibregl.Map, config: ViewerConfig): void {
 }
 
 function addParcelLayers(map: maplibregl.Map): void {
-  const sourceLayer = DISPLAY_SNAPSHOT ? {} : { "source-layer": PARCEL_SOURCE_LAYER };
+  const sourceLayer = DISPLAY_SNAPSHOT || OFFLINE_FIXTURE ? {} : { "source-layer": PARCEL_SOURCE_LAYER };
   map.addLayer({
     id: "parcel-outlines",
     type: "line",
@@ -232,7 +233,7 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
     style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": token("--map-land") } }] },
     center: MAUI_VIEW.center,
     zoom: MAUI_VIEW.zoom,
-    attributionControl: { compact: true, customAttribution: "Basemap © OpenStreetMap contributors (Protomaps) · Parcels, zoning: County of Maui · Flood zones: FEMA" },
+    attributionControl: { compact: true, customAttribution: OFFLINE_FIXTURE ? "Synthetic demonstration data · not county records" : "Basemap © OpenStreetMap contributors (Protomaps) · Parcels, zoning: County of Maui · Flood zones: FEMA" },
     cooperativeGestures: false,
   });
   watchTheme(map);

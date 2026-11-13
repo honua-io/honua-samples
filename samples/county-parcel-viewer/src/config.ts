@@ -1,3 +1,4 @@
+export const OFFLINE_FIXTURE = import.meta.env.MODE === "fixture";
 export const DISPLAY_SNAPSHOT = import.meta.env.VITE_STATE_LOCAL_SNAPSHOT === "1";
 // Where the viewer reads its data. Every default is on the one Honua server
 // (demo.honua.io); URL parameters point the same app at another server or at
@@ -42,6 +43,7 @@ function trimSlash(value: string): string {
 }
 
 export function readConfig(params: URLSearchParams): ViewerConfig {
+  if (OFFLINE_FIXTURE) return fixtureConfig();
   if (DISPLAY_SNAPSHOT) return displayConfig();
   const baseUrl = trimSlash(params.get("baseUrl") || DEFAULT_BASE_URL);
   const tiles = params.get("parcelTilesUrl");
@@ -66,4 +68,13 @@ function displayConfig(): ViewerConfig {
   return { baseUrl: location.origin, parcelsUrl: snapshot("maui-parcels"), zoningUrl: snapshot("maui-zoning"),
     floodUrl: snapshot("maui-flood-hazard"), parcelTilesUrl: null, buildingsUrl: null, basemapUrl: null,
     geocoderLocator: "World", planning: Object.fromEntries(PLANNING_PARAMS.map((key, index) => [key, snapshot(names[index])])) as ViewerConfig["planning"] };
+}
+
+function fixtureConfig(): ViewerConfig {
+  const baseUrl = location.origin;
+  return { baseUrl, parcelsUrl: `${baseUrl}/rest/services/maui-parcels/FeatureServer/1`,
+    zoningUrl: `${baseUrl}/rest/services/maui-zoning/FeatureServer/2`,
+    floodUrl: `${baseUrl}/rest/services/maui-flood-hazard/FeatureServer/4`,
+    parcelTilesUrl: null, buildingsUrl: null, basemapUrl: null, geocoderLocator: "World",
+    planning: Object.fromEntries(PLANNING_PARAMS.map((key) => [key, null])) as ViewerConfig["planning"] };
 }

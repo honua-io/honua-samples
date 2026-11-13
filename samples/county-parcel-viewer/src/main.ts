@@ -14,7 +14,7 @@ import "./styles.css";
 import { h, fill } from "./dom.js";
 import { planningPanel } from "./planning.js";
 
-import { EXAMPLE_TMK, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
+import { EXAMPLE_TMK, OFFLINE_FIXTURE, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
 import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelById, parcelByTmk } from "./data.js";
 import { createParcelBrowser } from "./parcel-browser.js";
 import { createParcelMap, type ParcelMap } from "./map.js";
@@ -26,6 +26,13 @@ import { INVALID_TMK_MESSAGE, classifySearch, formatTmk, normalizeTmk } from "./
 const FEMA_MSC_URL = "https://msc.fema.gov/portal/home";
 const FLOOD_EMPTY_TEXT =
   "No flood zone found for this parcel in the county's copy of the FEMA flood map. This is not a flood determination; check the official FEMA Flood Map Service Center.";
+
+if (OFFLINE_FIXTURE) {
+  document.querySelector(".tag")!.textContent = "Synthetic fixture · no live county data";
+  document.getElementById("q-hint")!.textContent = "Sample TMKs: 234008053, 234008054, 234008055. Address search is unavailable.";
+  document.querySelector(".foot")!.textContent = "Synthetic geometry, acreage, zoning and flood zones for software demonstrations only. Not county records or land-use advice.";
+  document.getElementById("export-status")!.textContent = "Exports re-query the local synthetic fixture. No live county data.";
+}
 
 const config: ViewerConfig = readConfig(new URLSearchParams(location.search));
 const usingDemoParcels = !new URLSearchParams(location.search).get("parcelsUrl") && config.baseUrl === DEFAULT_BASE_URL;
