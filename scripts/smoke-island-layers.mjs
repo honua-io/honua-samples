@@ -12,10 +12,14 @@ const requestedEngines = (process.env.ISLAND_SMOKE_BROWSERS ?? 'chromium,firefox
 const ARCHIVE_PREFIX = 'pmtiles://https://demo.honua.io/demo-data/';
 const MAP_SETTLE_TIMEOUT_MS = 60_000;
 
-function islandSourcesWithFeatures(prefix) {
-  return HM.maps.flatMap((map) => Object.entries(map.getStyle()?.sources ?? {})
+// Runs in the page: the CDN-backed island sources once every map has loaded and one of them drew features.
+function drawnIslandSources(prefix) {
+  const maps = window.HM?.maps ?? [];
+  if (maps.length === 0 || !maps.every((map) => map.loaded())) return null;
+  const sources = maps.flatMap((map) => Object.entries(map.getStyle()?.sources ?? {})
     .filter(([, source]) => source.type === 'vector' && String(source.url).startsWith(prefix))
-    .map(([id]) => ({ id, loaded: map.isSourceLoaded(id), features: map.querySourceFeatures(id, { sourceLayer: 'layer' }).length })));
+    .map(([id]) => ({ id, features: map.querySourceFeatures(id, { sourceLayer: 'layer' }).length })));
+  return sources.some((source) => source.features > 0) ? sources : null;
 }
 
 async function checkRoute(context, baseUrl, route) {
@@ -26,14 +30,8 @@ async function checkRoute(context, baseUrl, route) {
   try {
     const response = await page.goto(`${baseUrl}/state-local/${route}`);
     assert.equal(response.status(), 200, route);
-    await page.waitForFunction((prefix) => {
-      const maps = window.HM?.maps ?? [];
-      return maps.length > 0 && maps.every((map) => map.loaded()) && maps.some((map) =>
-        Object.entries(map.getStyle()?.sources ?? {}).some(([id, source]) => String(source.url).startsWith(prefix)
-          && map.querySourceFeatures(id, { sourceLayer: 'layer' }).length > 0));
-    }, ARCHIVE_PREFIX, { timeout: MAP_SETTLE_TIMEOUT_MS });
-    const sources = await page.evaluate(islandSourcesWithFeatures, ARCHIVE_PREFIX);
-    assert.ok(sources.some((source) => source.features > 0), `${route}: no island layer drew features`);
+    const drawn = await page.waitForFunction(drawnIslandSources, ARCHIVE_PREFIX, { timeout: MAP_SETTLE_TIMEOUT_MS });
+    const sources = await drawn.jsonValue();
     const decodeErrors = errors.filter((text) => /decod|ETag|pmtiles/i.test(text));
     assert.deepEqual(decodeErrors, [], `${route}: archive read errors`);
     return { route: `/state-local/${route}`, sources };
@@ -46,6 +44,7 @@ const server = process.env.ISLAND_SMOKE_BASE_URL ? null : await startStaticServe
 const baseUrl = process.env.ISLAND_SMOKE_BASE_URL?.replace(/\/+$/, '') ?? server.url;
 try {
   for (const name of requestedEngines) {
+    assert.ok(ENGINES[name], `ISLAND_SMOKE_BROWSERS names an unknown engine: ${name}`);
     const browser = await ENGINES[name].launch();
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     try {
