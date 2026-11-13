@@ -11,6 +11,8 @@ const ENGINES = { chromium, firefox, webkit };
 const requestedEngines = (process.env.ISLAND_SMOKE_BROWSERS ?? 'chromium,firefox').split(',');
 const ARCHIVE_PREFIX = 'pmtiles://https://demo.honua.io/demo-data/';
 const MAP_SETTLE_TIMEOUT_MS = 60_000;
+// Headless Firefox on GPU-less CI hosts refuses WebGL unless software rendering is forced.
+const LAUNCH_OPTIONS = { firefox: { firefoxUserPrefs: { 'webgl.force-enabled': true, 'webgl.enable-webgl2': true } } };
 
 // Runs in the page: the CDN-backed island sources once every map has loaded and one of them drew features.
 function drawnIslandSources(prefix) {
@@ -49,7 +51,7 @@ const baseUrl = process.env.ISLAND_SMOKE_BASE_URL?.replace(/\/+$/, '') ?? server
 try {
   for (const name of requestedEngines) {
     assert.ok(ENGINES[name], `ISLAND_SMOKE_BROWSERS names an unknown engine: ${name}`);
-    const browser = await ENGINES[name].launch();
+    const browser = await ENGINES[name].launch(LAUNCH_OPTIONS[name]);
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     try {
       for (const route of ROUTES) {
