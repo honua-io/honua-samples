@@ -219,13 +219,17 @@ jobs:
       - name: Install gallery browser
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium firefox
 
       - name: Smoke the exact gallery artifact
         # Bundle supply is gated above. The publish floor is the named list in
         # config/required-published-apps.v1.json: every app it lists must be
         # runnable in this artifact (scripts/smoke-published-gallery.mjs).
         run: npm run test:gallery:browser
+
+      - name: Island map layers draw in Chromium and Firefox
+        # The state-local maps read their PMTiles archives byte-exact from the demo CDN.
+        run: npm run test:island-layers:browser
 
       - name: Verify server-first job pages
         env:
