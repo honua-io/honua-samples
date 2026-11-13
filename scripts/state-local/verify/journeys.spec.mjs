@@ -10,9 +10,9 @@ const configured = process.env[SERVER_SETTING] && process.env.STATE_LOCAL_SITE_U
 test.skip(!configured, `Set ${SERVER_SETTING} and STATE_LOCAL_SITE_URL to run the journeys against a server`);
 
 function watchPage(page, siteOrigin) {
-  const seen = { errors: [], endpointRequests: [], otherRequests: [] };
-  const endpoints = new Set([stateLocalServer, stateLocalBasemap, new URL(stateLocalIslandData, siteOrigin).href].map((url) => new URL(url).origin));
-  endpoints.delete(siteOrigin);
+  const seen = { errors: [], archiveRequests: [], otherRequests: [] };
+  const archives = [stateLocalBasemap, stateLocalIslandData];
+  const allowedOrigins = new Set([siteOrigin, stateLocalServer, ...archives.map((url) => new URL(url).origin), ...LIBRARY_ORIGINS]);
   page.on('pageerror', (error) => seen.errors.push(error.message));
   page.on('console', (message) => {
     const missingFavicon = message.location().url?.endsWith('/favicon.ico');
@@ -21,8 +21,9 @@ function watchPage(page, siteOrigin) {
   page.on('request', (request) => {
     const { origin, protocol } = new URL(request.url());
     if (!['http:', 'https:'].includes(protocol)) return;
-    if (endpoints.has(origin)) seen.endpointRequests.push(request.url());
-    else if (origin !== siteOrigin && !LIBRARY_ORIGINS.includes(origin)) seen.otherRequests.push(request.url());
+    const archive = archives.find((prefix) => request.url().startsWith(prefix));
+    if (archive) seen.archiveRequests.push(archive);
+    else if (!allowedOrigins.has(origin)) seen.otherRequests.push(request.url());
   });
   return seen;
 }
@@ -39,7 +40,7 @@ for (const journey of JOURNEYS) {
     const response = await page.goto(`/state-local/${journey}/`);
     expect(response?.status()).toBe(200);
     await mapsDrawn(page);
-    expect(seen.endpointRequests.length, 'live requests to the configured endpoints').toBeGreaterThan(0);
+    expect(new Set(seen.archiveRequests), 'live requests to each configured map archive').toEqual(new Set([stateLocalBasemap, stateLocalIslandData]));
     expect(seen.otherRequests, 'live requests to any other server').toEqual([]);
     expect(seen.errors, 'console errors').toEqual([]);
   });
