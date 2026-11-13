@@ -1,7 +1,9 @@
 /* Maui street basemap and Honua-native island archives. Story records remain
    separate GeoJSON sources so parcel selections retain their documented IDs. */
 (function () {
-  const root = new URL('{{STATE_LOCAL_ISLAND_DATA}}', location.origin);
+  const root = new URL('/state-local/data/island/', location.origin);
+  // The demo CDN serves the archives byte-exact; static hosting gzips them and breaks range reads.
+  const tileRoot = new URL('{{STATE_LOCAL_ISLAND_DATA}}');
   const tiled = new Set(['parcels', 'zoning', 'dfirm', 'tsunami', 'roads', 'contours']);
   const small = new Set(['slr32', 'council', 'waterbodies', 'streams', 'fire', 'schools', 'places', 'slud', 'sma', 'mip_growth', 'bridges', 'coastline', 'police', 'hospitals']);
   const bounds = [[-157.55, 20.25], [-155.65, 21.4]];
@@ -23,7 +25,7 @@
   }
 
   function source(name) {
-    if (tiled.has(name)) return { type: 'vector', url: islandArchive(new URL(name + '.pmtiles', root).href) };
+    if (tiled.has(name)) return { type: 'vector', url: islandArchive(new URL(name + '.pmtiles', tileRoot).href) };
     if (small.has(name)) return { type: 'geojson', data: new URL(name + '.geojson', root).href };
     return null;
   }

@@ -39,10 +39,7 @@ const WAILUKU_TMK = "234008053";
 const LARGE_TMK = "249002001";
 // A coastal parcel in a VE flood zone, distinct from the example parcel.
 const COASTAL_TMK = "215010777";
-// OpenStreetMap carries this house number, so its match lands on the parcel
-// rather than on the street centre line.
 const OSM_HOUSE_ADDRESS = "2145 Wells St, Wailuku, HI";
-const OSM_HOUSE_TMK = "234008047";
 
 test.describe.configure({ mode: "serial" });
 
@@ -107,6 +104,21 @@ async function liveParcelAt([x, y]) {
 }
 
 const queries = (filter) => seen.filter((r) => /\/FeatureServer\/\d+\/query/u.test(r.url) && filter(r));
+
+async function expectAddressParcel(page, { x, y }) {
+  const expectedTmk = await liveParcelAt([x, y]);
+  if (await page.locator("body").getAttribute("data-search-state") === "picks") {
+    await page.locator(".picks button").first().click();
+    await settled(page);
+  }
+  const pointQueries = queries((request) => request.url.startsWith(PARCELS) && request.url.includes("esriGeometryPoint"));
+  expect(pointQueries).toHaveLength(1);
+  const geometry = JSON.parse(new URL(pointQueries[0].url).searchParams.get("geometry"));
+  expect(geometry).toMatchObject({ x, y });
+  await expect(page.locator("body")).toHaveAttribute("data-search-state", expectedTmk ? "found" : "not-found");
+  if (expectedTmk) await expect(page.locator("body")).toHaveAttribute("data-tmk", expectedTmk);
+  else await expect(page.locator("#panel-inner")).toContainText("No parcel at that address");
+}
 
 test("first load shows the example parcel from PMTiles outlines within the live budget", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -335,16 +347,23 @@ test("address search follows the server's geocoder provider", async ({ page }) =
   const metadata = await fetch(`${DATA_BASE}/rest/services/World/GeocodeServer?f=json`).then((response) => response.json());
   const provider = String(metadata.locatorProperties?.Provider ?? "unknown");
   test.info().annotations.push({ type: "geocoder-provider", description: provider });
+  const approvedProvider = /nominatim|openstreetmap|\bosm\b/iu.test(provider);
   await page.goto(appUrl());
   await settled(page);
   await page.locator("#q").fill(OSM_HOUSE_ADDRESS);
+  const geocodingResponse = approvedProvider
+    ? page.waitForResponse((response) => response.url().includes("/GeocodeServer/findAddressCandidates"))
+    : null;
   await page.locator("#find").click();
   await settled(page);
   const candidates = seen.filter((r) => r.url.includes("/GeocodeServer/findAddressCandidates"));
-  if (/nominatim|openstreetmap|\bosm\b/iu.test(provider)) {
+  if (approvedProvider) {
     expect(candidates.length).toBe(1);
-    await expect(page.locator("body")).toHaveAttribute("data-search-state", "found");
-    await expect(page.locator("body")).toHaveAttribute("data-tmk", OSM_HOUSE_TMK);
+    const response = await geocodingResponse;
+    expect(response.ok()).toBe(true);
+    const body = await response.json();
+    expect(body.candidates.length).toBeGreaterThan(0);
+    await expectAddressParcel(page, body.candidates[0].location);
   } else {
     // The page credits OpenStreetMap; it refuses any other provider before an address is sent.
     expect(candidates).toEqual([]);

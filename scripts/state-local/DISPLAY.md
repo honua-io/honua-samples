@@ -44,7 +44,7 @@ settings:
 | --- | --- | --- |
 | `VITE_STATE_LOCAL_SERVER` | `https://demo.honua.io` | sample bindings, workbench analysis, parcel viewer, SDK Explorer |
 | `VITE_STATE_LOCAL_BASEMAP` | server + `/api/v1/tiles/pmtiles/maui-basemap` | street basemap PMTiles archive on every journey map |
-| `VITE_STATE_LOCAL_ISLAND_DATA` | `/state-local/data/island/` (same origin) | island PMTiles and GeoJSON archives |
+| `VITE_STATE_LOCAL_ISLAND_DATA` | demo server + `/demo-data/maui-island-display/2026-11-11/` | island PMTiles archives (island GeoJSON stays on the site) |
 
 The basemap and island-data settings apply to the assembled journey pages only; the Vite
 sample apps derive their basemap from the server. The archive locations must allow

@@ -6,6 +6,9 @@ import { withStateLocalEndpoints } from '../../shared/state-local/server.mjs';
 
 const code = withStateLocalEndpoints(await readFile(new URL('../../shared/state-local/island-map.js', import.meta.url), 'utf8'));
 const base = 'https://samples.honua.io/state-local/data/island/';
+const islandLock = JSON.parse(await readFile(new URL('../../shared/state-local/island-display.lock.json', import.meta.url), 'utf8'));
+const islandRelease = islandLock.url.match(/\/download\/maui-island-display-([\d-]+)\//)[1];
+const tileBase = `https://demo.honua.io/demo-data/maui-island-display/${islandRelease}/`;
 const chrome = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36';
 const firefox = 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0';
 const edge = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36 Edg/141.0';
@@ -37,11 +40,11 @@ test('island archives get one shared source each, with the HTTP cache bypassed o
     const { HI, added, registered } = load(userAgent);
     const zoning = HI.source('zoning');
     assert.equal(zoning.type, 'vector');
-    assert.equal(zoning.url, `pmtiles://${base}zoning.pmtiles`);
+    assert.equal(zoning.url, `pmtiles://${tileBase}zoning.pmtiles`);
     assert.equal(HI.source('zoning').url, zoning.url, 'a second source of the same archive reuses it');
     HI.source('parcels');
     assert.deepEqual(registered, ['pmtiles'], 'one protocol registration');
-    assert.deepEqual(added.map((source) => source.url), [`${base}zoning.pmtiles`, `${base}parcels.pmtiles`]);
+    assert.deepEqual(added.map((source) => source.url), [`${tileBase}zoning.pmtiles`, `${tileBase}parcels.pmtiles`]);
     assert.ok(added.every((source) => source.chromeWindowsNoCache === chromiumAgents.has(userAgent)), userAgent);
   }
 });

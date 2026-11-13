@@ -4,7 +4,7 @@ export const BASEMAP_SETTING = 'VITE_STATE_LOCAL_BASEMAP';
 export const ISLAND_DATA_SETTING = 'VITE_STATE_LOCAL_ISLAND_DATA';
 export const DEFAULT_SERVER = 'https://demo.honua.io';
 export const BASEMAP_ROUTE = '/api/v1/tiles/pmtiles/maui-basemap';
-export const DEFAULT_ISLAND_DATA = '/state-local/data/island/';
+export const ISLAND_DATA_ROUTE = '/demo-data/maui-island-display/2026-11-11/';
 
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 const UNSAFE_CHARACTERS = /['"\\<>\s?#]/u;
@@ -40,12 +40,10 @@ export function basemapUrl(value, server) {
 }
 
 export function islandDataUrl(value) {
-  const text = value || DEFAULT_ISLAND_DATA;
-  const sitePath = /^\/[^/]/u.test(text) && !UNSAFE_CHARACTERS.test(text);
-  if (!text.endsWith('/') || !(sitePath || absoluteUrl(text, ISLAND_DATA_SETTING))) {
-    throw new Error(`${ISLAND_DATA_SETTING} must be a site path or https URL ending in /`);
-  }
-  return text;
+  if (!value) return `${DEFAULT_SERVER}${ISLAND_DATA_ROUTE}`;
+  const url = absoluteUrl(value, ISLAND_DATA_SETTING);
+  if (!url.pathname.endsWith('/')) throw new Error(`${ISLAND_DATA_SETTING} must be an https URL ending in /`);
+  return url.href;
 }
 
 const env = globalThis.process?.env ?? {};

@@ -3,7 +3,7 @@ export const BASEMAP_SETTING: string;
 export const ISLAND_DATA_SETTING: string;
 export const DEFAULT_SERVER: string;
 export const BASEMAP_ROUTE: string;
-export const DEFAULT_ISLAND_DATA: string;
+export const ISLAND_DATA_ROUTE: string;
 export const stateLocalServer: string;
 export const stateLocalBasemap: string;
 export const stateLocalIslandData: string;

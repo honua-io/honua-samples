@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { sha256 } from '../lib/checksum.mjs';
 import { copyManifestFiles } from '../../shared/state-local/locked-archive.mjs';
-import { verifyDescriptorArtifacts } from '../publications/stage-publications.mjs';
+import { verifyDescriptorArtifacts } from '../publications/pack-publication.mjs';
 
 const integrity = { bytes: 10, sha256: 'a'.repeat(64) };
 

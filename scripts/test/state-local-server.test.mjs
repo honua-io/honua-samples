@@ -5,7 +5,8 @@ import { BASEMAP_SETTING, DEFAULT_SERVER, ISLAND_DATA_SETTING, SERVER_SETTING, b
   withStateLocalEndpoints } from '../../shared/state-local/server.mjs';
 
 const REHEARSAL = 'https://rehearsal.example.org';
-const ISLAND_MAP = "new URL('{{STATE_LOCAL_ISLAND_DATA}}', location.origin); url: 'pmtiles://{{STATE_LOCAL_BASEMAP}}'";
+const ISLAND_MAP = "new URL('{{STATE_LOCAL_ISLAND_DATA}}'); url: 'pmtiles://{{STATE_LOCAL_BASEMAP}}'";
+const DEMO_ISLAND_DATA = 'https://demo.honua.io/demo-data/maui-island-display/2026-11-11/';
 const configuredHere = [SERVER_SETTING, BASEMAP_SETTING, ISLAND_DATA_SETTING].some((name) => process.env[name]);
 
 function withSettings(settings, script) {
@@ -24,14 +25,14 @@ test('settings accept only plain http(s) locations', () => {
   assert.equal(basemapUrl('', REHEARSAL), `${REHEARSAL}/api/v1/tiles/pmtiles/maui-basemap`);
   assert.equal(basemapUrl(`${REHEARSAL}/data/maui.pmtiles`, DEFAULT_SERVER), `${REHEARSAL}/data/maui.pmtiles`);
   for (const value of ['/data/maui.pmtiles', `${REHEARSAL}/x'.pmtiles`]) assert.throws(() => basemapUrl(value, DEFAULT_SERVER), new RegExp(BASEMAP_SETTING), value);
-  assert.equal(islandDataUrl(''), '/state-local/data/island/');
+  assert.equal(islandDataUrl(''), DEMO_ISLAND_DATA);
   assert.equal(islandDataUrl(`${REHEARSAL}/data/island/`), `${REHEARSAL}/data/island/`);
-  for (const value of ['//cdn.example.org/island/', `${REHEARSAL}/island`, 'island/']) assert.throws(() => islandDataUrl(value), new RegExp(ISLAND_DATA_SETTING), value);
+  for (const value of ['//cdn.example.org/island/', `${REHEARSAL}/island`, '/state-local/data/island/', 'http://cdn.example.org/island/']) assert.throws(() => islandDataUrl(value), new RegExp(ISLAND_DATA_SETTING), value);
 });
 
-test('the default build keeps the public demo and the same-origin island archives', { skip: configuredHere }, () => {
+test('the default build keeps the public demo server and island archives', { skip: configuredHere }, () => {
   assert.equal(withStateLocalEndpoints(ISLAND_MAP),
-    "new URL('/state-local/data/island/', location.origin); url: 'pmtiles://https://demo.honua.io/api/v1/tiles/pmtiles/maui-basemap'");
+    `new URL('${DEMO_ISLAND_DATA}'); url: 'pmtiles://https://demo.honua.io/api/v1/tiles/pmtiles/maui-basemap'`);
 });
 
 test('the server setting moves the binding allow-list and the derived basemap', () => {
@@ -46,7 +47,7 @@ test('the server setting moves the binding allow-list and the derived basemap', 
       page: withStateLocalEndpoints(${JSON.stringify(ISLAND_MAP)}),
     }));`);
   assert.deepEqual(result, { fallback: REHEARSAL, local: 'http://localhost:8080', demoRejected: true,
-    page: `new URL('/state-local/data/island/', location.origin); url: 'pmtiles://${REHEARSAL}/api/v1/tiles/pmtiles/maui-basemap'` });
+    page: `new URL('${DEMO_ISLAND_DATA}'); url: 'pmtiles://${REHEARSAL}/api/v1/tiles/pmtiles/maui-basemap'` });
 });
 
 test('the basemap and island archive settings override the page archives alone', () => {
@@ -54,7 +55,7 @@ test('the basemap and island archive settings override the page archives alone',
     import { stateLocalServer, withStateLocalEndpoints } from './shared/state-local/server.mjs';
     console.log(JSON.stringify([stateLocalServer, withStateLocalEndpoints(${JSON.stringify(ISLAND_MAP)})]));`);
   assert.deepEqual(page, [DEFAULT_SERVER,
-    `new URL('${REHEARSAL}/data/island/', location.origin); url: 'pmtiles://${REHEARSAL}/data/maui-basemap.pmtiles'`]);
+    `new URL('${REHEARSAL}/data/island/'); url: 'pmtiles://${REHEARSAL}/data/maui-basemap.pmtiles'`]);
 });
 
 test('an invalid build setting fails the build instead of shipping a broken page', () => {
