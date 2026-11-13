@@ -56,7 +56,11 @@ export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https
 export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://msc.fema.gov", "https://publicweb1.co.maui.hi.us", "https://overturemaps.org", "https://opendatacommons.org"]);
 
 // Apps importing the shared server setting read from the configured server, not the source default.
-const SERVER_SETTING_IMPORT = /shared\/state-local\/(?:server|binding)\.mjs/u;
+const SERVER_SETTING_IMPORT = /\bfrom\s+["'][^"']*shared\/state-local\/(?:server|binding)\.mjs["']/u;
+
+export function importsServerSetting(text) {
+  return SERVER_SETTING_IMPORT.test(text);
+}
 
 const REGULAR_FILE_MODES = new Set(["100644", "100755"]);
 const ORIGIN_PATTERN = /https:\/\/[a-z0-9.-]+(?::\d+)?/giu;
@@ -280,7 +284,7 @@ async function collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit }) 
         build: { command, outputDir, lockfile: "package-lock.json", lockfileSha256: sha256(lockfile) },
       },
       sourceText: scanned.map((f) => f.bytes.toString("utf8")).join("\n"),
-      followsServerSetting: sources.some((f) => SERVER_SETTING_IMPORT.test(f.bytes.toString("utf8"))),
+      followsServerSetting: sources.some((f) => importsServerSetting(f.bytes.toString("utf8"))),
     };
   } finally {
     await rm(exportRoot, { recursive: true, force: true }).catch(() => {});

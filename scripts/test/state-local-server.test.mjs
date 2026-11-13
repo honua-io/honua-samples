@@ -76,3 +76,11 @@ test('a static sample that hard-codes the demo keeps it as its data origin under
     console.log(JSON.stringify(staged.app?.dataOrigins ?? staged.reason));`);
   assert.deepEqual(app, [DEFAULT_SERVER]);
 });
+
+test('built apps that import the shared server setting are recognised by their import, not a mention', async () => {
+  const { importsServerSetting } = await import('../lib/own-sample-apps.mjs');
+  assert.equal(importsServerSetting("import { stateLocalServer } from '../../../shared/state-local/server.mjs';"), true);
+  assert.equal(importsServerSetting('import { namedBindings } from "../../../shared/state-local/binding.mjs";'), true);
+  assert.equal(importsServerSetting('// see shared/state-local/server.mjs'), false);
+  assert.equal(importsServerSetting("import { x } from '../../../shared/state-local/features.mjs';"), false);
+});
