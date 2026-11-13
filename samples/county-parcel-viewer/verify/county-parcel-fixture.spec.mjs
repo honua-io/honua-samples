@@ -99,3 +99,43 @@ test('offline empty lookup clears export; address search stays local on mobile',
   await expect(page.locator('#export-geojson')).toBeEnabled();
   expect(external).toEqual([]);
 });
+
+test('pagehide event contract preserves cached resources and disposes discarded map once', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const external = await openOffline(page);
+  await page.evaluate(() => {
+    window.mapRemovals = 0;
+    window.sampleMap.on('remove', () => { window.mapRemovals += 1; });
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+  });
+  await expect(page.locator('.maplibregl-canvas')).toBeVisible();
+  await page.locator('#filter-tmk').fill('234008054');
+  await page.getByRole('button', { name: 'Apply filter', exact: true }).click();
+  await expect(page.locator('#browse-status')).toContainText('1 parcels loaded');
+  await page.evaluate(() => {
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }));
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }));
+  });
+  await expect(page.locator('.maplibregl-canvas')).toHaveCount(0);
+  expect(await page.evaluate(() => window.mapRemovals)).toBe(1);
+  expect(errors).toEqual([]);
+  expect(external).toEqual([]);
+});
+
+test('offline parcel browser recovers after real navigation and back', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const external = await openOffline(page);
+  await page.goto(`${origin}/?tmk=234008054`);
+  await expect(page.locator('body')).toHaveAttribute('data-tmk', '234008054');
+  await page.goBack();
+  await expect(page.locator('body')).toHaveAttribute('data-tmk', '234008053');
+  await expect(page.locator('#browse-status')).toContainText('3 parcels loaded');
+  await expect(page.locator('.maplibregl-canvas')).toBeVisible();
+  await page.locator('#filter-tmk').fill('234008055');
+  await page.getByRole('button', { name: 'Apply filter', exact: true }).click();
+  await expect(page.locator('#browse-status')).toContainText('1 parcels loaded');
+  expect(errors).toEqual([]);
+  expect(external).toEqual([]);
+});

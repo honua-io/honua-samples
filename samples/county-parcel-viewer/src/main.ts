@@ -631,12 +631,13 @@ function start(): void {
     if (closed) { browser.dispose(); return; }
     parcelBrowser = browser;
     if (selectedParcel) browser.select(selectedParcel);
-  }).catch((error) => { byId("browse-status").textContent = `Parcel browsing unavailable: ${message(error)}`; });
+  }).catch((error) => { if (!closed) byId("browse-status").textContent = `Parcel browsing unavailable: ${message(error)}`; });
   window.addEventListener("pagehide", (event) => {
-    if (event.persisted) return;
+    if (event.persisted || closed) return;
     closed = true;
     inflight?.abort();
     parcelBrowser?.dispose();
+    parcelMap?.map.remove();
   });
   const raw = new URLSearchParams(location.search).get("tmk");
   if (raw !== null) {
