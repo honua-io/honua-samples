@@ -13,6 +13,7 @@ import "./shared.css";
 import "./styles.css";
 import { h, fill } from "./dom.js";
 import { planningPanel } from "./planning.js";
+import { provenancePanel } from "./provenance.js";
 
 import { EXAMPLE_TMK, OFFLINE_FIXTURE, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
 import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelById, parcelByTmk } from "./data.js";
@@ -35,6 +36,7 @@ if (OFFLINE_FIXTURE) {
 }
 
 const config: ViewerConfig = readConfig(new URLSearchParams(location.search));
+document.querySelector(".search .field")!.append(provenancePanel(config));
 const usingDemoParcels = !new URLSearchParams(location.search).get("parcelsUrl") && config.baseUrl === DEFAULT_BASE_URL;
 
 // The overlap math lives in its own chunk; if it cannot load, both sections
