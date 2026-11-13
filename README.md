@@ -211,7 +211,10 @@ docker compose -f docker/compose.yml down -v
 ```
 
 `docker/compose.yml` defaults to that same candidate image and sets
-`Licensing__Mode=Disabled`. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it). The
+`Licensing__Mode=Disabled`. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it).
+The Honua service pins `platform: linux/amd64`, including with an image override.
+On an arm64 host, Docker runs the amd64 server under emulation; this is not a
+supported 2026.1 deployment topology. The
 floating `:trunk` tag is not the 2026.1 candidate. `HONUA_ADMIN_API_KEY`
 must match the composed server's admin password; browser specs use it when
 they create fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
