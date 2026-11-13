@@ -18,7 +18,7 @@ test('settings accept only plain http(s) locations', () => {
   assert.equal(serverOrigin(''), DEFAULT_SERVER);
   assert.equal(serverOrigin(`${REHEARSAL}/`), REHEARSAL);
   assert.equal(serverOrigin('http://localhost:8080'), 'http://localhost:8080');
-  for (const value of [`${REHEARSAL}/api`, 'https://user@rehearsal.example.org', `${REHEARSAL}?a=1`, `${REHEARSAL}#a`, 'ftp://rehearsal.example.org', 'http://rehearsal.example.org', '/']) {
+  for (const value of [`${REHEARSAL}/api`, 'https://user@rehearsal.example.org', `${REHEARSAL}?a=1`, `${REHEARSAL}#a`, 'ftp://rehearsal.example.org', 'http://rehearsal.example.org', 'https://', '/']) {
     assert.throws(() => serverOrigin(value), new RegExp(SERVER_SETTING), value);
   }
   assert.equal(basemapUrl('', REHEARSAL), `${REHEARSAL}/api/v1/tiles/pmtiles/maui-basemap`);
@@ -61,9 +61,18 @@ test('an invalid build setting fails the build instead of shipping a broken page
   assert.throws(() => withSettings({ [SERVER_SETTING]: `${REHEARSAL}/ogc` }, `import './shared/state-local/server.mjs';`), /bare server origin/);
 });
 
-test('gallery provenance names the configured server, not the source default', () => {
-  const origins = withSettings({ [SERVER_SETTING]: REHEARSAL }, `
-    import { dataOriginsOf } from './scripts/lib/own-sample-apps.mjs';
-    console.log(JSON.stringify(dataOriginsOf('fetch("${DEFAULT_SERVER}/rest/services")')));`);
-  assert.deepEqual(origins, [REHEARSAL]);
+test('a static sample that hard-codes the demo keeps it as its data origin under another server', () => {
+  const app = withSettings({ [SERVER_SETTING]: REHEARSAL }, `
+    import { execFileSync } from 'node:child_process';
+    import { mkdtemp, readFile } from 'node:fs/promises';
+    import { tmpdir } from 'node:os';
+    import path from 'node:path';
+    import { stageOwnBrowserApp } from './scripts/lib/own-sample-apps.mjs';
+    const dirName = 'maplibre-featureserver-layer';
+    const manifest = JSON.parse(await readFile(path.join('samples', dirName, 'sample.json'), 'utf8'));
+    const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const destDir = path.join(await mkdtemp(path.join(tmpdir(), 'state-local-server-')), 'app');
+    const staged = await stageOwnBrowserApp({ repoRoot: process.cwd(), dirName, manifest, sourceCommit, destDir });
+    console.log(JSON.stringify(staged.app?.dataOrigins ?? staged.reason));`);
+  assert.deepEqual(app, [DEFAULT_SERVER]);
 });

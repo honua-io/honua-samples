@@ -13,8 +13,16 @@ export function isLocalServer(url) {
   return LOCAL_HOSTS.includes(url.hostname);
 }
 
+function parsedUrl(value) {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
 function absoluteUrl(value, setting) {
-  const url = /^https?:\/\//u.test(value) && !UNSAFE_CHARACTERS.test(value) ? new URL(value) : null;
+  const url = /^https?:\/\//u.test(value) && !UNSAFE_CHARACTERS.test(value) ? parsedUrl(value) : null;
   if (!url || url.username || url.password || (url.protocol !== 'https:' && !isLocalServer(url))) {
     throw new Error(`${setting} must be an https URL (http only for localhost) without credentials, query, quotes or spaces`);
   }

@@ -46,17 +46,19 @@ settings:
 | `VITE_STATE_LOCAL_BASEMAP` | server + `/api/v1/tiles/pmtiles/maui-basemap` | street basemap PMTiles archive on every journey map |
 | `VITE_STATE_LOCAL_ISLAND_DATA` | `/state-local/data/island/` (same origin) | island PMTiles and GeoJSON archives |
 
-The archive locations must allow cross-origin range requests from the site.
+The basemap and island-data settings apply to the assembled journey pages only; the Vite
+sample apps derive their basemap from the server. The archive locations must allow
+cross-origin range requests from the site.
 
 ```sh
-export VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org
-node scripts/state-local/build-display-site.mjs
-node scripts/build-gallery.mjs
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org node scripts/state-local/build-display-site.mjs
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org node scripts/build-gallery.mjs
 ```
 
 Serve the built `site/` and run the six journeys against the same settings. The project
 is skipped unless `VITE_STATE_LOCAL_SERVER` and `STATE_LOCAL_SITE_URL` are both set:
 
 ```sh
-STATE_LOCAL_SITE_URL=http://localhost:8080 npx playwright test --project state-local-journeys
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org STATE_LOCAL_SITE_URL=http://localhost:8080 \
+  npx playwright test --project state-local-journeys
 ```

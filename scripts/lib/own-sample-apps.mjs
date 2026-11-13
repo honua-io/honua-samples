@@ -55,6 +55,9 @@ export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https
 // assert at runtime that no request goes to them.
 export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://msc.fema.gov", "https://publicweb1.co.maui.hi.us", "https://overturemaps.org", "https://opendatacommons.org"]);
 
+// Apps importing the shared server setting read from the configured server, not the source default.
+const SERVER_SETTING_IMPORT = /shared\/state-local\/(?:server|binding)\.mjs/u;
+
 const REGULAR_FILE_MODES = new Set(["100644", "100755"]);
 const ORIGIN_PATTERN = /https:\/\/[a-z0-9.-]+(?::\d+)?/giu;
 // Source files the data-origin scan reads. Built samples add TypeScript.
@@ -120,7 +123,7 @@ export function dataOriginsOf(text) {
   const origins = new Set();
   for (const match of String(text).matchAll(ORIGIN_PATTERN)) {
     const origin = match[0].toLowerCase();
-    if (!LIBRARY_ORIGINS.includes(origin) && !NAVIGATION_ORIGINS.includes(origin)) origins.add(deployedOrigin(origin));
+    if (!LIBRARY_ORIGINS.includes(origin) && !NAVIGATION_ORIGINS.includes(origin)) origins.add(origin);
   }
   return [...origins].sort();
 }
@@ -145,12 +148,13 @@ function listCommittedFiles(repoRoot, commit, treePath) {
 export async function stageOwnBrowserApp({ repoRoot, dirName, manifest, sourceCommit, destDir }) {
   try {
     if (!/^[0-9a-f]{40}$/u.test(sourceCommit ?? "")) throw new Error(`source commit ${JSON.stringify(sourceCommit)} is not a full git sha`);
-    const { files, entrypoint, builtFrom, sourceText } = hasAppBuild(manifest)
+    const { files, entrypoint, builtFrom, sourceText, followsServerSetting } = hasAppBuild(manifest)
       ? await collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit })
       : await collectCommittedFiles({ repoRoot, dirName, manifest, sourceCommit });
 
     const dataMode = manifest.dataMode ?? null;
-    const dataOrigins = dataOriginsOf(sourceText);
+    const scannedOrigins = dataOriginsOf(sourceText);
+    const dataOrigins = followsServerSetting ? [...new Set(scannedOrigins.map(deployedOrigin))].sort() : scannedOrigins;
     if ((dataMode === "public-live" || dataMode === "live") && dataOrigins.length !== 1) {
       throw new Error(`a ${dataMode} sample must reference exactly one data origin; found ${dataOrigins.length ? dataOrigins.join(", ") : "none"}`);
     }
@@ -276,6 +280,7 @@ async function collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit }) 
         build: { command, outputDir, lockfile: "package-lock.json", lockfileSha256: sha256(lockfile) },
       },
       sourceText: scanned.map((f) => f.bytes.toString("utf8")).join("\n"),
+      followsServerSetting: sources.some((f) => SERVER_SETTING_IMPORT.test(f.bytes.toString("utf8"))),
     };
   } finally {
     await rm(exportRoot, { recursive: true, force: true }).catch(() => {});
