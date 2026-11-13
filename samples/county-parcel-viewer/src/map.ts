@@ -113,11 +113,12 @@ function boundsOf(geometry: GeoJsonGeometry): [[number, number], [number, number
   ];
 }
 
-async function addBasemap(map: maplibregl.Map, config: ViewerConfig): Promise<string> {
+async function addBasemap(map: maplibregl.Map, config: ViewerConfig, signal: AbortSignal): Promise<string> {
   if (!config.basemapUrl) return "off (basemap=none)";
   try {
     const archive = pmtilesArchive(config.basemapUrl);
     await archive.getHeader();
+    if (signal.aborted) return "off (map removed)";
     map.addSource("basemap", { type: "vector", url: `pmtiles://${config.basemapUrl}` });
     // Under every data layer.
     const before = map.getStyle().layers.find((layer) => layer.id !== "background")?.id;
@@ -228,6 +229,7 @@ function connectOverlayControls(map: maplibregl.Map): void {
 }
 
 export function createParcelMap(container: HTMLElement, config: ViewerConfig, events: MapEvents): ParcelMap {
+  const lifetime = new AbortController();
   const map = new maplibregl.Map({
     container,
     style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": token("--map-land") } }] },
@@ -236,6 +238,7 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
     attributionControl: { compact: true, customAttribution: OFFLINE_FIXTURE ? "Synthetic demonstration data · not county records" : "Basemap © OpenStreetMap contributors (Protomaps) · Parcels, zoning: County of Maui · Flood zones: FEMA" },
     cooperativeGestures: false,
   });
+  map.on("remove", () => lifetime.abort());
   watchTheme(map);
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   // On a phone the expanded credit line covers a third of the 38vh map; it
@@ -269,7 +272,9 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
       map.addLayer({ id: "flood-fill", type: FILL_LAYER, source: "flood", paint: { "fill-color": token("--hz-flood"), "fill-opacity": 0.18 } }, underOutline);
       map.addLayer({ id: "flood-line", type: "line", source: "flood", paint: { "line-color": token("--hz-flood"), "line-opacity": 0.6, "line-width": 1, "line-dasharray": [3, 2] } }, underOutline);
       connectOverlayControls(map);
-      events.onBasemap(await addBasemap(map, config));
+      const basemap = await addBasemap(map, config, lifetime.signal);
+      if (lifetime.signal.aborted) return;
+      events.onBasemap(basemap);
       installBuildingControl(map, { archiveUrl: config.buildingsUrl, archiveFor: pmtilesArchive });
       resolve();
     });
