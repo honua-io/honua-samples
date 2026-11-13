@@ -27,6 +27,7 @@ services:
       retries: 10
 
   honua:
+    platform: linux/amd64
     image: "${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e}"
     ports:
       - "${HONUA_HTTP_PORT:-8080}:8080"
