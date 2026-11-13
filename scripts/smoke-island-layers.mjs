@@ -11,8 +11,9 @@ const ENGINES = { chromium, firefox, webkit };
 const requestedEngines = (process.env.ISLAND_SMOKE_BROWSERS ?? 'chromium,firefox').split(',');
 const ARCHIVE_PREFIX = 'pmtiles://https://demo.honua.io/demo-data/';
 const MAP_SETTLE_TIMEOUT_MS = 60_000;
-// Headless Firefox on GPU-less CI hosts refuses WebGL unless software rendering is forced.
-const LAUNCH_OPTIONS = { firefox: { firefoxUserPrefs: { 'webgl.force-enabled': true, 'webgl.enable-webgl2': true } } };
+// Headless Firefox finds no GL driver on GPU-less CI hosts; with a display (xvfb-run in CI) it renders
+// WebGL through Mesa's software driver.
+const LAUNCH_OPTIONS = { firefox: { headless: !process.env.DISPLAY, firefoxUserPrefs: { 'webgl.force-enabled': true } } };
 
 // Runs in the page: the CDN-backed island sources once every map has loaded and one of them drew features.
 function drawnIslandSources(prefix) {

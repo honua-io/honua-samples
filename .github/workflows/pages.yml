@@ -226,7 +226,7 @@ jobs:
 
       - name: Island map layers draw in Chromium and Firefox
         # The state-local maps read their PMTiles archives byte-exact from the demo CDN.
-        run: npm run test:island-layers:browser
+        run: xvfb-run -a npm run test:island-layers:browser
 
       - name: Verify server-first job pages
         env:
