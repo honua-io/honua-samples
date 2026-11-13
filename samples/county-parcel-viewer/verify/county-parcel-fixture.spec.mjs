@@ -30,6 +30,12 @@ async function openOffline(page) {
   });
   await page.goto(`${origin}/?baseUrl=https://ignored.example&parcelsUrl=https://ignored.example/parcels`);
   await expect(page.locator('.tag')).toContainText('Synthetic fixture');
+  await expect(page.locator('#data-provenance summary')).toHaveText('Synthetic fixture · no county records');
+  await page.locator('#data-provenance summary').click();
+  await expect(page.locator('#data-provenance')).toContainText('Invented parcels');
+  for (const href of await page.locator('#data-provenance a').evaluateAll(links => links.map(link => link.href))) {
+    expect(new URL(href).origin).toBe(origin);
+  }
   await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass');
   await expect(page.locator('#browse-status')).toContainText('3 parcels loaded');
   await expect.poll(() => page.locator('body').getAttribute('data-rendered-features').then(Number)).toBeGreaterThan(0);

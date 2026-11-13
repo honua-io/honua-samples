@@ -21,6 +21,18 @@ It is a Vite app built on the published Honua JavaScript SDK (`@honua/sdk-js@0.3
 | Prerequisites | Node.js 22.12 or later, a modern web browser, internet access |
 | Libraries | `@honua/sdk-js` 0.3.2, `maplibre-gl` 6.4.1, `pmtiles` 4.5.0, `@fontsource` Public Sans 5.3.0 and Source Serif 4 5.3.1 |
 
+## Data sources and freshness
+
+The expandable source disclosure below the search field identifies the active mode and links to its
+configured sources. The default combines PMTiles parcel outlines with separate live service queries
+for selected geometry, details and planning results; these can represent different versions. With
+`parcelTilesUrl=none`, parcels use service queries without archived outlines. The state-local gallery
+reads bundled GeoJSON instead, and fixture mode clearly identifies invented records and local sources.
+
+No verified capture or update timestamps are currently configured, so the disclosure says dates are
+unavailable. Neither a successful live request nor a date supplied in the page URL establishes data
+freshness. This demo is not a current land-use or flood determination.
+
 ## Run
 
 ```bash
