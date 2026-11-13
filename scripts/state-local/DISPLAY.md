@@ -33,3 +33,23 @@ npm ci
 npx playwright install chromium
 node scripts/smoke-state-local-display.mjs
 ```
+
+## Server endpoint
+
+The journeys read live tiles and services from one Honua server, `https://demo.honua.io`
+by default (`shared/state-local/server.mjs`). Set `VITE_STATE_LOCAL_SERVER` to a bare
+origin when building to point every journey, the sample bindings and the SDK Explorer at
+another server:
+
+```sh
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org node scripts/state-local/build-display-site.mjs
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org node scripts/build-gallery.mjs
+```
+
+Serve the built `site/` and run the six journeys against that server. The project is
+skipped unless both variables are set:
+
+```sh
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org STATE_LOCAL_SITE_URL=http://localhost:8080 \
+  npx playwright test --project state-local-journeys
+```

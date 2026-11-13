@@ -53,8 +53,8 @@ test('GeoJSON overlays are untouched', () => {
 
 test('the street basemap keeps default caching', () => {
   // Only the static island archives showed the cache failure; the basemap is served by Honua behind its own CDN.
-  assert.match(code, /url: 'pmtiles:\/\/https:\/\/demo\.honua\.io\/api\/v1\/tiles\/pmtiles\/maui-basemap'/);
-  assert.doesNotMatch(code, /islandArchive\(\s*'https:\/\/demo\.honua\.io/);
+  assert.match(code, /url: 'pmtiles:\/\/\{\{STATE_LOCAL_SERVER\}\}\/api\/v1\/tiles\/pmtiles\/maui-basemap'/);
+  assert.doesNotMatch(code, /islandArchive\(\s*'\{\{STATE_LOCAL_SERVER/);
 });
 
 test('pages load the pmtiles build whose FetchSource honours chromeWindowsNoCache', async () => {

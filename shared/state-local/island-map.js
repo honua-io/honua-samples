@@ -41,7 +41,7 @@
   }
 
   function streets(map) {
-    map.addSource('streets', { type: 'vector', url: 'pmtiles://https://demo.honua.io/api/v1/tiles/pmtiles/maui-basemap' });
+    map.addSource('streets', { type: 'vector', url: 'pmtiles://{{STATE_LOCAL_SERVER}}/api/v1/tiles/pmtiles/maui-basemap' });
     streetLayer(map, { id: 'land', type: 'fill', 'source-layer': 'earth', paint: { 'fill-color': '--map-land' } });
     streetLayer(map, { id: 'street-parks', type: 'fill', 'source-layer': 'landuse', filter: ['in', ['get', 'kind'], ['literal', ['park', 'forest', 'nature_reserve']]], paint: { 'fill-color': '--map-zone-base-park', 'fill-opacity': 0.65 } });
     streetLayer(map, { id: 'street-water', type: 'fill', 'source-layer': 'water', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': '--map-water' } });

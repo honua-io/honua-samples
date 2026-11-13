@@ -1,7 +1,9 @@
+import { stateLocalServer } from "../../../shared/state-local/server.mjs";
+
 export const OFFLINE_FIXTURE = import.meta.env.MODE === "fixture";
 export const DISPLAY_SNAPSHOT = import.meta.env.VITE_STATE_LOCAL_SNAPSHOT === "1";
 // Where the viewer reads its data. Every default is on the one Honua server
-// (demo.honua.io); URL parameters point the same app at another server or at
+// chosen at build time (shared/state-local/server.mjs); URL parameters point the same app at another server or at
 // a county's own layers (design R9, R20):
 //
 //   baseUrl         Honua server for every default below
@@ -13,7 +15,7 @@ export const DISPLAY_SNAPSHOT = import.meta.env.VITE_STATE_LOCAL_SNAPSHOT === "1
 //   basemap         "none" skips the server's PMTiles basemap
 //   tmk             the selected parcel (9 digits)
 
-export const DEFAULT_BASE_URL = "https://demo.honua.io";
+export const DEFAULT_BASE_URL = stateLocalServer;
 // A downtown Wailuku parcel (B-3 Business, 100%): the first load shows a full
 // zoning and flood result rather than an empty zoning match.
 export const EXAMPLE_TMK = "234008053";

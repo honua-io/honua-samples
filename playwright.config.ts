@@ -30,6 +30,12 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "state-local-journeys",
+      testDir: "scripts/state-local/verify",
+      testMatch: "*.spec.mjs",
+      use: { ...devices["Desktop Chrome"], baseURL: process.env.STATE_LOCAL_SITE_URL },
+    },
     ...(allBrowsers
       ? [
           { name: "firefox", use: { ...devices["Desktop Firefox"] } },
