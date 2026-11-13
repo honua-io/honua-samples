@@ -2,7 +2,18 @@
 
 **Runnable samples as executable evidence.**
 
-Cross-SDK, cross-protocol samples for [Honua Server](https://github.com/honua-io/honua-server). Active gallery samples use the canonical capability vocabulary and run headless in CI against a real composed server. Standalone operator and authoring examples have separate checks below. Active run results feed the [honua-evidence](https://github.com/honua-io/honua-evidence) capability matrix.
+Build customer applications with **authenticated gRPC for live data and edits**,
+and **PMTiles, GeoParquet and COG over CDN HTTP range reads for public and read-heavy
+data**. Start with the [native application guide](docs/native-applications.md):
+browser gRPC-Web setup, private signed files, regeneration and the current Maui
+migration gaps.
+
+The repository also retains OGC API and GeoServices REST samples as **compatibility**
+examples for third-party tools and existing clients during coexistence. Their
+passing results do not certify the native path. Active gallery samples use the
+canonical capability vocabulary and run headless in CI against a real composed
+[Honua Server](https://github.com/honua-io/honua-server). Active results feed the
+[honua-evidence](https://github.com/honua-io/honua-evidence) capability matrix.
 
 ## Layout
 

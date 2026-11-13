@@ -1,5 +1,10 @@
 # Category style and legend from OGC API Features
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The FeatureServer-backed map below demonstrates **compatibility** and category styling.
+
 Read features from OGC API Features, colour them by a category field with a
 MapLibre `match` expression, and build the HTML legend and the popup from the
 same values. The default is Maui zoning districts around Kahului, coloured by

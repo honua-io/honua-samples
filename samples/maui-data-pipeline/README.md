@@ -1,5 +1,10 @@
 # Maui department data pipeline
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+This administrative import sample prepares data; it does not qualify the consuming application transport.
+
 Run against a disposable local Honua Server with its managed import database:
 
 ```sh

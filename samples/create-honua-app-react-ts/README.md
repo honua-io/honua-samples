@@ -1,5 +1,10 @@
 # Your first Honua app: create-honua-app react-ts
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The pinned React starter below currently reads a FeatureServer layer and is **compatibility** coverage.
+
 Scaffold the `react-ts` starter from the published
 [`create-honua-app`](https://www.npmjs.com/package/create-honua-app) package and point it at a
 FeatureServer layer on your Honua server.
