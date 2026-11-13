@@ -1,5 +1,10 @@
 # Honua developer samples program
 
+Start with the [native application path](native-applications.md) for authenticated
+gRPC, browser gRPC-Web, public cloud-native files through the CDN, and private
+signed files regenerated when data changes. Historical audits below retain their
+recorded scope; protocol-specific examples provide compatibility coverage.
+
 This directory records the research, product decisions, and delivery plan for the Honua developer learning experience.
 
 ## Repository and domain ownership

@@ -1,5 +1,10 @@
 # Maui questions in a stock MCP client
 
+Customer applications lead with the [native application path](native-applications.md):
+gRPC live operations and versioned cloud-native range reads. The administrative
+import and REST-backed MCP checks below retain their stated scope; they do not
+qualify native client behavior.
+
 Generate a read-only client setup and a realistic question from the same verified
 import receipts used by the Maui demos. This is preparation for the agent moment;
 generating the file does not mean an agent has answered the question successfully.

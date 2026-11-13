@@ -1,5 +1,13 @@
 # Maui 311 exercise dashboard
 
+Start with the [native application path](../../docs/native-applications.md):
+authenticated gRPC for live queries and approved edits, browser gRPC-Web setup,
+and versioned PMTiles/GeoParquet/COG range reads through the CDN for public or
+read-heavy data. Private files require authorized signed URLs and regeneration
+when data changes. The guide records this app's remaining native migration gaps.
+Existing REST SDK calls and OGC feeds below are **compatibility** examples; they
+do not establish native transport readiness.
+
 Browse fictional requests on real Maui road geometry. Status, type, fictional district
 and request/crew search filter the map, metrics, 12-week event counts and exports together.
 Select a request to inspect its timeline and assigned exercise crew. Metrics use the
@@ -48,7 +56,7 @@ The shared public OGC deployment, released Studio app, Console walkthrough and
 executed stock-client MCP question remain separate completion gates. This sample
 does not expose an Open311 endpoint or claim those gates have passed.
 
-## Published SDK queries
+## Compatibility: published SDK queries
 
 Generate a [receipt-bound stock MCP client setup and question](../../docs/state-local-mcp.md)
 for the agent moment. Setup generation does not mark the stock-client journey complete.

@@ -1,4 +1,14 @@
-# Maui public works exercise: published SDK queries
+# Maui public works exercise
+
+Start with the [native application path](../../docs/native-applications.md):
+authenticated gRPC for live queries and approved edits, browser gRPC-Web setup,
+and versioned PMTiles/GeoParquet/COG range reads through the CDN for public or
+read-heavy data. Private files require authorized signed URLs and regeneration
+when data changes. The guide records this app's remaining native migration gaps.
+Existing REST SDK calls and OGC feeds below are **compatibility** examples; they
+do not establish native transport readiness.
+
+## Compatibility: published SDK queries
 
 Query `maui-demo-work-orders` with the same filter in JavaScript, Python and .NET.
 These examples are one bounded, read-only query, not the complete Studio/MCP demo.

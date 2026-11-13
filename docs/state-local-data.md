@@ -1,5 +1,10 @@
 # Maui County data pipeline
 
+Customer applications lead with the [native application path](native-applications.md):
+gRPC live operations and versioned cloud-native range reads. The administrative
+import and REST-backed MCP checks below retain their stated scope; they do not
+qualify native client behavior.
+
 This pipeline downloads real Maui Nui public GIS data and generates explicitly
 fictional operational records for four state and local use cases. It prepares
 reviewable, disabled department layers through Honua's admin import and publishing

@@ -1,5 +1,10 @@
 # Local geoprocessing with the Python SDK
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+This developer walkthrough tests the current GP submission contract; it does not qualify native feature queries or edits.
+
 Submit and verify a 500-metre planar buffer using the published Python SDK.
 Run these commands from the repository root with Python 3.11+ and Docker Compose:
 

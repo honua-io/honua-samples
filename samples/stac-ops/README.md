@@ -1,5 +1,10 @@
 # STAC operations dashboard
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+This operator dashboard inspects STAC metadata; native data reads and edits need their own transport evidence.
+
 A standalone Blazor WebAssembly dashboard for inspecting a Honua STAC catalog,
 collection validators, extension declarations, query probes, and request timing.
 It consumes the server HTTP API and is deployed independently of Honua Server.

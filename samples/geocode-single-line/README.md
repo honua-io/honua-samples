@@ -1,5 +1,10 @@
 # Geocode one address
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The geocoding endpoint check below is a bounded protocol example; it does not qualify native feature queries or edits.
+
 Send one anonymous request to Honua's GeoServices REST GeocodeServer and print
 the best candidate.
 

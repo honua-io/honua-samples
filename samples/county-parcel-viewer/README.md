@@ -1,5 +1,13 @@
 # County parcel viewer
 
+Start with the [native application path](../../docs/native-applications.md):
+authenticated gRPC for live queries and approved edits, browser gRPC-Web setup,
+and versioned PMTiles/GeoParquet/COG range reads through the CDN for public or
+read-heavy data. Private files require authorized signed URLs and regeneration
+when data changes. The guide records this app's remaining native migration gaps.
+Existing REST SDK calls and OGC feeds below are **compatibility** examples; they
+do not establish native transport readiness.
+
 A parcel viewer a small county can run on Honua instead of a Tax Parcel Viewer template. Find a parcel by
 its number (TMK on Maui), by street address or by clicking it on the map, and see:
 
