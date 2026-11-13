@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
+import { withStateLocalEndpoints } from '../../shared/state-local/server.mjs';
 
-const code = await readFile(new URL('../../shared/state-local/island-map.js', import.meta.url), 'utf8');
+const code = withStateLocalEndpoints(await readFile(new URL('../../shared/state-local/island-map.js', import.meta.url), 'utf8'));
 const base = 'https://samples.honua.io/state-local/data/island/';
 const islandLock = JSON.parse(await readFile(new URL('../../shared/state-local/island-display.lock.json', import.meta.url), 'utf8'));
 const islandRelease = islandLock.url.match(/\/download\/maui-island-display-([\d-]+)\//)[1];

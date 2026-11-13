@@ -1,3 +1,5 @@
+import { isLocalServer, stateLocalServer } from './server.mjs';
+
 export function sourceBinding(search) {
   const params = new URLSearchParams(search);
   const serviceId = params.get('service');
@@ -6,11 +8,10 @@ export function sourceBinding(search) {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(serviceId ?? '') || !/^\d{1,9}$/.test(layer ?? '')) {
     throw new Error('Use the service and numeric layer from the approved deployment receipt');
   }
-  const url = new URL(params.get('baseUrl') ?? 'https://demo.honua.io');
-  const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
-  if ((!local && url.origin !== 'https://demo.honua.io') || !['http:', 'https:'].includes(url.protocol)
+  const url = new URL(params.get('baseUrl') ?? stateLocalServer);
+  if ((!isLocalServer(url) && url.origin !== stateLocalServer) || !['http:', 'https:'].includes(url.protocol)
     || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
-    throw new Error('Connect to demo.honua.io or a disposable localhost server');
+    throw new Error(`Connect to ${new URL(stateLocalServer).host} or a disposable localhost server`);
   }
   return { baseUrl: url.origin, serviceId, layerId: Number(layer) };
 }
@@ -18,7 +19,7 @@ export function sourceBinding(search) {
 export function namedBindings(search, names) {
   const params = new URLSearchParams(search);
   const entries = names.map((name) => [name, sourceBinding(new URLSearchParams({
-    baseUrl: params.get('baseUrl') ?? 'https://demo.honua.io',
+    baseUrl: params.get('baseUrl') ?? stateLocalServer,
     ...(params.has(`${name}Service`) ? { service: params.get(`${name}Service`) } : {}),
     ...(params.has(`${name}Layer`) ? { layer: params.get(`${name}Layer`) } : {})
   }))]);

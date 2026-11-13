@@ -1,15 +1,16 @@
 // Every state-local page must draw its island PMTiles layers in each browser engine, reading the
-// archives byte-exact from the demo CDN. Serves the built site/ locally, or checks a deployed site
+// archives byte-exact from the configured island archive host (the demo CDN by default). Serves the built site/ locally, or checks a deployed site
 // when ISLAND_SMOKE_BASE_URL is set (e.g. https://samples.honua.io).
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chromium, firefox, webkit } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
+import { stateLocalIslandData } from '../shared/state-local/server.mjs';
 
 const ROUTES = ['', 'workbench/', 'property/', 'property/mobile/', '311/', 'public-works/', 'emergency/'];
 const ENGINES = { chromium, firefox, webkit };
 const requestedEngines = (process.env.ISLAND_SMOKE_BROWSERS ?? 'chromium,firefox').split(',');
-const ARCHIVE_PREFIX = 'pmtiles://https://demo.honua.io/demo-data/';
+const ARCHIVE_PREFIX = `pmtiles://${stateLocalIslandData}`;
 const MAP_SETTLE_TIMEOUT_MS = 60_000;
 // Headless Firefox finds no GL driver on GPU-less CI hosts; with a display (xvfb-run in CI) it renders
 // WebGL through Mesa's software driver.

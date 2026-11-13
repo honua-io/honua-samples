@@ -1,11 +1,12 @@
 // Preserve the approved mockup shell across public demo pages.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { withStateLocalEndpoints } from './server.mjs';
 
 export async function approvedPage({ template, assets, data }) {
   const css = await readFile(path.join(assets, 'tokens.css'), 'utf8') + '\n' + await readFile(path.join(assets, 'app.css'), 'utf8');
   const icons = await readFile(path.join(assets, 'icons.svg'), 'utf8');
-  const island = await readFile(new URL('./island-map.js', import.meta.url), 'utf8');
+  const island = withStateLocalEndpoints(await readFile(new URL('./island-map.js', import.meta.url), 'utf8'));
   const mapKit = await readFile(new URL('./honua-map.js', import.meta.url), 'utf8');
   const kit = `<script>${island}\n${mapKit}</script>`;
   const head = `<script>try{var t=localStorage.getItem("honua-theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){document.documentElement.setAttribute("data-theme","light")}</script>

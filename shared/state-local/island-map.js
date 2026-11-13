@@ -3,7 +3,7 @@
 (function () {
   const root = new URL('/state-local/data/island/', location.origin);
   // The demo CDN serves the archives byte-exact; static hosting gzips them and breaks range reads.
-  const tileRoot = new URL('https://demo.honua.io/demo-data/maui-island-display/2026-11-11/');
+  const tileRoot = new URL('{{STATE_LOCAL_ISLAND_DATA}}');
   const tiled = new Set(['parcels', 'zoning', 'dfirm', 'tsunami', 'roads', 'contours']);
   const small = new Set(['slr32', 'council', 'waterbodies', 'streams', 'fire', 'schools', 'places', 'slud', 'sma', 'mip_growth', 'bridges', 'coastline', 'police', 'hospitals']);
   const bounds = [[-157.55, 20.25], [-155.65, 21.4]];
@@ -43,7 +43,7 @@
   }
 
   function streets(map) {
-    map.addSource('streets', { type: 'vector', url: 'pmtiles://https://demo.honua.io/api/v1/tiles/pmtiles/maui-basemap' });
+    map.addSource('streets', { type: 'vector', url: 'pmtiles://{{STATE_LOCAL_BASEMAP}}' });
     streetLayer(map, { id: 'land', type: 'fill', 'source-layer': 'earth', paint: { 'fill-color': '--map-land' } });
     streetLayer(map, { id: 'street-parks', type: 'fill', 'source-layer': 'landuse', filter: ['in', ['get', 'kind'], ['literal', ['park', 'forest', 'nature_reserve']]], paint: { 'fill-color': '--map-zone-base-park', 'fill-opacity': 0.65 } });
     streetLayer(map, { id: 'street-water', type: 'fill', 'source-layer': 'water', filter: ['==', ['geometry-type'], 'Polygon'], paint: { 'fill-color': '--map-water' } });
