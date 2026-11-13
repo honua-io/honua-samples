@@ -198,6 +198,9 @@ jobs:
       - name: Build snapshot-backed state and local demos
         run: node scripts/state-local/build-display-site.mjs
 
+      - name: Stage locked publications
+        run: node scripts/publications/stage-publications.mjs
+
       - name: Build gallery
         # KEY_LIST_URL is the published capability list at the 2026.1 server
         # pin, the same URL validate.yml and run-samples.yml fetch (see
