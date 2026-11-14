@@ -1,3 +1,5 @@
+import { element } from './dom.mjs';
+
 export function parcelResults(parcels, zone) {
   const features = parcels.filter(({ properties }) => zone === '' || String(properties.zone) === zone);
   const areas = features.map(({ properties }) => properties.acres);
@@ -13,26 +15,20 @@ export function parcelViewUrl(current, { tmk, zone }) {
   return url.href;
 }
 
-function element(tag, text) {
-  const node = document.createElement(tag);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
 function parcelRow(feature, options) {
-  const p = feature.properties, row = element('tr'), button = element('button', options.formatTmk(p.t9));
-  button.type = 'button'; button.className = 'btn sm';
+  const p = feature.properties, row = element('tr', null), button = element('button', options.formatTmk(p.t9));
+  button.type = 'button'; button.className = 'btn sm'; button.dataset.parcelId = String(p.id);
   button.setAttribute('aria-pressed', String(options.selected()?.properties.id === p.id));
   button.addEventListener('click', () => options.onSelect(feature));
-  const cell = element('td'); cell.append(button); row.append(cell);
+  const cell = element('td', null); cell.append(button); row.append(cell);
   row.append(element('td', options.zoneNames[p.zone] || 'Not zoned'));
   row.append(element('td', typeof p.acres === 'number' && Number.isFinite(p.acres) && p.acres >= 0 ? p.acres.toFixed(3) : 'Unknown'));
   return row;
 }
 
 function tableShell(root) {
-  const table = element('table'), caption = element('caption', 'Parcel snapshot results');
-  const head = element('thead'), titles = element('tr'), body = element('tbody');
+  const table = element('table', null), caption = element('caption', 'Parcel snapshot results');
+  const head = element('thead', null), titles = element('tr', null), body = element('tbody', null);
   for (const name of ['TMK', 'Zoning', 'Acres']) { const th = element('th', name); th.scope = 'col'; titles.append(th); }
   head.append(titles); table.append(caption, head, body); root.append(table);
   return body;
@@ -43,14 +39,14 @@ export function mountParcelBrowser(options) {
   const zones = [...new Set(parcels.map(({ properties }) => String(properties.zone)))].sort();
   const requested = new URL(location.href).searchParams.get('zone') ?? '';
   let zone = zones.includes(requested) ? requested : '', offset = 0;
-  const label = element('label', 'Zoning district '), filter = element('select');
+  const label = element('label', 'Zoning district '), filter = element('select', null);
   filter.setAttribute('aria-label', 'Zoning district');
   for (const code of ['', ...zones]) { const option = element('option', code === '' ? 'All zoning districts' : options.zoneNames[code] || 'Not zoned'); option.value = code; filter.append(option); }
   filter.value = zone; label.append(filter);
-  const summary = element('p'), selection = element('p'), paging = element('p');
+  const summary = element('p', null), selection = element('p', null), paging = element('p', null);
   summary.setAttribute('role', 'status'); selection.setAttribute('role', 'status');
   root.replaceChildren(label, summary, selection);
-  const body = tableShell(root), controls = element('div'); controls.className = 'row wrap';
+  const body = tableShell(root), controls = element('div', null); controls.className = 'row wrap';
   const previous = element('button', 'Previous parcels'), next = element('button', 'Next parcels');
   for (const button of [previous, next]) { button.type = 'button'; button.className = 'btn sm'; }
   controls.append(previous, next); root.append(paging, controls);
@@ -68,12 +64,14 @@ function renderResults(state, { zone, offset }) {
   const result = parcelResults(options.parcels, zone), selected = options.selected();
   summary.textContent = `${result.features.length.toLocaleString()} parcels · ${result.acres.toLocaleString(undefined, { maximumFractionDigits: 3 })} acres${result.missingArea ? ` · ${result.missingArea} with unknown area` : ''}`;
   selection.textContent = selected && !result.features.includes(selected) ? 'The selected parcel is outside this zoning filter. Clear the filter to include it.' : '';
+  const focusedId = body.contains(document.activeElement) ? document.activeElement.dataset.parcelId : null;
   body.replaceChildren(...result.features.slice(offset, offset + 20).map((feature) => parcelRow(feature, options)));
+  if (focusedId !== null) [...body.querySelectorAll('button')].find((button) => button.dataset.parcelId === focusedId)?.focus();
   paging.textContent = result.features.length ? `Showing ${offset + 1}–${Math.min(offset + 20, result.features.length)} of ${result.features.length} parcels` : 'No parcels match this filter.';
   previous.disabled = offset === 0; next.disabled = offset + 20 >= result.features.length;
 }
 
 function applyParcelFilter(map, zone) {
-  const expression = zone === '' ? null : ['==', ['to-string', ['get', 'zone']], zone];
+  const expression = zone === '' ? null : ['==', ['to-string', ['coalesce', ['get', 'zone'], 'null']], zone];
   for (const layer of ['parcels-fill', 'parcels-line']) if (map?.getLayer(layer)) map.setFilter(layer, expression);
 }

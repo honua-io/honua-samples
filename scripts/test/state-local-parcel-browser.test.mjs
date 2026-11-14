@@ -25,3 +25,8 @@ test('share URLs retain leading-zero parcel IDs and the current zoning filter', 
   assert.equal(url.searchParams.get('zone'), '0');
   assert.equal(new URL(parcelViewUrl(url, { tmk: '000000002', zone: '' })).searchParams.has('zone'), false);
 });
+
+test('unzoned records share the explicit null sentinel with map filtering', () => {
+  const unzoned = { properties: { id: 4, t9: '000000004', zone: null, acres: 1 } };
+  assert.deepEqual(parcelResults([...parcels, unzoned], 'null').features, [unzoned]);
+});
