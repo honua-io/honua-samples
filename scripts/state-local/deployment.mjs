@@ -116,7 +116,8 @@ async function publicLayerIndex(serviceUrl, layer) {
   const listing = response.ok ? await response.json() : null;
   const layers = Array.isArray(listing?.layers) ? listing.layers : [];
   const named = layers.filter((entry) => entry.name === layer.layerName);
-  const match = named.length === 1 ? named[0] : layers.length === 1 ? layers[0] : null;
+  // Fall back to the only layer solely for servers that do not report the admin layer name.
+  const match = layer.layerName ? (named.length === 1 ? named[0] : null) : layers.length === 1 ? layers[0] : null;
   if (!Number.isInteger(match?.id)) throw new Error("Anonymous public layer index was not confirmed");
   return match.id;
 }

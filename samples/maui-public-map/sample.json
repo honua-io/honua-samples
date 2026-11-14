@@ -1,7 +1,7 @@
 {
   "id": "maui-public-map",
   "title": "Maui County public fire-station map",
-  "description": "Import real Maui fire stations into Emergency Management, activate the reviewed layer, then author, version and publish a Studio map that anonymous residents can open, on the default PostGIS-only server.",
+  "description": "Import real Maui fire stations into Emergency Management, activate the reviewed layer, then author and version a Studio map and request public publication; on the default PostGIS-only server the request is held for a human approval.",
   "contentKind": "walkthrough",
   "learning": {
     "goal": "build-map",

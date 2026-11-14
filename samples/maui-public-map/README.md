@@ -1,7 +1,7 @@
 # Maui County public fire-station map
 
-The emergency-management journey end to end on the default PostGIS-only server:
-real open data in, a released map out that residents open without signing in.
+The emergency-management journey on the default PostGIS-only server: real open data in, a
+Studio map that residents open without signing in once its publication is approved.
 
 ```sh
 export HONUA_BASE_URL=http://localhost:8080

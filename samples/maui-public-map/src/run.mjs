@@ -1,6 +1,6 @@
-// Real-source public map on the default PostGIS-only server: import Maui fire
-// stations into Emergency Management, activate the reviewed layer, then author,
-// version and publish a Studio map that anonymous residents can open.
+// Real-source public map: import Maui fire stations into Emergency Management,
+// activate the reviewed layer, then author and version a Studio map and request
+// public publication. A held request is recorded as held, never as released.
 // HONUA_SAMPLE_VERIFY_RECEIPT=<path> skips authoring and re-reads an existing
 // publication (used after a server restart to prove it is durable).
 import assert from 'node:assert/strict';
@@ -72,6 +72,8 @@ if (process.env.HONUA_SAMPLE_VERIFY_RECEIPT) {
   const status = receipt.proposalId ? await proposalStatus(receipt) : 'Released';
   if (status === 'AwaitingApproval') {
     await refusesAnonymousControl(receipt, approvePath(receipt));
+    const held = await anonymous(receipt.publishedUrl);
+    assert.equal(held.status, 404, `EM-02: a held map must stay unreadable after restart (HTTP ${held.status})`);
     console.log(`PASS Maui map publication still held for approval after restart: ${receipt.proposalId}`);
     process.exit(0);
   }
@@ -99,11 +101,10 @@ const packageKey = `maui-fire-stations-${Date.now().toString(36)}`;
 // same MCP tool an agent client uses; never derive the id from the service name.
 const listed = await mcpTool('honua_list_layers', {});
 const candidates = (listed?.layers ?? []).filter((entry) => entry.serviceName === staged.serviceName
-  || entry.serviceId === staged.serviceName || String(entry.serviceId ?? '').includes(staged.serviceName));
-console.log(`MCP honua_list_layers candidates: ${JSON.stringify(candidates.map(({ serviceId, serviceName, serviceLayerIndex, name }) => ({ serviceId, serviceName, serviceLayerIndex, name })))}`);
-const exact = candidates.filter((entry) => entry.serviceName === staged.serviceName);
-const chosen = (exact.length ? exact : candidates)[0];
-assert.ok(chosen && Number.isInteger(chosen.serviceLayerIndex), 'MCP must list the activated fire-station layer');
+  && entry.serviceLayerIndex === active.serviceLayerIndex);
+console.log(`MCP honua_list_layers match: ${JSON.stringify(candidates.map(({ serviceId, serviceName, serviceLayerIndex, name }) => ({ serviceId, serviceName, serviceLayerIndex, name })))}`);
+assert.equal(candidates.length, 1, 'MCP must list exactly the activated fire-station layer');
+const [chosen] = candidates;
 const sourceId = `${encodeURIComponent(chosen.serviceId)}/${chosen.serviceLayerIndex}`;
 const body = {
   mapPackageId: packageKey,
@@ -155,7 +156,11 @@ if (published?.proposalId) {
 }
 assert.match(published?.status ?? '', /^accepted$/i, `Publication must be accepted or held for approval: ${JSON.stringify(published).slice(0, 400)}`);
 const source = await readPublication(receipt);
-const query = await fetch(`${active.layerUrl}/query?where=1%3D1&returnCountOnly=true&f=json`);
+// Count through the map's own source locator, not the import receipt.
+// The locator may carry the server's public base URL, so compare paths and query this server.
+const sourcePath = `${new URL(source.locator.url, env.baseUrl).pathname.replace(/\/+$/, '')}/${source.locator.layerId}`;
+assert.equal(sourcePath, new URL(active.layerUrl).pathname, 'EM-02: the released map must point at the imported layer');
+const query = await fetch(`${env.baseUrl}${sourcePath}/query?where=1%3D1&returnCountOnly=true&f=json`);
 assert.equal(query.status, 200, 'EM-02: the map source must stay anonymously queryable');
 assert.equal((await query.json()).count, snapshot.accepted, 'EM-02: public map count must match the imported snapshot');
 await writeFile(receiptPath, JSON.stringify(receipt, null, 2), { mode: 0o600 });

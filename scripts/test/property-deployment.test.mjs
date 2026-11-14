@@ -26,14 +26,17 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
   const env = { baseUrl: 'https://server.test', adminApiKey: 'private-key' };
   const layers = snapshots.map((receipt, layerId) => ({ source: receipt.source, serviceName: `source-${layerId}`, layerId,
     folderName: 'planning', publicName: `public-${layerId}`, schema: 'honua_data', table: `table_${layerId}`, folderId: 'planning', enabled: false,
-    cleanSha256: receipt.cleanSha256, description: `SHA-256 ${receipt.cleanSha256}` }));
+    cleanSha256: receipt.cleanSha256, description: `SHA-256 ${receipt.cleanSha256}`, layerName: receipt.source }));
+  // Odd layers use the rc.2 admin shape: storageLayerId, with an unrelated legacy-looking id.
+  for (const layer of layers) if (layer.layerId % 2) Object.assign(layer, { storageLayerId: layer.layerId, layerId: 900 + layer.layerId });
+  const storage = (layer) => layer.storageLayerId ?? layer.layerId;
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
     if (url.pathname.endsWith('/services/')) return json({ data: { items: layers } });
     if (url.pathname.endsWith('/FeatureServer')) {
       // The public index is service-local and differs from the storage handle.
       const owner = layers.find((item) => url.pathname.includes(`/${item.publicName}/`));
-      return json({ layers: [{ id: owner.layerId + 100, name: owner.source }] });
+      return json({ layers: [{ id: storage(owner) + 100, name: owner.source }] });
     }
     if (url.pathname.includes('/FeatureServer/')) {
       assert.equal(options, undefined);
@@ -45,14 +48,14 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
     if (url.pathname.endsWith('/settings')) return json({ data: { accessPolicy: layer.policy } });
     if (url.pathname.endsWith('/access-policy')) layer.policy = JSON.parse(options.body);
     else if (options.method === 'PUT') {
-      assert.equal(url.pathname, `/api/v1/admin/connections/managed/layers/${layer.layerId}/enabled`);
+      assert.equal(url.pathname, `/api/v1/admin/connections/managed/layers/${storage(layer)}/enabled`);
       assert.equal(url.searchParams.get('serviceName'), layer.serviceName);
       layer.enabled = true;
     }
     return json({ data: { items: [layer] } });
   };
   for (const staged of layers) {
-    await saveDeployment(env, { staged, directory, connection: 'managed' });
+    await saveDeployment(env, { staged: { ...staged, layerId: storage(staged) }, directory, connection: 'managed' });
     await activateDeployment(env, { name: staged.source, directory });
   }
   const result = await propertyApp(env, directory);
@@ -61,7 +64,7 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
   assert.equal(url.searchParams.get('parcelTilesUrl'), 'none');
   assert.equal(url.searchParams.get('baseUrl'), env.baseUrl);
   for (const layer of layers) assert.equal(url.searchParams.get(propertyLayers[layer.source]),
-    `${env.baseUrl}/rest/services/planning/${layer.publicName}/FeatureServer/${layer.layerId + 100}`);
+    `${env.baseUrl}/rest/services/planning/${layer.publicName}/FeatureServer/${storage(layer) + 100}`);
   assert.equal(result.appUrl.includes(env.adminApiKey), false);
   layers.at(-1).enabled = false;
   await assert.rejects(propertyApp(env, directory), /activation was not confirmed/);
