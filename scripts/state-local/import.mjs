@@ -48,7 +48,19 @@ async function publishedLayer(env, publication) {
   throw new Error("Layer publication still pending; inspect Console before retrying");
 }
 
-async function completedUpload(env, uploaded) {
+function validatedImportReceipt(job, uploaded, snapshot) {
+  if (typeof job.physicalTableName !== "string" || !job.physicalTableName.trim()
+    || typeof job.schema !== "string" || !job.schema.trim()) {
+    throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
+  }
+  if (job.jobId !== uploaded.jobId || job.tableName !== snapshot.tableName
+    || !snapshot.connection || job.connectionId !== snapshot.connection) {
+    throw new Error(`Import receipt does not match this job, table and managed connection; inspect Console job ${uploaded.jobId} before publishing`);
+  }
+  return { ...job, featureCount: job.featuresProcessed };
+}
+
+async function completedUpload(env, uploaded, snapshot) {
   if (!uploaded?.jobId) return uploaded;
   const apiPath = `/api/v1/admin/import/jobs/${encodeURIComponent(uploaded.jobId)}`;
   const deadline = Date.now() + 120_000;
@@ -58,7 +70,7 @@ async function completedUpload(env, uploaded) {
       throw new Error(`Import failed or cancelled; inspect Console job ${uploaded.jobId} before retrying`);
     }
     if ([2, "Completed"].includes(job?.status)) {
-      throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
+      return validatedImportReceipt(job, uploaded, snapshot);
     }
     await setTimeout(500);
   }
@@ -81,7 +93,7 @@ export async function uploadSnapshotTable(env, snapshot) {
     body: { sourceUrl: snapshot.sourceUrl, fileName: "snapshot.geojson", tableName: snapshot.tableName,
       overwriteExisting: false, sourceSrid: 4326, targetSrid: 4326 },
   } : { apiPath: "/api/v1/admin/import/upload", body: snapshotForm(snapshot) };
-  const uploaded = await completedUpload(env, await adminFetch(env, { method: "POST", ...request }));
+  const uploaded = await completedUpload(env, await adminFetch(env, { method: "POST", ...request }), snapshot);
   if (uploaded?.featureCount !== snapshot.geojson.features.length || !uploaded.physicalTableName) {
     throw new Error("Import did not confirm the snapshot table and feature count");
   }
@@ -115,7 +127,7 @@ export async function stageVerifiedSnapshot(env, options) {
   const runId = options.runId ?? randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);
   const serviceName = stagingServiceName(name, runId);
-  const uploaded = await uploadSnapshotTable(env, { tableName, geojson, sourceUrl: options.sourceUrl });
+  const uploaded = await uploadSnapshotTable(env, { tableName, geojson, connection, sourceUrl: options.sourceUrl });
   const published = await adminFetch(env, {
     method: "POST", apiPath: layersPath(connection),
     body: {

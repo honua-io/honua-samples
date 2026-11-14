@@ -130,9 +130,12 @@ The script resolves exactly one active department folder, uploads GeoJSON throug
 managed connection API with its folder ID, attribution, licence and snapshot hash.
 Runs create unique table/service names and are not idempotent. Inspect Console
 before retrying a failed import; tables or jobs can remain behind.
-Background completion currently stops at the missing physical-table receipt
-([tracked server issue](https://github.com/honua-io/honua-server/issues/7217));
-synchronous imports can continue. No database credentials belong in browser code.
+Background imports are polled to completion. Publication requires a returned schema,
+physical table name, matching job/table identity and the selected managed connection,
+plus the exact expected feature count. Older candidates without the completed-job
+receipt stop for Console inspection; the helper never derives a physical table name
+from the logical name ([server receipt change](https://github.com/honua-io/honua-server/issues/7217)).
+Failed or cancelled jobs stop before publication. No database credentials belong in browser code.
 
 After staging, the CLI verifies the disabled layer's table, service, snapshot hash
 and department folder, then saves a private `<source>.deployment.json` receipt

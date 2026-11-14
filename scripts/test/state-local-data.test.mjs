@@ -358,6 +358,53 @@ test("background upload polls terminal state and never guesses a physical table"
 });
 
 
+function completedReceiptFetch(state) {
+  return async (input, request) => {
+    const url = new URL(input);
+    if (url.pathname.endsWith("/folders")) return folders();
+    if (url.pathname.endsWith("/upload")) {
+      state.expectedTable = request.body.get("TableName");
+      return response({ jobId: "upload-job", statusUrl: "https://untrusted.test" }, 202);
+    }
+    if (url.pathname.endsWith("/jobs/upload-job")) return response({
+      jobId: "upload-job", status: 2, tableName: state.expectedTable, featuresProcessed: 1,
+      schema: "import_schema", physicalTableName: "physical_import_table", connectionId: "managed", ...state.changes,
+    });
+    assert.equal(url.pathname, "/api/v1/admin/connections/managed/layers");
+    const body = JSON.parse(request.body);
+    assert.equal(body.schema, "import_schema");
+    assert.equal(body.table, "physical_import_table");
+    assert.equal(body.enabled, false);
+    state.published++;
+    return response({ data: { storageLayerId: 19, enabled: false } });
+  };
+}
+
+test("background import publishes only the completed receipt for this job, table and connection", async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot("basins", output);
+  const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
+  const options = { name: "basins", directory: output, connection: "managed" };
+  const state = { changes: {}, published: 0 };
+  globalThis.fetch = completedReceiptFetch(state);
+  for (const status of [2, "Completed"]) {
+    state.changes = { status };
+    assert.equal((await stageSnapshot(env, options)).table, "physical_import_table");
+  }
+  assert.equal(state.published, 2);
+  for (const invalid of [
+    { schema: null }, { physicalTableName: " " }, { jobId: "another-job" },
+    { tableName: "another-table" }, { connectionId: null }, { connectionId: "other" },
+    { featuresProcessed: 2 },
+  ]) {
+    state.changes = invalid;
+    await assert.rejects(stageSnapshot(env, options), /physical table receipt|receipt does not match|feature count/);
+  }
+  assert.equal(state.published, 2, "invalid receipts must never reach publication");
+});
+
+
 test("staging requires exactly one department folder before uploading", async (t) => {
   const output = await directory(t);
   sourceFetch(t);
