@@ -122,6 +122,11 @@
     </a>
     <div class="verify">County public search · enter the selected TMK</div>
 
+    <section class="msec" aria-labelledby="snapshotQuestions" id="parcelQuestions">
+      <h2 id="snapshotQuestions" style="font-size:13px">Questions about this snapshot</h2>
+      <p class="faint" style="font-size:12px">Demo answers · scripted snapshot · updated 2026-11-10 · <a href="/state-local/data/approved/manifest.json">Hawaii Statewide GIS sources</a></p>
+    </section>
+
     <section class="msec" aria-labelledby="askH">
       <div class="ai-card">
         <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 id="askH" style="font-size:13px">Can I build here?</h2><span class="tag-demo" style="margin-left:auto">Demo answer</span></div>
@@ -172,8 +177,10 @@
 {{DATA land,roads,streams,waterbodies,zoning,dfirm,tsunami,slr32,sma,slud,mip_growth,cplan,cp_names,parcels,shelters,zone_names}}
 {{MAPJS}}
 {{PARCEL_SEARCH}}
+{{PARCEL_ANSWERS}}
 <script>
 (() => {
+  const parcelAnswers = HonuaParcelAnswers.mount(document.getElementById("parcelQuestions"));
   const FEAT = 27904;
 
   const ZN = HD.zone_names, CPN = HD.cp_names;
@@ -199,6 +206,7 @@
     const url = new URL(location.href); url.searchParams.set("tmk", p.t9); document.getElementById("shareUrl").textContent = url.href;
     const sqft = Math.round(p.acres * 43560 / 100) * 100;
     document.getElementById("sub").textContent = (id === FEAT ? "Lono Ave and Kaʻahumanu Ave · " : "Kahului · ") + `${p.acres.toFixed(3)} acres`;
+    parcelAnswers.update(p);
     document.getElementById("fLand").textContent = HM.money(p.land); document.getElementById("fBldg").textContent = HM.money(p.bldg); document.getElementById("fArea").textContent = sqft.toLocaleString();
     document.getElementById("mapps").href = `https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx`;
     const chips = [`<span class="chip accent">${zn}</span>`, p.fld && p.fld !== "X" ? `<span class="chip info">Flood zone ${p.fld}</span>` : `<span class="chip">Flood zone X</span>`];

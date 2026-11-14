@@ -111,6 +111,11 @@
       </div>
     </div>
 
+    <section class="side-sec" aria-labelledby="snapshotQuestions" id="parcelQuestions">
+      <h2 id="snapshotQuestions" style="font-size:13px">Questions about this snapshot</h2>
+      <p class="faint" style="font-size:12px">Demo answers · scripted snapshot · updated 2026-11-10 · <a href="/state-local/data/approved/manifest.json">Hawaii Statewide GIS sources</a></p>
+    </section>
+
     <section class="side-sec" style="padding-top:4px" aria-labelledby="askH">
       <div class="ai-card">
         <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 id="askH" style="font-size:13px">Ask about this parcel</h2><span class="tag-demo" style="margin-left:auto">Demo answer</span></div>
@@ -255,8 +260,10 @@
 {{DATA land,roads,contours,streams,waterbodies,zoning,dfirm,tsunami,slr32,parcels,shelters,zone_names,slud,sma,mip_growth,cplan,cp_names}}
 {{MAPJS}}
 {{PARCEL_SEARCH}}
+{{PARCEL_ANSWERS}}
 <script>
 (() => {
+  const parcelAnswers = HonuaParcelAnswers.mount(document.getElementById("parcelQuestions"));
   const FEAT = 27904;
 
   const parcels = HM.get("parcels");
@@ -308,6 +315,7 @@
     if (p.fld && p.fld !== "X") chips.push(`<span class="chip info">Flood zone ${p.fld}</span>`); else chips.push(`<span class="chip">Flood zone X</span>`);
     if (p.ts === 1) chips.push(`<span class="chip warn">Tsunami evacuation zone</span>`); else if (p.ts === 2) chips.push(`<span class="chip">Extreme tsunami zone</span>`);
     document.getElementById("pChips").innerHTML = chips.join("");
+    parcelAnswers.update(p);
     document.getElementById("fLand").textContent = HM.money(p.land); document.getElementById("fBldg").textContent = HM.money(p.bldg);
     document.getElementById("ovTmk").textContent = t; document.getElementById("ovArea").textContent = `${p.acres.toFixed(3)} acres (GIS)`;
     document.getElementById("ovZone").textContent = zn; document.getElementById("ovFlood").textContent = FLOOD[p.fld] || p.fld || "—";

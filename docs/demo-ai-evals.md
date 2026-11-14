@@ -21,8 +21,8 @@ cloud-native files lead; compatibility protocols are identified as such.
 | Page / answer | Evidence checked |
 | --- | --- |
 | Overview agent example | Illustrative answer and synthetic-record labels; no query count claimed. |
-| Property, desktop | Seven featured-parcel answer statements agree with the mapped-layer list; choosing another parcel hides the fixed answer. Pending sources remain pending. |
-| Property, mobile | Five featured-parcel statements agree with its rule list; choosing another parcel hides the answer and shows the unavailable message. |
+| Property, desktop | Three selected-parcel question buttons agree with the displayed assessment, area and mapped flood zone for featured and other parcels; answers reset on selection. Seven featured-parcel answer statements agree with the mapped-layer list; choosing another parcel hides the fixed answer. Pending sources remain pending. |
+| Property, mobile | The same three snapshot questions agree with displayed parcel values at both widths, including keyboard activation and source links. Five featured-parcel statements agree with its rule list; choosing another parcel hides the answer and shows the unavailable message. |
 | 311 daily brief | SLA count agrees with the linked queue and an independent filter over the request records, initially and after type and district changes. A deliberately corrupted answer is rejected. |
 | 311 triage and reply | Reply is explicitly an unsent example and identifies the selected request; the triage asset matches the request detail. Crew availability and priority are examples; approval changes no records. |
 | Public works anomaly | Good inspection rating, nearby request count and example request IDs agree with an independent filter over the pinned records. |
