@@ -61,7 +61,8 @@ async function selectCountyParcel(state, value) {
     if (feature.properties.tmk_txt !== tmk) throw new Error('Parcel identity mismatch.');
     renderCountyDetails(state, feature);
     showCountySelection(state, feature);
-    state.status.textContent = `County TMK ${tmk} · GeoParquet details · captured 13 November 2026.`;
+    const warning = answer.limit ? ` ${answer.limit.message} Live lookup is not connected in this demo.` : '';
+    state.status.textContent = `County TMK ${tmk} · GeoParquet details · captured 13 November 2026.${warning}`;
   } catch (error) {
     if (sequence === state.sequence && state.root.open) state.status.textContent = `County lookup unavailable: ${error.message} Snapshot data remains available.`;
   }

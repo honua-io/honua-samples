@@ -110,6 +110,23 @@ async function verifyUnavailablePublication(browser, url) {
   console.log('PASS unavailable descriptor retry and unavailable county map with working GeoParquet lookup');
 }
 
+async function verifySlowLookup(browser, url) {
+  const page = await browser.newPage();
+  await loadPage(page, url);
+  await page.route('**/parcels.parquet', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 2100));
+    await route.continue();
+  });
+  await page.getByLabel('County TMK', { exact: true }).fill('238007001');
+  await page.getByRole('button', { name: 'Find county parcel', exact: true }).click();
+  await expect(page.locator('#countyStatus')).toContainText('County TMK 238007001 · GeoParquet details', { timeout: 30000 });
+  await expect(page.locator('#countyStatus')).toContainText('took longer than 2.0 s');
+  await expect(page.locator('#countyStatus')).toContainText('Live lookup is not connected in this demo');
+  await expect(page.locator('#countyDetails dd')).toHaveCount(9);
+  await page.close();
+  console.log('PASS slow native lookup retains real details and explains the browser budget');
+}
+
 const server = await startStaticServer({ rootDir: path.resolve('site'), port: 0 });
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
 try {
@@ -127,4 +144,5 @@ try {
   }
   await verifyEarlyOpen(browser, `${server.url}/state-local/property/`);
   await verifyUnavailablePublication(browser, `${server.url}/state-local/property/`);
+  await verifySlowLookup(browser, `${server.url}/state-local/property/`);
 } finally { await browser.close(); await server.close(); }
