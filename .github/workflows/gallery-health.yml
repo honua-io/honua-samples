@@ -53,6 +53,7 @@ jobs:
         with:
           name: gallery-health
           path: .artifacts/gallery-health*
+          include-hidden-files: true
           retention-days: 14
           if-no-files-found: warn
       - name: Update the single public health tracking issue

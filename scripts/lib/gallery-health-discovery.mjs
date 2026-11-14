@@ -5,15 +5,19 @@ import path from 'node:path';
 export async function discoverGallery(context, manifest, options = {}) {
   const entries = new Map();
   const failures = [];
-  for (const source of manifest.sources) {
-    await discoverSource(context, { source, entries, failures }, options);
+  for (const [index, source] of manifest.sources.entries()) {
+    const result = await discoverSource(context, source, { ...options, id: `${options.id}-${index}` });
+    for (const [url, entry] of result.entries) entries.set(url, entry);
+    failures.push(...result.failures);
   }
   if (!options.directory && failures.length) throw new Error(failures.map((failure) => failure.failure).join('; '));
   const found = [...entries.values()].sort((a, b) => a.url.localeCompare(b.url));
   return options.directory ? { entries: found, failures } : found;
 }
 
-async function discoverSource(context, { source, entries, failures }, options) {
+async function discoverSource(context, source, options) {
+  const entries = new Map();
+  const failures = [];
   const pending = [source.url];
   const visited = new Set();
   while (pending.length) {
@@ -26,7 +30,10 @@ async function discoverSource(context, { source, entries, failures }, options) {
       if (!response?.ok()) throw new Error(`Inventory ${url}: HTTP ${response?.status()}`);
       entries.set(url, { url, kind: source.kind });
       const links = await inventoryLinks(page, source, context.request);
-      addLinks(links, { source, pending, entries });
+      for (const entry of admittedLinks(links, source)) {
+        entries.set(entry.url, entry);
+        if (source.recursive) pending.push(entry.url);
+      }
     } catch (error) {
       const failure = { url, ok: false, failure: error.message };
       if (options.directory) {
@@ -37,6 +44,7 @@ async function discoverSource(context, { source, entries, failures }, options) {
       failures.push(failure);
     } finally { await page.close(); }
   }
+  return { entries, failures };
 }
 
 async function inventoryLinks(page, source, request) {
@@ -52,13 +60,14 @@ async function inventoryLinks(page, source, request) {
   return links;
 }
 
-function addLinks(links, { source, pending, entries }) {
+function admittedLinks(links, source) {
+  const admitted = [];
   for (const entry of links) {
     const target = new URL(entry.url);
     target.hash = '';
     if (!['http:', 'https:'].includes(target.protocol)) continue;
     if (source.kind === 'state-local' && (!target.href.startsWith(source.url) || !target.pathname.endsWith('/'))) continue;
-    entries.set(target.href, { ...entry, url: target.href, kind: source.kind });
-    if (source.recursive) pending.push(target.href);
+    admitted.push({ ...entry, url: target.href, kind: source.kind });
   }
+  return admitted;
 }
