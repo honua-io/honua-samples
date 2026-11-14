@@ -217,6 +217,8 @@
       </ul>
     </section>
 
+    {{COUNTY_PUBLICATION}}
+
     <section class="side-sec" aria-labelledby="browseHeading">
       <details><summary id="browseHeading">Browse parcel snapshot</summary><div id="parcelBrowser"></div></details>
     </section>
@@ -276,6 +278,9 @@
 
   const parcels = HM.get("parcels");
   const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
+  import('/state-local/shared/county-publication.mjs').then(({ mountCountyPublication }) => mountCountyPublication({
+    root: document.getElementById('countyPublication'), map: () => map,
+  })).catch(() => { document.getElementById('countyStatus').textContent = 'County publication controls unavailable. Snapshot data remains available.'; });
   let parcelBrowser;
   import('/state-local/shared/parcel-browser.mjs').then(({ mountParcelBrowser, parcelViewUrl }) => {
     parcelBrowser = mountParcelBrowser({
@@ -372,7 +377,7 @@
       HM.bindToggles(m);
       const sh = HD.shelters.features.find((s) => s.properties.name.startsWith("Kahului Elementary"));
       if (sh) { const el = document.createElement("div"); el.className = "mappin shelter"; el.innerHTML = '<svg class="ico"><use href="#i-home"/></svg>'; el.title = "School exercise anchor: Kahului Elementary"; new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(sh.geometry.coordinates).addTo(m); HM.label(m, [sh.geometry.coordinates[0], sh.geometry.coordinates[1] - 0.00045], "Kahului Elementary · exercise anchor", "poi"); }
-      m.on("click", "parcels-fill", (e) => select(e.features[0].properties.id, false));
+      m.on("click", "parcels-fill", (e) => { if (!document.getElementById("countyPublication").open) select(e.features[0].properties.id, false); });
       let hov = null;
       m.on("mousemove", "parcels-fill", (e) => { m.getCanvas().style.cursor = "pointer"; const id = e.features[0].id; if (hov !== id) { if (hov != null) m.setFeatureState({ source: "parcels", id: hov }, { hover: false }); hov = id; m.setFeatureState({ source: "parcels", id }, { hover: true }); } });
       m.on("mouseleave", "parcels-fill", () => { m.getCanvas().style.cursor = ""; if (hov != null) m.setFeatureState({ source: "parcels", id: hov }, { hover: false }); hov = null; });
