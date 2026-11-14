@@ -63,11 +63,25 @@ async function verifyReloadAndReset(page, id) {
   await root.getByRole('button', { name: 'Resident report', exact: true }).click();
 }
 
+async function verifyReportWithoutPhoto(page, seed) {
+  const root = page.locator('#request-loop');
+  await root.locator('[name="type"]').selectOption(seed.type);
+  await root.locator('[name="addr"]').fill('Fictional location without a photo');
+  await root.getByRole('button', { name: 'Submit fictional demo report' }).click();
+  await expect(root.locator('[data-submit-message]')).toContainText('Created DEMO-');
+  const row = root.locator('[data-request-view="public"] article');
+  await expect(row).toContainText('Fictional location without a photo');
+  await expect(row.locator('img')).toHaveCount(0);
+  await root.locator('[data-reset]').click();
+  await root.getByRole('button', { name: 'Resident report', exact: true }).click();
+}
+
 export async function verifyRequestLoop(page, { capture = async () => {} } = {}) {
   const report = await submitReport(page);
   await assignAndExport(page, report);
   await page.locator('[data-request-view="public"] article').scrollIntoViewIfNeeded();
   await capture();
   await verifyReloadAndReset(page, report.id);
-  return { category: report.seed.type, duplicateId: report.seed.id, assignment: 'Assigned', photo: 'visible', reload: 'persisted', reset: 'cleared' };
+  await verifyReportWithoutPhoto(page, report.seed);
+  return { category: report.seed.type, duplicateId: report.seed.id, assignment: 'Assigned', photo: 'visible', optionalPhoto: 'omitted', reload: 'persisted', reset: 'cleared' };
 }

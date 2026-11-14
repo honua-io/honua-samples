@@ -40,7 +40,7 @@ function staffControls(row, record) {
   triage.onclick = () => suggest(record, answer);
   row.append(status, crew, save, triage, answer);
 }
-function renderRecord(record, staff) {
+function renderRecord(record) {
   const row = element('article', '', 'panel-b'); row.dataset.reportId = record.id;
   row.append(element('h3', `${record.id} · ${record.type}`), element('p', `${record.addr} · ${record.status}${record.crew ? ` · Crew: ${record.crew}` : ''}`));
   if (record.note) row.append(element('p', record.note));
@@ -49,7 +49,11 @@ function renderRecord(record, staff) {
     row.append(photo);
   }
   row.append(element('p', requestNotice, 'faint'));
-  if (staff) staffControls(row, record);
+  return row;
+}
+function renderStaffRecord(record) {
+  const row = renderRecord(record);
+  staffControls(row, record);
   return row;
 }
 function render() {
@@ -57,14 +61,14 @@ function render() {
   const records = store.records().filter(row => `${row.id} ${row.addr}`.toLowerCase().includes(term));
   for (const view of ['staff', 'public']) {
     const list = query(`[data-request-view="${view}"] .request-records`);
-    list.replaceChildren(...records.slice(0, 25).map(row => renderRecord(row, view === 'staff')));
+    list.replaceChildren(...records.slice(0, 25).map(view === 'staff' ? renderStaffRecord : renderRecord));
     if (!records.length) list.append(element('p', 'No demo reports match this search.'));
     list.prepend(element('p', `${records.length} matching reports. Showing up to 25; search by report ID or location.`));
   }
   query('[data-reset-time]').textContent = `Resets at ${new Date(store.resetAt()).toISOString()} (UTC). Closing this browser session also clears reports. The snapshot dashboard below remains unchanged.`;
 }
 function photoData(file) {
-  if (!file) return Promise.resolve('');
+  if (!file || (!file.name && file.size === 0)) return Promise.resolve('');
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 250000) return Promise.reject(new Error('Choose a JPEG, PNG or WebP photo smaller than 250 KB.'));
   return new Promise((resolve, reject) => {
     const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('The photo could not be read.')); reader.readAsDataURL(file);
