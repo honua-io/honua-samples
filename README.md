@@ -240,7 +240,44 @@ Additional optional environment variables: `HONUA_BASE_URL` (default `http://loc
 `HONUA_PUBLIC_BASE_URL` (default `https://demo.honua.io`) and `HONUA_BROWSER_STATIC_PORT` (see
 [Browser lane](#browser-lane) below).
 
-### Browser lane
+### Nightly public gallery health
+
+[Latest health result](https://github.com/honua-io/honua-samples/actions/workflows/gallery-health.yml)
+ · [Failure tracking issue](https://github.com/honua-io/honua-samples/issues?q=label%3Agallery-health)
+
+`gallery-health.yml` runs daily at 08:37 UTC and on manual dispatch on existing
+GitHub Actions runners. Each listed demo opens in a fresh signed-out context in
+Chromium and Firefox at desktop and mobile widths. Checks require rendered
+application features on maps, reject console/page errors and dead HTTP links,
+and record first contentful paint. A loaded basemap alone cannot pass. PMTiles
+decoding failures fail even when Chromium renders the same page successfully.
+
+The gallery generator publishes `gallery-health.v1.json` from the same admitted
+cards it renders. The source manifest `config/gallery-health.v1.json` follows
+that inventory plus the website's deployed route cards and state/local
+navigation, including embedded frames. Adding a card needs no workflow edit.
+A missing or empty inventory fails visibly; other inventories still run.
+
+Every run has a readable Actions summary and a 14-day artifact containing JSON,
+Markdown and screenshots of failed pages. Failures open or update one issue
+labelled `gallery-health`; a passing run updates and closes it. Runner failures
+also update that issue. No maintainer needs to open CI logs to see the result.
+
+Run locally after `npm ci` and `npx playwright install --with-deps chromium firefox`:
+
+```sh
+node scripts/smoke-gallery-health-controls.mjs
+node scripts/check-gallery-health.mjs
+```
+
+The controls run on relevant PRs and deliberately introduce a blank map, console
+error, dead link and broken inventory in both browsers and viewports. They verify
+failures have screenshots, healthy pages pass and new cards are discovered.
+`GALLERY_HEALTH_MANIFEST` and `GALLERY_HEALTH_OUTPUT` override input and output
+paths for a local check. These page checks complement the demo API canary and
+exact-head gallery tests; they do not qualify a native SDK data path.
+
+## Browser lane
 
 `entrypoint.type: "browser"` samples run headless in a real browser instead
 of a Node/Python/.NET child process -- needed for anything that actually
