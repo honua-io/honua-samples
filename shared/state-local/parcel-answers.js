@@ -1,4 +1,4 @@
-(() => {
+{
   const available = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
   const money = (value) => available(value) ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value) : 'unavailable';
   const area = (value) => available(value) ? `${value.toFixed(3)} acres (${(Math.round(value * 43560 / 100) * 100).toLocaleString('en-US')} sq ft)` : 'area unavailable';
@@ -39,4 +39,4 @@
   }
 
   window.HonuaParcelAnswers = { summarize, mount: (root) => new ParcelAnswers(root) };
-})();
+}
