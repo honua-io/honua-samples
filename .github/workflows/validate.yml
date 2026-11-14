@@ -171,9 +171,6 @@ jobs:
       - name: Stage the vendored immutable SDK release
         run: node scripts/lib/sample-bundles.mjs
 
-      - name: Install build dependencies
-        run: npm ci --ignore-scripts
-
       - name: Build snapshot-backed state and local demos
         run: node scripts/state-local/build-display-site.mjs
 
