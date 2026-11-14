@@ -17,7 +17,11 @@ export async function checkGalleryPage(context, entry, { directory, id, timeout 
     result.firstPaintMs = await page.evaluate(() => performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null);
     if (result.firstPaintMs === null) throw new Error('No first contentful paint recorded');
     result.maps = await waitForMaps(page, { required: expectsMap, timeout });
-    result.links = await checkLinks(page, context.request, linkCache);
+    result.redirectedTo = page.url() === entry.url ? null : page.url();
+    // Source-only cards can redirect to repository documentation. Verify that
+    // destination resolves, without treating the external site's navigation as demo links.
+    result.links = new URL(page.url()).origin === new URL(entry.url).origin
+      ? await checkLinks(page, context.request, linkCache) : 0;
     if (errors.length) throw new Error(`Console/page errors: ${errors.join('; ')}`);
     result.ok = true;
   } catch (error) {
@@ -45,7 +49,8 @@ async function waitForMaps(page, { required, timeout }) {
 }
 
 async function checkLinks(page, request, cache) {
-  const links = await page.locator('a[href]').evaluateAll((nodes) => [...new Set(nodes.map((node) => node.href))]);
+  const links = (await Promise.all(page.frames().map((frame) => frame.locator('a[href]')
+    .evaluateAll((nodes) => nodes.map((node) => node.href))))).flat();
   const urls = links.filter((url) => /^https?:/.test(url)).map((url) => { const target = new URL(url); target.hash = ''; return target.href; });
   const broken = [];
   // Bound concurrency so a page with hundreds of source links cannot burst a host.
