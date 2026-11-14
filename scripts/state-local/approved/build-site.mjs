@@ -15,7 +15,7 @@ export async function buildApprovedDemos({ root, output, lock }) {
     pattern: /^[a-z0-9_-]+\.(cjson|geojson|json|csv)$/ });
   const shared = path.join(output, 'shared');
   await mkdir(shared, { recursive: true });
-  for (const file of ['parcel-export-control.mjs', 'parcel-export.mjs', 'csv.mjs']) {
+  for (const file of ['parcel-browser.mjs', 'parcel-export-control.mjs', 'parcel-export.mjs', 'csv.mjs']) {
     await cp(path.join(root, 'shared/state-local', file), path.join(shared, file));
   }
   const built = path.join(root, 'artifacts/approved-pages');

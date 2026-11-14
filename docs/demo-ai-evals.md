@@ -42,3 +42,5 @@ answers. Changes that add an answer must extend this inventory and its browser
 checks before claiming that answer is covered.
 
 Property snapshot exports are checked by `scripts/smoke-parcel-exports.mjs`, included in the display browser gate. Both layouts download the currently selected parcel as CSV and GeoJSON with snapshot date, attribution, source licences and warnings; a missing source manifest makes downloads unavailable. These browser checks cover the scripted snapshot experience, not a live backend pass.
+
+The parcel browser regression checks zoning filters and acreage totals against the snapshot, row selection linked to parcel exports, map filters, pagination, and zoning plus parcel state after reloading a shared link on both layouts. It also verifies the explicit outside-filter selection message.

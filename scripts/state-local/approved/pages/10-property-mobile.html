@@ -154,6 +154,9 @@
       <div id="regs"></div>
     </section>
 
+    <section class="msec" aria-labelledby="browseHeading">
+      <details><summary id="browseHeading">Browse parcel snapshot</summary><div id="parcelBrowser"></div></details>
+    </section>
     <section class="msec" aria-labelledby="exportHeading">
       <h2 id="exportHeading">Selected parcel snapshot</h2>
       <div id="parcelExports" class="row wrap"><p class="faint">Loading snapshot exports…</p></div>
@@ -191,6 +194,17 @@
   const ZN = HD.zone_names, CPN = HD.cp_names;
   const parcels = HM.get("parcels");
   const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
+  let parcelBrowser;
+  import('/state-local/shared/parcel-browser.mjs').then(({ mountParcelBrowser, parcelViewUrl }) => {
+    parcelBrowser = mountParcelBrowser({
+      root: document.getElementById('parcelBrowser'), parcels: parcels.features, zoneNames: HD.zone_names,
+      selected: () => byId.get(currentId), map: () => map, formatTmk: HM.tmk,
+      onSelect: (feature) => { render(feature.properties.id); map?.fitBounds(HM.bbox(feature.geometry), { padding: 40, maxZoom: 18 }); }, onChange: () => { render(currentId); },
+    });
+    shareParcelUrl = (tmk) => parcelViewUrl(location.href, { tmk, zone: parcelBrowser.zone });
+    render(currentId);
+  }).catch(() => { document.getElementById('parcelBrowser').textContent = 'Parcel list unavailable. Search remains available.'; });
+  let shareParcelUrl = (tmk) => { const url = new URL(location.href); url.searchParams.set('tmk', tmk); return url.href; };
   import('/state-local/shared/parcel-export-control.mjs').then(({ mountParcelExports }) => mountParcelExports({
     root: document.getElementById('parcelExports'), selected: () => byId.get(currentId),
   })).catch(() => { document.getElementById('parcelExports').textContent = 'Snapshot exports unavailable.'; });
@@ -212,7 +226,7 @@
     const zn = ZN[p.zone] || "Not zoned", cp = p.cp >= 0 ? CPN[p.cp] : null;
     const iS = findIdx({ features: HD.slud.features }, pt), iG = findIdx({ features: HD.mip_growth.features }, pt), iC = findIdx(cplan, pt);
     document.getElementById("tmk").textContent = "TMK " + HM.tmk(p.t9);
-    const url = new URL(location.href); url.searchParams.set("tmk", p.t9); document.getElementById("shareUrl").textContent = url.href;
+    const url = new URL(shareParcelUrl(p.t9)); document.getElementById("shareUrl").textContent = url.href;
     const sqft = Math.round(p.acres * 43560 / 100) * 100;
     document.getElementById("sub").textContent = (id === FEAT ? "Lono Ave and Kaʻahumanu Ave · " : "Kahului · ") + `${p.acres.toFixed(3)} acres`;
     parcelAnswers.update(p);
@@ -250,6 +264,7 @@
       `${ok}<span>Review the <b>3.2 ft sea-level-rise</b> exposure overlay. ${cite("slr32/1", "slr")}</span>`,
       `${info}<span>Shoreline setback not checked: source pending.</span>`,
     ].map((s) => `<li>${s}</li>`).join("");
+    parcelBrowser?.refresh();
     document.getElementById("ai").hidden = id !== FEAT;
     document.getElementById("aiUnavailable").hidden = id === FEAT;
     if (map && map.getSource("parcels")) { if (sel != null) map.setFeatureState({ source: "parcels", id: sel }, { sel: false }); sel = id; map.setFeatureState({ source: "parcels", id }, { sel: true }); map.setFilter("parcels-sel", ["==", ["get", "id"], id]); }
