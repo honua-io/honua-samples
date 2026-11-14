@@ -40,7 +40,9 @@ async function checkProfile(browser, engine, profile) {
       console.log(`${engine}/${profile} ${result.ok ? 'PASS' : 'FAIL'} ${entry.url} ${result.failure ?? `${result.firstPaintMs}ms`}`);
     }
   };
-  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, worker));
+  // Headed Firefox suspends paint timing for background tabs: keep one demo active.
+  const concurrency = engine === 'firefox' ? 1 : 4;
+  await Promise.all(Array.from({ length: Math.min(concurrency, pending.length) }, worker));
 }
 
 async function checkEngine(engine, launcher) {

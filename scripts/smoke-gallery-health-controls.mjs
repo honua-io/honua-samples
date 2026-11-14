@@ -17,12 +17,19 @@ const demo = (body) => `<!doctype html><title>Health control</title><h1>Demo</h1
 await writeFile(path.join(root, 'index.html'), '<h1>Gallery</h1><a class="demo" href="/good.html">Good</a><a class="demo" href="/blank.html">New demo</a>');
 await writeFile(path.join(root, 'good.html'), demo(feature));
 await writeFile(path.join(root, 'blank.html'), demo(''));
+await writeFile(path.join(root, 'icons.html'), '<h1>Non-map page</h1><svg style="display:none"><symbol id="i-map"><path d="M0 0 L20 20"/></symbol></svg>');
+await writeFile(path.join(root, 'module-map.html'), `<!doctype html><h1>Module map</h1><canvas width="200" height="200"></canvas><script type="module">
+  const map = { getCanvas: () => document.querySelector('canvas'),
+    getStyle: () => ({ sources: { records: { type: 'geojson' } }, layers: [{ id: 'records', source: 'records' }] }),
+    queryRenderedFeatures: () => [{ id: 'painted-feature' }] };
+  window.sampleMap = map;
+</script>`);
 await writeFile(path.join(root, 'console.html'), demo(`${feature}<script>console.error('deliberately broken demo')</script>`));
 await writeFile(path.join(root, 'link.html'), demo(`${feature}<a href="/missing.html">Broken link</a>`));
 const server = await startStaticServer({ rootDir: root, port: 0 });
 async function assertPage(context, scenario, identity) {
   const [file, failure] = scenario;
-  const result = await checkGalleryPage(context, { url: `${server.url}/${file}.html`, mapRequired: true }, {
+  const result = await checkGalleryPage(context, { url: `${server.url}/${file}.html`, ...(file === 'icons' ? {} : { mapRequired: true }) }, {
     directory: output, id: `${identity}-${file}`, timeout: 1500,
   });
   assert.equal(result.ok, failure === null, JSON.stringify(result));
@@ -45,7 +52,7 @@ async function assertProfile(browser, identity, viewport) {
     assert.equal(partial.failures.length, 1);
     assert.equal(partial.entries.length, 3, 'a broken inventory must not skip healthy inventories');
     assert.ok((await readFile(path.join(output, partial.failures[0].screenshot))).length > 100);
-    for (const scenario of [['good', null], ['blank', /Map never painted/], ['console', /deliberately broken/], ['link', /Broken links/]]) {
+    for (const scenario of [['good', null], ['module-map', null], ['icons', null], ['blank', /Map never painted/], ['console', /deliberately broken/], ['link', /Broken links/]]) {
       await assertPage(context, scenario, identity);
     }
   } finally { await context.close(); }

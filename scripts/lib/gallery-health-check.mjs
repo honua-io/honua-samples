@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { renderedMapEvidence } from './gallery-health-map.mjs';
+import { renderedMapEvidence, visibleMapContainers } from './gallery-health-map.mjs';
 
 export async function checkGalleryPage(context, entry, { directory, id, timeout = 45_000, linkCache = new Map() }) {
   const page = await context.newPage();
@@ -8,9 +8,10 @@ export async function checkGalleryPage(context, entry, { directory, id, timeout 
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
   page.on('pageerror', (error) => errors.push(error.message));
   try {
+    await page.bringToFront();
     const response = await page.goto(entry.url, { waitUntil: 'load', timeout });
     if (!response?.ok()) throw new Error(`HTTP ${response?.status()}`);
-    const mapContainers = await Promise.all(page.frames().map((frame) => frame.locator('.maplibregl-map, .leaflet-container, canvas, #map, [id$="-map"]').count()));
+    const mapContainers = await Promise.all(page.frames().map((frame) => frame.evaluate(visibleMapContainers)));
     const expectsMap = entry.mapRequired ?? mapContainers.some((count) => count > 0);
     result.mapRequired = expectsMap;
     await page.waitForFunction(() => performance.getEntriesByName('first-contentful-paint').length > 0, null, { timeout });

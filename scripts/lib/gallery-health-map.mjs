@@ -44,3 +44,9 @@ export function renderedMapEvidence() {
   return { containers, maps: evidence, leafletFeatures,
     painted: evidence.some((map) => map.features > 0) || leafletFeatures > 0 };
 }
+
+// SVG symbols such as i-map are icons, not map containers.
+export function visibleMapContainers() {
+  return [...document.querySelectorAll('.maplibregl-map, .leaflet-container, canvas, div#map, div[id$="-map"]')]
+    .filter((node) => { const bounds = node.getBoundingClientRect(); return bounds.width > 0 && bounds.height > 0; }).length;
+}
