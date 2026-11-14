@@ -99,6 +99,7 @@ function attachCountyMap(state) {
     });
   }
   countyVisibility(state);
+  if (state.selection) showCountySelection(state, state.selection);
 }
 
 function countyVisibility(state) {
@@ -110,10 +111,12 @@ function countyVisibility(state) {
 }
 
 function clearCountySelection(state) {
+  state.selection = null;
   state.map()?.getSource('county-selection')?.setData({ type: 'FeatureCollection', features: [] });
 }
 
 function showCountySelection(state, feature) {
+  state.selection = feature;
   const map = state.map();
   if (state.mapFailed || !map?.getSource('county-selection')) return;
   map.getSource('county-selection').setData(feature);

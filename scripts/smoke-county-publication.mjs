@@ -33,7 +33,11 @@ async function verifyEarlyOpen(browser, url) {
   await page.locator('#countyHeading').click();
   await expect(page.locator('#countyStatus')).toContainText('County publication connected', { timeout: 30000 });
   assert.equal(await page.evaluate(() => Boolean(window.__parcelMap.getLayer('county-fill'))), false, 'county waits for snapshot initialization');
+  await page.getByLabel('County TMK', { exact: true }).fill('238007001');
+  await page.getByRole('button', { name: 'Find county parcel', exact: true }).click();
+  await expect(page.locator('#countyStatus')).toContainText('County TMK 238007001 · GeoParquet details', { timeout: 30000 });
   await page.evaluate(() => { window.__finishSnapshot(); window.__parcelMap.fire('load'); });
+  await expect.poll(() => page.evaluate(() => window.__parcelMap.getSource('county-selection')?._data?.properties?.tmk_txt)).toBe('238007001');
   await expect.poll(() => page.evaluate(() => Boolean(window.__parcelMap.getLayer('county-fill')))).toBe(true);
   assert.equal(await page.evaluate(() => window.__parcelMap.getLayoutProperty('parcels-fill', 'visibility')), 'none');
   const layers = await page.evaluate(() => window.__parcelMap.getStyle().layers.map((layer) => layer.id));
