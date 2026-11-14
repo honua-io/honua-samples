@@ -124,6 +124,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install build dependencies
+        run: npm ci --ignore-scripts
+
       - name: Build snapshot-backed state and local demos
         run: node scripts/state-local/build-display-site.mjs
 
