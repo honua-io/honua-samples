@@ -5,10 +5,11 @@ import { withIslandPoints } from '../../shared/state-local/island-points.mjs';
 import { readFile, writeFile, mkdir, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { LIVE_FEEDS } from './public/live-feeds.js';
 import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const approved = path.join(root, 'approved');
-const output = path.join(root, 'dist');
+const output = path.resolve(process.argv[2] ?? path.join(root, 'dist'));
 const islandLock = JSON.parse(await readFile(new URL('../../shared/state-local/island-display.lock.json', import.meta.url)));
 const islandDirectory = path.join(root, 'node_modules/.cache/island-display');
 const islandManifest = await lockedArchive(islandLock, islandDirectory);
@@ -62,5 +63,8 @@ for (const [name, target] of [['04-emergency.html', 'index.html'], ['11-emergenc
 }
 const sourceFile = path.join(output, 'data/sources.json');
 const sources = JSON.parse(await read(sourceFile));
-await writeFile(sourceFile, JSON.stringify({ ...sources, displayLayers: receipts }, null, 2));
+const liveFeeds = LIVE_FEEDS.map(({ id, label, agency, url, staleAfterMs }) => ({ id, label, attribution: agency, sourceUrl: url,
+  license: 'public-domain', licenseNote: 'U.S. Government work (17 U.S.C. 105)', staleAfterMinutes: staleAfterMs / 60_000,
+  note: 'Real data read live by the visitor\'s browser; not stored, not part of the exercise.' }));
+await writeFile(sourceFile, JSON.stringify({ ...sources, displayLayers: receipts, liveFeeds }, null, 2));
 console.log('Approved emergency desktop and mobile assembled with verified exercise snapshot.');
