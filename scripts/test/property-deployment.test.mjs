@@ -30,6 +30,11 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
     if (url.pathname.endsWith('/services/')) return json({ data: { items: layers } });
+    if (url.pathname.endsWith('/FeatureServer')) {
+      // The public index is service-local and differs from the storage handle.
+      const owner = layers.find((item) => url.pathname.includes(`/${item.publicName}/`));
+      return json({ layers: [{ id: owner.layerId + 100, name: owner.source }] });
+    }
     if (url.pathname.includes('/FeatureServer/')) {
       assert.equal(options, undefined);
       return json({ id: Number(url.pathname.split('/').at(-1)) });
@@ -56,7 +61,7 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
   assert.equal(url.searchParams.get('parcelTilesUrl'), 'none');
   assert.equal(url.searchParams.get('baseUrl'), env.baseUrl);
   for (const layer of layers) assert.equal(url.searchParams.get(propertyLayers[layer.source]),
-    `${env.baseUrl}/rest/services/planning/${layer.publicName}/FeatureServer/${layer.layerId}`);
+    `${env.baseUrl}/rest/services/planning/${layer.publicName}/FeatureServer/${layer.layerId + 100}`);
   assert.equal(result.appUrl.includes(env.adminApiKey), false);
   layers.at(-1).enabled = false;
   await assert.rejects(propertyApp(env, directory), /activation was not confirmed/);

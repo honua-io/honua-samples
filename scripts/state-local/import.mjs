@@ -18,6 +18,13 @@ export function layersPath(connection) {
   return `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers`;
 }
 
+// Global layer administration names the storage handle storageLayerId (server
+// 2026.1 rc.2); older servers called it layerId. Public URLs use the
+// service-local index instead (see activeDeployment).
+export function storageLayerId(layer) {
+  return layer?.storageLayerId ?? layer?.layerId;
+}
+
 export async function listLayers(env, connection, serviceName) {
   const response = await adminFetch(env, { method: "GET",
     apiPath: `${layersPath(connection)}?serviceName=${encodeURIComponent(serviceName)}` });
@@ -34,7 +41,7 @@ async function publishedLayer(env, publication) {
     if (["Failed", "Cancelled"].includes(job?.data?.status)) throw new Error("Layer publication failed; inspect Console before retrying");
     if (job?.data?.status === "Completed") {
       const layers = await listLayers(env, connection, serviceName);
-      return layers.find((layer) => layer.layerId === job.data.layerId);
+      return layers.find((layer) => storageLayerId(layer) === storageLayerId(job.data));
     }
     await setTimeout(500);
   }
@@ -120,9 +127,10 @@ export async function stageVerifiedSnapshot(env, options) {
     },
   });
   const layer = await publishedLayer(env, { response: published, connection, serviceName });
-  if (!Number.isInteger(layer?.layerId) || layer.enabled !== false) {
+  const layerId = storageLayerId(layer);
+  if (!Number.isInteger(layerId) || layer.enabled !== false) {
     throw new Error("Publish did not confirm a disabled layer; inspect Console before retrying");
   }
-  return { source: name, ...sourceLicense(source), serviceName, folderId, layerId: layer.layerId, enabled: false,
+  return { source: name, ...sourceLicense(source), serviceName, folderId, layerId, enabled: false,
     schema: uploaded.schema ?? "honua_data", table: uploaded.physicalTableName, cleanSha256: receipt.cleanSha256 };
 }

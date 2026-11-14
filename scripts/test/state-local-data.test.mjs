@@ -45,6 +45,10 @@ async function deploymentFixture(t) {
   const state = { layer: { ...staged, description: `SHA-256 ${receipt.cleanSha256}` }, folderId: staged.folderId, writes: 0, policyWrites: 0, policy: { allowAnonymous: true, allowAnonymousWrite: true }, publicId: 7, publicStatus: 200, folderName: "public-works", publicName: "public-basins", serviceMissing: false };
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
+    if (url.pathname.endsWith("/FeatureServer")) {
+      assert.equal(options, undefined, "public request must not carry admin credentials");
+      return response({ layers: [{ id: 7, name: "basins" }] }, state.publicStatus);
+    }
     if (url.pathname.includes("/FeatureServer/")) {
       assert.equal(options, undefined, "public request must not carry admin credentials");
       return response({ id: state.publicId }, state.publicStatus);
@@ -80,6 +84,7 @@ test("deployment activation rechecks table, snapshot, service and department bef
   const options = { name: "basins", directory: output };
   const active = await activateDeployment(env, options);
   assert.equal(active.layerUrl, "https://server.test/rest/services/public-works/public-basins/FeatureServer/7");
+  assert.equal(active.serviceLayerIndex, 7);
   assert.equal(active.enabled, true);
   await activateDeployment(env, options);
   assert.equal(state.writes, 1);

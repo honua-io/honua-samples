@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { adminFetch } from "../lib/admin-api.mjs";
-import { layersPath, listLayers } from "./import.mjs";
+import { layersPath, listLayers, storageLayerId } from "./import.mjs";
 import { readSnapshot } from "./snapshot.mjs";
 
 export function receiptPath(directory, name) {
@@ -21,7 +21,7 @@ function servicePath(serviceName) {
 
 export async function verifyLayer(env, receipt) {
   const layers = await listLayers(env, receipt.connection, receipt.serviceName);
-  const matches = layers.filter((layer) => layer.layerId === receipt.layerId);
+  const matches = layers.filter((layer) => storageLayerId(layer) === receipt.layerId);
   const layer = matches.length === 1 ? matches[0] : null;
   if (!layer || layer.serviceName !== receipt.serviceName || layer.schema !== receipt.schema
     || layer.table !== receipt.table || !layer.description?.includes(`SHA-256 ${receipt.cleanSha256}`)) {
@@ -109,14 +109,28 @@ export async function activateDeployment(env, options) {
   return activeDeployment(env, options);
 }
 
+// The public index is service-local and may differ from the storage handle, so
+// read it from the anonymous service listing rather than assume it.
+async function publicLayerIndex(serviceUrl, layer) {
+  const response = await fetch(`${serviceUrl}?f=json`);
+  const listing = response.ok ? await response.json() : null;
+  const layers = Array.isArray(listing?.layers) ? listing.layers : [];
+  const named = layers.filter((entry) => entry.name === layer.layerName);
+  const match = named.length === 1 ? named[0] : layers.length === 1 ? layers[0] : null;
+  if (!Number.isInteger(match?.id)) throw new Error("Anonymous public layer index was not confirmed");
+  return match.id;
+}
+
 export async function activeDeployment(env, options) {
   const receipt = await readDeployment(env, options);
   const { layer: activated, service } = await verifyLayer(env, receipt);
   if (activated.enabled !== true) throw new Error("Layer activation was not confirmed");
   if (!publicReadOnly(await accessPolicy(env, receipt))) throw new Error("Public read-only access was not confirmed");
-  const layerUrl = `${receipt.baseUrl}/rest/services/${encodeURIComponent(service.folderName)}/${encodeURIComponent(service.publicName)}/FeatureServer/${receipt.layerId}`;
+  const serviceUrl = `${receipt.baseUrl}/rest/services/${encodeURIComponent(service.folderName)}/${encodeURIComponent(service.publicName)}/FeatureServer`;
+  const serviceLayerIndex = await publicLayerIndex(serviceUrl, activated);
+  const layerUrl = `${serviceUrl}/${serviceLayerIndex}`;
   const response = await fetch(`${layerUrl}?f=json`);
   const metadata = response.ok ? await response.json() : null;
-  if (metadata?.id !== receipt.layerId || metadata.error) throw new Error("Anonymous public layer URL was not confirmed");
-  return { ...receipt, enabled: true, layerUrl };
+  if (metadata?.id !== serviceLayerIndex || metadata.error) throw new Error("Anonymous public layer URL was not confirmed");
+  return { ...receipt, enabled: true, serviceLayerIndex, layerUrl };
 }
