@@ -88,6 +88,7 @@ import {
   publicSampleIds,
 } from "./lib/gallery-public-portfolio.mjs";
 import { renderGalleryActions } from "./lib/gallery-actions.mjs";
+import { journeySourceUrl } from "./lib/gallery-action-contract.mjs";
 import { DATA_MODE_LABELS } from "./lib/data-mode-labels.mjs";
 import { buildStateLocalSite, validateStateLocalLinks } from "./state-local/build-site.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
@@ -931,14 +932,8 @@ function renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommi
 }
 
 function renderJourneyCard(journey, index, sourceCommit) {
-  const sourcePaths = {
-    property: "samples/county-parcel-viewer", "311": "samples/maui-311",
-    emergency: "samples/maui-emergency", "public-works": "samples/maui-public-works",
-    workbench: "samples/maui-workbench", switching: "scripts/state-local/approved/09-switching.html",
-  };
   const slug = journey.path.split("/").filter(Boolean).at(-1);
-  const sourcePath = sourcePaths[slug];
-  const sourceUrl = `https://github.com/${OWN_REPO}/${sourcePath.endsWith(".html") ? "blob" : "tree"}/${sourceCommit}/${sourcePath}`;
+  const sourceUrl = journeySourceUrl(slug, sourceCommit);
   return `<article class="starter-card" data-id="journey-${slug}">
   <span class="starter-number">${String(index + 1).padStart(2, "0")}</span><span class="starter-eyebrow">${escapeHtml(journey.eyebrow)}</span>
   <h3><a href="${escapeAttr(journey.path)}">${escapeHtml(journey.title)}</a></h3><p>${escapeHtml(journey.summary)}</p>
@@ -1034,11 +1029,7 @@ function renderCard(card) {
     : card.track
       ? escapeHtml(card.track)
       : "SDK example";
-  const actions = renderGalleryActions({
-    openUrl: runnable ? card.detailPath : null,
-    sourceUrl: card.githubUrl,
-    unavailableReason: "This sample has no published browser app. Open its overview for local run instructions.",
-  });
+  const actions = renderCardActions(card, runnable);
   return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")} ${(card.searchAliases ?? []).join(" ")}`)}">
   <div class="card-topline"><span class="content-kind-label kind-${escapeAttr(card.contentKind)}">${escapeHtml(contentKind.singular)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
@@ -1054,6 +1045,14 @@ function renderCard(card) {
   <div class="card-evidence">${runnableBadge}${extra}</div>
   ${actions}
 </article>`;
+}
+
+function renderCardActions(card, runnable) {
+  return renderGalleryActions({
+    openUrl: runnable ? card.detailPath : null,
+    sourceUrl: card.githubUrl,
+    unavailableReason: "This sample has no published browser app. Open its overview for local run instructions.",
+  });
 }
 
 function renderCardEvidenceBadges(card) {

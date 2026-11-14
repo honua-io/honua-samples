@@ -1,22 +1,36 @@
+import { validateActionDestination } from "./gallery-action-contract.mjs";
 import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT } from "./gallery-visual-contract.mjs";
 
 export async function verifyGalleryActions(browser, baseUrl) {
   const visited = new Set();
   for (const viewport of [DESKTOP_VIEWPORT, MOBILE_VIEWPORT]) {
-    const page = await browser.newPage({ viewport });
-    try {
-      await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
-      const cards = page.locator(".starter-card, .card[data-id]");
-      if (!(await cards.count())) throw new Error("No gallery action cards found");
-      for (const card of await cards.all()) await verifyCardActions({ card, page, baseUrl, visited });
-    } finally {
-      await page.close();
-    }
+    await verifyViewport(browser, baseUrl, viewport, visited);
   }
 }
 
-async function verifyCardActions({ card, page, baseUrl, visited }) {
-  const id = await card.getAttribute("data-id");
+async function verifyViewport(browser, baseUrl, viewport, visited) {
+  const page = await browser.newPage({ viewport });
+  try {
+    await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    const commitLink = await page.locator('.site-footer a[href*="/commit/"]').getAttribute("href");
+    const commit = commitLink?.match(/\/commit\/([a-f0-9]{40})$/u)?.[1];
+    if (!commit) throw new Error("Gallery has no published source commit");
+    const cards = page.locator(".starter-card, .card[data-id]");
+    if (!(await cards.count())) throw new Error("No gallery action cards found");
+    for (const card of await cards.all()) await verifyCardActions({ card, page, baseUrl, visited, commit });
+  } finally {
+    await page.close();
+  }
+}
+
+async function verifyCardActions({ card, page, baseUrl, visited, commit }) {
+  const identity = {
+    id: await card.getAttribute("data-id"),
+    source: await card.getAttribute("data-source"),
+    jobPage: await card.getAttribute("data-job-page") === "yes",
+    detailHref: await card.locator("h3 a").getAttribute("href"),
+  };
+  const id = identity.id;
   const actions = card.locator("[data-gallery-action]");
   const kinds = await actions.evaluateAll((nodes) => nodes.map((node) => node.dataset.galleryAction));
   if (kinds.join(",") !== "open,build,source") throw new Error(`${id}: expected open, build, source actions`);
@@ -27,11 +41,12 @@ async function verifyCardActions({ card, page, baseUrl, visited }) {
     if (!bounds || bounds.x < 0 || bounds.x + bounds.width > page.viewportSize().width + 1) {
       throw new Error(`${id}: action extends beyond the viewport`);
     }
-    await verifyActionDestination({ action, page, baseUrl, visited, id });
+    await verifyActionDestination({ action, page, baseUrl, visited, card: identity, commit });
   }
 }
 
-async function verifyActionDestination({ action, page, baseUrl, visited, id }) {
+async function verifyActionDestination({ action, page, baseUrl, visited, card, commit }) {
+  const id = card.id;
   const kind = await action.getAttribute("data-gallery-action");
   const href = await action.getAttribute("href");
   if (!href) {
@@ -42,10 +57,7 @@ async function verifyActionDestination({ action, page, baseUrl, visited, id }) {
     return;
   }
   const url = new URL(href, `${baseUrl}/`);
-  if (kind === "source" && !/^https:\/\/github\.com\/honua-io\/[^/]+\/(tree|blob)\/[a-f0-9]{40}\/.+/u.test(url.href)) {
-    throw new Error(`${id}: source does not pin a full published commit`);
-  }
-  if (kind === "open" && url.origin !== new URL(baseUrl).origin) throw new Error(`${id}: open leaves the gallery`);
+  validateActionDestination({ kind, href, card, commit, baseUrl });
   if (visited.has(url.href)) return;
   const response = await followAction(page, url);
   if (!response.ok()) throw new Error(`${id}: ${kind} returned ${response.status()} at ${url.href}`);
