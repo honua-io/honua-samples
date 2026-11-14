@@ -24,19 +24,19 @@ cloud-native files lead; compatibility protocols are identified as such.
 | Property, desktop | Seven featured-parcel answer statements agree with the mapped-layer list; choosing another parcel hides the fixed answer. Pending sources remain pending. |
 | Property, mobile | Five featured-parcel statements agree with its rule list; choosing another parcel hides the answer and shows the unavailable message. |
 | 311 daily brief | SLA count agrees with the linked queue and an independent filter over the request records, initially and after type and district changes. A deliberately corrupted answer is rejected. |
-| 311 triage and reply | Reply is explicitly an unsent example and identifies the selected request. Crew availability and priority are examples; approval changes no records. |
+| 311 triage and reply | Reply is explicitly an unsent example and identifies the selected request; the triage asset matches the request detail. Crew availability and priority are examples; approval changes no records. |
+| Public works anomaly | Good inspection rating, nearby request count and example request IDs agree with an independent filter over the pinned records. |
 | Public works weekly plan | Inspection count and crew-hours agree with the plan rows, summary and demo approval result. |
 | Public works capital shortlist | Poor/failed and fair counts agree with the condition ratings in the shortlist table. Costs remain demo estimates. |
-| Emergency situation report | Open shelter count, occupied/total capacity and percentage agree with shelter rows; closed-road count agrees with the road list. Resource counts are derived from the fictional request array. |
+| Emergency situation report | Open shelter count, occupied/total capacity and percentage agree with shelter rows; closed-road count agrees with the road list. Resource and critical counts agree with map markers; facility names and exposure counts agree with the table; balancing percentages and free spaces agree with shelter rows. |
 | Emergency public notice | Explicit exercise notice; no real alert is asserted. |
 | Emergency mobile notice and nearest shelter | Practice notice and straight-line disclaimer; open shelter count agrees with the exercise records and nearest shelter agrees with the first distance-sorted row. |
 | Workbench local natural-language parser | Acreage-query count agrees across chips, table, explanation and generated plan; removing a clause updates all four; unsupported requests show no fabricated result. |
 
-Facility exposure, shelter balancing, triage proximity/duplicate analysis and
-public-works anomaly analysis are calculated from the pinned records in the
-page, but this first browser suite does not independently repeat their spatial
-algorithms. Property permitting summaries require Planning review. Neither this
-suite nor a green merge is a live pass of AI-NATIVE-GATE.md. SDK Explorer and
+Facility geometry and triage proximity/duplicate analysis are calculated from
+the pinned records in the page; this suite compares the displayed facility and
+triage evidence but does not independently repeat those spatial algorithms.
+Property permitting summaries require Planning review. Neither this suite nor a green merge is a live pass of AI-NATIVE-GATE.md. SDK Explorer and
 Switching describe AI capabilities but do not show generated record-count
 answers. Changes that add an answer must extend this inventory and its browser
 checks before claiming that answer is covered.

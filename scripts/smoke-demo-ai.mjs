@@ -60,7 +60,7 @@ async function propertyMobile(page) {
 }
 
 async function emergencyMobile(page) {
-  await visit(page, 'emergency/mobile/');
+  await visit(page, 'emergency/mobile.html');
   await expect(page.locator('#nearName')).not.toHaveText('');
   const names = await page.locator('#shelters .row-item > span:first-child').allTextContents();
   const expected = await page.evaluate(() => HD.shelters.features.filter((f) => HD.exerciseShelters[f.properties.name]?.st === 'open').length);
@@ -162,9 +162,7 @@ async function emergency(page, route) {
   await expect(page.locator('#exposure')).toContainText(`${evacuation} facilities are inside the evacuation zone`);
   const checked = await count(page, '#tcCount');
   await expect(page.locator('#exposure')).toContainText(`I checked ${checked} facilities`);
-  for (const text of await facilityRows.locator('td:nth-child(2)').allTextContents()) {
-    // The cell appends its facility kind without whitespace; compare its first text node.
-    const name = text.replace(/(Fire station|Police|Hospital|School)$/, '');
+  for (const name of await facilityRows.locator('td:nth-child(2)').evaluateAll((cells) => cells.map((cell) => cell.firstChild.textContent))) {
     await expect(page.locator('#sitrep')).toContainText(name);
   }
   for (const name of ['Baldwin High', 'Maui High']) {
@@ -192,7 +190,7 @@ async function workbenchCounts(page) {
 
 async function workbench(page) {
   await visit(page, 'workbench/');
-  await page.locator('#nlqIn').fill('Show parcels larger than 0.25 acres');
+  await page.locator('#nlqIn').fill('Show parcels over 0.25 acres');
   await page.locator('#nlqForm').evaluate((form) => form.requestSubmit());
   await expect(page.locator('#nlqOut')).toBeVisible();
   if (await page.locator('#nlqExplainBtn').getAttribute('aria-pressed') !== 'true') await page.locator('#nlqExplainBtn').click();
