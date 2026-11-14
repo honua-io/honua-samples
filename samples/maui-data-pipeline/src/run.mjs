@@ -5,7 +5,7 @@ import { adminFetch, serverEnv } from '../../../scripts/lib/admin-api.mjs';
 import { ensureConnection } from '../../../scripts/lib/sample-connection.mjs';
 import { ensureDepartments } from '../../../scripts/state-local/departments.mjs';
 import { fetchSnapshot } from '../../../scripts/state-local/snapshot.mjs';
-import { stageSnapshot } from '../../../scripts/state-local/import.mjs';
+import { stageSnapshot, storageLayerId } from '../../../scripts/state-local/import.mjs';
 import { activateDeployment, saveDeployment } from '../../../scripts/state-local/deployment.mjs';
 
 const env = serverEnv();
@@ -22,7 +22,7 @@ assert.equal(receipt.rejected, 0, 'EM data: no silent feature loss');
 const staged = await stageSnapshot(env, { name, directory, connection });
 const { data: layers } = await adminFetch(env, { method: 'GET',
   apiPath: `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers?serviceName=${staged.serviceName}` });
-const layer = layers.items.find((entry) => entry.layerId === staged.layerId);
+const layer = layers.items.find((entry) => storageLayerId(entry) === staged.layerId);
 assert.equal(layer.enabled, false, 'Imported source must wait for publication approval');
 const { data: services } = await adminFetch(env, { method: 'GET', apiPath: '/api/v1/admin/services/' });
 const service = services.items.find((entry) => entry.serviceName === staged.serviceName);
