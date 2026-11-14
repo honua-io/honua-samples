@@ -1009,12 +1009,15 @@ function renderCategorySection(category) {
 </section>`;
 }
 
+function hasPublishedBrowserApp(card) {
+  return (card.kind === "sdk" && card.bundleRunnable && card.evidence?.fixture?.status === "executed") ||
+    (card.kind === "own" && Boolean(card.ownApp));
+}
+
 function renderCard(card) {
   const dataCaps = escapeAttr(card.capabilities.join(","));
   const dataSdks = escapeAttr(card.sdks.join(","));
-  const runnable =
-    (card.kind === "sdk" && card.bundleRunnable && card.evidence?.fixture?.status === "executed") ||
-    (card.kind === "own" && Boolean(card.ownApp));
+  const runnable = hasPublishedBrowserApp(card);
   const extra =
     card.kind === "own"
       ? runBadgeHtml(card.runBadge)
