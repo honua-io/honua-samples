@@ -312,6 +312,14 @@ async function main() {
 
   await copyAssets();
   await buildStateLocalSite({ repoRoot: REPO_ROOT, siteDir: SITE_DIR, cards });
+  await writeFile(path.join(SITE_DIR, "gallery-health.v1.json"), `${JSON.stringify({
+    format: "honua.gallery-health-inventory.v1",
+    entries: cards.map((card) => ({
+      url: card.detailPath,
+      ...(card.ownApp || (card.bundleRunnable && card.renderers?.some((renderer) => /maplibre|leaflet|openlayers|mapbox|cesium/i.test(renderer)))
+        ? { mapRequired: true } : {}),
+    })),
+  }, null, 2)}\n`, "utf8");
   const indexHtml = renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommit, bundleNotice });
   assertNoDuplicateArticles(indexHtml);
   await writeFile(path.join(SITE_DIR, "index.html"), indexHtml, "utf8");
