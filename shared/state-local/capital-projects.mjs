@@ -1,4 +1,5 @@
 import { csvCell } from './csv.mjs';
+import { download } from './download.mjs';
 import { capitalProjects, capitalSource } from './capital-project-data.mjs';
 
 export function filterCapital({ phase = '', district = '' } = {}) {
@@ -68,15 +69,6 @@ function updateCapitalMap({ map, projects, active }) {
   element('capitalLocations').dataset.mappedIds = [...located].join(',');
 }
 
-function downloadCapital(projects) {
-  const url = URL.createObjectURL(new Blob([capitalCsv(projects)], { type: 'text/csv;charset=utf-8' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'maui-capital-projects-filtered.csv';
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 export function mountCapital() {
   let active = false;
   let projects = filterCapital();
@@ -102,7 +94,7 @@ export function mountCapital() {
   element('capitalSource').href = capitalSource;
   element('capitalPhase').addEventListener('change', refresh);
   element('capitalDistrict').addEventListener('change', refresh);
-  element('capitalExport').addEventListener('click', () => downloadCapital(projects));
+  element('capitalExport').addEventListener('click', () => download('maui-capital-projects-filtered.csv', capitalCsv(projects), 'csv'));
   element('capitalButton').addEventListener('click', () => switchView('capital'));
   element('inspectionButton').addEventListener('click', () => switchView('inspections'));
   window.addEventListener('publicworksmapready', () => switchView(active ? 'capital' : 'inspections'));
