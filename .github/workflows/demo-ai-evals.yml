@@ -9,6 +9,8 @@ on:
       - 'scripts/smoke-demo-ai.mjs'
       - 'scripts/build-gallery.mjs'
       - 'scripts/lib/browser-lane.mjs'
+      - 'scripts/lib/verify-request-loop.mjs'
+      - 'scripts/test/request-records.test.mjs'
       - 'config/state-local-display.v1.json'
       - 'package*.json'
       - '.github/workflows/demo-ai-evals.yml'
@@ -38,6 +40,8 @@ jobs:
         run: |
           node scripts/state-local/build-display-site.mjs
           node scripts/build-gallery.mjs --check
+      - name: Verify browser report storage and reset
+        run: node --test scripts/test/request-records.test.mjs
       - name: Compare demo answers with displayed records
         run: npm run test:demo-ai:browser
       - name: Save answer comparison results
