@@ -86,7 +86,7 @@
 <header class="appbar">
   <a class="wordmark" href="index.html"><strong>County of Maui</strong><small>Public Works · Assets</small></a>
   <nav class="appnav" aria-label="App">
-    <a href="#" aria-current="page">Assets</a><a href="#wo">Work orders</a><a href="#crews">Crews</a><a href="#">Inspections</a><a href="#">Capital plan</a>
+    <a href="#inspectionButton" aria-current="page" data-publicworks-view="inspections">Assets</a><a href="#wo" data-publicworks-view="inspections">Work orders</a><a href="#crews" data-publicworks-view="inspections">Crews</a><a href="#inspectionButton" data-publicworks-view="inspections">Inspections</a><a href="#capitalButton" data-publicworks-view="capital">Capital plan</a>
   </nav>
   <span class="spacer"></span>
   <span class="env hide-sm"><span class="dot"></span>Snapshot · browser exercise</span>
@@ -114,6 +114,10 @@
       <a class="btn primary" href="#"><svg class="ico"><use href="#i-plus"/></svg>New work order</a>
     </div>
   </div>
+<div class="row wrap" role="group" aria-label="Public works view" style="margin-bottom:12px">
+  <button class="btn" id="inspectionButton" aria-pressed="true">Asset inspections</button>
+  <button class="btn" id="capitalButton" aria-pressed="false">Capital projects</button>
+</div>
 <div class="department-workspace">
 <div class="map" id="map" role="region" aria-label="Asset map">
       <div class="map-legend map-tools">
@@ -129,6 +133,23 @@
       </div>
     </div>
 <aside class="department-panel" aria-label="Operations dashboard">
+<section class="panel" id="capitalView" hidden aria-labelledby="capitalTitle" style="padding:16px">
+  <h2 id="capitalTitle">Capital projects · FY 2026 funding snapshot</h2>
+  <p><span class="tag-real">Real county records</span> Three published programs/projects, not the complete capital plan.
+    <a id="capitalSource" href="https://www.mauicounty.gov/DocumentCenter/View/155200/000-FY-2026-Program-Budget-Combined">County of Maui FY 2026 adopted Public Works CIP, pp. 1031–1048</a>.</p>
+  <p>Phases are planned funded activities, not live status. Schedule dates, actual costs and completion status are unavailable in this funding snapshot.</p>
+  <div class="row wrap" style="margin:12px 0">
+    <label>Phase <select id="capitalPhase"><option value="">All phases</option><option>Planning</option><option>Design</option><option>New construction</option><option>Other</option></select></label>
+    <label>District <select id="capitalDistrict"><option value="">All districts</option><option>Countywide</option><option>Wailuku-Kahului</option></select></label>
+    <button class="btn" id="capitalExport">Export filtered CSV</button>
+  </div>
+  <p><b id="capitalCount"></b> · <strong id="capitalTotal"></strong> FY 2026 whole-project appropriations; each project counted once, not phase allocations.</p>
+  <p id="capitalLocations" class="muted" role="status">Map references loading; project sites are not supplied.</p>
+  <div class="tbl-scroll"><table class="tbl"><thead><tr><th>Project</th><th>Name</th><th>District</th><th>Planned phases</th><th>FY 2026 budget</th><th>Planned dates</th></tr></thead><tbody id="capitalRows"></tbody></table></div>
+  <p id="capitalEmpty" hidden>No projects match these filters.</p>
+  <div class="flag"><b>Which projects are over budget or late?</b><p id="capitalAnswer" aria-live="polite"></p></div>
+</section>
+<div id="inspectionView">
 
   <div class="aibar" role="region" aria-label="Agent proposal">
     <svg class="ico"><use href="#i-agent"/></svg>
@@ -246,6 +267,7 @@
     <div id="list" hidden style="padding:0 16px 16px" class="tbl-scroll"><table class="tbl"><thead><tr><th>Work order</th><th>Asset</th><th>Stage</th><th>Priority</th><th>Crew</th><th>Scheduled</th><th>EAM</th></tr></thead><tbody id="listBody"></tbody></table></div>
   </section>
 
+</div>
 </aside>
 </div>
 </main>
@@ -447,6 +469,16 @@
       m.addLayer({ id: "sel", type: "circle", source: "sel", paint: { "circle-radius": 14, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#0b4f4a", "circle-stroke-width": 3 } });
       plan.forEach((a, i) => { const el = document.createElement("div"); el.className = "rankpin"; el.textContent = i + 1; el.title = `Plan #${i + 1}: ${a.id}`; planPins.push(new maplibregl.Marker({ element: el, anchor: "center", offset: [12, -12] }).setLngLat(a.c).addTo(m)); });
       document.getElementById("planToggle").addEventListener("change", (e) => planPins.forEach((p) => (p.getElement().style.display = e.target.checked ? "" : "none")));
+      window.addEventListener("publicworksview", ({ detail }) => {
+        for (const checkbox of document.querySelectorAll('[data-layers]')) {
+          const ids = checkbox.dataset.layers.split(',').filter((id) => ['assets', 'bridges', 'bridges-ring', 'reqs'].includes(id));
+          HM.toggle(m, ids, !detail.capital && checkbox.checked);
+          if (ids.length) checkbox.disabled = detail.capital;
+        }
+        HM.toggle(m, ['sel'], !detail.capital);
+        planPins.forEach((pin) => { pin.getElement().style.display = detail.capital || !document.getElementById('planToggle').checked ? 'none' : ''; });
+        document.getElementById('planToggle').disabled = detail.capital;
+      });
       paintPw(m); m.on("honua:theme", () => paintPw(m));
       HM.toggle(m, ["tsunami-x"], false);
       HM.bindToggles(m);
@@ -455,6 +487,8 @@
       m.on("click", "bridges", (e) => selectBridge(HD.bridges.features.find((f) => f.properties.id === e.features[0].properties.id)));
       m.on("click", "reqs", (e) => { const p = e.features[0].properties; new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat).setHTML(`<b>${p.id}</b><br>${p.addr}<br><span style="color:var(--c-text-3)">${p.status} · ${p.note}</span>`).addTo(m); });
       selectAsset(anomaly || plan[0]);
+      window.publicWorksMap = m;
+      window.dispatchEvent(new Event("publicworksmapready"));
     },
   });
   document.addEventListener("click", (e) => {
@@ -464,5 +498,6 @@
   });
 })();
 </script>
+<script type="module">import { mountCapital } from "./capital-projects.mjs"; mountCapital();</script>
 </body>
 </html>
