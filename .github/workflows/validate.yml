@@ -185,6 +185,8 @@ jobs:
       - name: Run exact-head gallery semantic canaries
         # Keep GALLERY_BASE_URL unset: the verifier serves this job's exact
         # generated site/ artifact locally and exercises packaged fixtures.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: npm run test:gallery:live
 
       - name: Run every admitted job page
