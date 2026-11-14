@@ -18,9 +18,9 @@ export function layersPath(connection) {
   return `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers`;
 }
 
-// Global layer administration names the storage handle storageLayerId (server
-// 2026.1 rc.2); older servers called it layerId. Public URLs use the
-// service-local index instead (see activeDeployment).
+// The admin storage handle is storageLayerId, or layerId on servers that
+// report that name. Public URLs use the service-local index instead
+// (see activeDeployment).
 export function storageLayerId(layer) {
   return layer?.storageLayerId ?? layer?.layerId;
 }

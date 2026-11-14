@@ -27,7 +27,7 @@ test('PRM-05 property URL binds every regulatory source to an active verified de
   const layers = snapshots.map((receipt, layerId) => ({ source: receipt.source, serviceName: `source-${layerId}`, layerId,
     folderName: 'planning', publicName: `public-${layerId}`, schema: 'honua_data', table: `table_${layerId}`, folderId: 'planning', enabled: false,
     cleanSha256: receipt.cleanSha256, description: `SHA-256 ${receipt.cleanSha256}`, layerName: receipt.source }));
-  // Odd layers use the rc.2 admin shape: storageLayerId, with an unrelated legacy-looking id.
+  // Odd layers report storageLayerId, with an unrelated layerId that must be ignored.
   for (const layer of layers) if (layer.layerId % 2) Object.assign(layer, { storageLayerId: layer.layerId, layerId: 900 + layer.layerId });
   const storage = (layer) => layer.storageLayerId ?? layer.layerId;
   globalThis.fetch = async (input, options) => {
