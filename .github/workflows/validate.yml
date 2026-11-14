@@ -124,7 +124,14 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install catalog exporters
+        run: |
+          python3 -m venv artifacts/catalog-python
+          artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+
       - name: Build snapshot-backed state and local demos
+        env:
+          HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: node scripts/state-local/build-display-site.mjs
 
       - name: Build gallery in --check mode
@@ -168,7 +175,14 @@ jobs:
       - name: Stage the vendored immutable SDK release
         run: node scripts/lib/sample-bundles.mjs
 
+      - name: Install catalog exporters
+        run: |
+          python3 -m venv artifacts/catalog-python
+          artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+
       - name: Build snapshot-backed state and local demos
+        env:
+          HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: node scripts/state-local/build-display-site.mjs
 
       - name: Build the exact-head gallery

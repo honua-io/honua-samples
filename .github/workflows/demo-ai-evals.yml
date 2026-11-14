@@ -7,6 +7,7 @@ on:
       - 'shared/state-local/**'
       - 'samples/maui-emergency/**'
       - 'scripts/smoke-demo-ai.mjs'
+      - 'scripts/smoke-public-catalog.mjs'
       - 'scripts/build-gallery.mjs'
       - 'scripts/lib/browser-lane.mjs'
       - 'config/state-local-display.v1.json'
@@ -34,12 +35,21 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: Install catalog exporters
+        run: |
+          python3 -m venv artifacts/catalog-python
+          artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+
       - name: Build pinned demo snapshots
+        env:
+          HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: |
           node scripts/state-local/build-display-site.mjs
           node scripts/build-gallery.mjs --check
       - name: Compare demo answers with displayed records
         run: npm run test:demo-ai:browser
+      - name: Verify catalog discovery and signed-out exports
+        run: node scripts/smoke-public-catalog.mjs
       - name: Save answer comparison results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
