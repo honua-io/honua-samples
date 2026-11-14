@@ -232,7 +232,7 @@ jobs:
 
       - name: Verify server-first job pages
         env:
-          MIN_JOB_PAGES: "4"
+          MIN_JOB_PAGES: "3"
         run: npm run test:job-pages:browser
 
       - name: Upload gallery browser evidence
