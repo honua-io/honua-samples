@@ -8,8 +8,10 @@ const sourceUrl = (path) => new URL(`https://github.com/honua-io/honua-samples/$
 function fixture(responses) {
   const requests = [];
   const delays = [];
+  const options = [];
   const page = {
-    request: { async get(href) {
+    request: { async get(href, requestOptions) {
+      options.push(requestOptions);
       requests.push(href);
       const next = responses.shift();
       assert.ok(next, "Unexpected source request");
@@ -18,7 +20,7 @@ function fixture(responses) {
     } },
     waitForTimeout: async (delay) => delays.push(delay),
   };
-  return { page, requests, delays };
+  return { page, requests, delays, options };
 }
 
 test("source checks share the exact-commit Git tree across files and directories", async () => {
@@ -76,4 +78,20 @@ test("persistent or long rate limits return the failure without unbounded waits"
   const long = fixture([{ status: 429, headers: { "retry-after": "60" } }]);
   assert.equal((await requestAction(long.page, "https://gallery.example/")).status(), 429);
   assert.deepEqual(long.delays, []);
+});
+
+
+test("source API authentication is request-scoped and cannot follow redirects", async () => {
+  const { page, options } = fixture([{ body: { tree: [{ path: "jobs/query.json", type: "blob" }] } }, { status: 200 }]);
+  await createGithubSourceVerifier("test-token")(page, sourceUrl(`blob/${commit}/jobs/query.json`));
+  assert.equal(options[0].headers.Authorization, "Bearer test-token");
+  assert.equal(options[0].maxRedirects, 0);
+  await requestAction(page, "https://gallery.example/");
+  assert.equal(options[1].headers, undefined);
+});
+
+test("source checks remain usable anonymously without a token", async () => {
+  const { page, options } = fixture([{ body: { tree: [{ path: "jobs/query.json", type: "blob" }] } }]);
+  await createGithubSourceVerifier("")(page, sourceUrl(`blob/${commit}/jobs/query.json`));
+  assert.equal(options[0].headers, undefined);
 });
