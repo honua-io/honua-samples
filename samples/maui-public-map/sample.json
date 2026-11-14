@@ -1,0 +1,33 @@
+{
+  "id": "maui-public-map",
+  "title": "Maui County public fire-station map",
+  "description": "Import real Maui fire stations into Emergency Management, activate the reviewed layer, then author, version and publish a Studio map that anonymous residents can open, on the default PostGIS-only server.",
+  "contentKind": "walkthrough",
+  "learning": {
+    "goal": "build-map",
+    "level": "intermediate",
+    "estimatedMinutes": 10,
+    "prerequisites": [
+      "Local Honua Server candidate (PostGIS only, no extra services)",
+      "Node.js 22+",
+      "Network access to Hawaii Statewide GIS"
+    ]
+  },
+  "dataMode": "local-integration",
+  "auth": "admin-api-key",
+  "capabilities": [
+    "import.file"
+  ],
+  "sdks": [
+    "rest"
+  ],
+  "protocols": [
+    "honua-admin-rest"
+  ],
+  "edition": "community",
+  "entrypoint": {
+    "type": "node",
+    "command": "node src/run.mjs"
+  },
+  "status": "active"
+}
