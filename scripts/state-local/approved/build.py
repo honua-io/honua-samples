@@ -69,6 +69,7 @@ def build(name):
     src = src.replace("{{ICONS}}", read(os.path.join(SRC, "icons.svg")))
     src = src.replace("{{PARCEL_ANSWERS}}", "<script>" + read(os.path.join(SHARED, "parcel-answers.js")) + "</script>")
     src = src.replace("{{PARCEL_SEARCH}}", "<script>" + read(os.path.join(SHARED, "parcel-search.js")) + "</script>")
+    src = src.replace("{{COUNTY_PUBLICATION}}", read(os.path.join(SHARED, "county-publication.html")))
     island = read(os.path.join(SHARED, "island-map.js"))
     for placeholder, value in json.loads(os.environ["HONUA_PAGE_PLACEHOLDERS"]).items():
         island = island.replace(placeholder, value)
@@ -82,7 +83,7 @@ def build(name):
     src = re.sub(r"\{\{DATA ([^}]*)\}\}", lambda m: data_block(m.group(1)), src)
     if "{{REQUEST_LOOP}}" in src:
         src = src.replace("</head>", "<style>" + read(os.path.join(SHARED, "request-loop.css")) + "</style></head>", 1)
-        modules = [read(os.path.join(SHARED, name)) for name in ("csv.mjs", "request-records.mjs", "request-loop.mjs")]
+        modules = [read(os.path.join(SHARED, name)) for name in ("csv.mjs", "download.mjs", "request-records.mjs", "request-loop.mjs")]
         script = "\n".join(re.sub(r"^import [^\n]+\n", "", module, flags=re.MULTILINE) for module in modules)
         src = src.replace("{{REQUEST_LOOP}}", '<script type="module">' + script + "</script>")
     for source, target in ROUTES.items():

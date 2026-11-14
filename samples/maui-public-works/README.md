@@ -92,9 +92,24 @@ unverified source gaps. Fictional work orders and inspections remain clearly lab
 
 ## Browser inventory and maintenance board
 
-Build the app with `npm ci --prefix samples/maui-public-works` and
-`npm run build --prefix samples/maui-public-works`. Serve its `dist/` directory with
-an HTTP server. Supply the activated service names and numeric layer IDs in the URL:
+Build the gallery first so the app can load its shared fonts, theme and logos,
+then stage the app under the same server root. Run these commands from the
+repository root:
+
+```sh
+npm ci
+node scripts/state-local/build-display-site.mjs
+node scripts/build-gallery.mjs --check
+npm ci --prefix samples/maui-public-works
+npm run build --prefix samples/maui-public-works
+mkdir -p site/maui-public-works/app
+cp -R samples/maui-public-works/dist/. site/maui-public-works/app/
+python3 -m http.server 3000 --directory site
+```
+
+Open `/maui-public-works/app/` on that local server. This local staging step does
+not activate the full journey in the public portfolio. Supply the activated
+service names and numeric layer IDs in the URL:
 
 ```text
 ?baseUrl=http://localhost:8080&bridgeService=BRIDGES&bridgeLayer=1&orderService=ORDERS&orderLayer=2&inspectionService=INSPECTIONS&inspectionLayer=3

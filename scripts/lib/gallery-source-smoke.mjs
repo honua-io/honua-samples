@@ -9,7 +9,7 @@ export async function requestAction(page, href, options = {}) {
   }
 }
 
-export function createGithubSourceVerifier(token = process.env.GITHUB_TOKEN) {
+export function createGithubSourceVerifier({ token = process.env.GITHUB_TOKEN } = {}) {
   const sourceTrees = new Map();
   return async (page, url) => {
     const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/(blob|tree)\/([a-f0-9]{40})\/(.+)$/u);
@@ -26,8 +26,10 @@ export function createGithubSourceVerifier(token = process.env.GITHUB_TOKEN) {
 }
 
 async function readSourceTree(page, treeUrl, token) {
-  const options = token ? { headers: { Authorization: `Bearer ${token}` }, maxRedirects: 0 } : {};
-  const response = await requestAction(page, treeUrl, options);
+  const headers = { Accept: "application/vnd.github+json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  // Keep credentials on the constructed API URL, even if it returns a redirect.
+  const response = await requestAction(page, treeUrl, { headers, maxRedirects: 0 });
   if (!response.ok()) throw new Error(`Source tree returned ${response.status()} at ${treeUrl}`);
   const result = await response.json();
   if (result.truncated || !Array.isArray(result.tree)) throw new Error(`Incomplete source tree at ${treeUrl}`);
