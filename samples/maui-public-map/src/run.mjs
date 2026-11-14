@@ -24,6 +24,16 @@ async function anonymous(path, init = {}) {
   return { status: response.status, json, text };
 }
 
+async function mcpTool(name, args) {
+  const response = await fetch(`${env.baseUrl}/mcp`, { method: 'POST', signal: AbortSignal.timeout(60_000),
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'X-API-Key': env.adminApiKey },
+    body: JSON.stringify({ jsonrpc: '2.0', id: name, method: 'tools/call', params: { name, arguments: args } }) });
+  const text = await response.text();
+  const payload = JSON.parse(text.startsWith('{') ? text : text.split('\n').find((line) => line.startsWith('data:')).slice(5));
+  if (!response.ok || payload.error || payload.result?.isError) throw new Error(`MCP ${name} failed: ${text.slice(0, 400)}`);
+  return payload.result.structuredContent;
+}
+
 async function readPublication(receipt) {
   const read = await anonymous(`${receipt.publishedUrl}?includeSources=true`);
   assert.equal(read.status, 200, `EM-02: anonymous readers must open the released map: ${read.text.slice(0, 300)}`);
@@ -70,7 +80,16 @@ await saveDeployment(env, { staged, directory, connection });
 const active = await activateDeployment(env, { name, directory });
 
 const packageKey = `maui-fire-stations-${Date.now().toString(36)}`;
-const sourceId = `${encodeURIComponent(staged.serviceName)}/${staged.layerId}`;
+// Ask the server which catalog source serves the imported layer, through the
+// same MCP tool an agent client uses; never derive the id from the service name.
+const listed = await mcpTool('honua_list_layers', {});
+const candidates = (listed?.layers ?? []).filter((entry) => entry.serviceName === staged.serviceName
+  || entry.serviceId === staged.serviceName || String(entry.serviceId ?? '').includes(staged.serviceName));
+console.log(`MCP honua_list_layers candidates: ${JSON.stringify(candidates.map(({ serviceId, serviceName, serviceLayerIndex, name }) => ({ serviceId, serviceName, serviceLayerIndex, name })))}`);
+const exact = candidates.filter((entry) => entry.serviceName === staged.serviceName);
+const chosen = (exact.length ? exact : candidates)[0];
+assert.ok(chosen && Number.isInteger(chosen.serviceLayerIndex), 'MCP must list the activated fire-station layer');
+const sourceId = `${encodeURIComponent(chosen.serviceId)}/${chosen.serviceLayerIndex}`;
 const body = {
   mapPackageId: packageKey,
   format: 'honua_map_package.v1',
@@ -94,7 +113,7 @@ assert.ok(version?.itemId && version?.versionId && version?.contentHash, 'Studio
 const route = `/maps/${packageKey}`;
 const receipt = {
   format: 'honua.samples.public-map.v1', baseUrl: env.baseUrl, route, sourceId,
-  layerId: staged.layerId, itemId: version.itemId, versionId: version.versionId, contentHash: version.contentHash,
+  layerId: chosen.serviceLayerIndex, itemId: version.itemId, versionId: version.versionId, contentHash: version.contentHash,
   publishRequestPath: `/api/v1/studio/content-items/${version.itemId}/versions/${version.versionId}/publish-requests`,
   publishedUrl: `/api/v1/studio/published/maps/${encodeURIComponent(packageKey)}`,
 };
