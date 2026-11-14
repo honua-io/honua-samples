@@ -1029,7 +1029,11 @@ function renderCard(card) {
     : card.track
       ? escapeHtml(card.track)
       : "SDK example";
-  const actions = renderCardActions(card, runnable);
+  const actions = renderGalleryActions({
+    openUrl: runnable ? card.detailPath : null,
+    sourceUrl: card.githubUrl,
+    unavailableReason: "This sample has no published browser app. Open its overview for local run instructions.",
+  });
   return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")} ${(card.searchAliases ?? []).join(" ")}`)}">
   <div class="card-topline"><span class="content-kind-label kind-${escapeAttr(card.contentKind)}">${escapeHtml(contentKind.singular)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
@@ -1045,14 +1049,6 @@ function renderCard(card) {
   <div class="card-evidence">${runnableBadge}${extra}</div>
   ${actions}
 </article>`;
-}
-
-function renderCardActions(card, runnable) {
-  return renderGalleryActions({
-    openUrl: runnable ? card.detailPath : null,
-    sourceUrl: card.githubUrl,
-    unavailableReason: "This sample has no published browser app. Open its overview for local run instructions.",
-  });
 }
 
 function renderCardEvidenceBadges(card) {
