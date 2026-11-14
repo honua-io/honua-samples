@@ -38,7 +38,7 @@ function renderProjects(projects) {
     const row = document.createElement('tr');
     row.dataset.projectId = project.id;
     for (const value of [project.id, project.name, project.district, project.phases.join(', '),
-      money(project.budget), `${project.start} – ${project.end}`]) {
+      money(project.budget), project.start && project.end ? `${project.start} – ${project.end}` : 'Not available in funding snapshot']) {
       const cell = document.createElement('td');
       cell.textContent = value;
       row.append(cell);

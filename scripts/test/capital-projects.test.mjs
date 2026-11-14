@@ -16,8 +16,10 @@ test('filtered CSV preserves provenance and explicitly unavailable actuals', () 
   assert.match(csv, /CBS-1069/);
   assert.doesNotMatch(csv, /CBS-6069/);
   assert.match(csv, /county_published/);
-  assert.match(csv, /162348/);
+  assert.match(csv, /155200/);
   assert.match(csv, /actualCost.*completed/);
+  assert.ok(capitalProjects.every(({ start, end }) => start === null && end === null));
+  assert.match(csv, /Schedule unavailable in this funding snapshot/);
   assert.match(capitalCsv([{ ...capitalProjects[0], name: '=SUM(A1),"quoted"' }]), /'=SUM\(A1\),""quoted""/);
 });
 
