@@ -53,3 +53,13 @@ test('changing the parcel clears the announced answer and renders data as text',
   assert.doesNotMatch(root.children[1].textContent, /001234567/);
   assert.equal(root.children[1].children.length, 0);
 });
+
+test('classic script preserves existing globals', async () => {
+  const summarize = () => 'existing';
+  const context = { summarize, Intl, Number };
+  context.window = context;
+  const source = await readFile(new URL('../../shared/state-local/parcel-answers.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, context);
+  assert.equal(context.summarize, summarize);
+  assert.equal(typeof context.HonuaParcelAnswers.summarize, 'function');
+});
