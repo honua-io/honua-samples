@@ -254,15 +254,12 @@
   });
   render(parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
   window.HonuaParcelSearch({ input: document.getElementById("q"), list: document.getElementById("sug"), parcels: parcels.features,
-    streets: Array.from(new Set(HM.get("roads").features.map((f) => f.properties.name).filter(Boolean))).sort(), formatTmk: HM.tmk,
+    streets: HM.streetNames(), formatTmk: HM.tmk,
     onParcel: (parcel) => {
       render(parcel.properties.id);
       map?.fitBounds(HM.bbox(parcel.geometry), { padding: 40, maxZoom: 18, duration: 600 });
     },
-    onStreet: (name) => {
-      const features = HM.get("roads").features.filter((f) => f.properties.name === name);
-      if (features.length && map) map.fitBounds(HM.bbox({ coordinates: features.map((feature) => feature.geometry.coordinates) }), { padding: 40, maxZoom: 16, duration: 600 });
-    },
+    onStreet: (name) => HM.fitStreet(map, name, 40),
   });
   const lb = document.getElementById("lbtn"), lg = document.getElementById("mlegend");
   lb.addEventListener("click", () => { const o = lg.dataset.open !== "true"; lg.dataset.open = o; lb.setAttribute("aria-expanded", o); });
