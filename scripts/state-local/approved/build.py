@@ -67,6 +67,7 @@ def build(name):
     uses_map = "{{MAPJS}}" in src
     src = src.replace("{{HEAD}}", head(uses_map))
     src = src.replace("{{ICONS}}", read(os.path.join(SRC, "icons.svg")))
+    src = src.replace("{{PARCEL_SEARCH}}", "<script>" + read(os.path.join(SHARED, "parcel-search.js")) + "</script>")
     island = read(os.path.join(SHARED, "island-map.js"))
     for placeholder, value in json.loads(os.environ["HONUA_PAGE_PLACEHOLDERS"]).items():
         island = island.replace(placeholder, value)

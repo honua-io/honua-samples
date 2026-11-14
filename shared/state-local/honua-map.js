@@ -167,11 +167,16 @@
     (function walk(c) { if (typeof c[0] === "number") { a = [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[2], c[0]), Math.max(a[3], c[1])]; } else c.forEach(walk); })(geom.coordinates);
     return [[a[0], a[1]], [a[2], a[3]]];
   }
+  function streetNames() { return Array.from(new Set(get("roads").features.map((f) => f.properties.name).filter(Boolean))).sort(); }
+  function fitStreet(map, name, padding) {
+    const roads = get("roads").features.filter((f) => f.properties.name === name);
+    if (roads.length && map) map.fitBounds(bbox({ coordinates: roads.map((road) => road.geometry.coordinates) }), { padding, maxZoom: 16, duration: 600 });
+  }
   function tmk(t9) { const s = String(t9).padStart(9, "0"); return `(${s[0]}) ${s[1]}-${s[2]}-${s.slice(3, 6)}:${s.slice(6)}`; }
   function money(n) { return n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US"); }
   function icon(name) { return `<svg class="ico" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
   function hashParams() { return new URLSearchParams(location.hash.slice(1)); }
-  window.HM = { hashParams, themed, cssVar, setTheme, theme, restyle, maps, decode, get, points, create, add, overlays, toggle, bindToggles, label, bbox, tmk, money, icon, VIEW, ZONE_GROUP, ZONE_COLOR };
+  window.HM = { hashParams, themed, cssVar, setTheme, theme, restyle, maps, decode, get, points, create, add, overlays, toggle, bindToggles, label, bbox, streetNames, fitStreet, tmk, money, icon, VIEW, ZONE_GROUP, ZONE_COLOR };
 
   /* Tabs: [role=tablist] buttons with aria-controls */
   document.addEventListener("click", (e) => {
