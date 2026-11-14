@@ -312,11 +312,12 @@
     const pct = Math.min(1, a.score / plan[0].score);
     return `<tr><td><span class="rank">${i + 1}</span></td><td><b>${a.id}</b><span class="id">${a.street}</span></td><td><div style="font-size:12.5px">${why.join(" · ")}</div><div class="cites" style="margin-top:4px">${cites.join(" ")}</div></td><td class="num"><div class="score" aria-label="score ${a.score.toFixed(1)}"><span style="width:${Math.round(pct * 56)}px;background:var(--c-ai)"></span><span style="width:${56 - Math.round(pct * 56)}px;background:var(--c-surface-2)"></span></div><span class="faint" style="font-size:11px">${a.score.toFixed(1)}</span></td><td style="font-size:12px">${days[i]} · ${crewsFor[i % 3].split(" · ")[1]}<span class="id">${h} h</span></td></tr>`;
   }).join("");
-  document.getElementById("planSum").textContent = `12 inspections and cleanings · ${hrs} crew-hours · Tue to Thu`;
+  document.getElementById("planCountTop").textContent = plan.length;
+  document.getElementById("planSum").textContent = `${plan.length} inspections and cleanings · ${hrs} crew-hours · Tue to Thu`;
   document.getElementById("planHrsTop").textContent = hrs;
   document.getElementById("approvePlan").addEventListener("click", (e) => {
     const b = e.currentTarget; b.disabled = true; b.innerHTML = '<svg class="ico"><use href="#i-check"/></svg>Demo approval';
-    document.querySelector("#plan .chip.warn").className = "chip ok"; document.querySelector("#plan .chip.ok").textContent = "Demo approval · 12 draft work orders";
+    document.querySelector("#plan .chip.warn").className = "chip ok"; document.querySelector("#plan .chip.ok").textContent = `Demo approval · ${plan.length} draft work orders`;
   });
 
   // Capital shortlist (PW-AI-2)
@@ -331,7 +332,7 @@
   }).sort((x, y) => y.score - x.score).slice(0, 5);
   const poorN = cand.filter((c) => c.a.cond <= 2).length;
   document.querySelector("#capTbl tbody").innerHTML = cand.map((c, i) => `<tr><td><span class="rank">${i + 1}</span></td><td><b>${c.a.id}</b> <span class="chip ${c.a.cond <= 2 ? "danger" : "warn"}" style="height:18px">${c.a.cond} · ${COND[c.a.cond][0]}</span><span class="id">${c.a.street} · ${ACTION[c.a.cond]}</span><div class="cites" style="margin-top:2px"><button class="cite" data-asset="${c.a.id}">assets/${c.a.id}</button> ${c.reqs.slice(0, 2).map((r) => `<button class="cite" data-req="${r.id}">${r.id}</button>`).join(" ")}</div></td><td class="r num">${c.reqs.length}</td><td class="r num">${c.parcels}</td><td class="r num">${HM.money(COST[c.a.cond])}</td></tr>`).join("");
-  document.getElementById("capNote").textContent = `${poorN} culverts are rated poor or failed; the next ${5 - poorN} are fair and listed to watch. Parcel counts: Maui County Parcels layer, within 300 m in this verified parcel snapshot. Costs are demo planning estimates.`;
+  document.getElementById("capNote").textContent = `${poorN} culverts are rated poor or failed; the next ${cand.length - poorN} are fair and listed to watch. Parcel counts: Maui County Parcels layer, within 300 m in this verified parcel snapshot. Costs are demo planning estimates.`;
 
   // Anomaly: many recent requests but rated good
   const anomaly = inlets.filter((a) => a.cond >= 4).sort((a, b) => b.near60.length - a.near60.length)[0];

@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import { loadJobPages } from "./validate-job-pages.mjs";
+import { referenceRedirects, referenceDocumentUrl } from "./lib/gallery-reference-redirects.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(root, "site");
@@ -97,6 +98,38 @@ try {
       await page.close();
     }
     results.push({ id: job.id, route: `/jobs/${job.id}/`, kind: job.kind, passed: failures.length === 0, failures: [...new Set(failures)] });
+  }
+  for (const entry of referenceRedirects) {
+    const failures = [];
+    const id = entry.route.split("/").at(-1);
+    if (await index.locator(`.card[data-id="${id}"]`).count()) failures.push("reference guidance must not have a gallery card");
+    const readme = await readFile(path.join(root, entry.document), "utf8");
+    const sourceCommit = process.env.EXPECTED_SOURCE_COMMIT ?? "";
+    const html = await readFile(path.join(siteRoot, entry.route, "index.html"), "utf8");
+    const target = html.match(/<link rel="canonical" href="([^"]+)"/u)?.[1];
+    if (!target || (sourceCommit && target !== referenceDocumentUrl(entry, sourceCommit))) {
+      failures.push("reference redirect must target its source-bound documentation");
+    } else {
+      for (const width of [1440, 390]) {
+        await mkdir(evidenceDir, { recursive: true });
+        await index.setViewportSize({ width, height: 900 });
+        await index.screenshot({ path: path.join(evidenceDir, `reference-gallery-${width}.png`), fullPage: true });
+        const page = await context.newPage();
+        await page.setViewportSize({ width, height: 900 });
+        try {
+          // Serve the repository document locally so this navigation check does not depend on GitHub availability.
+          await page.route(target, (route) => route.fulfill({ contentType: "text/plain", body: readme }));
+          await page.goto(`${baseUrl}/${entry.route}/`, { waitUntil: "domcontentloaded" });
+          await page.waitForURL(target);
+          if (!(await page.locator("body").innerText()).includes(entry.title)) failures.push(`reference document missing at ${width}px`);
+        } catch (error) {
+          failures.push(`${width}px: ${error.message}`);
+        } finally {
+          await page.close();
+        }
+      }
+    }
+    results.push({ id, route: `/${entry.route}/`, kind: "reference-redirect", passed: failures.length === 0, failures });
   }
   await index.close();
 } finally {

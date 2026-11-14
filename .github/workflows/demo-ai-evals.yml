@@ -1,0 +1,53 @@
+name: Demo AI answers
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/state-local/**'
+      - 'shared/state-local/**'
+      - 'samples/maui-emergency/**'
+      - 'scripts/smoke-demo-ai.mjs'
+      - 'scripts/build-gallery.mjs'
+      - 'scripts/lib/browser-lane.mjs'
+      - 'scripts/lib/verify-request-loop.mjs'
+      - 'scripts/test/request-records.test.mjs'
+      - 'config/state-local-display.v1.json'
+      - 'package*.json'
+      - '.github/workflows/demo-ai-evals.yml'
+  push:
+    branches: [trunk]
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot-answer-consistency:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Build pinned demo snapshots
+        run: |
+          node scripts/state-local/build-display-site.mjs
+          node scripts/build-gallery.mjs --check
+      - name: Verify browser report storage and reset
+        run: node --test scripts/test/request-records.test.mjs
+      - name: Compare demo answers with displayed records
+        run: npm run test:demo-ai:browser
+      - name: Save answer comparison results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: demo-ai-evals
+          path: artifacts/demo-ai-evals/
+          if-no-files-found: error
