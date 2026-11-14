@@ -46,7 +46,7 @@ on:
 
 permissions:
   contents: read
-  actions: read # to best-effort download the latest run-samples.yml run-results artifact below
+  actions: read # download the latest run-samples.yml run-results artifact
   pages: write
   id-token: write
 
@@ -157,26 +157,18 @@ jobs:
             run_build "$script"
           done
 
-      - name: Download latest run-results artifact (best effort)
-        # Feeds scripts/build-gallery.mjs's honest per-sample run badges. Not
-        # fatal if absent (no run-samples.yml run yet, or its artifact
-        # already expired) -- the gallery then just shows "no run results
-        # yet" for active samples instead of a badge, same as a local build.
+      - name: Download latest run-results artifact
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set +e
-          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow run-samples.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          set -euo pipefail
+          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow run-samples.yml --branch trunk --status success --limit 1 --json databaseId --jq '.[0].databaseId')
           if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
-            echo "No successful run-samples.yml run found yet -- continuing without run-results."
-            exit 0
+            echo "::error::No successful trunk run-samples.yml run found; refusing to publish without run results."
+            exit 1
           fi
           mkdir -p results
-          if gh run download "$run_id" --repo "$GITHUB_REPOSITORY" -n run-results -D results; then
-            echo "Downloaded run-results artifact from run $run_id."
-          else
-            echo "Could not download the run-results artifact from run $run_id (may have expired) -- continuing without it."
-          fi
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" -n run-results -D results
 
       - name: Stage & verify sdk-js sample bundles
         # Reads the lock's content-addressed vendored release and SHA-256-verifies
@@ -211,6 +203,7 @@ jobs:
         env:
           KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/9d2169cc12ee6323519567368774d0deba829686/docs/gis/data/capability-keys.v1.json
           MIN_RUNNABLE_BUNDLES: "11"
+          REQUIRE_RUN_RESULTS: "1"
         run: node scripts/build-gallery.mjs
 
       - name: Install gallery browser
