@@ -73,10 +73,12 @@ try {
   for (const width of [1440, 390]) {
     for (const colorScheme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height: 1000 }, colorScheme, permissions: ['clipboard-read', 'clipboard-write'] });
+      await context.addInitScript((theme) => localStorage.setItem('honua-theme', theme), colorScheme);
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
       await page.goto(`${baseUrl}/state-local/catalog/`);
+      assert.equal(await page.locator('html').getAttribute('data-theme'), colorScheme);
       await checkSearch(page);
       await checkDataset(page, baseUrl);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${width}: horizontal overflow`);
