@@ -1,3 +1,4 @@
+import { verifyRequestLoop } from './lib/verify-request-loop.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
@@ -71,6 +72,14 @@ try {
   assert.match(await csv.text(), /SR-26-18708/);
   assert.deepEqual(errors, []);
   console.log('PASS 311: filters, labelled detail, downloadable GeoJSON and CSV');
+
+  await page.goto(`${server.url}/state-local/311/`);
+  await verifyRequestLoop(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${server.url}/state-local/311/`);
+  await verifyRequestLoop(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  console.log('PASS 311 linked browser loop: desktop/mobile submission, photo, triage citation, assignment, status, CSV, reload and reset');
 
   await open('public-works');
   await expect(page.locator('#planTbl tbody tr')).toHaveCount(12);

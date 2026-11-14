@@ -1,0 +1,15 @@
+#request-loop {
+  flex: 0 0 auto;
+  max-height: 45dvh;
+  overflow: auto;
+  margin-bottom: 20px;
+}
+#request-loop summary { cursor: pointer; }
+#request-loop form { display: grid; gap: 12px; max-width: 540px; }
+#request-loop label { display: grid; gap: 4px; }
+#request-loop form .sel { width: 100%; }
+#request-loop input.sel, #request-loop textarea.sel { background-image: none; }
+#request-loop .seg { flex-wrap: wrap; }
+#request-loop .request-records article { display: grid; gap: 8px; border-bottom: 1px solid var(--c-border); }
+#request-loop .request-records .btn, #request-loop .request-records .sel { justify-self: start; max-width: 100%; }
+#request-loop .request-records h3, #request-loop .request-records p { overflow-wrap: anywhere; }
