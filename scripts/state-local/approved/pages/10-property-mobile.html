@@ -122,6 +122,11 @@
     </a>
     <div class="verify">County public search · enter the selected TMK</div>
 
+    <section class="msec" aria-labelledby="snapshotQuestions" id="parcelQuestions">
+      <h2 id="snapshotQuestions" style="font-size:13px">Questions about this snapshot</h2>
+      <p class="faint" style="font-size:12px">Demo answers · scripted snapshot · updated 2026-11-10 · <a href="/state-local/data/approved/manifest.json">Hawaii Statewide GIS sources</a></p>
+    </section>
+
     <section class="msec" aria-labelledby="askH">
       <div class="ai-card">
         <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 id="askH" style="font-size:13px">Can I build here?</h2><span class="tag-demo" style="margin-left:auto">Demo answer</span></div>
@@ -149,6 +154,16 @@
       <div id="regs"></div>
     </section>
 
+    {{COUNTY_PUBLICATION}}
+
+    <section class="msec" aria-labelledby="browseHeading">
+      <details><summary id="browseHeading">Browse parcel snapshot</summary><div id="parcelBrowser"></div></details>
+    </section>
+    <section class="msec" aria-labelledby="exportHeading">
+      <h2 id="exportHeading">Selected parcel snapshot</h2>
+      <div id="parcelExports" class="row wrap"><p class="faint">Loading snapshot exports…</p></div>
+    </section>
+
     <section class="msec" aria-labelledby="dataH" style="margin-bottom:6px">
       <h2 id="dataH">Data sources</h2>
       <p class="faint" style="font-size:12px">Hawaii Statewide GIS Program, State Land Use Commission, County of Maui Department of Planning (community plan 2002, Maui Island Plan 2012), FEMA flood zones; school locations are exercise anchors, not activated shelters. <span class="tag-real">Real data</span></p>
@@ -172,13 +187,33 @@
 {{DATA land,roads,streams,waterbodies,zoning,dfirm,tsunami,slr32,sma,slud,mip_growth,cplan,cp_names,parcels,shelters,zone_names}}
 {{MAPJS}}
 {{PARCEL_SEARCH}}
+{{PARCEL_ANSWERS}}
 <script>
 (() => {
+  const parcelAnswers = HonuaParcelAnswers.mount(document.getElementById("parcelQuestions"));
   const FEAT = 27904;
 
   const ZN = HD.zone_names, CPN = HD.cp_names;
   const parcels = HM.get("parcels");
   const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
+  import('/state-local/shared/county-publication.mjs').then(({ mountCountyPublication }) => mountCountyPublication({
+    root: document.getElementById('countyPublication'), map: () => map,
+  })).catch(() => { document.getElementById('countyStatus').textContent = 'County publication controls unavailable. Snapshot data remains available.'; });
+  let parcelBrowser;
+  import('/state-local/shared/parcel-browser.mjs').then(({ mountParcelBrowser, parcelViewUrl }) => {
+    parcelBrowser = mountParcelBrowser({
+      root: document.getElementById('parcelBrowser'), parcels: parcels.features, zoneNames: HD.zone_names,
+      selected: () => byId.get(currentId), map: () => map, formatTmk: HM.tmk,
+      onSelect: (feature) => { render(feature.properties.id); map?.fitBounds(HM.bbox(feature.geometry), { padding: 40, maxZoom: 18 }); }, onChange: () => { render(currentId); },
+    });
+    shareParcelUrl = (tmk) => parcelViewUrl(location.href, { tmk, zone: parcelBrowser.zone });
+    render(currentId);
+  }).catch(() => { document.getElementById('parcelBrowser').textContent = 'Parcel list unavailable. Search remains available.'; });
+  let shareParcelUrl = (tmk) => { const url = new URL(location.href); url.searchParams.set('tmk', tmk); return url.href; };
+  import('/state-local/shared/parcel-export-control.mjs').then(({ mountParcelExports }) => mountParcelExports({
+    root: document.getElementById('parcelExports'), selected: () => byId.get(currentId),
+  })).catch(() => { document.getElementById('parcelExports').textContent = 'Snapshot exports unavailable.'; });
+
   const cplan = HM.get("cplan");
   function inRing(pt, ring) { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) c = !c; } return c; }
   function inGeom(pt, g) { const polys = g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : []; return polys.some((p) => inRing(pt, p[0]) && !p.slice(1).some((h) => inRing(pt, h))); }
@@ -196,9 +231,10 @@
     const zn = ZN[p.zone] || "Not zoned", cp = p.cp >= 0 ? CPN[p.cp] : null;
     const iS = findIdx({ features: HD.slud.features }, pt), iG = findIdx({ features: HD.mip_growth.features }, pt), iC = findIdx(cplan, pt);
     document.getElementById("tmk").textContent = "TMK " + HM.tmk(p.t9);
-    const url = new URL(location.href); url.searchParams.set("tmk", p.t9); document.getElementById("shareUrl").textContent = url.href;
+    const url = new URL(shareParcelUrl(p.t9)); document.getElementById("shareUrl").textContent = url.href;
     const sqft = Math.round(p.acres * 43560 / 100) * 100;
     document.getElementById("sub").textContent = (id === FEAT ? "Lono Ave and Kaʻahumanu Ave · " : "Kahului · ") + `${p.acres.toFixed(3)} acres`;
+    parcelAnswers.update(p);
     document.getElementById("fLand").textContent = HM.money(p.land); document.getElementById("fBldg").textContent = HM.money(p.bldg); document.getElementById("fArea").textContent = sqft.toLocaleString();
     document.getElementById("mapps").href = `https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx`;
     const chips = [`<span class="chip accent">${zn}</span>`, p.fld && p.fld !== "X" ? `<span class="chip info">Flood zone ${p.fld}</span>` : `<span class="chip">Flood zone X</span>`];
@@ -233,6 +269,7 @@
       `${ok}<span>Review the <b>3.2 ft sea-level-rise</b> exposure overlay. ${cite("slr32/1", "slr")}</span>`,
       `${info}<span>Shoreline setback not checked: source pending.</span>`,
     ].map((s) => `<li>${s}</li>`).join("");
+    parcelBrowser?.refresh();
     document.getElementById("ai").hidden = id !== FEAT;
     document.getElementById("aiUnavailable").hidden = id === FEAT;
     if (map && map.getSource("parcels")) { if (sel != null) map.setFeatureState({ source: "parcels", id: sel }, { sel: false }); sel = id; map.setFeatureState({ source: "parcels", id }, { sel: true }); map.setFilter("parcels-sel", ["==", ["get", "id"], id]); }
@@ -248,7 +285,7 @@
       HM.bindToggles(m);
       const sh = HD.shelters.features.find((s) => s.properties.name.startsWith("Kahului Elementary"));
       if (sh) { const el = document.createElement("div"); el.className = "mappin shelter"; el.innerHTML = '<svg class="ico"><use href="#i-home"/></svg>'; el.title = "School exercise anchor: Kahului Elementary"; new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(sh.geometry.coordinates).addTo(m); }
-      m.on("click", "parcels-fill", (e) => { render(e.features[0].properties.id); document.getElementById("card").scrollIntoView({ behavior: "smooth" }); });
+      m.on("click", "parcels-fill", (e) => { if (document.getElementById("countyPublication").open) return; render(e.features[0].properties.id); document.getElementById("card").scrollIntoView({ behavior: "smooth" }); });
       render(currentId ?? parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
     },
   });
