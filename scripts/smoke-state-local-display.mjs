@@ -28,7 +28,7 @@ async function verifyEarlyParcelSelection(route, title) {
       set(value) {
         helper = value;
         const create = value.create;
-        value.create = (element, options) => create(element, { ...options,
+        helper.create = (element, options) => create(element, { ...options,
           onload: (map) => { window.releaseParcelMap = () => options.onload(map); },
         });
       },
