@@ -29,7 +29,7 @@ test("Pages stops on absent runs or a failed artifact download", async (t) => {
   await writeFile(path.join(dir, "gh"), `#!/bin/sh
 if [ "$1" = api ]; then
   case "$*" in
-    *actions/artifacts*) printf "%s" "$STUB_RUN_IDS" ;;
+    *actions/artifacts*) printf "%s" "$STUB_ARTIFACTS" ;;
     *actions/runs/41*) printf false ;;
     *actions/runs/42*) printf true ;;
     *) exit 8 ;;
@@ -43,7 +43,7 @@ fi
     const result = spawnSync("bash", ["-c", script], {
       cwd: dir,
       encoding: "utf8",
-      env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GITHUB_REPOSITORY: "honua-io/honua-samples", STUB_RUN_IDS: runIds, STUB_DOWNLOAD_STATUS: downloadStatus },
+      env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GITHUB_REPOSITORY: "honua-io/honua-samples", STUB_ARTIFACTS: JSON.stringify({ artifacts: runIds.split("\n").filter(Boolean).map((id, index) => ({ expired: false, created_at: `2026-11-${14 - index}`, workflow_run: { id: Number(id), head_branch: "trunk" } })) }), STUB_DOWNLOAD_STATUS: downloadStatus },
     });
     assert.equal(result.status, expectedStatus, result.stderr);
   }

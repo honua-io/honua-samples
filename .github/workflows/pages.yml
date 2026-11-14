@@ -163,7 +163,7 @@ jobs:
         run: |
           set -euo pipefail
           # Successful workflows may skip sample execution; start from available artifacts.
-          candidates=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/artifacts?name=run-results&per_page=100" --jq '[.[].artifacts[] | select(.expired == false and .workflow_run.head_branch == "trunk")] | sort_by(.created_at) | reverse | .[].workflow_run.id')
+          candidates=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=run-results&per_page=100" | jq -sr '[.[].artifacts[] | select(.expired == false and .workflow_run.head_branch == "trunk")] | sort_by(.created_at) | reverse | .[].workflow_run.id')
           run_id=""
           for candidate in $candidates; do
             usable=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.path == ".github/workflows/run-samples.yml" and .conclusion == "success" and .head_branch == "trunk"')
