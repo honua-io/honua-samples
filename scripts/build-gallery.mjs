@@ -531,7 +531,7 @@ function toOwnCard(sample, runResults, keyByKey, problems, sourceCommit) {
     detailUrl: `${GALLERY_BASE_URL}/${id}/`,
     detailPath: `/${id}/`,
     githubUrl: `https://github.com/${OWN_REPO}/tree/${sourceCommit}/samples/${dirName}`,
-    readmeHtml: readme ? renderMarkdown(readme) : null,
+    readmeHtml: readme ? renderMarkdown(readme, `https://github.com/${OWN_REPO}/blob/${sourceCommit}/samples/${dirName}/README.md`) : null,
     sourcePath,
     sourceText,
     runBadge,

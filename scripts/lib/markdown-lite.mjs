@@ -7,7 +7,8 @@
 // (nested blockquotes, HTML passthrough, footnotes, etc.) falls through to
 // plain escaped paragraphs, which is a safe (if plain) degradation.
 
-export function renderMarkdown(markdown) {
+export function renderMarkdown(markdown, sourceUrl) {
+  const inline = (text) => renderInline(text, sourceUrl);
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const out = [];
   let i = 0;
@@ -51,7 +52,7 @@ export function renderMarkdown(markdown) {
         rows.push(splitTableRow(lines[i]));
         i++;
       }
-      out.push(renderTable(header, rows));
+      out.push(renderTable(header, rows, inline));
       continue;
     }
 
@@ -134,7 +135,7 @@ function splitTableRow(line) {
   return s.split("|").map((cell) => cell.trim());
 }
 
-function renderTable(header, rows) {
+function renderTable(header, rows, inline) {
   const thead = `<thead><tr>${header.map((h) => `<th>${inline(h)}</th>`).join("")}</tr></thead>`;
   const tbody = `<tbody>${rows
     .map((row) => `<tr>${row.map((cell) => `<td>${inline(cell)}</td>`).join("")}</tr>`)
@@ -142,15 +143,17 @@ function renderTable(header, rows) {
   return `<table>${thead}${tbody}</table>`;
 }
 
-function inline(text) {
+function renderInline(text, sourceUrl) {
   let s = escapeHtml(text);
   s = s.replace(/`([^`]+)`/g, (_, code) => `<code>${code}</code>`);
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => {
-    const external = /^https?:\/\//i.test(url);
+    const resolved = sourceUrl && !/^(?:[a-z][a-z\d+.-]*:|#|\/\/)/i.test(url)
+      ? new URL(url, sourceUrl).href : url;
+    const external = /^https?:\/\//i.test(resolved);
     const attrs = external ? ' target="_blank" rel="noopener noreferrer"' : "";
-    return `<a href="${escapeAttr(url)}"${attrs}>${label}</a>`;
+    return `<a href="${escapeAttr(resolved)}"${attrs}>${label}</a>`;
   });
   return s;
 }
