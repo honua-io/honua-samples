@@ -52,12 +52,12 @@ function validatedImportReceipt(job, uploaded, snapshot) {
   if (typeof job.physicalTableName !== "string" || !job.physicalTableName.trim()
     || typeof job.schema !== "string" || !job.schema.trim()) {
     throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
-}
-if (job.jobId !== uploaded.jobId || job.tableName !== snapshot.tableName
-  || !snapshot.connection || job.connectionId !== snapshot.connection) {
-  throw new Error(`Import receipt does not match this job, table and managed connection; inspect Console job ${uploaded.jobId} before publishing`);
-}
-return { ...job, featureCount: job.featuresProcessed };
+  }
+  if (job.jobId !== uploaded.jobId || job.tableName !== snapshot.tableName
+    || !snapshot.connection || job.connectionId !== snapshot.connection) {
+    throw new Error(`Import receipt does not match this job, table and managed connection; inspect Console job ${uploaded.jobId} before publishing`);
+  }
+  return { ...job, featureCount: job.featuresProcessed };
 }
 
 async function completedUpload(env, uploaded, snapshot) {
