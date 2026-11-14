@@ -29,6 +29,21 @@ async function verifySelectedExport(page) {
   assert.ok(exported.provenance.sources.parcels.license);
 }
 
+async function verifyBeforeMap(page, url) {
+  const deepLink = `${url}?tmk=234039007`;
+  await page.route(deepLink, async (route) => {
+    const response = await route.fetch();
+    const html = (await response.text()).replace('map = HM.create(', 'map = (() => undefined)(');
+    await route.fulfill({ response, body: html });
+  });
+  await page.goto(deepLink);
+  await expect(page.locator('h1')).toContainText('3-4-039:007');
+  await expect(page.locator('#parcelExports')).toContainText('Snapshot 2026-11-10');
+  assert.match(await readDownload(page, 'CSV'), /"234039007"/);
+  assert.equal(String(JSON.parse(await readDownload(page, 'GeoJSON')).features[0].properties.t9), '234039007');
+  await page.unroute(deepLink);
+}
+
 async function verifyUnavailable(page, url) {
   await page.route('**/data/approved/manifest.json', (route) => route.fulfill({ status: 503, body: 'Unavailable' }));
   await page.goto(url);
@@ -45,6 +60,7 @@ try {
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     const url = `${server.url}/state-local/${route}/`;
+    await verifyBeforeMap(page, url);
     await page.goto(url);
     await verifySelectedExport(page);
     await verifyUnavailable(page, url);

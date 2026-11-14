@@ -367,6 +367,8 @@
     },
   });
 
+  select([...byId.values()].find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT, false);
+
   // Citations: each one shows its source on the map
   const CITE = {
     parcel: () => select(FEAT, true),
