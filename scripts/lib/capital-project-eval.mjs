@@ -37,6 +37,13 @@ export async function evaluateCapitalProjects(page) {
   assert.doesNotMatch(csv, /CBS-6069/);
   assert.match(csv, /county_published/);
   assert.match(csv, /87000000/);
+  for (const target of ['#wo', '#crews']) {
+    await page.locator('#capitalButton').click();
+    const link = page.locator(`.appnav a[href="${target}"]`);
+    if (await link.isVisible()) await link.click();
+    else await link.evaluate((element) => element.click());
+    await expect(page.locator(target)).toBeVisible();
+  }
   await page.locator('#inspectionButton').click();
   await expect(page.locator('#inspectionView')).toBeVisible();
   await expect(page.locator('#plan .chip.ok')).toContainText('draft work orders');
