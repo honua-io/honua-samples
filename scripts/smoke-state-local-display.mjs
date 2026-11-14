@@ -19,7 +19,38 @@ async function open(route) {
   await page.locator('.maplibregl-canvas').waitFor({ timeout: 60_000 });
 }
 
+async function verifyEarlyParcelSelection(route, title) {
+  const early = await context.newPage();
+  await early.addInitScript(() => {
+    let helper;
+    Object.defineProperty(window, 'HM', {
+      configurable: true, get: () => helper,
+      set(value) {
+        helper = value;
+        const create = value.create;
+        value.create = (element, options) => create(element, { ...options,
+          onload: (map) => { window.releaseParcelMap = () => options.onload(map); },
+        });
+      },
+    });
+  });
+  try {
+    await early.goto(`${server.url}/state-local/${route}/`);
+    await early.waitForFunction(() => typeof window.releaseParcelMap === 'function');
+    await early.fill('#q', '234039007');
+    await early.locator('#q').press('Enter');
+    await expect(early.locator(title)).toContainText('3-4-039:007');
+    await early.evaluate(() => window.releaseParcelMap());
+    await expect(early.locator(title)).toContainText('3-4-039:007');
+  } finally {
+    await early.close();
+  }
+}
+
 try {
+  await verifyEarlyParcelSelection('property', '#pTitle');
+  await verifyEarlyParcelSelection('property/mobile', '#tmk');
+  console.log('PASS Property early lookup survives map initialization');
   await verifyAppShells(context, server.url);
   await open('311');
   await expect(page.locator('#qBody tr')).toHaveCount(12);
@@ -61,6 +92,7 @@ try {
   await page.fill('#q', street);
   await page.locator('#sug button[data-street]').first().click();
   await expect(page.locator('#q')).toHaveValue(street);
+  await expect(page.locator('#q')).toBeFocused();
   await page.fill('#q', '237004006');
   await page.locator('#q').press('ArrowDown');
   await expect(page.locator('#sug [aria-selected="true"]')).toHaveCount(1);
@@ -80,6 +112,7 @@ try {
   await page.fill('#q', street);
   await page.locator('#sug button[data-street]').first().click();
   await expect(page.locator('#q')).toHaveValue(street);
+  await expect(page.locator('#q')).toBeFocused();
   await page.fill('#q', '(2) 3-4-039:007');
   await page.locator('#q').press('ArrowDown');
   await page.locator('#q').press('Enter');

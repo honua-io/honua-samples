@@ -11,6 +11,7 @@ class Element {
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }
   contains(target) { return target === this || this.children.includes(target); }
+  focus() { this.focused = true; this.fire('focus'); }
   fire(name, event = {}) { this.listeners[name]?.({ preventDefault() {}, ...event }); }
 }
 
@@ -58,6 +59,8 @@ test('street results work with pointer selection and never interpret HTML', asyn
   assert.equal(list.children[0].textContent, '<Street>');
   list.children[0].fire('click');
   assert.deepEqual(streets, ['<Street>']);
+  assert.equal(input.focused, true);
+  assert.equal(input.attributes['aria-expanded'], 'false');
 });
 
 test('ArrowUp starts at the last suggestion and wraps in both directions', async () => {

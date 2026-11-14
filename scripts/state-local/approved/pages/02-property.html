@@ -292,10 +292,13 @@
     document.getElementById("luCount").textContent = `${rows.length} layers`;
   }
   function select(id, fly) {
-    const f = byId.get(id); if (!f || !map) return;
-    if (selected != null) map.setFeatureState({ source: "parcels", id: selected }, { sel: false });
-    selected = id; map.setFeatureState({ source: "parcels", id }, { sel: true });
-    map.setFilter("parcels-sel", ["==", ["get", "id"], id]);
+    const f = byId.get(id); if (!f) return;
+    if (map?.getSource("parcels")) {
+      if (selected != null) map.setFeatureState({ source: "parcels", id: selected }, { sel: false });
+      map.setFeatureState({ source: "parcels", id }, { sel: true });
+      map.setFilter("parcels-sel", ["==", ["get", "id"], id]);
+    }
+    selected = id;
     if (window._selPin) { const b = HM.bbox(f.geometry); window._selPin.setLngLat([(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2]); }
     const p = f.properties, t = HM.tmk(p.t9), zn = ZN[p.zone] || "Not zoned";
     document.getElementById("pTitle").textContent = "TMK " + t;
@@ -320,7 +323,7 @@
     document.getElementById("askAnswer").hidden = id !== FEAT;
     fillPermits(p.t9, t); luStack(p);
     updateShare(p.t9);
-    if (fly) map.fitBounds(HM.bbox(f.geometry), { padding: 160, maxZoom: 17.6, duration: 700 });
+    if (fly && map) map.fitBounds(HM.bbox(f.geometry), { padding: 160, maxZoom: 17.6, duration: 700 });
   }
 
   map = HM.create(document.getElementById("map"), {
@@ -343,7 +346,7 @@
       m.on("mouseleave", "parcels-fill", () => { m.getCanvas().style.cursor = ""; if (hov != null) m.setFeatureState({ source: "parcels", id: hov }, { hover: false }); hov = null; });
       const sel = document.createElement("div"); sel.className = "mappin selpin"; sel.innerHTML = '<svg class="ico"><use href="#i-pin"/></svg>'; sel.title = "Selected parcel";
       window._selPin = new maplibregl.Marker({ element: sel, anchor: "bottom" }).setLngLat([-156.47016, 20.88951]).addTo(m);
-      select([...byId.values()].find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT, false);
+      select(selected ?? [...byId.values()].find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT, false);
     },
   });
 

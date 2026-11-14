@@ -191,6 +191,7 @@
   const info = '<svg class="ico faint"><use href="#i-info"/></svg>';
 
   function render(id) {
+    currentId = id;
     const f = byId.get(id); const p = f.properties; const pt = id === FEAT ? [-156.47016, 20.88951] : center(f);
     const zn = ZN[p.zone] || "Not zoned", cp = p.cp >= 0 ? CPN[p.cp] : null;
     const iS = findIdx({ features: HD.slud.features }, pt), iG = findIdx({ features: HD.mip_growth.features }, pt), iC = findIdx(cplan, pt);
@@ -236,7 +237,7 @@
     document.getElementById("aiUnavailable").hidden = id === FEAT;
     if (map && map.getSource("parcels")) { if (sel != null) map.setFeatureState({ source: "parcels", id: sel }, { sel: false }); sel = id; map.setFeatureState({ source: "parcels", id }, { sel: true }); map.setFilter("parcels-sel", ["==", ["get", "id"], id]); }
   }
-  let sel = null, map = null;
+  let sel = null, map = null, currentId = null;
   map = HM.create(document.getElementById("map"), {
     bounds: [[-156.4775, 20.8855], [-156.463, 20.8935]], padding: 4, roadLabels: false, cooperative: true, navPos: "top-right",
     onload: (m) => {
@@ -248,7 +249,7 @@
       const sh = HD.shelters.features.find((s) => s.properties.name.startsWith("Kahului Elementary"));
       if (sh) { const el = document.createElement("div"); el.className = "mappin shelter"; el.innerHTML = '<svg class="ico"><use href="#i-home"/></svg>'; el.title = "School exercise anchor: Kahului Elementary"; new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(sh.geometry.coordinates).addTo(m); }
       m.on("click", "parcels-fill", (e) => { render(e.features[0].properties.id); document.getElementById("card").scrollIntoView({ behavior: "smooth" }); });
-      render(parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
+      render(currentId ?? parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
     },
   });
   render(parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);

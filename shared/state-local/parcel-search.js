@@ -27,6 +27,7 @@ class ParcelSearch {
     const match = this.matches[index];
     if (!match) return;
     this.input.value = match.label;
+    this.input.focus();
     this.close();
     if (match.parcel) this.onParcel(match.parcel);
     else this.onStreet(match.label);
