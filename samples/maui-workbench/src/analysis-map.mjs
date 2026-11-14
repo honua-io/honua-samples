@@ -12,6 +12,8 @@ export function createAnalysisMap(onSelect, measurement) {
   const map = new maplibregl.Map({ container: 'map', center: [-156.4, 20.85], zoom: 9, maxPitch: 60,
     style: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background',
       paint: { 'background-color': '#eef1ec' } }] }, attributionControl: false });
+  // Public map handle shared by the signed-out browser checks and other samples.
+  window.sampleMap = map;
   map.addControl(new maplibregl.NavigationControl());
   map.addControl(new maplibregl.AttributionControl({ customAttribution: 'County of Maui · DEMO DATA operations' }));
   measurement.map = map;

@@ -1,0 +1,8 @@
+{
+  "format": "honua.gallery-health.v1",
+  "sources": [
+    { "url": "https://honua.io/demos.html", "selector": "a.route-card", "kind": "website" },
+    { "url": "https://samples.honua.io/", "inventory": "https://samples.honua.io/gallery-health.v1.json", "kind": "samples" },
+    { "url": "https://samples.honua.io/state-local/", "selector": "a[href]", "kind": "state-local", "recursive": true }
+  ]
+}

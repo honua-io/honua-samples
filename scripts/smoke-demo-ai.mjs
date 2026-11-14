@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, expect } from '@playwright/test';
+import { verifyRequestLoop } from './lib/verify-request-loop.mjs';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
 const root = fileURLToPath(new URL('../site/', import.meta.url));
@@ -23,8 +24,36 @@ async function overview(page) {
   return { mode: 'labelled example, no query-result count' };
 }
 
+async function parcelQuestions(page) {
+  const questions = page.locator('#parcelQuestions');
+  await expect(questions).toContainText('Demo answers · scripted snapshot');
+  await expect(questions.getByRole('link')).toHaveAttribute('href', '/state-local/data/approved/manifest.json');
+  const buttons = questions.getByRole('button');
+  await expect(buttons).toHaveCount(3);
+  const title = await page.locator('#pTitle, #tmk').textContent();
+  const id = title.replace(/[^0-9]/g, '');
+  const land = await page.locator('#fLand').textContent();
+  const building = await page.locator('#fBldg').textContent();
+  await buttons.nth(0).focus();
+  await page.keyboard.press('Enter');
+  await expect(questions.getByRole('status')).toContainText(`TMK ${id}`);
+  await expect(questions.getByRole('status')).toContainText(land);
+  await expect(questions.getByRole('status')).toContainText(building);
+  await buttons.nth(1).click();
+  const area = (await page.locator('#fArea, #ovArea').textContent()).replace(' (GIS)', '');
+  await expect(questions.getByRole('status')).toContainText(area);
+  await buttons.nth(2).click();
+  const flood = await page.evaluate(() => {
+    const id = document.querySelector('#pTitle, #tmk').textContent.replace(/[^0-9]/g, '');
+    return HM.get('parcels').features.find((f) => String(f.properties.t9) === id).properties.fld;
+  });
+  await expect(questions.getByRole('status')).toContainText(`flood zone ${flood}`);
+  await expect(questions.getByRole('status')).toContainText('County floodplain administrator');
+}
+
 async function property(page, route) {
   await visit(page, route);
+  await parcelQuestions(page);
   await expect(page.locator('#askAnswer')).toBeVisible();
   await expect(page.locator('#askAnswer')).toContainText('scripted example');
   const claims = [
@@ -39,13 +68,17 @@ async function property(page, route) {
   }
   const other = await page.evaluate(() => HM.get("parcels").features.find((f) => String(f.properties.t9) !== '237004006')?.properties.t9);
   assert.ok(other, 'A second parcel is required to check answer invalidation');
-  await visit(page, `${route}?tmk=${other}`);
+  await page.getByRole('combobox').fill(String(other));
+  await page.getByRole('combobox').press('Enter');
+  await expect(page.locator('#parcelQuestions').getByRole('status')).toBeEmpty();
+  await parcelQuestions(page);
   await expect(page.locator('#askAnswer')).toBeHidden();
   return { claims: claims.length, otherParcelAnswer: 'hidden' };
 }
 
 async function propertyMobile(page) {
   await visit(page, 'property/mobile/');
+  await parcelQuestions(page);
   await expect(page.locator('#aiSteps li')).toHaveCount(8);
   await expect(page.locator('#ai')).toContainText('This example identifies layers');
   for (const text of ['Urban', 'B-2 Business - Community', 'source pending', 'AE', '3.2 ft']) {
@@ -53,7 +86,10 @@ async function propertyMobile(page) {
     await expect(page.locator('#regs')).toContainText(text, { ignoreCase: true });
   }
   const other = await page.evaluate(() => HM.get('parcels').features.find((f) => String(f.properties.t9) !== '237004006').properties.t9);
-  await visit(page, `property/mobile/?tmk=${other}`);
+  await page.getByRole('combobox').fill(String(other));
+  await page.getByRole('combobox').press('Enter');
+  await expect(page.locator('#parcelQuestions').getByRole('status')).toBeEmpty();
+  await parcelQuestions(page);
   await expect(page.locator('#ai')).toBeHidden();
   await expect(page.locator('#aiUnavailable')).toBeVisible();
   return { claims: 5, otherParcelAnswer: 'hidden' };
@@ -214,6 +250,7 @@ try {
     const scenarios = [
       ['overview', overview], ['property', (p) => property(p, 'property/')],
       ['property-mobile', propertyMobile], ['311', requests],
+      ['311-linked-loop', async (p) => { await visit(p, '311/'); return verifyRequestLoop(p); }],
       ['public-works', publicWorks], ['emergency', (p) => emergency(p, 'emergency/')],
       ['emergency-mobile', emergencyMobile], ['workbench', workbench],
     ];
