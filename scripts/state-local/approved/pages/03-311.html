@@ -109,6 +109,35 @@
       <a class="btn" href="/state-local/data/approved/requests.csv" download><svg class="ico"><use href="#i-download"/></svg>Export</a>
     </div>
   </div>
+<details class="panel" id="request-loop">
+  <summary class="panel-h">Try the linked 311 demo · resident report → staff triage → public status</summary>
+  <div class="panel-b">
+    <p role="note">DEMO DATA · fictional reports · browser session only · not a county submission. Staff controls are an unauthenticated demo role. Live writes are coming.</p>
+    <p class="faint" data-reset-time></p>
+    <div class="seg" role="group" aria-label="311 demo views">
+      <button type="button" data-request-tab="resident" aria-pressed="true">Resident report</button>
+      <button type="button" data-request-tab="staff" aria-pressed="false">Demo staff board</button>
+      <button type="button" data-request-tab="public" aria-pressed="false">Public status</button>
+    </div>
+    <p><label>Find demo report <input class="sel" name="report-search" placeholder="Report ID or location"></label></p>
+    <p><button class="btn" type="button" data-export>Export open demo requests · CSV</button> <button class="btn" type="button" data-reset>Reset demo session</button></p>
+    <p role="status" data-submit-message></p>
+    <section data-request-view="resident" aria-label="Resident demo report">
+      <form>
+        <label>Category <select class="sel" name="type" required><option value="">Choose a category</option></select></label>
+        <label>Location description <input class="sel" name="addr" required maxlength="120" placeholder="Fictional location on Maui Nui"></label>
+        <label>Latitude <input class="sel" name="lat" type="number" step="any" required min="20.45" max="21.25" value="20.889"></label>
+        <label>Longitude <input class="sel" name="lng" type="number" step="any" required min="-157.4" max="-155.95" value="-156.47"></label>
+        <label>Description <textarea class="sel" name="note" maxlength="500" placeholder="Use fictional details only"></textarea></label>
+        <label>Photo (optional, JPEG, PNG or WebP, up to 250 KB) <input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label>
+        <button class="btn" type="submit">Submit fictional demo report</button>
+      </form>
+    </section>
+    <section data-request-view="staff" aria-label="Demo staff board" hidden><p>Demo staff role · assign a crew, change status or inspect a scripted triage suggestion grounded in these reports.</p><div class="request-records"></div></section>
+    <section data-request-view="public" aria-label="Public demo status" hidden><p>Public status uses the same browser records as the demo staff board.</p><div class="request-records"></div></section>
+  </div>
+</details>
+
 <div class="department-workspace">
 <section class="mapwrap" aria-label="Request map">
       <div id="map"></div>
@@ -413,5 +442,6 @@
   if (HM.hashParams().has("triage")) setTimeout(() => openDrawer(incoming.id), 400);
 })();
 </script>
+{{REQUEST_LOOP}}
 </body>
 </html>
