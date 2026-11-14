@@ -20,14 +20,16 @@ async function filterParcels(page, url) {
   await expect(page.locator('#parcelBrowser [role=status]').first()).toContainText(`${matching.length.toLocaleString()} parcels`);
   const area = matching.reduce((sum, f) => sum + f.properties.acres, 0).toLocaleString(undefined, { maximumFractionDigits: 3 });
   await expect(page.locator('#parcelBrowser [role=status]').first()).toContainText(`${area} acres`);
-  await expect.poll(() => page.evaluate(() => window.__parcelMap?.getFilter('parcels-fill'))).toEqual(['==', ['to-string', ['get', 'zone']], zone]);
+  await expect.poll(() => page.evaluate(() => window.__parcelMap?.getFilter('parcels-fill'))).toEqual(['==', ['to-string', ['coalesce', ['get', 'zone'], 'null']], zone]);
   return { parcels, matching, zone };
 }
 
 async function selectParcel(page, matching) {
   const first = page.locator('#parcelBrowser tbody button').first();
   const tmk = await first.textContent();
-  await first.click();
+  await first.focus();
+  await first.press('Enter');
+  await expect(first).toBeFocused();
   await expect(page.locator('h1')).toContainText(tmk);
   await expect(first).toHaveAttribute('aria-pressed', 'true');
   const waiting = page.waitForEvent('download');
@@ -62,6 +64,23 @@ async function verifyReload(page, result) {
   assert.equal(new URL(await page.locator('#shareUrl').textContent()).searchParams.has('zone'), false);
 }
 
+async function verifyUnzoned(page, url) {
+  await page.goto(url);
+  const result = await page.evaluate(async () => {
+    const { mountParcelBrowser } = await import('/state-local/shared/parcel-browser.mjs');
+    const root = document.createElement('div'); document.body.append(root);
+    const filters = [];
+    const parcels = [{ properties: { id: 1, t9: '000000001', zone: null, acres: 1 } }];
+    mountParcelBrowser({ root, parcels, zoneNames: {}, formatTmk: (value) => value, selected: () => null,
+      onSelect() {}, onChange() {}, map: () => ({ getLayer: () => true, setFilter: (layer, expression) => filters.push(expression) }) });
+    const filter = root.querySelector('select'); filter.value = 'null'; filter.dispatchEvent(new Event('change'));
+    const result = { expression: filters.at(-1), count: root.querySelectorAll('tbody tr').length };
+    root.remove(); return result;
+  });
+  assert.equal(result.count, 1);
+  assert.deepEqual(result.expression, ['==', ['to-string', ['coalesce', ['get', 'zone'], 'null']], 'null']);
+}
+
 async function verifyBrowser(page, url) {
   const result = await filterParcels(page, url);
   const selected = await selectParcel(page, result.matching);
@@ -74,6 +93,7 @@ try {
   for (const [route, width] of [['property', 1440], ['property/mobile', 390]]) {
     const page = await browser.newPage({ viewport: { width, height: 1000 } });
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
+    await verifyUnzoned(page, `${server.url}/state-local/${route}/`);
     await verifyBrowser(page, `${server.url}/state-local/${route}/`);
     assert.deepEqual(errors, []);
     await page.screenshot({ path: `/tmp/s-backlog-clients-parcel-browser-${width}.png`, fullPage: true });
