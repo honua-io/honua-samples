@@ -196,6 +196,9 @@ jobs:
           MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/lib/sample-bundles.mjs
 
+      - name: Install gallery dependencies
+        run: npm ci
+
       - name: Build snapshot-backed state and local demos
         run: node scripts/state-local/build-display-site.mjs
 
@@ -217,7 +220,6 @@ jobs:
 
       - name: Install gallery browser
         run: |
-          npm ci
           npx playwright install --with-deps chromium firefox
 
       - name: Smoke the exact gallery artifact
