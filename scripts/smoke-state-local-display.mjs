@@ -26,11 +26,10 @@ async function verifyEarlyParcelSelection(route, title) {
     Object.defineProperty(window, 'HM', {
       configurable: true, get: () => helper,
       set(value) {
-        helper = value;
         const create = value.create;
-        helper.create = (element, options) => create(element, { ...options,
+        helper = { ...value, create: (element, options) => create(element, { ...options,
           onload: (map) => { window.releaseParcelMap = () => options.onload(map); },
-        });
+        }) };
       },
     });
   });
