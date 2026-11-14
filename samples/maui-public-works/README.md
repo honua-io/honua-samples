@@ -98,6 +98,7 @@ repository root:
 
 ```sh
 npm ci
+node scripts/state-local/build-display-site.mjs
 node scripts/build-gallery.mjs --check
 npm ci --prefix samples/maui-public-works
 npm run build --prefix samples/maui-public-works
