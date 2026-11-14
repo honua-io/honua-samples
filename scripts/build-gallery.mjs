@@ -89,6 +89,7 @@ import {
 import { DATA_MODE_LABELS } from "./lib/data-mode-labels.mjs";
 import { buildStateLocalSite, validateStateLocalLinks } from "./state-local/build-site.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
+import { writeReferenceRedirects } from "./lib/gallery-reference-redirects.mjs";
 import {
   dataOriginHost,
   isOwnBrowserSample,
@@ -401,6 +402,7 @@ async function main() {
     );
   }
 
+  await writeReferenceRedirects({ siteDir: SITE_DIR, sourceCommit });
   await validateStateLocalLinks(SITE_DIR);
   await assertNoMutableTrunkLinks(SITE_DIR);
 
