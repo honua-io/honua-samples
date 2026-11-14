@@ -26,12 +26,24 @@ test("Pages stops on absent runs or a failed artifact download", async (t) => {
   const workflow = await readFile(path.join(root, ".github/workflows/pages.yml"), "utf8");
   const step = workflow.split("      - name: Download latest run-results artifact\n")[1].split("      - name:")[0];
   const script = step.split("        run: |\n")[1].split("\n").map((line) => line.slice(10)).join("\n");
-  await writeFile(path.join(dir, "gh"), '#!/bin/sh\nif [ "$2" = list ]; then printf "%s" "$STUB_RUN_ID"; else exit "$STUB_DOWNLOAD_STATUS"; fi\n', { mode: 0o755 });
-  for (const [runId, downloadStatus, expectedStatus] of [["", "0", 1], ["null", "0", 1], ["42", "9", 9], ["42", "0", 0]]) {
+  await writeFile(path.join(dir, "gh"), `#!/bin/sh
+if [ "$1" = api ]; then
+  case "$*" in
+    *actions/artifacts*) printf "%s" "$STUB_RUN_IDS" ;;
+    *actions/runs/41*) printf false ;;
+    *actions/runs/42*) printf true ;;
+    *) exit 8 ;;
+  esac
+else
+  [ "$3" = 42 ] || exit 7
+  exit "$STUB_DOWNLOAD_STATUS"
+fi
+`, { mode: 0o755 });
+  for (const [runIds, downloadStatus, expectedStatus] of [["", "0", 1], ["41", "0", 1], ["42", "9", 9], ["42", "0", 0], ["41\n42", "0", 0]]) {
     const result = spawnSync("bash", ["-c", script], {
       cwd: dir,
       encoding: "utf8",
-      env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GITHUB_REPOSITORY: "honua-io/honua-samples", STUB_RUN_ID: runId, STUB_DOWNLOAD_STATUS: downloadStatus },
+      env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GITHUB_REPOSITORY: "honua-io/honua-samples", STUB_RUN_IDS: runIds, STUB_DOWNLOAD_STATUS: downloadStatus },
     });
     assert.equal(result.status, expectedStatus, result.stderr);
   }

@@ -162,9 +162,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow run-samples.yml --branch trunk --status success --limit 1 --json databaseId --jq '.[0].databaseId')
-          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
-            echo "::error::No successful trunk run-samples.yml run found; refusing to publish without run results."
+          # Successful workflows may skip sample execution; start from available artifacts.
+          candidates=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/artifacts?name=run-results&per_page=100" --jq '[.[].artifacts[] | select(.expired == false and .workflow_run.head_branch == "trunk")] | sort_by(.created_at) | reverse | .[].workflow_run.id')
+          run_id=""
+          for candidate in $candidates; do
+            usable=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.path == ".github/workflows/run-samples.yml" and .conclusion == "success" and .head_branch == "trunk"')
+            if [ "$usable" = "true" ]; then
+              run_id="$candidate"
+              break
+            fi
+          done
+          if [ -z "$run_id" ]; then
+            echo "::error::No successful trunk run-samples.yml run with available run-results found; refusing to publish without run results."
             exit 1
           fi
           mkdir -p results
