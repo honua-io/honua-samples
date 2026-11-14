@@ -54,6 +54,16 @@ try {
       await page.screenshot({ path: path.join(output, `gallery-${width}-${theme}.png`), fullPage: true });
       receipts.push({ page: 'gallery', width, theme, metrics, contrast });
     }
+    for (const theme of ['light', 'dark']) {
+      await page.goto(`${server.url}/maplibre-featureserver-layer/`, { waitUntil: 'domcontentloaded' });
+      if (await page.locator('html').getAttribute('data-theme') !== theme)
+        await page.getByRole('button', { name: `Switch to ${theme} mode` }).click();
+      const contrast = await textContrast(page, '.code-toolbar span, .code-toolbar strong, .code-toolbar > a');
+      assert.ok(contrast.length >= 2, 'Detail code toolbar is present');
+      assert.deepEqual(contrast.filter(item => item.ratio < 4.5), [], `Detail AA text contrast (${theme})`);
+      receipts.push({ page: 'detail', width, theme, contrast });
+      await page.screenshot({ path: path.join(output, `detail-${width}-${theme}.png`), fullPage: true });
+    }
     await page.reload({ waitUntil: 'domcontentloaded' });
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
     await page.goto(`${server.url}/state-local/sdk-explorer/`, { waitUntil: 'domcontentloaded' });
