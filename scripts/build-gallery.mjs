@@ -74,6 +74,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCapabilityKeyRecords } from "./lib/capability-keys.mjs";
 import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs";
+import { computeOwnRunBadge, httpsUrlOrNull, runBadgeHtml } from "./lib/run-badge.mjs";
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
 import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
@@ -468,9 +469,9 @@ async function loadRunResults() {
     raw = await readFile(RUN_RESULTS_PATH, "utf8");
   } catch {
     console.warn(
-      `build-gallery: no run results at ${path.relative(REPO_ROOT, RUN_RESULTS_PATH)} -- run badges will reflect "not yet run" instead of an actual outcome`,
+      `build-gallery: no run results at ${path.relative(REPO_ROOT, RUN_RESULTS_PATH)} -- own-sample cards will show no run badge`,
     );
-    return { resultsById: new Map(), generatedAt: null };
+    return { resultsById: new Map(), generatedAt: null, runUrl: null };
   }
   const envelope = JSON.parse(raw);
   const resultsById = new Map();
@@ -478,7 +479,7 @@ async function loadRunResults() {
     if (!result?.id) continue;
     resultsById.set(result.id, result);
   }
-  return { resultsById, generatedAt: envelope.generatedAt };
+  return { resultsById, generatedAt: envelope.generatedAt, runUrl: httpsUrlOrNull(envelope.runUrl) };
 }
 
 // ---- card normalization -------------------------------------------------
@@ -494,7 +495,7 @@ function toOwnCard(sample, runResults, keyByKey, problems, sourceCommit) {
   }
 
   const result = runResults.resultsById.get(id);
-  const runBadge = computeOwnRunBadge(manifest, result, runResults.generatedAt);
+  const runBadge = computeOwnRunBadge(manifest, result, runResults);
 
   return {
     kind: "own",
@@ -519,26 +520,6 @@ function toOwnCard(sample, runResults, keyByKey, problems, sourceCommit) {
     sourceText,
     runBadge,
     entrypoint: manifest.entrypoint ?? null,
-  };
-}
-
-function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
-  if (manifest.status === "draft") {
-    return { state: "draft", label: "Draft — outside the active gallery's verified sample set" };
-  }
-  if (!result) {
-    return { state: "none", label: "Server run not recorded" };
-  }
-  const date = envelopeGeneratedAt ? envelopeGeneratedAt.slice(0, 10) : "an unknown date";
-  if (result.outcome === "pass") {
-    return {
-      state: "pass",
-      label: `Server run passed ${date} against server ${result.serverVersion ?? "unknown"}`,
-    };
-  }
-  return {
-    state: "fail",
-    label: `Server run failed on ${date} (server ${result.serverVersion ?? "unknown"})${result.error ? `: ${result.error}` : ""}`,
   };
 }
 
@@ -794,11 +775,6 @@ function capabilityChips(capabilities, keyByKey) {
       return chip(`${label} (${key})`);
     })
     .join("")}</div>`;
-}
-
-function runBadgeHtml(badge) {
-  if (!badge) return "";
-  return `<span class="badge ${badge.state}">${escapeHtml(badge.label)}</span>`;
 }
 
 // ---- rendering: bundle embed / no-bundle / headless panels ---------------

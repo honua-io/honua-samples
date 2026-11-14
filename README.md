@@ -315,8 +315,9 @@ from **two inputs**:
 1. **This repo's own samples** -- every `samples/<id>/sample.json` manifest,
    its `README.md`, and (when available) the matching entry in the latest
    `results/run-results.v1.json` for an honest run badge. A badge only ever
-   says "runs green" when there's an actual passing run behind it; a `draft`
-   sample or an `active` sample that hasn't run yet says so plainly instead.
+   says "runs green" when there's an actual passing run behind it, and links
+   to the CI run that produced it; a `draft` sample says so, and an `active`
+   sample with no recorded run shows no run badge at all.
 2. **honua-sdk-js's versioned site-consumer handoff** -- the AUTHORITATIVE
    SDK projection since
    [honua-io/honua-samples#16](https://github.com/honua-io/honua-samples/issues/16),
