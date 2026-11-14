@@ -79,7 +79,7 @@ function renderCountyDetails(state, feature) {
 function attachCountyMap(state) {
   const map = state.map();
   if (!map) return;
-  if (!map.getStyle()?.layers) { map.once('styledata', () => { if (state.root.open) attachCountyMap(state); }); return; }
+  if (!map.getLayer('parcels-sel')) { map.once('load', () => { if (state.root.open) attachCountyMap(state); }); return; }
   if (!map.getSource('county-publication')) {
     const display = state.publication.display;
     map.addSource('county-publication', { type: 'vector', url: `pmtiles://${display.pmtilesUrl}`, promoteId: display.promoteId, minzoom: display.minzoom, maxzoom: display.maxzoom, attribution: 'County of Maui; Hawaii Statewide GIS Program' });

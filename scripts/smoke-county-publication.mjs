@@ -17,6 +17,31 @@ async function loadPage(page, url) {
   await expect.poll(() => page.evaluate(() => Boolean(window.__parcelMap?.getLayer('county-fill'))), { timeout: 30000 }).toBe(true);
 }
 
+async function verifyEarlyOpen(browser, url) {
+  const page = await browser.newPage();
+  await page.route('**/state-local/property/**', async (route) => {
+    if (route.request().resourceType() !== 'document') return route.continue();
+    const response = await route.fetch();
+    const body = (await response.text())
+      .replace('map = HM.create(', 'map = window.__parcelMap = HM.create(')
+      .replace('map.on("load", () => {\n      basemap(map, opts); restyle(map);\n      if (opts.onload) opts.onload(map);\n    });',
+        'window.__finishSnapshot = () => { basemap(map, opts); restyle(map); if (opts.onload) opts.onload(map); };');
+    await route.fulfill({ response, body });
+  });
+  await page.goto(url);
+  await page.waitForFunction(() => window.__parcelMap?.getStyle()?.layers && window.__finishSnapshot);
+  await page.locator('#countyHeading').click();
+  await expect(page.locator('#countyStatus')).toContainText('County publication connected', { timeout: 30000 });
+  assert.equal(await page.evaluate(() => Boolean(window.__parcelMap.getLayer('county-fill'))), false, 'county waits for snapshot initialization');
+  await page.evaluate(() => { window.__finishSnapshot(); window.__parcelMap.fire('load'); });
+  await expect.poll(() => page.evaluate(() => Boolean(window.__parcelMap.getLayer('county-fill')))).toBe(true);
+  assert.equal(await page.evaluate(() => window.__parcelMap.getLayoutProperty('parcels-fill', 'visibility')), 'none');
+  const layers = await page.evaluate(() => window.__parcelMap.getStyle().layers.map((layer) => layer.id));
+  assert.ok(layers.indexOf('county-fill') > layers.indexOf('parcels-sel'));
+  await page.close();
+  console.log('PASS early county open waits for application map initialization');
+}
+
 async function verifyLookup(page) {
   await page.getByLabel('County TMK', { exact: true }).fill('238-007-001');
   await page.getByRole('button', { name: 'Find county parcel', exact: true }).click();
@@ -96,5 +121,6 @@ try {
     await page.close();
     console.log(`PASS ${route}: hosted native lookup, public fields, map overlay, close/restore and unavailable data`);
   }
+  await verifyEarlyOpen(browser, `${server.url}/state-local/property/`);
   await verifyUnavailablePublication(browser, `${server.url}/state-local/property/`);
 } finally { await browser.close(); await server.close(); }
