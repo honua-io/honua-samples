@@ -1,0 +1,22 @@
+<section class="side-sec msec" aria-labelledby="countyHeading">
+  <details id="countyPublication">
+    <summary id="countyHeading">County parcel publication · 13 Nov 2026</summary>
+    <p>County of Maui · Hawaii Statewide GIS Program · public domain. Captured 13 November 2026. PMTiles map with GeoParquet details; no sign-in required.</p>
+    <p>This publication provides parcel identifiers and acreage. Zoning, assessment and hazard answers elsewhere on this page use the separately labelled snapshot.</p>
+    <form id="countySearch" class="row wrap">
+      <label for="countyTmk">County TMK</label>
+      <input id="countyTmk" name="countyTmk" type="text" inputmode="numeric" placeholder="238007001" autocomplete="off" aria-describedby="countyStatus" style="min-width:0;max-width:100%">
+      <button class="btn sm" type="submit">Find county parcel</button>
+    </form>
+    <p id="countyStatus" role="status">Open this panel to connect to the county publication.</p>
+    <p id="countyMapStatus" role="status"></p>
+    <dl id="countyDetails" class="dl"></dl>
+    <fieldset id="countyExports" disabled>
+      <legend>Selected county parcel</legend>
+      <button class="btn sm" type="button" data-county-export="csv">Download county CSV</button>
+      <button class="btn sm" type="button" data-county-export="geojson">Download county GeoJSON</button>
+    </fieldset>
+    <a id="countyShare" hidden>Share selected county parcel</a>
+    <p><a href="https://demo.honua.io/demo-data/publications/maui-county-parcels/20261113T122054Z/descriptor.json" target="_blank" rel="noopener">Publication descriptor and source provenance</a>. Published 13 November 2026; not a current legal boundary survey. Close this panel to return to the snapshot parcel map.</p>
+  </details>
+</section>

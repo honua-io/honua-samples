@@ -5,6 +5,8 @@ export function createFeatureMap(options) {
   const map = new library.Map({ container: 'map', center: [-156.4, 20.85], zoom: 9,
     style: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#eef1ec' } }] },
     attributionControl: false });
+  // Public map handle shared by the signed-out browser checks and other samples.
+  window.sampleMap = map;
   map.addControl(new library.NavigationControl(), 'top-left');
   map.addControl(new library.AttributionControl({ compact: true, customAttribution: attribution }));
   const painters = new Set();
