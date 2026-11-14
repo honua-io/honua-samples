@@ -70,6 +70,11 @@
     .phone { width: 100%; margin: 0; border-radius: 0; box-shadow: none; }
     .statusbar, .frame-note { display: none; }
   }
+  .msearch { position: relative; }
+  .suggest { display: none; position: absolute; left: 12px; right: 12px; z-index: 20; padding: 6px; background: var(--c-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); }
+  .suggest[data-open="true"] { display: block; }
+  .suggest button { display: block; width: 100%; padding: 7px 8px; border: 0; border-radius: 5px; background: transparent; color: var(--c-text); text-align: left; }
+  .suggest button:hover, .suggest button[aria-selected="true"] { background: var(--c-surface-2); }
 </style>
 </head>
 <body>
@@ -85,7 +90,8 @@
   </header>
   <div class="msearch">
     <label class="sr-only" for="q">Search by TMK or street</label>
-    <div class="field"><svg class="ico faint"><use href="#i-search"/></svg><input id="q" value="3-7-004:006" autocomplete="off"></div>
+    <div class="field"><svg class="ico faint"><use href="#i-search"/></svg><input id="q" placeholder="Search TMK or street" value="3-7-004:006" autocomplete="off"></div>
+    <div class="suggest" id="sug" role="listbox" aria-label="Suggestions"></div>
   </div>
   <div class="mmap map" id="map" role="region" aria-label="Parcel map">
     <button class="lbtn" id="lbtn" aria-expanded="false" aria-controls="mlegend"><svg class="ico"><use href="#i-layers"/></svg>Layers</button>
@@ -165,6 +171,7 @@
 
 {{DATA land,roads,streams,waterbodies,zoning,dfirm,tsunami,slr32,sma,slud,mip_growth,cplan,cp_names,parcels,shelters,zone_names}}
 {{MAPJS}}
+{{PARCEL_SEARCH}}
 <script>
 (() => {
   const FEAT = 27904;
@@ -184,6 +191,7 @@
   const info = '<svg class="ico faint"><use href="#i-info"/></svg>';
 
   function render(id) {
+    currentId = id;
     const f = byId.get(id); const p = f.properties; const pt = id === FEAT ? [-156.47016, 20.88951] : center(f);
     const zn = ZN[p.zone] || "Not zoned", cp = p.cp >= 0 ? CPN[p.cp] : null;
     const iS = findIdx({ features: HD.slud.features }, pt), iG = findIdx({ features: HD.mip_growth.features }, pt), iC = findIdx(cplan, pt);
@@ -229,7 +237,7 @@
     document.getElementById("aiUnavailable").hidden = id === FEAT;
     if (map && map.getSource("parcels")) { if (sel != null) map.setFeatureState({ source: "parcels", id: sel }, { sel: false }); sel = id; map.setFeatureState({ source: "parcels", id }, { sel: true }); map.setFilter("parcels-sel", ["==", ["get", "id"], id]); }
   }
-  let sel = null, map = null;
+  let sel = null, map = null, currentId = null;
   map = HM.create(document.getElementById("map"), {
     bounds: [[-156.4775, 20.8855], [-156.463, 20.8935]], padding: 4, roadLabels: false, cooperative: true, navPos: "top-right",
     onload: (m) => {
@@ -241,10 +249,18 @@
       const sh = HD.shelters.features.find((s) => s.properties.name.startsWith("Kahului Elementary"));
       if (sh) { const el = document.createElement("div"); el.className = "mappin shelter"; el.innerHTML = '<svg class="ico"><use href="#i-home"/></svg>'; el.title = "School exercise anchor: Kahului Elementary"; new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(sh.geometry.coordinates).addTo(m); }
       m.on("click", "parcels-fill", (e) => { render(e.features[0].properties.id); document.getElementById("card").scrollIntoView({ behavior: "smooth" }); });
-      render(parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
+      render(currentId ?? parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
     },
   });
   render(parcels.features.find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT);
+  window.HonuaParcelSearch({ input: document.getElementById("q"), list: document.getElementById("sug"), parcels: parcels.features,
+    streets: HM.streetNames(), formatTmk: HM.tmk,
+    onParcel: (parcel) => {
+      render(parcel.properties.id);
+      map?.fitBounds(HM.bbox(parcel.geometry), { padding: 40, maxZoom: 18, duration: 600 });
+    },
+    onStreet: (name) => HM.fitStreet(map, name, 40),
+  });
   const lb = document.getElementById("lbtn"), lg = document.getElementById("mlegend");
   lb.addEventListener("click", () => { const o = lg.dataset.open !== "true"; lg.dataset.open = o; lb.setAttribute("aria-expanded", o); });
   const CITE = { flood: ["flood", "flood-line"], tsunami: ["tsunami", "tsunami-x", "tsunami-line"], shelter: ["tsunami", "tsunami-x", "tsunami-line"], slr: ["slr"], sma: ["sma", "sma-line"], zoning: ["zoning", "zoning-line"] };

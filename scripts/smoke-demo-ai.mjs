@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, expect } from '@playwright/test';
 import { evaluateCapitalProjects } from './lib/capital-project-eval.mjs';
+import { verifyRequestLoop } from './lib/verify-request-loop.mjs';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
 const root = fileURLToPath(new URL('../site/', import.meta.url));
@@ -216,6 +217,7 @@ try {
     const scenarios = [
       ['overview', overview], ['property', (p) => property(p, 'property/')],
       ['property-mobile', propertyMobile], ['311', requests],
+      ['311-linked-loop', async (p) => { await visit(p, '311/'); return verifyRequestLoop(p); }],
       ['public-works', publicWorks], ['emergency', (p) => emergency(p, 'emergency/')],
       ['emergency-mobile', emergencyMobile], ['workbench', workbench],
     ];

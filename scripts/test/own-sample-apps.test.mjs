@@ -155,7 +155,7 @@ test("a public-live sample must name exactly one data origin", async () => {
   // Attribution and flood-map links are navigation, not data (R13); any other
   // second origin still counts.
   assert.deepEqual(
-    dataOriginsOf(`${PAGE}<a href="https://www.openstreetmap.org/copyright">OSM</a><a href="https://msc.fema.gov/portal">FEMA</a><a href="https://overturemaps.org/">Overture</a><a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a>`),
+    dataOriginsOf(`${PAGE}<a href="https://www.mauicounty.gov/DocumentCenter/View/162348">County source document</a><a href="https://www.openstreetmap.org/copyright">OSM</a><a href="https://msc.fema.gov/portal">FEMA</a><a href="https://overturemaps.org/">Overture</a><a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a>`),
     ["https://demo.honua.io"],
   );
   assert.deepEqual(dataOriginsOf(`${PAGE}<a href="https://maps.example.org/">x</a>`), ["https://demo.honua.io", "https://maps.example.org"]);
