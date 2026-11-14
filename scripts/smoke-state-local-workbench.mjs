@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
-import { startStaticServer } from './lib/browser-lane.mjs';
+import { startSmokeSite } from './lib/smoke-site.mjs';
 
-const server = await startStaticServer({ rootDir: path.resolve('site'), port: 0 });
+const server = await startSmokeSite({ rootDir: path.resolve('site'), baseUrl: process.env.STATE_LOCAL_SMOKE_BASE_URL });
+console.log(`Checking snapshots at ${server.url}`);
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const errors = [];
