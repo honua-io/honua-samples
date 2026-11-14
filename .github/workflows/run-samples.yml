@@ -107,6 +107,21 @@ jobs:
       - name: Run active samples
         run: node scripts/run-samples.mjs --edition ${{ steps.edition.outputs.edition }}
 
+      - name: Verify nightly signed-out gallery theme journeys
+        if: ${{ !cancelled() && github.event_name == 'schedule' }}
+        run: |
+          node scripts/state-local/build-display-site.mjs
+          node scripts/build-gallery.mjs --check
+          npm run test:gallery:themes
+
+      - name: Upload nightly gallery theme evidence
+        if: ${{ always() && github.event_name == 'schedule' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gallery-theme-journeys
+          path: .artifacts/gallery-browser-smoke/themes
+          if-no-files-found: error
+
       - name: Dump honua-server logs on failure
         if: failure()
         run: docker compose ${{ steps.edition.outputs.compose_files }} logs honua

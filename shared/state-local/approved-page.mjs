@@ -1,15 +1,16 @@
 // Preserve the approved mockup shell across public demo pages.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { themeBootstrap } from '../design-system/theme-init.mjs';
 import { withStateLocalEndpoints } from './server.mjs';
 
 export async function approvedPage({ template, assets, data }) {
-  const css = await readFile(path.join(assets, 'tokens.css'), 'utf8') + '\n' + await readFile(path.join(assets, 'app.css'), 'utf8');
+  const css = await readFile(new URL('../design-system/tokens.css', import.meta.url), 'utf8') + '\n' + await readFile(path.join(assets, 'app.css'), 'utf8');
   const icons = await readFile(path.join(assets, 'icons.svg'), 'utf8');
   const island = withStateLocalEndpoints(await readFile(new URL('./island-map.js', import.meta.url), 'utf8'));
   const mapKit = await readFile(new URL('./honua-map.js', import.meta.url), 'utf8');
   const kit = `<script>${island}\n${mapKit}</script>`;
-  const head = `<script>try{var t=localStorage.getItem("honua-theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){document.documentElement.setAttribute("data-theme","light")}</script>
+  const head = `${themeBootstrap}
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">

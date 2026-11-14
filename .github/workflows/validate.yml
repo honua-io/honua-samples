@@ -179,6 +179,9 @@ jobs:
       - name: Verify snapshot-backed state and local routes
         run: node scripts/smoke-state-local-display.mjs
 
+      - name: Verify light and dark gallery journeys
+        run: npm run test:gallery:themes
+
       - name: Run every admitted SDK app
         run: npm run test:gallery:browser
 

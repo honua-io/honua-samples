@@ -309,6 +309,16 @@ internal capability metadata.
 
 Published at [samples.honua.io](https://samples.honua.io) -- **the single canonical Honua
 sample gallery** (decided on [honua-io/honua-samples#3](https://github.com/honua-io/honua-samples/issues/3)).
+The gallery and SDK Explorer use `shared/design-system/tokens.css`, pinned to
+the approved Honua design source identified in that file. Update that shared
+file when advancing the design revision; both builds consume it directly.
+Product pages default to light and share the `honua-theme` browser preference.
+After building the gallery, `npm run test:gallery:themes` checks desktop/mobile
+light and dark views, text contrast, route persistence, and unavailable storage.
+The nightly sample workflow uploads the screenshots and contrast results as
+`gallery-theme-journeys`. The marketing-side rollout is tracked in
+[honua-site#402](https://github.com/honua-io/honua-site/issues/402).
+
 Every deploy runs `node scripts/build-gallery.mjs`, which renders `site/` fresh
 from **two inputs**:
 
