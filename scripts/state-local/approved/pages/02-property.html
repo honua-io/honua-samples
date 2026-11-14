@@ -389,12 +389,9 @@
   // Search
   const q = document.getElementById("q");
   window.HonuaParcelSearch({ input: q, list: document.getElementById("sug"), parcels: parcels.features,
-    streets: Array.from(new Set(HM.get("roads").features.map((f) => f.properties.name).filter(Boolean))).sort(), formatTmk: HM.tmk,
+    streets: HM.streetNames(), formatTmk: HM.tmk,
     onParcel: (parcel) => select(parcel.properties.id, true),
-    onStreet: (name) => {
-      const features = HM.get("roads").features.filter((f) => f.properties.name === name);
-      if (features.length && map) map.fitBounds(HM.bbox({ coordinates: features.map((feature) => feature.geometry.coordinates) }), { padding: 80, maxZoom: 16, duration: 600 });
-    },
+    onStreet: (name) => HM.fitStreet(map, name, 80),
   });
   document.addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); q.select(); } });
   function updateShare(tmk) {
