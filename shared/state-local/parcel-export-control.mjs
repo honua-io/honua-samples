@@ -1,12 +1,6 @@
 import { parcelCsv, parcelGeoJson } from './parcel-export.mjs';
 
-function download(feature, contents, format) {
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(new Blob([contents], { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'application/geo+json' }));
-  link.download = `parcel-${feature.properties.t9}.${format}`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 0);
-}
+import { download } from './download.mjs';
 
 export async function mountParcelExports({ root, selected }) {
   const status = document.createElement('p');
@@ -26,7 +20,7 @@ export async function mountParcelExports({ root, selected }) {
       button.textContent = `Download selected parcel ${label}`;
       button.addEventListener('click', () => {
         const feature = selected();
-        download(feature, serialize([feature], provenance), format);
+        download(`parcel-${feature.properties.t9}.${format}`, serialize([feature], provenance), format);
       });
       return button;
     });

@@ -1,5 +1,6 @@
 import { openPublication, publicationSource } from '@honua/sdk-js/publication';
 import { countyFields, countyParcel, countyTmk } from './county-parcel.mjs';
+import { mountCountyExports, updateCountyExports } from './county-export-control.mjs';
 
 const descriptor = 'https://demo.honua.io/demo-data/publications/maui-county-parcels/20261113T122054Z/descriptor.json';
 const countyLayers = ['county-fill', 'county-line', 'county-selected'];
@@ -7,6 +8,7 @@ const snapshotLayers = ['parcels-fill', 'parcels-line', 'parcels-sel'];
 
 export function mountCountyPublication({ root, map }) {
   const state = { root, map, status: root.querySelector('#countyStatus'), details: root.querySelector('#countyDetails'), publication: null, source: null, loading: null, request: null, sequence: 0 };
+  mountCountyExports(state);
   root.querySelector('#countySearch').addEventListener('submit', (event) => {
     event.preventDefault();
     selectCountyParcel(state, root.querySelector('#countyTmk').value);
@@ -23,6 +25,8 @@ export function mountCountyPublication({ root, map }) {
     try { await connectCounty(state); if (root.open) attachCountyMap(state); }
     catch { state.status.textContent = 'County publication unavailable. Close and reopen this panel to retry. Snapshot data remains available.'; }
   });
+  const sharedTmk = new URL(location.href).searchParams.get('countyTmk');
+  if (sharedTmk !== null) { root.open = true; selectCountyParcel(state, sharedTmk); }
 }
 
 async function connectCounty(state) {
@@ -113,11 +117,13 @@ function countyVisibility(state) {
 
 function clearCountySelection(state) {
   state.selection = null;
+  updateCountyExports(state);
   state.map()?.getSource('county-selection')?.setData({ type: 'FeatureCollection', features: [] });
 }
 
 function showCountySelection(state, feature) {
   state.selection = feature;
+  updateCountyExports(state);
   const map = state.map();
   if (state.mapFailed || !map?.getSource('county-selection')) return;
   map.getSource('county-selection').setData(feature);
