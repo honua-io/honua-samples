@@ -157,10 +157,11 @@ if (published?.proposalId) {
 assert.match(published?.status ?? '', /^accepted$/i, `Publication must be accepted or held for approval: ${JSON.stringify(published).slice(0, 400)}`);
 const source = await readPublication(receipt);
 // Count through the map's own source locator, not the import receipt.
-// The locator may carry the server's public base URL, so compare paths and query this server.
+// The locator may carry the server's public base URL, so compare paths, then query the
+// proven-equal activated layer on this server.
 const sourcePath = `${new URL(source.locator.url, env.baseUrl).pathname.replace(/\/+$/, '')}/${source.locator.layerId}`;
 assert.equal(sourcePath, new URL(active.layerUrl).pathname, 'EM-02: the released map must point at the imported layer');
-const query = await fetch(`${env.baseUrl}${sourcePath}/query?where=1%3D1&returnCountOnly=true&f=json`);
+const query = await fetch(`${active.layerUrl}/query?where=1%3D1&returnCountOnly=true&f=json`);
 assert.equal(query.status, 200, 'EM-02: the map source must stay anonymously queryable');
 assert.equal((await query.json()).count, snapshot.accepted, 'EM-02: public map count must match the imported snapshot');
 await writeFile(receiptPath, JSON.stringify(receipt, null, 2), { mode: 0o600 });
