@@ -4,11 +4,11 @@ import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT } from "./gallery-visual-contract.mjs
 export async function verifyGalleryActions(browser, baseUrl) {
   const visited = new Set();
   for (const viewport of [DESKTOP_VIEWPORT, MOBILE_VIEWPORT]) {
-    await verifyViewport(browser, baseUrl, viewport, visited);
+    await verifyViewport(browser, { baseUrl, viewport, visited });
   }
 }
 
-async function verifyViewport(browser, baseUrl, viewport, visited) {
+async function verifyViewport(browser, { baseUrl, viewport, visited }) {
   const page = await browser.newPage({ viewport });
   try {
     await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
