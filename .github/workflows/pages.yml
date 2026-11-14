@@ -275,6 +275,7 @@ jobs:
 
       - name: Verify every admitted live route and runnable app
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           GALLERY_BASE_URL: https://samples.honua.io
           EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
         run: npm run test:gallery:live
