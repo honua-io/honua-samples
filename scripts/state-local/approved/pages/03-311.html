@@ -253,7 +253,7 @@
       <div class="kpi"><div class="v" style="color:var(--c-danger-ink)">${late}</div><div class="l">Past due, open</div><div class="d">${open.filter((r) => dueIn(r) >= 0 && dueIn(r) < 48).length} more due within 48 h</div></div>`;
   }
   function renderBrief() {
-    const open = reqs.filter(isOpen);
+    const open = base().filter(isOpen);
     const wed = new Date("2026-11-11T23:59");
     const risk = open.filter((r) => r.tdue >= NOW && r.tdue <= wed);
     const late = open.filter((r) => r.tdue < NOW);
@@ -263,7 +263,7 @@
     document.getElementById("brief").innerHTML = `
       <div class="row" style="align-items:baseline;gap:10px"><span class="stat">${risk.length + late.length}</span><span class="muted">open requests will be past SLA by Wednesday unless they move today: ${late.length} already late, ${risk.length} due by Wed 11:59 PM.</span></div>
       <ul>${top.map(([t, n]) => `<li><span><span class="tdot" style="background:${TYPE_COLOR[t]}"></span>${t}</span><span class="num">${n}</span></li>`).join("")}</ul>
-      <p style="margin-top:10px">${drainD4} drainage requests in District 4 cluster near Kahului Elementary and Kaʻahumanu Ave. <button class="cite" data-fly="drain">311 · drainage · D4</button> <button class="cite" data-fly="crew">crews/kahului-drainage</button> Kahului Drainage Crew 1 has 5 open hours on Tuesday.</p>
+      <p style="margin-top:10px">${drainD4} drainage requests in District 4 are in this filtered open queue. <button class="cite" data-fly="drain">311 · drainage · D4</button> <button class="cite" data-fly="crew">crews/kahului-drainage</button> Example crew availability: Kahului Drainage Crew 1 has 5 open hours on Tuesday.</p>
       <div class="row" style="margin-top:10px"><button class="btn sm primary" id="briefOpen">Show these ${risk.length + late.length}</button><button class="btn sm">Propose reassignment</button></div>
       <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Read-only job</span><span><svg class="ico"><use href="#i-check"/></svg>Counts link to the list</span></div>`;
     document.getElementById("briefOpen").onclick = () => { state.riskOnly = true; renderQueue(); document.getElementById("queue").scrollIntoView({ behavior: "smooth" }); };
@@ -354,11 +354,11 @@
       ${isNew || dupes.length ? `<section class="dsec"><div class="ai-card"><div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg>Demo answer · triage proposal<span class="chip warn" style="margin-left:auto">Waiting for dispatcher</span></div><div class="ai-b">
         <ul class="tl" style="margin-top:6px">
           <li class="ai"><b>Possible duplicate</b> of ${dupes.map((d) => `<button class="cite" data-sel="${d.id}">${d.id}</button>`).join(" ") || "none"}: same type, ${dupes.length ? Math.round(m2(dupes[0].c, r.c)) : 0} m away, opened ${dupes.length ? ago(dupes[0].t0) : ""}. Merge and notify both reporters.</li>
-          <li class="ai"><b>Route to</b> Public Works · Engineering → ${CREW[r.dept]}. Nearest asset is inlet <button class="cite" data-asset="1">assets/${asset.id}</button>, condition ${asset.cond}/5, last cleaned ${new Date(asset.insp).toLocaleDateString("en-US", { month: "short", year: "numeric" })}.</li>
-          <li class="ai"><b>Priority P2</b>: inside the tsunami evacuation zone <button class="cite">tsunami/1</button>, ${Math.round(dd(shelter.geometry.coordinates, r.c) / 10) * 10} m from the ${sName} school exercise anchor <button class="cite">shelters/${sName.toLowerCase().replace(/ /g, "-")}</button>, on a walking route to school.</li>
+          <li class="ai"><b>Route to</b> Public Works · Engineering → ${CREW[r.dept]}. Nearest asset is ${asset.kind.toLowerCase()} <button class="cite" data-asset="1">assets/${asset.id}</button>, condition ${asset.cond}/5, last cleaned ${new Date(asset.insp).toLocaleDateString("en-US", { month: "short", year: "numeric" })}.</li>
+          <li class="ai"><b>Example priority P2</b>: ${r.evac ? 'inside the tsunami evacuation zone <button class="cite">tsunami/1</button>' : "outside the tsunami evacuation zone"}, ${Math.round(dd(shelter.geometry.coordinates, r.c) / 10) * 10} m from the ${sName} school exercise anchor <button class="cite">shelters/${sName.toLowerCase().replace(/ /g, "-")}</button>.</li>
         </ul>
         <div class="row" style="margin-top:4px"><button class="btn sm primary" id="acc">Accept all</button><button class="btn sm">Edit</button><button class="btn sm ghost">Dismiss</button></div>
-        <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Nothing changes until you accept</span><span><svg class="ico"><use href="#i-check"/></svg>Logged with your name</span></div>
+        <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Demo approval only</span><span><svg class="ico"><use href="#i-check"/></svg>No records changed</span></div>
       </div></div></section>` : ""}
       <section class="dsec"><h3><svg class="ico faint"><use href="#i-clock"/></svg>SLA · ${r.sla} days</h3>
         <div class="clock"><div class="meter"><span style="width:${pct}%;background:${pct >= 100 ? "var(--c-danger)" : pct > 70 ? "var(--c-warn)" : "var(--c-ok)"}"></span></div><span class="sla ${slaClass(r)}">${slaText(r)}</span></div>
@@ -377,7 +377,7 @@
         <div class="photos" style="margin-top:10px"><div class="photo"><span>Photo 1 · reporter</span></div><div class="photo b"><span>Photo 2 · reporter</span></div><div class="photo"><span>Street view</span></div></div>
         <div class="row" style="margin-top:10px;font-size:13px"><svg class="ico faint"><use href="#i-lock"/></svg><span class="muted">Synthetic reporter · no personal data</span></div></section>
       <section class="dsec"><h3><svg class="ico" style="color:var(--c-ai)"><use href="#i-message"/></svg>Update for the resident</h3>
-        <div class="reply">Aloha, thank you for reporting the blocked drain on ${r.street.replace(/ (Avenue|Street|Road)$/, (m) => m)}. We've matched it to an open report from the same spot and sent it to the Kahului drainage crew. They plan to clean the inlet on <b>Tuesday, November 10</b>. We'll message you when the work is done. Reference ${r.id}.</div>
+        <div class="reply"><b>Example reply · not sent.</b> Aloha, thank you for your ${r.type.toLowerCase()} report on ${r.street}. A dispatcher would review the proposed assignment before any work is scheduled. Reference ${r.id}.</div>
         <p style="margin-top:6px;font-size:12px" class="faint">Draft from <button class="cite">${r.id}</button> <button class="cite">crews/kahului-drainage/2026-11-10</button> · plain language, grade 6</p>
         <div class="row" style="margin-top:8px"><button class="btn sm primary">Approve and send</button><button class="btn sm">Edit</button><span class="faint" style="font-size:12px">Sends by app notification and SMS</span></div></section>
       <section class="dsec"><h3><svg class="ico faint"><use href="#i-route"/></svg>Hand off</h3>
@@ -389,14 +389,14 @@
         <ul class="tl">
           <li><b>Received</b> via ${r.channel}<time>${r.t0.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time></li>
           <li class="ok"><b>Location resolved</b> district ${r.district}, ${asset.id}, crew<time>+84 ms</time></li>
-          <li class="ok"><b>Sent to county CRM</b> webhook 202<time>+1 s</time></li>
+          <li class="ok"><b>Example CRM handoff</b> · no webhook sent<time>+1 s</time></li>
           <li class="ai"><b>Triage proposal</b> by Honua agent<time>+3 s</time></li>
         </ul></section>`;
     drawer.dataset.open = "true"; drawer.setAttribute("aria-hidden", "false"); scrim.dataset.open = "true";
     document.getElementById("dClose").focus();
     if (map && map.getLayer("sel")) { map.setFilter("sel", ["==", ["get", "rid"], r.id]); map.easeTo({ center: r.c, zoom: Math.max(map.getZoom(), 15), duration: 600 }); }
     document.querySelectorAll("#dBody [data-sel]").forEach((b) => (b.onclick = () => openDrawer(b.dataset.sel)));
-    const acc = document.getElementById("acc"); if (acc) acc.onclick = () => { acc.closest(".ai-card").querySelector(".chip").className = "chip ok"; acc.closest(".ai-card").querySelector(".chip").textContent = "Accepted by M. Kahale"; };
+    const acc = document.getElementById("acc"); if (acc) acc.onclick = () => { acc.closest(".ai-card").querySelector(".chip").className = "chip ok"; acc.closest(".ai-card").querySelector(".chip").textContent = "Demo approval · no records changed"; };
   }
   function closeDrawer() { drawer.dataset.open = "false"; drawer.setAttribute("aria-hidden", "true"); scrim.dataset.open = "false"; }
   document.getElementById("dClose").onclick = closeDrawer; scrim.onclick = closeDrawer;
@@ -405,11 +405,11 @@
   document.getElementById("qBody").addEventListener("keydown", (e) => { const tr = e.target.closest("tr"); if (tr && e.key === "Enter") openDrawer(tr.dataset.id); });
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-fly]"); if (b && map) map.fitBounds([[-156.481, 20.873], [-156.462, 20.888]], { duration: 700 }); });
 
-  function render() { const rs = filtered(); renderKpis(rs); renderRoute(rs); renderTrend(); renderSla(rs); renderDist(); renderQueue(); renderMap(rs); }
+  function render() { const rs = filtered(); renderKpis(rs); renderRoute(rs); renderTrend(); renderSla(rs); renderDist(); renderBrief(); renderQueue(); renderMap(rs); }
   document.querySelectorAll("[data-days]").forEach((b) => b.addEventListener("click", () => { state.days = +b.dataset.days; render(); }));
   document.getElementById("fType").onchange = (e) => { state.type = e.target.value; render(); };
   document.getElementById("fDist").onchange = (e) => { state.dist = e.target.value; render(); };
-  renderBrief(); render();
+  render();
   if (HM.hashParams().has("triage")) setTimeout(() => openDrawer(incoming.id), 400);
 })();
 </script>
