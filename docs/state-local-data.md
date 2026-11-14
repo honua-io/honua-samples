@@ -130,9 +130,12 @@ The script resolves exactly one active department folder, uploads GeoJSON throug
 managed connection API with its folder ID, attribution, licence and snapshot hash.
 Runs create unique table/service names and are not idempotent. Inspect Console
 before retrying a failed import; tables or jobs can remain behind.
-Background completion currently stops at the missing physical-table receipt
-([tracked server issue](https://github.com/honua-io/honua-server/issues/7217));
-synchronous imports can continue. No database credentials belong in browser code.
+Background imports are polled to completion. Publication requires a returned schema,
+physical table name, matching job/table identity and the selected managed connection,
+plus the exact expected feature count. Older candidates without the completed-job
+receipt stop for Console inspection; the helper never derives a physical table name
+from the logical name ([server receipt change](https://github.com/honua-io/honua-server/issues/7217)).
+Failed or cancelled jobs stop before publication. No database credentials belong in browser code.
 
 After staging, the CLI verifies the disabled layer's table, service, snapshot hash
 and department folder, then saves a private `<source>.deployment.json` receipt
@@ -248,3 +251,18 @@ physical table and service first. Never retry from a fresh artifact directory.
 Activation first checks every layer receipt, then enables anonymous reads and
 verifies public metadata. Rollback disables only verified owned layers; it does
 not delete tables or alter unrelated publications. Keep failed-run artifacts too.
+
+### Public works capital funding snapshot
+
+The capital view uses three FY 2026 Council-adopted Public Works CIP records from
+[County of Maui project sheets](https://www.mauicounty.gov/DocumentCenter/View/155200/000-FY-2026-Program-Budget-Combined),
+pp. 1031–1032, 1037–1038 and 1047–1048. It is a selected historical funding snapshot,
+not the complete capital plan or current project status. `capital-project-data.mjs`
+retains project IDs, source pages and `data_origin=county_published` in CSV exports.
+Whole-project FY appropriations are counted once even when several planned activity
+phases match. Dates, actual costs and completion status are unavailable in this funding
+snapshot, so the scripted answer cannot determine overruns or delays.
+Countywide shading and an existing Waiale road reference use the map's published
+geometry; they are not construction footprints or a proposed extension alignment.
+Missing road references remain explicitly unmapped. Inspection records retain their
+existing demo labels and workflow when switching views.

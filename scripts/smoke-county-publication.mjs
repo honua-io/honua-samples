@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
@@ -36,6 +37,7 @@ async function verifyEarlyOpen(browser, url) {
   await page.getByLabel('County TMK', { exact: true }).fill('238007001');
   await page.getByRole('button', { name: 'Find county parcel', exact: true }).click();
   await expect(page.locator('#countyStatus')).toContainText('County TMK 238007001 · GeoParquet details', { timeout: 30000 });
+  await verifyExportsBeforeMap(page);
   await page.evaluate(() => { window.__finishSnapshot(); window.__parcelMap.fire('load'); });
   await expect.poll(() => page.evaluate(() => window.__parcelMap.getSource('county-selection')?._data?.properties?.tmk_txt)).toBe('238007001');
   await expect.poll(() => page.evaluate(() => Boolean(window.__parcelMap.getLayer('county-fill')))).toBe(true);
@@ -73,6 +75,36 @@ async function verifyLookup(page) {
   await expect.poll(() => page.evaluate(() => window.__parcelMap.getSource('county-selection')._data?.properties?.tmk_txt)).toBe(tmk);
 }
 
+async function verifyExportsBeforeMap(page) {
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download county GeoJSON', exact: true }).click();
+  const contents = JSON.parse(await readFile(await (await pending).path(), 'utf8'));
+  assert.equal(contents.features[0].properties.tmk_txt, '238007001');
+}
+
+async function verifyExports(page) {
+  const tmk = await page.locator('#countyTmk').inputValue();
+  for (const format of ['CSV', 'GeoJSON']) {
+    const pending = page.waitForEvent('download');
+    await page.getByRole('button', { name: `Download county ${format}`, exact: true }).click();
+    const downloaded = await pending;
+    assert.equal(downloaded.suggestedFilename(), `county-parcel-${tmk}.${format.toLowerCase()}`);
+    const contents = await readFile(await downloaded.path(), 'utf8');
+    assert.ok(contents.includes(tmk));
+    assert.ok(contents.includes('2026-11-13T12:20:54.318Z'));
+    assert.ok(contents.includes('public-domain'));
+    assert.ok(!/homeowner|landvalue|bldgvalue/.test(contents));
+    if (format === 'GeoJSON') assert.equal(JSON.parse(contents).features[0].geometry.type, 'MultiPolygon');
+  }
+  const href = await page.locator('#countyShare').getAttribute('href');
+  assert.equal(new URL(href).searchParams.get('countyTmk'), tmk);
+  const shared = await page.context().browser().newPage({ viewport: page.viewportSize() });
+  await shared.goto(href);
+  await expect(shared.locator('#countyStatus')).toContainText(`County TMK ${tmk} · GeoParquet details`, { timeout: 30000 });
+  await expect(shared.getByRole('button', { name: 'Download county CSV', exact: true })).toBeEnabled();
+  await shared.close();
+}
+
 async function verifyCloseAndFailure(page) {
   await page.locator('#countyHeading').click();
   await expect.poll(() => page.evaluate(() => window.__parcelMap.getLayoutProperty('parcels-fill', 'visibility'))).toBe('visible');
@@ -84,6 +116,8 @@ async function verifyCloseAndFailure(page) {
   await page.getByRole('button', { name: 'Find county parcel', exact: true }).click();
   await expect(page.locator('#countyStatus')).toContainText('County lookup unavailable', { timeout: 30000 });
   await expect(page.locator('#countyDetails dd')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Download county CSV', exact: true })).toBeDisabled();
+  await expect(page.locator('#countyShare')).toBeHidden();
   await page.getByLabel('County TMK', { exact: true }).fill('123');
   await page.getByRole('button', { name: 'Find county parcel', exact: true }).click();
   await expect(page.locator('#countyStatus')).toContainText('nine-digit TMK');
@@ -135,6 +169,7 @@ try {
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
     await loadPage(page, `${server.url}/state-local/${route}/`);
     await verifyLookup(page);
+    await verifyExports(page);
     await page.locator('#countyPublication').scrollIntoViewIfNeeded();
     await page.screenshot({ path: `/tmp/s-backlog-clients-county-${width}.png`, fullPage: true });
     await verifyCloseAndFailure(page);

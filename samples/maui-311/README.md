@@ -30,6 +30,7 @@ Build and run the repository gallery (shared fonts, theme and logos are gallery 
 
 ```sh
 npm ci
+node scripts/state-local/build-display-site.mjs
 node scripts/build-gallery.mjs --check
 npm ci --prefix samples/maui-311
 npm run build --prefix samples/maui-311

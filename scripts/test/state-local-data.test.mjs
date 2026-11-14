@@ -42,9 +42,13 @@ async function deploymentFixture(t) {
   const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
   const staged = { source: "basins", serviceName: "basins-test", folderId: "works-folder",
     layerId: 7, enabled: false, schema: "honua_data", table: "managed_basins", cleanSha256: receipt.cleanSha256 };
-  const state = { layer: { ...staged, description: `SHA-256 ${receipt.cleanSha256}` }, folderId: staged.folderId, writes: 0, policyWrites: 0, policy: { allowAnonymous: true, allowAnonymousWrite: true }, publicId: 7, publicStatus: 200, folderName: "public-works", publicName: "public-basins", serviceMissing: false };
+  const state = { layer: { ...staged, layerName: "basins", description: `SHA-256 ${receipt.cleanSha256}` }, folderId: staged.folderId, writes: 0, policyWrites: 0, policy: { allowAnonymous: true, allowAnonymousWrite: true }, publicId: 7, publicStatus: 200, folderName: "public-works", publicName: "public-basins", serviceMissing: false };
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
+    if (url.pathname.endsWith("/FeatureServer")) {
+      assert.equal(options, undefined, "public request must not carry admin credentials");
+      return response({ layers: [{ id: 7, name: state.listedName ?? "basins" }] }, state.publicStatus);
+    }
     if (url.pathname.includes("/FeatureServer/")) {
       assert.equal(options, undefined, "public request must not carry admin credentials");
       return response({ id: state.publicId }, state.publicStatus);
@@ -80,6 +84,7 @@ test("deployment activation rechecks table, snapshot, service and department bef
   const options = { name: "basins", directory: output };
   const active = await activateDeployment(env, options);
   assert.equal(active.layerUrl, "https://server.test/rest/services/public-works/public-basins/FeatureServer/7");
+  assert.equal(active.serviceLayerIndex, 7);
   assert.equal(active.enabled, true);
   await activateDeployment(env, options);
   assert.equal(state.writes, 1);
@@ -122,6 +127,10 @@ test("deployment rejects inaccessible public routes and missing department paths
   state.publicStatus = 200;
   state.publicId = 8;
   await assert.rejects(activateDeployment(env, options), /Anonymous public layer/);
+  state.publicId = 7;
+  state.listedName = "other-layer";
+  await assert.rejects(activateDeployment(env, options), /public layer index/);
+  state.listedName = undefined;
   const file = path.join(output, "basins.deployment.json");
   const receipt = JSON.parse(await readFile(file, "utf8"));
   await writeFile(file, JSON.stringify({ ...receipt, cleanSha256: "changed" }));
@@ -276,6 +285,28 @@ test("stage follows completed async publication and rejects failed or enabled re
   await assert.rejects(stageSnapshot(env, options), /disabled layer/);
 });
 
+test("stage reads the rc.2 storageLayerId from sync and async publication", async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot("basins", output);
+  const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
+  const options = { name: "basins", directory: output, connection: "managed" };
+  let asynchronous = true;
+  globalThis.fetch = async (input) => {
+    const url = new URL(input);
+    if (url.pathname.endsWith("/folders")) return folders();
+    if (url.pathname.endsWith("/import/upload")) return response({ featureCount: 1, physicalTableName: "basins" });
+    if (url.pathname.endsWith("/jobs/job-id")) return response({ data: { status: "Completed", storageLayerId: 19 } });
+    // A storage handle must win over any other numeric id in the same record.
+    if (url.searchParams.has("serviceName")) return response({ data: [{ storageLayerId: 19, serviceLayerIndex: 2, enabled: false }] });
+    return asynchronous ? response({ data: { jobId: "job-id" } }, 202)
+      : response({ data: { storageLayerId: 23, layerName: "basins", enabled: false } }, 201);
+  };
+  assert.equal((await stageSnapshot(env, options)).layerId, 19);
+  asynchronous = false;
+  assert.equal((await stageSnapshot(env, options)).layerId, 23);
+});
+
 
 test("all geometry readers minimise fields and reject invalid 311 coordinates", () => {
   const privateFields = { owner: "omit", applicant: "omit", contractors: "omit", description: "omit", comments: "omit" };
@@ -324,6 +355,53 @@ test("background upload polls terminal state and never guesses a physical table"
     await assert.rejects(stageSnapshot(env, options), status === 2 ? /physical table receipt/ : /import failed or cancelled/i);
     assert.deepEqual(paths, ["/api/v1/admin/import/upload", "/api/v1/admin/import/jobs/upload-job"]);
   }
+});
+
+
+function completedReceiptFetch(state) {
+  return async (input, request) => {
+    const url = new URL(input);
+    if (url.pathname.endsWith("/folders")) return folders();
+    if (url.pathname.endsWith("/upload")) {
+      state.expectedTable = request.body.get("TableName");
+      return response({ jobId: "upload-job", statusUrl: "https://untrusted.test" }, 202);
+    }
+    if (url.pathname.endsWith("/jobs/upload-job")) return response({
+      jobId: "upload-job", status: 2, tableName: state.expectedTable, featuresProcessed: 1,
+      schema: "import_schema", physicalTableName: "physical_import_table", connectionId: "managed", ...state.changes,
+    });
+    assert.equal(url.pathname, "/api/v1/admin/connections/managed/layers");
+    const body = JSON.parse(request.body);
+    assert.equal(body.schema, "import_schema");
+    assert.equal(body.table, "physical_import_table");
+    assert.equal(body.enabled, false);
+    state.published++;
+    return response({ data: { storageLayerId: 19, enabled: false } });
+  };
+}
+
+test("background import publishes only the completed receipt for this job, table and connection", async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot("basins", output);
+  const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
+  const options = { name: "basins", directory: output, connection: "managed" };
+  const state = { changes: {}, published: 0 };
+  globalThis.fetch = completedReceiptFetch(state);
+  for (const status of [2, "Completed"]) {
+    state.changes = { status };
+    assert.equal((await stageSnapshot(env, options)).table, "physical_import_table");
+  }
+  assert.equal(state.published, 2);
+  for (const invalid of [
+    { schema: null }, { physicalTableName: " " }, { jobId: "another-job" },
+    { tableName: "another-table" }, { connectionId: null }, { connectionId: "other" },
+    { featuresProcessed: 2 },
+  ]) {
+    state.changes = invalid;
+    await assert.rejects(stageSnapshot(env, options), /physical table receipt|receipt does not match|feature count/);
+  }
+  assert.equal(state.published, 2, "invalid receipts must never reach publication");
 });
 
 

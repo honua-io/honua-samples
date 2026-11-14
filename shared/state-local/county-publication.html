@@ -11,6 +11,12 @@
     <p id="countyStatus" role="status">Open this panel to connect to the county publication.</p>
     <p id="countyMapStatus" role="status"></p>
     <dl id="countyDetails" class="dl"></dl>
+    <fieldset id="countyExports" disabled>
+      <legend>Selected county parcel</legend>
+      <button class="btn sm" type="button" data-county-export="csv">Download county CSV</button>
+      <button class="btn sm" type="button" data-county-export="geojson">Download county GeoJSON</button>
+    </fieldset>
+    <a id="countyShare" hidden>Share selected county parcel</a>
     <p><a href="https://demo.honua.io/demo-data/publications/maui-county-parcels/20261113T122054Z/descriptor.json" target="_blank" rel="noopener">Publication descriptor and source provenance</a>. Published 13 November 2026; not a current legal boundary survey. Close this panel to return to the snapshot parcel map.</p>
   </details>
 </section>

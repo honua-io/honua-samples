@@ -53,7 +53,7 @@ export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https
 // Sites a sample only links to (attribution and the official flood map), never
 // fetches from (R13). They are not data origins. The browser verify lanes
 // assert at runtime that no request goes to them.
-export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://msc.fema.gov", "https://publicweb1.co.maui.hi.us", "https://overturemaps.org", "https://opendatacommons.org"]);
+export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://www.mauicounty.gov", "https://msc.fema.gov", "https://publicweb1.co.maui.hi.us", "https://overturemaps.org", "https://opendatacommons.org"]);
 
 // Apps importing the shared server setting read from the configured server, not the source default.
 const SERVER_SETTING_IMPORT = /\bfrom\s+["'][^"']*shared\/state-local\/(?:server|binding)\.mjs["']/u;

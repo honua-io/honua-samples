@@ -1,3 +1,4 @@
+import { download } from './download.mjs';
 import { createRequestStore, requestStatuses, requestNotice, triageSuggestion, openRequestsCsv } from './request-records.mjs';
 
 const root = document.querySelector('#request-loop');
@@ -87,10 +88,7 @@ form.onsubmit = async event => {
 root.querySelectorAll('[data-request-tab]').forEach(button => { button.onclick = () => showTab(button.dataset.requestTab); });
 search.oninput = render;
 query('[data-reset]').onclick = () => { store.reset(); search.value = ''; query('[data-submit-message]').textContent = 'Demo session reset.'; render(); };
-query('[data-export]').onclick = () => {
-  const url = URL.createObjectURL(new Blob([openRequestsCsv(store.records())], { type: 'text/csv;charset=utf-8' }));
-  const link = element('a', ''); link.href = url; link.download = 'demo-open-requests.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-};
+query('[data-export]').onclick = () => download('demo-open-requests.csv', openRequestsCsv(store.records()), 'csv');
 [...new Set(store.records().map(row => row.type))].sort().forEach(type => form.elements.type.add(new Option(type, type)));
 render();
 let resetAt = store.resetAt();
