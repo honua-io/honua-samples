@@ -87,6 +87,7 @@ import {
   movedEntries,
   publicSampleIds,
 } from "./lib/gallery-public-portfolio.mjs";
+import { renderGalleryActions } from "./lib/gallery-actions.mjs";
 import { DATA_MODE_LABELS } from "./lib/data-mode-labels.mjs";
 import { buildStateLocalSite, validateStateLocalLinks } from "./state-local/build-site.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
@@ -899,7 +900,7 @@ function renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommi
 </section>
 <section id="journeys" class="starter-section" aria-labelledby="journeys-heading">
   <div class="section-heading"><div><p class="eyebrow">Use-case journeys</p><h2 id="journeys-heading">Start with a county job.</h2></div><p>Each journey is a complete county workflow on Maui data.</p></div>
-  <div class="starter-grid">${STATE_LOCAL_JOURNEYS.map(renderJourneyCard).join("\n")}</div>
+  <div class="starter-grid">${STATE_LOCAL_JOURNEYS.map((journey, index) => renderJourneyCard(journey, index, sourceCommit)).join("\n")}</div>
 </section>
 <section id="build" class="catalog-section" aria-labelledby="build-heading">
   <div class="catalog-heading"><div><p class="eyebrow">Build it yourself</p><h2 id="build-heading">Code samples by task.</h2></div><div class="catalog-search"><label for="filter-search">Search samples</label><input id="filter-search" type="search" placeholder="Try: OGC, tiles, geoprocessing..." autocomplete="off" /><kbd>/</kbd></div></div>
@@ -929,12 +930,21 @@ function renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommi
   });
 }
 
-function renderJourneyCard(journey, index) {
-  return `<a class="starter-card" href="${escapeAttr(journey.path)}">
+function renderJourneyCard(journey, index, sourceCommit) {
+  const sourcePaths = {
+    property: "samples/county-parcel-viewer", "311": "samples/maui-311",
+    emergency: "samples/maui-emergency", "public-works": "samples/maui-public-works",
+    workbench: "samples/maui-workbench", switching: "scripts/state-local/approved/09-switching.html",
+  };
+  const slug = journey.path.split("/").filter(Boolean).at(-1);
+  const sourcePath = sourcePaths[slug];
+  const sourceUrl = `https://github.com/${OWN_REPO}/${sourcePath.endsWith(".html") ? "blob" : "tree"}/${sourceCommit}/${sourcePath}`;
+  return `<article class="starter-card" data-id="journey-${slug}">
   <span class="starter-number">${String(index + 1).padStart(2, "0")}</span><span class="starter-eyebrow">${escapeHtml(journey.eyebrow)}</span>
-  <h3>${escapeHtml(journey.title)}</h3><p>${escapeHtml(journey.summary)}</p>
-  <span class="starter-meta">Maui County <b>Open journey &rarr;</b></span>
-</a>`;
+  <h3><a href="${escapeAttr(journey.path)}">${escapeHtml(journey.title)}</a></h3><p>${escapeHtml(journey.summary)}</p>
+  <span class="starter-meta">Maui County</span>
+  ${renderGalleryActions({ openUrl: journey.path, sourceUrl })}
+</article>`;
 }
 
 function renderFilterPanel(cards, keyByKey) {
@@ -1024,9 +1034,11 @@ function renderCard(card) {
     : card.track
       ? escapeHtml(card.track)
       : "SDK example";
-  const actions = card.contentKind === "project"
-    ? `<a class="card-open" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">${card.kind === "job" ? "Open governed project contract" : "Open project source"} &nearr;</a><a href="${card.detailPath}">Project overview &rarr;</a>`
-    : `<a class="card-open" href="${card.detailPath}">${runnable ? "Run and view code" : "View code"} &rarr;</a><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">GitHub &nearr;</a>`;
+  const actions = renderGalleryActions({
+    openUrl: runnable ? card.detailPath : null,
+    sourceUrl: card.githubUrl,
+    unavailableReason: "This sample has no published browser app. Open its overview for local run instructions.",
+  });
   return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")} ${(card.searchAliases ?? []).join(" ")}`)}">
   <div class="card-topline"><span class="content-kind-label kind-${escapeAttr(card.contentKind)}">${escapeHtml(contentKind.singular)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
@@ -1040,7 +1052,7 @@ function renderCard(card) {
     ${card.auth ? chip(card.auth) : ""}
   </div>
   <div class="card-evidence">${runnableBadge}${extra}</div>
-  <div class="card-actions">${actions}</div>
+  ${actions}
 </article>`;
 }
 
