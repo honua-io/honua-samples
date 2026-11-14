@@ -29,5 +29,5 @@
     "type": "node",
     "command": "node src/run.mjs"
   },
-  "status": "active"
+  "status": "draft"
 }

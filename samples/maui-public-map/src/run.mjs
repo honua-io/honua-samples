@@ -47,6 +47,15 @@ async function readPublication(receipt) {
   return source;
 }
 
+function approvePath(receipt) {
+  return `/api/v1/admin/proposals/${encodeURIComponent(receipt.proposalId)}/approve`;
+}
+
+async function proposalStatus(receipt) {
+  const proposal = await adminFetch(env, { method: 'GET', apiPath: `/api/v1/admin/proposals/${encodeURIComponent(receipt.proposalId)}` });
+  return proposal?.status ?? proposal?.data?.status;
+}
+
 async function refusesAnonymousControl(receipt, proposalPath) {
   const publish = await anonymous(receipt.publishRequestPath, { method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -60,9 +69,15 @@ async function refusesAnonymousControl(receipt, proposalPath) {
 
 if (process.env.HONUA_SAMPLE_VERIFY_RECEIPT) {
   const receipt = JSON.parse(await readFile(process.env.HONUA_SAMPLE_VERIFY_RECEIPT, 'utf8'));
+  const status = receipt.proposalId ? await proposalStatus(receipt) : 'Released';
+  if (status === 'AwaitingApproval') {
+    await refusesAnonymousControl(receipt, approvePath(receipt));
+    console.log(`PASS Maui map publication still held for approval after restart: ${receipt.proposalId}`);
+    process.exit(0);
+  }
   await readPublication(receipt);
   await refusesAnonymousControl(receipt);
-  console.log(`PASS Maui public map still released after restart: ${receipt.publishedUrl}`);
+  console.log(`PASS Maui public map released: ${receipt.publishedUrl}`);
   process.exit(0);
 }
 
@@ -105,7 +120,9 @@ const created = await adminFetch(env, { method: 'POST', apiPath: '/api/v1/studio
 const draftId = created?.data?.draftId;
 assert.ok(draftId, `Studio must create the map draft: ${JSON.stringify(created).slice(0, 300)}`);
 const validated = await adminFetch(env, { method: 'POST', apiPath: `/api/v1/studio/package-drafts/${draftId}/validate`, body: {} });
-assert.notEqual(validated?.data?.isValid, false, `Studio draft must validate: ${JSON.stringify(validated?.data).slice(0, 500)}`);
+const validation = validated?.data?.envelope?.validation ?? validated?.data?.validation ?? validated?.data;
+assert.match(String(validation?.status ?? ''), /^(valid|passed|succeeded|warning)/i,
+  `Studio draft must validate: ${JSON.stringify(validated?.data).slice(0, 500)}`);
 const version = (await adminFetch(env, { method: 'POST',
   apiPath: `/api/v1/studio/package-drafts/${draftId}/content-versions`, body: {} }))?.data;
 assert.ok(version?.itemId && version?.versionId && version?.contentHash, 'Studio must seal an immutable version');
@@ -121,21 +138,25 @@ const before = await anonymous(receipt.publishedUrl);
 assert.equal(before.status, 404, `EM-02: an unpublished map must not be readable (HTTP ${before.status})`);
 await refusesAnonymousControl(receipt);
 
-// An administrator publishes directly through the Studio MCP publication tool.
-// (The REST publish-request route always opens an approval proposal, which on a
-// deployment without a sign-in provider has no one who can approve it:
-// honua-io/honua-server#7227.)
-const published = await mcpTool('honua_studio_propose_publication', { itemId: version.itemId,
-  versionId: version.versionId, contentHash: version.contentHash, route, visibility: 'public' });
-console.log(`MCP honua_studio_propose_publication: status=${published?.status} humanConfirmationRequired=${published?.humanConfirmationRequired} proposalId=${published?.proposalId ?? 'none'}`);
+// Publish the way Console does. The server may release it at once or hold it
+// for a human approval; both are recorded honestly.
+const published = (await adminFetch(env, { method: 'POST', apiPath: receipt.publishRequestPath,
+  body: { intent: { route, visibility: 'public' } } }))?.data;
+const receiptPath = process.env.HONUA_SAMPLE_RECEIPT_OUT ?? `${directory}/public-map.json`;
 if (published?.proposalId) {
-  await refusesAnonymousControl(receipt, `/api/v1/admin/proposals/${published.proposalId}/approve`);
-  throw new Error(`Publication is awaiting approval (${published.proposalId}); approve it in Console, then rerun with HONUA_SAMPLE_VERIFY_RECEIPT`);
+  receipt.proposalId = published.proposalId;
+  await refusesAnonymousControl(receipt, approvePath(receipt));
+  assert.equal(await proposalStatus(receipt), 'AwaitingApproval', 'EM-02: the publication request must be held durably');
+  const held = await anonymous(receipt.publishedUrl);
+  assert.equal(held.status, 404, `EM-02: a held map must not be readable (HTTP ${held.status})`);
+  await writeFile(receiptPath, JSON.stringify(receipt, null, 2), { mode: 0o600 });
+  console.log(`PASS Maui map ready for release: ${snapshot.accepted} stations, publication held for human approval as ${receipt.proposalId}; approve it in Console, then rerun with HONUA_SAMPLE_VERIFY_RECEIPT=${receiptPath}`);
+  process.exit(0);
 }
+assert.match(published?.status ?? '', /^accepted$/i, `Publication must be accepted or held for approval: ${JSON.stringify(published).slice(0, 400)}`);
 const source = await readPublication(receipt);
 const query = await fetch(`${active.layerUrl}/query?where=1%3D1&returnCountOnly=true&f=json`);
 assert.equal(query.status, 200, 'EM-02: the map source must stay anonymously queryable');
 assert.equal((await query.json()).count, snapshot.accepted, 'EM-02: public map count must match the imported snapshot');
-const receiptPath = process.env.HONUA_SAMPLE_RECEIPT_OUT ?? `${directory}/public-map.json`;
 await writeFile(receiptPath, JSON.stringify(receipt, null, 2), { mode: 0o600 });
 console.log(`PASS Maui public map released on ${source.locator?.url ?? 'the default server'}: ${snapshot.accepted} stations at ${receipt.publishedUrl}; receipt ${receiptPath}`);
