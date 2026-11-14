@@ -42,6 +42,13 @@ Switching describe AI capabilities but do not show generated record-count
 answers. Changes that add an answer must extend this inventory and its browser
 checks before claiming that answer is covered.
 
+The public works capital evaluation checks phase/district intersections (including
+empty results), on-screen whole-project funding totals, exact answer project IDs,
+map reference IDs, filtered CSV provenance, and restoration of the inspection plan.
+It runs at both desktop and mobile widths in the nightly demo AI evaluation. Missing
+actual costs and completion status must produce an explicit inability to assess
+budget overruns or delays, rather than an inferred project status.
+
 Property snapshot exports are checked by `scripts/smoke-parcel-exports.mjs`, included in the display browser gate. Both layouts download the currently selected parcel as CSV and GeoJSON with snapshot date, attribution, source licences and warnings; a missing source manifest makes downloads unavailable. These browser checks cover the scripted snapshot experience, not a live backend pass.
 
 The parcel browser regression checks zoning filters and acreage totals against the snapshot, row selection linked to parcel exports, map filters, pagination, and zoning plus parcel state after reloading a shared link on both layouts. It also verifies the explicit outside-filter selection message.
