@@ -48,6 +48,18 @@ async function publishedLayer(env, publication) {
   throw new Error("Layer publication still pending; inspect Console before retrying");
 }
 
+function validatedImportReceipt(job, uploaded, snapshot) {
+  if (typeof job.physicalTableName !== "string" || !job.physicalTableName.trim()
+    || typeof job.schema !== "string" || !job.schema.trim()) {
+    throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
+}
+if (job.jobId !== uploaded.jobId || job.tableName !== snapshot.tableName
+  || !snapshot.connection || job.connectionId !== snapshot.connection) {
+  throw new Error(`Import receipt does not match this job, table and managed connection; inspect Console job ${uploaded.jobId} before publishing`);
+}
+return { ...job, featureCount: job.featuresProcessed };
+}
+
 async function completedUpload(env, uploaded, snapshot) {
   if (!uploaded?.jobId) return uploaded;
   const apiPath = `/api/v1/admin/import/jobs/${encodeURIComponent(uploaded.jobId)}`;
@@ -58,15 +70,7 @@ async function completedUpload(env, uploaded, snapshot) {
       throw new Error(`Import failed or cancelled; inspect Console job ${uploaded.jobId} before retrying`);
     }
     if ([2, "Completed"].includes(job?.status)) {
-      if (typeof job.physicalTableName !== "string" || !job.physicalTableName.trim()
-        || typeof job.schema !== "string" || !job.schema.trim()) {
-        throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
-      }
-      if (job.jobId !== uploaded.jobId || job.tableName !== snapshot.tableName
-        || !snapshot.connection || job.connectionId !== snapshot.connection) {
-        throw new Error(`Import receipt does not match this job, table and managed connection; inspect Console job ${uploaded.jobId} before publishing`);
-      }
-      return { ...job, featureCount: job.featuresProcessed };
+      return validatedImportReceipt(job, uploaded, snapshot);
     }
     await setTimeout(500);
   }
