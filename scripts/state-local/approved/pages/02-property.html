@@ -14,7 +14,7 @@
   .suggest { position: absolute; left: 0; right: 0; top: 40px; z-index: 20; background: var(--c-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 6px; display: none; }
   .suggest[data-open="true"] { display: block; }
   .suggest button { display: flex; width: 100%; gap: 10px; align-items: center; border: 0; background: transparent; text-align: left; padding: 7px 8px; border-radius: 5px; font-size: 13px; }
-  .suggest button:hover, .suggest button:focus-visible { background: var(--c-surface-2); }
+  .suggest button:hover, .suggest button:focus-visible, .suggest button[aria-selected="true"] { background: var(--c-surface-2); }
   .suggest .k { color: var(--c-text-3); font-size: 12px; margin-left: auto; }
   .ph-title { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
   .ph-sub { color: var(--c-text-2); margin-top: 3px; font-size: 13px; }
@@ -254,6 +254,7 @@
 
 {{DATA land,roads,contours,streams,waterbodies,zoning,dfirm,tsunami,slr32,parcels,shelters,zone_names,slud,sma,mip_growth,cplan,cp_names}}
 {{MAPJS}}
+{{PARCEL_SEARCH}}
 <script>
 (() => {
   const FEAT = 27904;
@@ -364,23 +365,14 @@
   document.querySelectorAll("[data-cite]").forEach((b) => b.addEventListener("click", () => CITE[b.dataset.cite] && CITE[b.dataset.cite]()));
 
   // Search
-  const q = document.getElementById("q"), sug = document.getElementById("sug");
-  const streets = [...new Set(HM.get("roads").features.map((f) => f.properties.name).filter(Boolean))].sort();
-  function suggest() {
-    const v = q.value.trim().toLowerCase(); const digits = v.replace(/\D/g, "");
-    if (!v) { sug.dataset.open = false; q.setAttribute("aria-expanded", "false"); return; }
-    const ps = digits.length >= 3 ? parcels.features.filter((f) => String(f.properties.t9).includes(digits)).slice(0, 5) : [];
-    const ss = streets.filter((s) => s.toLowerCase().includes(v)).slice(0, 4);
-    sug.innerHTML = ps.map((f) => `<button role="option" data-id="${f.properties.id}"><svg class="ico faint"><use href="#i-map"/></svg>TMK ${HM.tmk(f.properties.t9)}<span class="k">${ZN[f.properties.zone] || ""}</span></button>`).join("") +
-      ss.map((s) => `<button role="option" data-street="${s}"><svg class="ico faint"><use href="#i-route"/></svg>${s}<span class="k">Street</span></button>`).join("") || `<div class="muted" style="padding:8px">No matches in Kahului.</div>`;
-    sug.dataset.open = true; q.setAttribute("aria-expanded", "true");
-  }
-  q.addEventListener("input", suggest); q.addEventListener("focus", suggest);
-  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) sug.dataset.open = false; });
-  sug.addEventListener("click", (e) => {
-    const b = e.target.closest("button"); if (!b) return; sug.dataset.open = false;
-    if (b.dataset.id) { select(+b.dataset.id, true); q.value = b.textContent.replace(/^TMK /, "").split(/[A-Z]-|R-|M-|P-/)[0]; }
-    if (b.dataset.street) { const fs = HM.get("roads").features.filter((f) => f.properties.name === b.dataset.street); let bb = [[180, 90], [-180, -90]]; fs.forEach((f) => { const x = HM.bbox(f.geometry); bb = [[Math.min(bb[0][0], x[0][0]), Math.min(bb[0][1], x[0][1])], [Math.max(bb[1][0], x[1][0]), Math.max(bb[1][1], x[1][1])]]; }); map.fitBounds(bb, { padding: 80, maxZoom: 17, duration: 700 }); q.value = b.dataset.street; }
+  const q = document.getElementById("q");
+  window.HonuaParcelSearch({ input: q, list: document.getElementById("sug"), parcels: parcels.features,
+    streets: Array.from(new Set(HM.get("roads").features.map((f) => f.properties.name).filter(Boolean))).sort(), formatTmk: HM.tmk,
+    onParcel: (parcel) => select(parcel.properties.id, true),
+    onStreet: (name) => {
+      const features = HM.get("roads").features.filter((f) => f.properties.name === name);
+      if (features.length && map) map.fitBounds(HM.bbox({ coordinates: features.map((feature) => feature.geometry.coordinates) }), { padding: 80, maxZoom: 16, duration: 600 });
+    },
   });
   document.addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); q.select(); } });
   function updateShare(tmk) {
