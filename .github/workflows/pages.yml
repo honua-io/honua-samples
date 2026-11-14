@@ -258,6 +258,8 @@ jobs:
 
   verify-live:
     name: verify deployed gallery
+    permissions:
+      contents: read
     needs: deploy
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
