@@ -6,6 +6,14 @@ export function serverEnv() {
   return { baseUrl, adminApiKey };
 }
 
+// Read a response body once, keeping the raw text for error messages.
+export async function readJsonResponse(response) {
+  const text = await response.text();
+  let json;
+  try { json = JSON.parse(text); } catch { json = undefined; }
+  return { text, json };
+}
+
 export async function adminFetchResponse(env, { method, apiPath, body, headers: requestHeaders }) {
   const headers = { ...requestHeaders, "X-API-Key": env.adminApiKey };
   let payload = body;
@@ -15,9 +23,7 @@ export async function adminFetchResponse(env, { method, apiPath, body, headers: 
   }
   const response = await fetch(`${env.baseUrl}${apiPath}`, { method, headers, body: payload,
     signal: AbortSignal.timeout(60_000) });
-  const text = await response.text();
-  let json;
-  try { json = JSON.parse(text); } catch { json = undefined; }
+  const { text, json } = await readJsonResponse(response);
   if (!response.ok || json?.success === false) {
     throw new Error(`${method} ${apiPath} -> HTTP ${response.status}: ${text.slice(0, 500)}`);
   }

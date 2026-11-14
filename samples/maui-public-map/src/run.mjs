@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { adminFetch, serverEnv } from '../../../scripts/lib/admin-api.mjs';
+import { adminFetch, readJsonResponse, serverEnv } from '../../../scripts/lib/admin-api.mjs';
 import { ensureConnection } from '../../../scripts/lib/sample-connection.mjs';
 import { ensureDepartments } from '../../../scripts/state-local/departments.mjs';
 import { fetchSnapshot } from '../../../scripts/state-local/snapshot.mjs';
@@ -18,10 +18,7 @@ const name = 'maui-fire-stations';
 
 async function anonymous(path, init = {}) {
   const response = await fetch(`${env.baseUrl}${path}`, { ...init, signal: AbortSignal.timeout(60_000) });
-  const text = await response.text();
-  let json;
-  try { json = JSON.parse(text); } catch { json = undefined; }
-  return { status: response.status, json, text };
+  return { status: response.status, ...(await readJsonResponse(response)) };
 }
 
 async function mcpTool(name, args) {
@@ -56,6 +53,17 @@ async function proposalStatus(receipt) {
   return proposal?.status ?? proposal?.data?.status;
 }
 
+// A released map must point at the imported layer and serve every snapshot feature.
+async function verifyReleasedSource(receipt, source) {
+  // The locator may carry the server's public base URL, so compare paths, then query the
+  // proven-equal activated layer on this server.
+  const sourcePath = `${new URL(source.locator.url, env.baseUrl).pathname.replace(/\/+$/, '')}/${source.locator.layerId}`;
+  assert.equal(sourcePath, new URL(receipt.layerUrl).pathname, 'EM-02: the released map must point at the imported layer');
+  const query = await fetch(`${receipt.layerUrl}/query?where=1%3D1&returnCountOnly=true&f=json`);
+  assert.equal(query.status, 200, 'EM-02: the map source must stay anonymously queryable');
+  assert.equal((await query.json()).count, receipt.expectedCount, 'EM-02: public map count must match the imported snapshot');
+}
+
 async function refusesAnonymousControl(receipt, proposalPath) {
   const publish = await anonymous(receipt.publishRequestPath, { method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -77,9 +85,9 @@ if (process.env.HONUA_SAMPLE_VERIFY_RECEIPT) {
     console.log(`PASS Maui map publication still held for approval after restart: ${receipt.proposalId}`);
     process.exit(0);
   }
-  await readPublication(receipt);
+  await verifyReleasedSource(receipt, await readPublication(receipt));
   await refusesAnonymousControl(receipt);
-  console.log(`PASS Maui public map released: ${receipt.publishedUrl}`);
+  console.log(`PASS Maui public map released: ${receipt.expectedCount} stations at ${receipt.publishedUrl}`);
   process.exit(0);
 }
 
@@ -131,7 +139,7 @@ assert.ok(version?.itemId && version?.versionId && version?.contentHash, 'Studio
 const route = `/maps/${packageKey}`;
 const receipt = {
   format: 'honua.samples.public-map.v1', baseUrl: env.baseUrl, route, sourceId,
-  layerId: chosen.serviceLayerIndex, itemId: version.itemId, versionId: version.versionId, contentHash: version.contentHash,
+  layerId: chosen.serviceLayerIndex, layerUrl: active.layerUrl, expectedCount: snapshot.accepted, itemId: version.itemId, versionId: version.versionId, contentHash: version.contentHash,
   publishRequestPath: `/api/v1/studio/content-items/${version.itemId}/versions/${version.versionId}/publish-requests`,
   publishedUrl: `/api/v1/studio/published/maps/${encodeURIComponent(packageKey)}`,
 };
@@ -156,13 +164,6 @@ if (published?.proposalId) {
 }
 assert.match(published?.status ?? '', /^accepted$/i, `Publication must be accepted or held for approval: ${JSON.stringify(published).slice(0, 400)}`);
 const source = await readPublication(receipt);
-// Count through the map's own source locator, not the import receipt.
-// The locator may carry the server's public base URL, so compare paths, then query the
-// proven-equal activated layer on this server.
-const sourcePath = `${new URL(source.locator.url, env.baseUrl).pathname.replace(/\/+$/, '')}/${source.locator.layerId}`;
-assert.equal(sourcePath, new URL(active.layerUrl).pathname, 'EM-02: the released map must point at the imported layer');
-const query = await fetch(`${active.layerUrl}/query?where=1%3D1&returnCountOnly=true&f=json`);
-assert.equal(query.status, 200, 'EM-02: the map source must stay anonymously queryable');
-assert.equal((await query.json()).count, snapshot.accepted, 'EM-02: public map count must match the imported snapshot');
+await verifyReleasedSource(receipt, source);
 await writeFile(receiptPath, JSON.stringify(receipt, null, 2), { mode: 0o600 });
 console.log(`PASS Maui public map released on ${source.locator?.url ?? 'the default server'}: ${snapshot.accepted} stations at ${receipt.publishedUrl}; receipt ${receiptPath}`);
