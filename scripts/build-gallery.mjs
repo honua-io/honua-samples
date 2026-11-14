@@ -59,7 +59,8 @@ import { sampleAppPath } from './lib/sample-app-url.mjs';
 //                                             # gate PRs on a broken gallery build
 //
 // Env vars (all optional):
-//   RUN_RESULTS_PATH           default "results/run-results.v1.json" (missing is tolerated)
+//   RUN_RESULTS_PATH           default "results/run-results.v1.json"
+//   REQUIRE_RUN_RESULTS        "1" makes missing run results fatal (Pages deploy)
 //   KEY_LIST_URL                see scripts/lib/capability-keys.mjs
 //   SDKJS_HANDOFF_URL           see scripts/lib/sdkjs-handoff.mjs
 //   SDKJS_HANDOFF_FIXTURE_URL   see scripts/lib/sdkjs-handoff.mjs
@@ -89,6 +90,7 @@ import {
 import { DATA_MODE_LABELS } from "./lib/data-mode-labels.mjs";
 import { buildStateLocalSite, validateStateLocalLinks } from "./state-local/build-site.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
+import { writeReferenceRedirects } from "./lib/gallery-reference-redirects.mjs";
 import {
   dataOriginHost,
   isOwnBrowserSample,
@@ -401,6 +403,7 @@ async function main() {
     );
   }
 
+  await writeReferenceRedirects({ siteDir: SITE_DIR, sourceCommit });
   await validateStateLocalLinks(SITE_DIR);
   await assertNoMutableTrunkLinks(SITE_DIR);
 
@@ -467,7 +470,10 @@ async function loadRunResults() {
   let raw;
   try {
     raw = await readFile(RUN_RESULTS_PATH, "utf8");
-  } catch {
+  } catch (error) {
+    if (process.env.REQUIRE_RUN_RESULTS === "1" || error.code !== "ENOENT") {
+      throw new Error(`build-gallery: cannot read required run results at ${RUN_RESULTS_PATH}`, { cause: error });
+    }
     console.warn(
       `build-gallery: no run results at ${path.relative(REPO_ROOT, RUN_RESULTS_PATH)} -- own-sample cards will show no run badge`,
     );

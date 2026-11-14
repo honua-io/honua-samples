@@ -342,6 +342,10 @@ from **two inputs**:
    its immutable identity fields must agree with the handoff or generation
    fails.
 
+Pages downloads the latest successful trunk `run-samples.yml` artifact and builds
+with `REQUIRE_RUN_RESULTS=1`. Missing or unreadable results stop publication.
+Local builds may omit that flag to preview cards without run badges.
+
 Both inputs are validated against the same canonical capability key list
 `scripts/validate-manifests.mjs` uses (`scripts/lib/capability-keys.mjs`) --
 an sdk-js card referencing an unrecognized key fails the gallery
