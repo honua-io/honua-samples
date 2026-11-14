@@ -9,17 +9,20 @@ export async function requestAction(page, href) {
   }
 }
 
-export async function verifyGithubSource(page, url, sourceTrees) {
-  const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/(blob|tree)\/([a-f0-9]{40})\/(.+)$/u);
-  if (url.hostname !== "github.com" || !match) throw new Error(`Unsupported source URL: ${url.href}`);
-  const [, owner, repository, kind, commit, path] = match;
-  const treeUrl = `https://api.github.com/repos/${owner}/${repository}/git/trees/${commit}?recursive=1`;
-  if (!sourceTrees.has(treeUrl)) sourceTrees.set(treeUrl, readSourceTree(page, treeUrl));
-  const tree = await sourceTrees.get(treeUrl);
-  const expectedType = kind === "blob" ? "blob" : "tree";
-  if (!tree.some((entry) => entry.path === path && entry.type === expectedType)) {
-    throw new Error(`Published source ${kind} is missing at ${url.href}`);
-  }
+export function createGithubSourceVerifier() {
+  const sourceTrees = new Map();
+  return async (page, url) => {
+    const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/(blob|tree)\/([a-f0-9]{40})\/(.+)$/u);
+    if (url.hostname !== "github.com" || !match) throw new Error(`Unsupported source URL: ${url.href}`);
+    const [, owner, repository, kind, commit, path] = match;
+    const treeUrl = `https://api.github.com/repos/${owner}/${repository}/git/trees/${commit}?recursive=1`;
+    if (!sourceTrees.has(treeUrl)) sourceTrees.set(treeUrl, readSourceTree(page, treeUrl));
+    const tree = await sourceTrees.get(treeUrl);
+    const expectedType = kind === "blob" ? "blob" : "tree";
+    if (!tree.some((entry) => entry.path === path && entry.type === expectedType)) {
+      throw new Error(`Published source ${kind} is missing at ${url.href}`);
+    }
+  };
 }
 
 async function readSourceTree(page, treeUrl) {

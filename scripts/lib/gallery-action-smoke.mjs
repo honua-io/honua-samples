@@ -1,16 +1,16 @@
-import { requestAction, verifyGithubSource } from "./gallery-source-smoke.mjs";
+import { requestAction, createGithubSourceVerifier } from "./gallery-source-smoke.mjs";
 import { validateActionDestination } from "./gallery-action-contract.mjs";
 import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT } from "./gallery-visual-contract.mjs";
 
 export async function verifyGalleryActions(browser, baseUrl) {
   const visited = new Set();
-  const sourceTrees = new Map();
+  const verifySource = createGithubSourceVerifier();
   for (const viewport of [DESKTOP_VIEWPORT, MOBILE_VIEWPORT]) {
-    await verifyViewport(browser, { baseUrl, viewport, visited, sourceTrees });
+    await verifyViewport(browser, { baseUrl, viewport, visited, verifySource });
   }
 }
 
-async function verifyViewport(browser, { baseUrl, viewport, visited, sourceTrees }) {
+async function verifyViewport(browser, { baseUrl, viewport, visited, verifySource }) {
   const page = await browser.newPage({ viewport });
   try {
     await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
@@ -19,13 +19,13 @@ async function verifyViewport(browser, { baseUrl, viewport, visited, sourceTrees
     if (!commit) throw new Error("Gallery has no published source commit");
     const cards = page.locator(".starter-card, .card[data-id]");
     if (!(await cards.count())) throw new Error("No gallery action cards found");
-    for (const card of await cards.all()) await verifyCardActions({ card, page, baseUrl, visited, commit, sourceTrees });
+    for (const card of await cards.all()) await verifyCardActions({ card, page, baseUrl, visited, commit, verifySource });
   } finally {
     await page.close();
   }
 }
 
-async function verifyCardActions({ card, page, baseUrl, visited, commit, sourceTrees }) {
+async function verifyCardActions({ card, page, baseUrl, visited, commit, verifySource }) {
   const identity = {
     id: await card.getAttribute("data-id"),
     source: await card.getAttribute("data-source"),
@@ -43,11 +43,11 @@ async function verifyCardActions({ card, page, baseUrl, visited, commit, sourceT
     if (!bounds || bounds.x < 0 || bounds.x + bounds.width > page.viewportSize().width + 1) {
       throw new Error(`${id}: action extends beyond the viewport`);
     }
-    await verifyActionDestination({ action, page, baseUrl, visited, card: identity, commit, sourceTrees });
+    await verifyActionDestination({ action, page, baseUrl, visited, card: identity, commit, verifySource });
   }
 }
 
-async function verifyActionDestination({ action, page, baseUrl, visited, card, commit, sourceTrees }) {
+async function verifyActionDestination({ action, page, baseUrl, visited, card, commit, verifySource }) {
   const id = card.id;
   const kind = await action.getAttribute("data-gallery-action");
   const href = await action.getAttribute("href");
@@ -62,7 +62,7 @@ async function verifyActionDestination({ action, page, baseUrl, visited, card, c
   validateActionDestination({ kind, href, card, commit, baseUrl });
   if (visited.has(url.href)) return;
   if (kind === "source") {
-    await verifyGithubSource(page, url, sourceTrees);
+    await verifySource(page, url);
   } else {
     const response = await requestAction(page, url.href);
     if (!response.ok()) throw new Error(`${id}: ${kind} returned ${response.status()} at ${url.href}`);

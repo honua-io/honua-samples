@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { requestAction, verifyGithubSource } from "../lib/gallery-source-smoke.mjs";
+import { requestAction, createGithubSourceVerifier } from "../lib/gallery-source-smoke.mjs";
 
 const commit = "a".repeat(40);
 const sourceUrl = (path) => new URL(`https://github.com/honua-io/honua-samples/${path}`);
@@ -25,24 +25,24 @@ test("source checks share the exact-commit Git tree across files and directories
   const { page, requests } = fixture([{ body: { tree: [
     { path: "samples/parcel", type: "tree" }, { path: "jobs/query.json", type: "blob" },
   ] } }]);
-  const cache = new Map();
-  await verifyGithubSource(page, sourceUrl(`tree/${commit}/samples/parcel`), cache);
-  await verifyGithubSource(page, sourceUrl(`blob/${commit}/jobs/query.json`), cache);
+  const verifySource = createGithubSourceVerifier();
+  await verifySource(page, sourceUrl(`tree/${commit}/samples/parcel`));
+  await verifySource(page, sourceUrl(`blob/${commit}/jobs/query.json`));
   assert.deepEqual(requests, [`https://api.github.com/repos/honua-io/honua-samples/git/trees/${commit}?recursive=1`]);
 });
 
 test("a missing path or wrong Git object type fails", async () => {
   const { page } = fixture([{ body: { tree: [{ path: "samples/parcel", type: "blob" }] } }]);
-  const cache = new Map();
-  await assert.rejects(verifyGithubSource(page, sourceUrl(`tree/${commit}/samples/parcel`), cache), /missing/u);
-  await assert.rejects(verifyGithubSource(page, sourceUrl(`blob/${commit}/jobs/missing.json`), cache), /missing/u);
+  const verifySource = createGithubSourceVerifier();
+  await assert.rejects(verifySource(page, sourceUrl(`tree/${commit}/samples/parcel`)), /missing/u);
+  await assert.rejects(verifySource(page, sourceUrl(`blob/${commit}/jobs/missing.json`)), /missing/u);
 });
 
 test("another producer revision gets its own pinned source tree", async () => {
   const { page, requests } = fixture([{ body: { tree: [] } }, { body: { tree: [] } }]);
-  const cache = new Map();
+  const verifySource = createGithubSourceVerifier();
   for (const revision of [commit, "b".repeat(40)]) {
-    await assert.rejects(verifyGithubSource(page, sourceUrl(`tree/${revision}/samples/missing`), cache), /missing/u);
+    await assert.rejects(verifySource(page, sourceUrl(`tree/${revision}/samples/missing`)), /missing/u);
   }
   assert.equal(requests.length, 2);
   assert.notEqual(requests[0], requests[1]);
@@ -51,13 +51,15 @@ test("another producer revision gets its own pinned source tree", async () => {
 test("truncated and malformed source trees cannot pass", async () => {
   for (const body of [{ tree: [], truncated: true }, {}]) {
     const { page } = fixture([{ body }]);
-    await assert.rejects(verifyGithubSource(page, sourceUrl(`tree/${commit}/samples/parcel`), new Map()), /Incomplete/u);
+    const verifySource = createGithubSourceVerifier();
+    await assert.rejects(verifySource(page, sourceUrl(`tree/${commit}/samples/parcel`)), /Incomplete/u);
   }
 });
 
 test("source API errors remain failures", async () => {
   const { page } = fixture([{ status: 404 }]);
-  await assert.rejects(verifyGithubSource(page, sourceUrl(`tree/${commit}/samples/parcel`), new Map()), /returned 404/u);
+  const verifySource = createGithubSourceVerifier();
+  await assert.rejects(verifySource(page, sourceUrl(`tree/${commit}/samples/parcel`)), /returned 404/u);
 });
 
 test("rate limits respect Retry-After and recover within the bounded retry", async () => {
