@@ -38,13 +38,13 @@ test('shared prepare is repeatable and binds every layer byte to the reviewed in
 });
 
 test('shared stage preflights every geometry before any server request while rollback remains available', async (t) => {
-  const geometry = { type: 'MultiPolygon', coordinates: Array.from({ length: 101 }, () => polygon.coordinates) };
+  const geometry = { type: 'MultiPolygon', coordinates: Array.from({ length: 1001 }, () => polygon.coordinates) };
   const { directory, plan } = await prepared(t, geometry);
   let requests = 0;
   globalThis.fetch = async () => { requests++; throw new Error('server contacted'); };
   const env = { baseUrl: 'https://server.test', adminApiKey: 'private-key' };
   const request = { directory, expectedSha256: plan.planSha256 };
-  await assert.rejects(runSharedLoad(env, { ...request, action: 'stage' }), /101 rings \(maximum 100\)/);
+  await assert.rejects(runSharedLoad(env, { ...request, action: 'stage' }), /1001 rings \(maximum 1000\)/);
   assert.equal(requests, 0);
   await assert.rejects(runSharedLoad(env, { ...request, action: 'rollback' }), /server contacted/);
   assert.equal(requests, 1);
