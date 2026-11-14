@@ -217,6 +217,11 @@
       </ul>
     </section>
 
+    <section class="side-sec" aria-labelledby="exportHeading">
+      <h2 id="exportHeading">Selected parcel snapshot</h2>
+      <div id="parcelExports" class="row wrap"><p class="faint">Loading snapshot exports…</p></div>
+    </section>
+
     <section class="side-sec apis" aria-labelledby="apiH">
       <div class="row"><h2 id="apiH" style="font-size:13px">Data and APIs</h2><span class="faint" style="font-size:12px;margin-left:auto">Same parcels, every standard</span></div>
       <div style="margin-top:6px">
@@ -268,6 +273,10 @@
 
   const parcels = HM.get("parcels");
   const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
+  import('/state-local/shared/parcel-export-control.mjs').then(({ mountParcelExports }) => mountParcelExports({
+    root: document.getElementById('parcelExports'), selected: () => byId.get(selected),
+  })).catch(() => { document.getElementById('parcelExports').textContent = 'Snapshot exports unavailable.'; });
+
   const ZN = HD.zone_names;
   const FLOOD = { AE: "AE, special flood hazard area", VE: "VE, coastal high hazard area", X: "X, minimal hazard", A: "A, special flood hazard area" };
   let map, selected = null;

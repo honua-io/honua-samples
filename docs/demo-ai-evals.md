@@ -40,3 +40,5 @@ Property permitting summaries require Planning review. Neither this suite nor a 
 Switching describe AI capabilities but do not show generated record-count
 answers. Changes that add an answer must extend this inventory and its browser
 checks before claiming that answer is covered.
+
+Property snapshot exports are checked by `scripts/smoke-parcel-exports.mjs`, included in the display browser gate. Both layouts download the currently selected parcel as CSV and GeoJSON with snapshot date, attribution, source licences and warnings; a missing source manifest makes downloads unavailable. These browser checks cover the scripted snapshot experience, not a live backend pass.

@@ -164,3 +164,5 @@ try {
 }
 
 await import('./smoke-state-local-workbench.mjs');
+
+await import('./smoke-parcel-exports.mjs');

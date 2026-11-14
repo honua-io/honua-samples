@@ -154,6 +154,11 @@
       <div id="regs"></div>
     </section>
 
+    <section class="msec" aria-labelledby="exportHeading">
+      <h2 id="exportHeading">Selected parcel snapshot</h2>
+      <div id="parcelExports" class="row wrap"><p class="faint">Loading snapshot exports…</p></div>
+    </section>
+
     <section class="msec" aria-labelledby="dataH" style="margin-bottom:6px">
       <h2 id="dataH">Data sources</h2>
       <p class="faint" style="font-size:12px">Hawaii Statewide GIS Program, State Land Use Commission, County of Maui Department of Planning (community plan 2002, Maui Island Plan 2012), FEMA flood zones; school locations are exercise anchors, not activated shelters. <span class="tag-real">Real data</span></p>
@@ -186,6 +191,10 @@
   const ZN = HD.zone_names, CPN = HD.cp_names;
   const parcels = HM.get("parcels");
   const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
+  import('/state-local/shared/parcel-export-control.mjs').then(({ mountParcelExports }) => mountParcelExports({
+    root: document.getElementById('parcelExports'), selected: () => byId.get(currentId),
+  })).catch(() => { document.getElementById('parcelExports').textContent = 'Snapshot exports unavailable.'; });
+
   const cplan = HM.get("cplan");
   function inRing(pt, ring) { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) c = !c; } return c; }
   function inGeom(pt, g) { const polys = g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : []; return polys.some((p) => inRing(pt, p[0]) && !p.slice(1).some((h) => inRing(pt, h))); }
