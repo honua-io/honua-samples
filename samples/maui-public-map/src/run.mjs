@@ -101,7 +101,7 @@ const body = {
   layers: [{ id: 'fire-stations', sourceId, type: 'circle', visible: true }],
 };
 const created = await adminFetch(env, { method: 'POST', apiPath: '/api/v1/studio/package-drafts', body: {
-  packageKey, envelope: { family: 'Map', schemaVersion: '1.0', format: 'honua_map_package.v1', body } } });
+  packageKey, envelope: { family: 'map', schemaVersion: '1.0', format: 'honua_map_package.v1', body } } });
 const draftId = created?.data?.draftId;
 assert.ok(draftId, `Studio must create the map draft: ${JSON.stringify(created).slice(0, 300)}`);
 const validated = await adminFetch(env, { method: 'POST', apiPath: `/api/v1/studio/package-drafts/${draftId}/validate`, body: {} });
