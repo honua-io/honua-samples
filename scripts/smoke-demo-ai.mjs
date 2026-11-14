@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, expect } from '@playwright/test';
+import { evaluateCapitalProjects } from './lib/capital-project-eval.mjs';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
 const root = fileURLToPath(new URL('../site/', import.meta.url));
@@ -139,7 +140,8 @@ async function publicWorks(page) {
   await expect(page.locator('#capNote')).toContainText(`${poor} culverts are rated poor or failed; the next ${conditions.length - poor} are fair`);
   await page.locator('#approvePlan').click();
   await expect(page.locator('#plan .chip.ok')).toContainText(`${rows} draft work orders`);
-  return { rows, totalHours, capitalRows: conditions.length, poor, anomaly };
+  const capitalProjects = await evaluateCapitalProjects(page);
+  return { rows, totalHours, capitalRows: conditions.length, poor, anomaly, capitalProjects };
 }
 
 async function emergency(page, route) {

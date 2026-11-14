@@ -248,3 +248,18 @@ physical table and service first. Never retry from a fresh artifact directory.
 Activation first checks every layer receipt, then enables anonymous reads and
 verifies public metadata. Rollback disables only verified owned layers; it does
 not delete tables or alter unrelated publications. Keep failed-run artifacts too.
+
+### Public works capital funding snapshot
+
+The capital view uses three FY 2026 Council-adopted Public Works CIP records from
+[County of Maui project sheets](https://www.mauicounty.gov/DocumentCenter/View/162348),
+pp. 1031–1032, 1037–1038 and 1047–1048. It is a selected historical funding snapshot,
+not the complete capital plan or current project status. `capital-project-data.mjs`
+retains project IDs, source pages and `data_origin=county_published` in CSV exports.
+Whole-project FY appropriations are counted once even when several planned activity
+phases match. Dates span published activities; neither actual cost nor completion
+status is supplied, so the scripted answer cannot determine overruns or delays.
+Countywide shading and an existing Waiale road reference use the map's published
+geometry; they are not construction footprints or a proposed extension alignment.
+Missing road references remain explicitly unmapped. Inspection records retain their
+existing demo labels and workflow when switching views.

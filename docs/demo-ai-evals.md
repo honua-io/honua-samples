@@ -40,3 +40,10 @@ Property permitting summaries require Planning review. Neither this suite nor a 
 Switching describe AI capabilities but do not show generated record-count
 answers. Changes that add an answer must extend this inventory and its browser
 checks before claiming that answer is covered.
+
+The public works capital evaluation checks phase/district intersections (including
+empty results), on-screen whole-project funding totals, exact answer project IDs,
+map reference IDs, filtered CSV provenance, and restoration of the inspection plan.
+It runs at both desktop and mobile widths in the nightly demo AI evaluation. Missing
+actual costs and completion status must produce an explicit inability to assess
+budget overruns or delays, rather than an inferred project status.
