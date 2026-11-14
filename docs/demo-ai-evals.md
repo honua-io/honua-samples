@@ -52,3 +52,22 @@ budget overruns or delays, rather than an inferred project status.
 Property snapshot exports are checked by `scripts/smoke-parcel-exports.mjs`, included in the display browser gate. Both layouts download the currently selected parcel as CSV and GeoJSON with snapshot date, attribution, source licences and warnings; a missing source manifest makes downloads unavailable. These browser checks cover the scripted snapshot experience, not a live backend pass.
 
 The parcel browser regression checks zoning filters and acreage totals against the snapshot, row selection linked to parcel exports, map filters, pagination, and zoning plus parcel state after reloading a shared link on both layouts. It also verifies the explicit outside-filter selection message.
+
+## Check a deployed snapshot
+
+After `npm ci` and `npx playwright install chromium`, run the same checks against
+a deployed site without building or serving a local gallery:
+
+```sh
+STATE_LOCAL_SMOKE_BASE_URL=https://samples.honua.io npm run test:demo-ai:browser
+STATE_LOCAL_SMOKE_BASE_URL=https://samples.honua.io node scripts/smoke-state-local-workbench.mjs
+```
+
+The value must be an HTTP(S) site origin. Without it, each script serves the
+built local `site/` as before. Both commands print their target; answer results
+and failure screenshots still go to `artifacts/demo-ai-evals/`. The workbench
+check covers chart filters, sorting, shared-state restoration, labelled GeoJSON
+exports and malformed-state fallback. Browser interactions use signed-out
+snapshot data and browser-local exercise state; neither command calls a paid
+model or writes county records. These checks do not establish a live
+Studio/Console/MCP or native-client workflow pass.
