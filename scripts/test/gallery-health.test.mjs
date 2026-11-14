@@ -9,8 +9,9 @@ import { renderedMapEvidence } from '../lib/gallery-health-map.mjs';
 test('loaded source features and basemap pixels cannot substitute for painted application features', () => {
   let rendered = [];
   const map = {
+    basemapLayers: ['waterbodies'],
     getCanvas: () => ({ getBoundingClientRect: () => ({ width: 400 }) }),
-    getStyle: () => ({ sources: { basemap: { type: 'vector' }, parcels: { type: 'vector' } }, layers: [{ id: 'base', source: 'basemap' }, { id: 'parcels', source: 'parcels' }] }),
+    getStyle: () => ({ sources: { basemap: { type: 'vector' }, waterbodies: { type: 'geojson' }, parcels: { type: 'vector' } }, layers: [{ id: 'base', source: 'basemap' }, { id: 'waterbodies', source: 'waterbodies' }, { id: 'parcels', source: 'parcels' }] }),
     querySourceFeatures: () => [{ id: 'loaded-but-not-painted' }],
     queryRenderedFeatures: ({ layers }) => { assert.deepEqual(layers, ['parcels']); return rendered; },
   };

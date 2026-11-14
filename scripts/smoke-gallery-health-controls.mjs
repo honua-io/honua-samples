@@ -24,6 +24,13 @@ await writeFile(path.join(root, 'module-map.html'), `<!doctype html><h1>Module m
     queryRenderedFeatures: () => [{ id: 'painted-feature' }] };
   window.sampleMap = map;
 </script>`);
+await writeFile(path.join(root, 'basemap-only.html'), `<!doctype html><h1>Basemap only</h1><canvas width="200" height="200"></canvas><script type="module">
+  window.sampleMap = { basemapLayers: ['waterbodies'],
+    getCanvas: () => document.querySelector('canvas'),
+    getStyle: () => ({ sources: { waterbodies: { type: 'geojson' }, records: { type: 'geojson' } },
+      layers: [{ id: 'waterbodies', source: 'waterbodies' }, { id: 'records', source: 'records' }] }),
+    queryRenderedFeatures: ({ layers }) => layers.includes('waterbodies') ? [{ id: 'background-water' }] : [] };
+</script>`);
 await writeFile(path.join(root, 'console.html'), demo(`${feature}<script>console.error('deliberately broken demo')</script>`));
 await writeFile(path.join(root, 'link.html'), demo(`${feature}<a href="/missing.html">Broken link</a>`));
 const server = await startStaticServer({ rootDir: root, port: 0 });
@@ -52,7 +59,7 @@ async function assertProfile(browser, identity, viewport) {
     assert.equal(partial.failures.length, 1);
     assert.equal(partial.entries.length, 3, 'a broken inventory must not skip healthy inventories');
     assert.ok((await readFile(path.join(output, partial.failures[0].screenshot))).length > 100);
-    for (const scenario of [['good', null], ['module-map', null], ['icons', null], ['blank', /Map never painted/], ['console', /deliberately broken/], ['link', /Broken links/]]) {
+    for (const scenario of [['good', null], ['module-map', null], ['icons', null], ['blank', /Map never painted/], ['basemap-only', /Map never painted/], ['console', /deliberately broken/], ['link', /Broken links/]]) {
       await assertPage(context, scenario, identity);
     }
   } finally { await context.close(); }

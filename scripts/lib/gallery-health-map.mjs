@@ -29,9 +29,10 @@ export function renderedMapEvidence() {
   ].filter(Boolean))];
   const evidence = maps.filter((map) => map.getCanvas?.().getBoundingClientRect().width > 0).map((map) => {
     const style = map.getStyle?.();
+    const basemapLayers = new Set(map.basemapLayers ?? []);
     const layers = (style?.layers ?? []).filter((layer) => {
       const source = style.sources?.[layer.source];
-      return source && ['vector', 'geojson'].includes(source.type)
+      return !basemapLayers.has(layer.id) && source && ['vector', 'geojson'].includes(source.type)
         && !/^(basemap|base|protomaps|openmaptiles|osm)([-_]|$)/i.test(layer.source)
         && !/basemap|protomaps|openmaptiles/i.test(String(source.url ?? ''));
     }).map((layer) => layer.id);
