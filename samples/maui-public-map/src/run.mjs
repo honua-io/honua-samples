@@ -121,18 +121,16 @@ const before = await anonymous(receipt.publishedUrl);
 assert.equal(before.status, 404, `EM-02: an unpublished map must not be readable (HTTP ${before.status})`);
 await refusesAnonymousControl(receipt);
 
-const published = await adminFetch(env, { method: 'POST', apiPath: receipt.publishRequestPath,
-  body: { intent: { route, visibility: 'public' } } });
-const status = published?.data?.status;
-let proposalPath;
-if (/^accepted$/i.test(status ?? '')) {
-  // A human administrator publishes directly on the default deployment.
-} else {
-  const proposalId = published?.data?.proposalId;
-  assert.ok(proposalId, `Publication must be accepted or held for approval: ${JSON.stringify(published).slice(0, 400)}`);
-  proposalPath = `/api/v1/admin/proposals/${proposalId}/approve`;
-  await refusesAnonymousControl(receipt, proposalPath);
-  throw new Error(`Publication is awaiting approval (${proposalId}); approve it in Console, then rerun with HONUA_SAMPLE_VERIFY_RECEIPT`);
+// An administrator publishes directly through the Studio MCP publication tool.
+// (The REST publish-request route always opens an approval proposal, which on a
+// deployment without a sign-in provider has no one who can approve it:
+// honua-io/honua-server#7227.)
+const published = await mcpTool('honua_studio_propose_publication', { itemId: version.itemId,
+  versionId: version.versionId, contentHash: version.contentHash, route, visibility: 'public' });
+console.log(`MCP honua_studio_propose_publication: status=${published?.status} humanConfirmationRequired=${published?.humanConfirmationRequired} proposalId=${published?.proposalId ?? 'none'}`);
+if (published?.proposalId) {
+  await refusesAnonymousControl(receipt, `/api/v1/admin/proposals/${published.proposalId}/approve`);
+  throw new Error(`Publication is awaiting approval (${published.proposalId}); approve it in Console, then rerun with HONUA_SAMPLE_VERIFY_RECEIPT`);
 }
 const source = await readPublication(receipt);
 const query = await fetch(`${active.layerUrl}/query?where=1%3D1&returnCountOnly=true&f=json`);

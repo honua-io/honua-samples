@@ -16,8 +16,10 @@ The sample:
 2. imports it into the Emergency Management folder and activates the reviewed layer;
 3. creates a Studio map draft bound to that layer, validates it and seals an immutable version;
 4. checks that the unpublished map is not readable and that anonymous callers cannot request publication;
-5. publishes the version publicly as an administrator, then reads the released map and its
-   source catalog anonymously and checks the public feature count matches the snapshot.
+5. finds the map source and publishes the version publicly through the Studio MCP tools
+   (`honua_list_layers`, `honua_studio_propose_publication`) as an administrator, then reads the
+   released map and its source catalog anonymously and checks the public feature count matches
+   the snapshot.
 
 It writes a receipt (`HONUA_SAMPLE_RECEIPT_OUT`, default under ignored `artifacts/state-local/ci/`).
 After restarting the server, prove the publication is durable:
@@ -26,7 +28,7 @@ After restarting the server, prove the publication is durable:
 HONUA_SAMPLE_VERIFY_RECEIPT=path/to/public-map.json node samples/maui-public-map/src/run.mjs
 ```
 
-An administrator publishes directly. If your deployment requires approval for publication, the
+An administrator publishes directly. If the server holds the publication for approval instead, the
 sample stops with the proposal id: approve it in Console, then rerun with the receipt.
 
 Each run keeps a new map and layer for Console inspection. Do not run it against a shared
