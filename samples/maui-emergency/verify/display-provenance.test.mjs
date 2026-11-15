@@ -32,10 +32,24 @@ test('replaced display layers cite the exact verified file and its source rather
 });
 
 test('missing source metadata fails rather than publishing obsolete provenance', () => {
-  const valid = { sources: { schools: source }, files: { 'schools.geojson': { sha256: 'verified' } } };
+  const valid = { sources: { schools: source }, files: { 'schools.geojson': { sha256: 'a'.repeat(64) } } };
   for (const field of ['sourceUrl', 'license', 'licenseUrl', 'attribution', 'retrievedAt']) {
     const manifest = { ...valid, sources: { schools: { ...source, [field]: undefined } } };
     assert.throws(() => displayProvenance({ receipts: [{ dataset: 'schools' }], manifest }), /missing for schools/);
   }
   assert.throws(() => displayProvenance({ receipts: [{ dataset: 'schools' }], manifest: { ...valid, files: {} } }), /missing for schools/);
+});
+
+test('malformed metadata fails before publishing a display receipt', () => {
+  const files = { 'schools.geojson': { sha256: 'a'.repeat(64) } };
+  const check = (manifest) => assert.throws(() => displayProvenance({ receipts: [{ dataset: 'schools' }], manifest }), /missing for schools/);
+  for (const field of ['sourceUrl', 'license', 'licenseUrl', 'attribution', 'retrievedAt']) {
+    for (const value of [{}, [], 123, true, '   ']) {
+      check({ files, sources: { schools: { ...source, [field]: value } } });
+    }
+  }
+  check({ files, sources: { schools: { ...source, retrievedAt: 'not a date' } } });
+  for (const sha256 of [{}, 'verified', ' '.repeat(64), 'g'.repeat(64)]) {
+    check({ files: { 'schools.geojson': { sha256 } }, sources: { schools: source } });
+  }
 });
