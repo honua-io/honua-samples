@@ -392,17 +392,17 @@
   // Citations: each one shows its source on the map
   const CITE = {
     parcel: () => select(FEAT, true),
-    zoning: () => { document.querySelector('[data-layers="zoning,zoning-line"]').checked = true; HM.toggle(map, ["zoning", "zoning-line"], true); document.getElementById("t2").click(); },
+    zoning: () => { document.querySelector('[data-layers="zoning,zoning-line"]').checked = true; map && HM.toggle(map, ["zoning", "zoning-line"], true); document.getElementById("t2").click(); },
     code: () => document.getElementById("t2").click(),
-    flood: () => { HM.toggle(map, ["flood", "flood-line"], true); document.getElementById("t3").click(); },
+    flood: () => { map && HM.toggle(map, ["flood", "flood-line"], true); document.getElementById("t3").click(); },
     bfe: () => document.getElementById("t3").click(),
-    tsunami: () => { const cb = document.querySelector('[data-layers="tsunami,tsunami-x,tsunami-line"]'); cb.checked = true; HM.toggle(map, ["tsunami", "tsunami-x", "tsunami-line"], true); map.fitBounds([[-156.484, 20.879], [-156.46, 20.896]], { duration: 700 }); },
-    shelter: () => map.fitBounds([[-156.476, 20.877], [-156.466, 20.892]], { duration: 700 }),
-    slud: () => { const cb = document.querySelector('[data-layers="slud-line,slud-lbl"]'); cb.checked = true; HM.toggle(map, ["slud-line", "slud-lbl"], true); document.getElementById("t0").click(); },
-    sma: () => { HM.toggle(map, ["sma-line"], true); map.fitBounds([[-156.5, 20.876], [-156.45, 20.902]], { duration: 700 }); document.getElementById("t0").click(); },
-    cplan: () => { const cb = document.querySelector('[data-layers="cplan-line"]'); cb.checked = true; HM.toggle(map, ["cplan-line"], true); document.getElementById("t0").click(); },
-    mip: () => { const cb = document.querySelector('[data-layers="mip-line"]'); cb.checked = true; HM.toggle(map, ["mip-line"], true); map.fitBounds(HM.VIEW.wide, { duration: 700 }); },
-    slr: () => { const cb = document.querySelector('[data-layers="slr"]'); cb.checked = true; HM.toggle(map, ["slr"], true); map.fitBounds([[-156.49, 20.884], [-156.462, 20.9]], { duration: 700 }); },
+    tsunami: () => { const cb = document.querySelector('[data-layers="tsunami,tsunami-x,tsunami-line"]'); cb.checked = true; map && HM.toggle(map, ["tsunami", "tsunami-x", "tsunami-line"], true); map?.fitBounds([[-156.484, 20.879], [-156.46, 20.896]], { duration: 700 }); },
+    shelter: () => map?.fitBounds([[-156.476, 20.877], [-156.466, 20.892]], { duration: 700 }),
+    slud: () => { const cb = document.querySelector('[data-layers="slud-line,slud-lbl"]'); cb.checked = true; map && HM.toggle(map, ["slud-line", "slud-lbl"], true); document.getElementById("t0").click(); },
+    sma: () => { map && HM.toggle(map, ["sma-line"], true); map?.fitBounds([[-156.5, 20.876], [-156.45, 20.902]], { duration: 700 }); document.getElementById("t0").click(); },
+    cplan: () => { const cb = document.querySelector('[data-layers="cplan-line"]'); cb.checked = true; map && HM.toggle(map, ["cplan-line"], true); document.getElementById("t0").click(); },
+    mip: () => { const cb = document.querySelector('[data-layers="mip-line"]'); cb.checked = true; map && HM.toggle(map, ["mip-line"], true); map?.fitBounds(HM.VIEW.wide, { duration: 700 }); },
+    slr: () => { const cb = document.querySelector('[data-layers="slr"]'); cb.checked = true; map && HM.toggle(map, ["slr"], true); map?.fitBounds([[-156.49, 20.884], [-156.462, 20.9]], { duration: 700 }); },
   };
   document.querySelectorAll("[data-cite]").forEach((b) => b.addEventListener("click", () => CITE[b.dataset.cite] && CITE[b.dataset.cite]()));
 
