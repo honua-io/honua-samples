@@ -14,7 +14,8 @@
   .hero-map .map { position: absolute; inset: 0; }
   .hero-legend { left: 12px; bottom: 30px; width: 214px; }
   .appbar { padding-block: 6px; } /* breathing room if enlarged text wraps the header */
-  /* From 901px the full nav shows and the header needs about 1114px: give the nav its own row, as on Switching. */
+  /* From 901px the full nav shows and the header needs about 1114px of layout width (1129px of viewport
+     with a classic 15px scrollbar): give the nav its own row, as on Switching. */
   @media (min-width: 901px) and (max-width: 1129px) {
     .appbar { padding-block: 10px; }
     .appbar .appnav { order: 1; flex-basis: 100%; margin-left: 0; }
