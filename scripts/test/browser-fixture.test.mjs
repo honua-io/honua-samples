@@ -3,7 +3,7 @@ import test from "node:test";
 import { seedFeatureService } from "../browser-verification/harness.mjs";
 
 for (const allowAnonymous of [true, false]) {
-  test(`fixture resolves public index independently of storage ID; anonymous=${allowAnonymous}`, async (t) => {
+  test(`fixture resolves converged public index independently of storage ID; anonymous=${allowAnonymous}`, async (t) => {
     const saved = { ...process.env };
     t.after(() => { process.env = saved; });
     process.env.HONUA_BASE_URL = "https://server.test";
@@ -18,7 +18,7 @@ for (const allowAnonymous of [true, false]) {
       else if (url.pathname.endsWith("/layers")) body = { data: { enabled: true, storageLayerId: 73, layerId: 99, layerName: "operations-areas" } };
       else if (url.pathname.endsWith("/FeatureServer")) {
         metadataHeaders.push(options?.headers);
-        body = { layers: [{ id: 0, name: "operations-areas" }, { id: 8, name: "other" }] };
+        body = { layers: metadataHeaders.length === 1 ? [] : [{ id: 0, name: "operations-areas" }, { id: 8, name: "other" }] };
       } else if (url.pathname.endsWith("/query")) {
         assert.match(url.pathname, /\/FeatureServer\/0\/query$/);
         body = allowAnonymous || options?.headers?.["X-API-Key"] === "test-key"
@@ -30,6 +30,7 @@ for (const allowAnonymous of [true, false]) {
       fixture: { geojson: { type: "FeatureCollection", features: [] }, count: 1 } });
     assert.equal(result.layerId, 0);
     assert.equal(result.layerUrl, `${result.serviceUrl}/0`);
-    assert.deepEqual(metadataHeaders, [allowAnonymous ? undefined : { "X-API-Key": "test-key" }]);
+    const headers = allowAnonymous ? undefined : { "X-API-Key": "test-key" };
+    assert.deepEqual(metadataHeaders, [headers, headers]);
   });
 }

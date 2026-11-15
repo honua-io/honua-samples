@@ -10,4 +10,3 @@ export async function publicLayerIndex(serviceUrl, layer, headers) {
   if (!Number.isInteger(match?.id)) throw new Error("Service public layer index was not confirmed");
   return match.id;
 }
-

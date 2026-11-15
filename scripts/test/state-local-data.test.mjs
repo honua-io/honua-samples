@@ -123,7 +123,7 @@ test("deployment rejects inaccessible public routes and missing department paths
   }
   assert.equal(state.writes + state.policyWrites, 0);
   state.publicStatus = 403;
-  await assert.rejects(activateDeployment(env, options), /Anonymous public layer/);
+  await assert.rejects(activateDeployment(env, options), /Service public layer index/);
   state.publicStatus = 200;
   state.publicId = 8;
   await assert.rejects(activateDeployment(env, options), /Anonymous public layer/);
