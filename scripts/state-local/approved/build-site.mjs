@@ -30,7 +30,8 @@ export async function buildApprovedDemos({ root, output, lock }) {
   try {
     execFileSync(catalogPython, [path.join(root, 'scripts/state-local/approved/catalog.py'), directory, catalog], { stdio: 'inherit' });
   } catch (error) {
-    throw new Error(`catalog.py failed with ${catalogPython}. Create the catalog environment first (scripts/state-local/approved/CATALOG.md): `
+    if (catalogPython !== 'python3') throw error;
+    throw new Error(`catalog.py failed with the system python3. Create the catalog environment first (scripts/state-local/approved/CATALOG.md): `
       + 'python3 -m venv artifacts/catalog-python && artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt', { cause: error });
   }
   execFileSync('python3', [path.join(root, 'scripts/state-local/approved/build.py'), directory, built,

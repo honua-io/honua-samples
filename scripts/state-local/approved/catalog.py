@@ -19,13 +19,14 @@ def read(directory, name):
     raise FileNotFoundError(name)
 
 
-def decode_line(values):
+def decode_line(values, decimals=5):
+    scale = 10 ** decimals
     x = y = 0
     result = []
     for index in range(0, len(values), 2):
         x += values[index]
         y += values[index + 1]
-        result.append([x / 100000, y / 100000])
+        result.append([x / scale, y / scale])
     return result
 
 
@@ -33,13 +34,14 @@ def collection(data):
     if data.get("type") == "FeatureCollection":
         return data
     features = []
+    decimals = data.get("s", 5)
     for values, geometry in zip(data["p"], data["g"]):
         properties = dict(zip(data["k"], values))
         if data["t"] == "poly":
-            coordinates = [[decode_line(ring) for ring in polygon] for polygon in geometry]
+            coordinates = [[decode_line(ring, decimals) for ring in polygon] for polygon in geometry]
             kind = "Polygon" if len(geometry) == 1 else "MultiPolygon"
         else:
-            coordinates = [decode_line(line) for line in geometry]
+            coordinates = [decode_line(line, decimals) for line in geometry]
             kind = "LineString" if len(geometry) == 1 else "MultiLineString"
         features.append({"type": "Feature", "properties": properties,
                          "geometry": {"type": kind, "coordinates": coordinates[0] if len(geometry) == 1 else coordinates}})

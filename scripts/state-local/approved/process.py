@@ -1,6 +1,6 @@
 import json, sys, os, re
 from shapely.geometry import shape, box, Point
-from display_geometry import round_coordinates, serialize_geometry
+from display_geometry import compact_scale, enc_geom, round_coordinates, serialize_geometry
 from shapely.ops import unary_union
 from shapely import make_valid
 RAW, OUT = sys.argv[1], sys.argv[2]
@@ -107,25 +107,14 @@ save("shelters", pts("schools", lambda p: {"name": title(p["sch_name"]), "addr":
 save("places", pts("places", lambda p: {"name": p["feature_name"], "cls": p["feature_class"]}))
 save("bridges", pts("bridges", lambda p: {"id": p["structure_number_008"].strip(), "carries": title(p["facility_carried_007"]), "over": title(p["features_desc_006a"]), "loc": title(p["location_009"]), "built": p["year_built_027"], "adt": p["adt_029"], "deck": p["deck_cond_058"], "sup": p["superstructure_cond_059"], "sub": p["substructure_cond_060"], "culv": p["culvert_cond_062"], "cond": p["bridge_condition"], "low": p["lowest_rating"], "insp": p["date_of_inspect_090"], "len": p["structure_len_mt_049"]}))
 
-# ---- compact encodings (delta-encoded 1e5 integers) ----
-def enc_line(coords):
-    out = []; px = py = 0
-    for x, y in coords:
-        ix, iy = int(round(x * 1e5)), int(round(y * 1e5))
-        out += [ix - px, iy - py]; px, py = ix, iy
-    return out
-def enc_geom(g):
-    t = g["type"]; c = g["coordinates"]
-    if t == "Polygon": return [[enc_line(r) for r in c]]
-    if t == "MultiPolygon": return [[enc_line(r) for r in p] for p in c]
-    if t == "LineString": return [enc_line(c)]
-    if t == "MultiLineString": return [enc_line(l) for l in c]
-    raise ValueError(t)
+# ---- compact encodings (delta-encoded integers, 1e5 unless a feature needs more) ----
 def compact(name, feats, keys, kind):
-    d = {"k": keys, "t": kind, "p": [[f["properties"].get(k) for k in keys] for f in feats], "g": [enc_geom(f["geometry"]) for f in feats]}
+    decimals = compact_scale(feats)
+    d = {"k": keys, "t": kind, "p": [[f["properties"].get(k) for k in keys] for f in feats], "g": [enc_geom(f["geometry"], decimals) for f in feats]}
+    if decimals != 5: d["s"] = decimals
     s = json.dumps(d, separators=(",", ":"), ensure_ascii=False)
     open(os.path.join(OUT, name + ".cjson"), "w").write(s)
-    print(f"{name:18s} compact {len(feats):5d} {len(s)/1024:7.1f} KB")
+    print(f"{name:18s} compact {len(feats):5d} {len(s)/1024:7.1f} KB" + (f" scale 1e{decimals}" if decimals != 5 else ""))
 
 # zoning dissolved by code, simplified harder
 from collections import defaultdict
