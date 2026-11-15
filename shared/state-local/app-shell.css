@@ -128,14 +128,16 @@ body.app-shell {
 }
 
 /* Enlarged text (WCAG 1.4.4): none of these rules moves anything at the default text size.
-   The hidden skip link no longer bleeds over the header, controls grow instead of spilling,
-   and the non-app headers wrap instead of running off the page. */
+   The hidden skip link no longer bleeds over the header, buttons grow instead of spilling,
+   and headers, tables and the landing agent card wrap or scroll instead of running off the page. */
 .skip-link:not(:focus) { clip-path: inset(50%); }
 .skip-link { max-width: calc(100% - 16px); }
-.btn, .seg button, .theme-toggle { min-height: fit-content; }
+.btn, .seg button { min-height: fit-content; }
 body:not(.app-shell) .appbar { flex-wrap: wrap; height: auto; min-height: 52px; row-gap: 8px; }
 body:not(.app-shell) .appnav { flex-wrap: wrap; }
 .hero .btn { white-space: normal; }
 .proto { flex-wrap: wrap; }
 .facts-row > div { overflow-wrap: anywhere; min-width: 0; }
-@media (max-width: 640px) { .map-tbl a.screen { white-space: normal; } }
+.tbl-wrap { overflow-x: auto; }
+.hero-card { max-height: calc(100% - 56px); overflow: auto; }
+@media (max-width: 700px) { .map-tbl a.screen { white-space: normal; } }
