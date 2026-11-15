@@ -974,10 +974,37 @@ try {
   }
   $("#copyBtn").addEventListener("click", (e) => { const f = currentFiles()[state.file]; if (f) copyText(f.code, e.currentTarget); });
   function copyText(text, btn) {
-    const done = (ok) => { const sp = btn.querySelector("span"); const old = sp ? sp.textContent : btn.title; if (sp) sp.textContent = ok ? "Copied" : "Press Ctrl+C"; btn.title = ok ? "Copied" : "Copy failed"; setTimeout(() => { if (sp) sp.textContent = old; btn.title = "Copy"; }, 1600); };
+    const done = (ok) => {
+      const label = btn.querySelector("span"), oldTitle = btn.title, oldLabel = label?.textContent;
+      if (!ok) selectCopySource(btn);
+      if (label) label.textContent = ok ? "Copied" : "Copy manually";
+      btn.title = ok ? "Copied" : "Code selected; use your device's copy command";
+      setTimeout(() => { if (label) label.textContent = oldLabel; btn.title = oldTitle; }, 1600);
+    };
     try { navigator.clipboard.writeText(text).then(() => done(true), () => done(fallbackCopy(text))); } catch (e) { done(fallbackCopy(text)); }
   }
-  function fallbackCopy(text) { try { const t = document.createElement("textarea"); t.value = text; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); const ok = document.execCommand("copy"); t.remove(); return ok; } catch (e) { return false; } }
+  function selectCopySource(btn) {
+    const source = btn.closest(".snip") || $("#code");
+    if (!source.hasAttribute("tabindex")) source.tabIndex = -1;
+    source.focus({ preventScroll: true });
+    const range = document.createRange();
+    range.selectNodeContents(source);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  function fallbackCopy(text) {
+    const input = document.createElement("textarea");
+    input.value = text;
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    try {
+      document.body.appendChild(input);
+      input.select();
+      return document.execCommand("copy");
+    } catch (e) { return false; }
+    finally { input.remove(); }
+  }
 
 function sanitizedReadme(html) {
   const parsed = new DOMParser().parseFromString(html, 'text/html');
