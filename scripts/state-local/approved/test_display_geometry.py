@@ -4,7 +4,7 @@ import unittest
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box, shape
 
 from catalog import collection
-from display_geometry import compact_scale, enc_geom, serialize_geometry
+from display_geometry import compact_scale, encode_geometry, serialize_geometry
 
 
 class DisplayGeometryTests(unittest.TestCase):
@@ -71,7 +71,7 @@ class DisplayGeometryTests(unittest.TestCase):
     def compact_round_trip(self, geometries):
         features = [{"type": "Feature", "properties": {}, "geometry": serialize_geometry(g)} for g in geometries]
         decimals = compact_scale(features)
-        data = {"k": [], "t": "poly", "p": [[] for _ in features], "g": [enc_geom(f["geometry"], decimals) for f in features]}
+        data = {"k": [], "t": "poly", "p": [[] for _ in features], "g": [encode_geometry(f["geometry"], decimals) for f in features]}
         if decimals != 5: data["s"] = decimals
         return decimals, [shape(f["geometry"]) for f in collection(data)["features"]]
 

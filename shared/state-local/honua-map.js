@@ -2,7 +2,7 @@
    The island adapter supplies native archives and the street basemap. */
 (function () {
   const HD = (window.HD = window.HD || {});
-  function decLine(a, scale = 1e5) {
+  function decLine(a, scale) {
     const out = []; let x = 0, y = 0;
     for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; out.push([x / scale, y / scale]); }
     return out;

@@ -32,35 +32,64 @@ def serialize_geometry(geometry):
     raise ValueError(f"Invalid display geometry at full precision: {explain_validity(shape(output))}")
 
 
-# Compact .cjson encoding: delta-encoded integers at 10**decimals.
-COMPACT_DECIMALS = (5, 6, 7, 9)
-def enc_line(coords, decimals=5):
-    out = []; px = py = 0; scale = 10 ** decimals
-    for x, y in coords:
-        ix, iy = int(round(x * scale)), int(round(y * scale))
-        out += [ix - px, iy - py]; px, py = ix, iy
-    return out
-def enc_geom(g, decimals=5):
-    t = g["type"]; c = g["coordinates"]
-    if t == "Polygon": return [[enc_line(r, decimals) for r in c]]
-    if t == "MultiPolygon": return [[enc_line(r, decimals) for r in p] for p in c]
-    if t == "LineString": return [enc_line(c, decimals)]
-    if t == "MultiLineString": return [enc_line(l, decimals) for l in c]
-    raise ValueError(t)
-def compact_scale(feats):
-    # serialize_geometry may keep more than 5 decimals for a shape that rounding would break;
-    # the collection then uses the smallest integer scale at which every decoded shape stays valid.
-    for decimals in COMPACT_DECIMALS:
-        if all(compact_valid(f["geometry"], decimals) for f in feats): return decimals
-    raise ValueError("No compact scale keeps every geometry valid")
-def compact_valid(g, decimals):
+# Compact .cjson encoding: delta-encoded integers at 10**decimals. A collection uses the smallest
+# scale at which every decoded shape is valid; readers default to DISPLAY_DECIMALS when "s" is absent.
+COMPACT_DECIMALS = (DISPLAY_DECIMALS, *FALLBACK_DECIMALS, 9)
+
+
+def encode_line(coordinates, decimals=DISPLAY_DECIMALS):
     scale = 10 ** decimals
-    def dec(values):
-        x = y = 0; out = []
-        for i in range(0, len(values), 2): x += values[i]; y += values[i + 1]; out.append([x / scale, y / scale])
-        return out
-    e = enc_geom(g, decimals); t = g["type"]
-    if t in ("Polygon", "MultiPolygon"): coords = [[dec(r) for r in p] for p in e]; kind = "MultiPolygon"
-    else: coords = [dec(l) for l in e]; kind = "MultiLineString"
-    decoded = shape({"type": kind, "coordinates": coords})
+    values = []
+    previous_x = previous_y = 0
+    for x, y in coordinates:
+        scaled_x, scaled_y = int(round(x * scale)), int(round(y * scale))
+        values += [scaled_x - previous_x, scaled_y - previous_y]
+        previous_x, previous_y = scaled_x, scaled_y
+    return values
+
+
+def encode_geometry(geometry, decimals=DISPLAY_DECIMALS):
+    kind, coordinates = geometry["type"], geometry["coordinates"]
+    if kind == "Polygon":
+        return [[encode_line(ring, decimals) for ring in coordinates]]
+    if kind == "MultiPolygon":
+        return [[encode_line(ring, decimals) for ring in polygon] for polygon in coordinates]
+    if kind == "LineString":
+        return [encode_line(coordinates, decimals)]
+    if kind == "MultiLineString":
+        return [encode_line(line, decimals) for line in coordinates]
+    raise ValueError(kind)
+
+
+def decode_line(values, decimals=DISPLAY_DECIMALS):
+    scale = 10 ** decimals
+    x = y = 0
+    result = []
+    for index in range(0, len(values), 2):
+        x += values[index]
+        y += values[index + 1]
+        result.append([x / scale, y / scale])
+    return result
+
+
+def decode_geometry(encoded, polygonal, decimals=DISPLAY_DECIMALS):
+    if polygonal:
+        coordinates = [[decode_line(ring, decimals) for ring in polygon] for polygon in encoded]
+        kind = "Polygon" if len(encoded) == 1 else "MultiPolygon"
+    else:
+        coordinates = [decode_line(line, decimals) for line in encoded]
+        kind = "LineString" if len(encoded) == 1 else "MultiLineString"
+    return {"type": kind, "coordinates": coordinates[0] if len(encoded) == 1 else coordinates}
+
+
+def compact_scale(features):
+    for decimals in COMPACT_DECIMALS:
+        if all(_compact_valid(feature["geometry"], decimals) for feature in features):
+            return decimals
+    raise ValueError("No compact scale keeps every geometry valid")
+
+
+def _compact_valid(geometry, decimals):
+    polygonal = geometry["type"] in ("Polygon", "MultiPolygon")
+    decoded = shape(decode_geometry(encode_geometry(geometry, decimals), polygonal, decimals))
     return not decoded.is_empty and decoded.is_valid

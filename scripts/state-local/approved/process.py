@@ -1,6 +1,6 @@
 import json, sys, os, re
 from shapely.geometry import shape, box, Point
-from display_geometry import compact_scale, enc_geom, round_coordinates, serialize_geometry
+from display_geometry import compact_scale, encode_geometry, round_coordinates, serialize_geometry
 from shapely.ops import unary_union
 from shapely import make_valid
 RAW, OUT = sys.argv[1], sys.argv[2]
@@ -110,7 +110,7 @@ save("bridges", pts("bridges", lambda p: {"id": p["structure_number_008"].strip(
 # ---- compact encodings (delta-encoded integers, 1e5 unless a feature needs more) ----
 def compact(name, feats, keys, kind):
     decimals = compact_scale(feats)
-    d = {"k": keys, "t": kind, "p": [[f["properties"].get(k) for k in keys] for f in feats], "g": [enc_geom(f["geometry"], decimals) for f in feats]}
+    d = {"k": keys, "t": kind, "p": [[f["properties"].get(k) for k in keys] for f in feats], "g": [encode_geometry(f["geometry"], decimals) for f in feats]}
     if decimals != 5: d["s"] = decimals
     s = json.dumps(d, separators=(",", ":"), ensure_ascii=False)
     open(os.path.join(OUT, name + ".cjson"), "w").write(s)
