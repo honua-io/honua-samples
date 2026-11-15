@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { countLaidOut, MAP_CONTAINER_SELECTOR, renderedMapEvidence, VISIBLE_MAP_SELECTOR } from './gallery-health-map.mjs';
 
-export async function checkGalleryPage(context, entry, { directory, id, timeout = 45_000, linkCache = new Map() }) {
+export async function checkGalleryPage(context, entry, { directory, id, timeout = 45_000, linkCache = createLinkCache() }) {
   const page = await context.newPage();
   const errors = [];
   const result = { ...entry, ok: false, errors, screenshot: null };
@@ -21,8 +21,13 @@ export async function checkGalleryPage(context, entry, { directory, id, timeout 
     result.redirectedTo = page.url() === entry.url ? null : page.url();
     // Source-only cards can redirect to repository documentation. Verify that
     // destination resolves, without treating the external site's navigation as demo links.
-    result.links = new URL(page.url()).origin === new URL(entry.url).origin
-      ? await checkLinks(page, context.request, linkCache, result) : 0;
+    result.links = 0;
+    if (new URL(page.url()).origin === new URL(entry.url).origin) {
+      const links = await checkLinkUrls(await pageLinks(page), context.request, { cache: linkCache });
+      result.links = links.count;
+      if (links.unverified.length) result.unverifiedLinks = links.unverified;
+      if (links.broken.length) throw new Error(`Broken links: ${links.broken.join('; ')}`);
+    }
     if (errors.length) throw new Error(`Console/page errors: ${errors.join('; ')}`);
     result.ok = true;
   } catch (error) {
@@ -53,41 +58,49 @@ async function waitForMaps(page, { required, timeout }) {
   throw new Error(`Map never painted application features: ${JSON.stringify(evidence)}`);
 }
 
-async function checkLinks(page, request, cache, result = {}) {
+async function pageLinks(page) {
   const links = (await Promise.all(page.frames().map((frame) => frame.locator('a[href]')
     .evaluateAll((nodes) => nodes.map((node) => node.href))))).flat();
-  const urls = links.filter((url) => /^https?:/.test(url)).map((url) => { const target = new URL(url); target.hash = ''; return target.href; });
-  const broken = [];
-  const unverified = [];
-  // Bound concurrency so a page with hundreds of source links cannot burst a host.
-  const pending = [...new Set(urls)];
-  const deadline = Date.now() + 45_000;
-  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
-    while (pending.length) {
-      const url = pending.shift();
-      const { host, hostname } = new URL(url);
-      const slowed = `rate-limit-seen:${host}`;
-      if (Date.now() >= deadline) {
-        // Time spent waiting out an outside host's rate limit is not a broken link.
-        if (cache.has(slowed)) unverified.push(`${url}: link-check deadline exceeded after HTTP 429 from ${host}`);
-        else broken.push(`${url}: link-check deadline exceeded`);
-        continue;
-      }
-      // After one persistent outside rate limit, stop requesting that host for the rest of the run.
-      const limited = `rate-limited:${host}`;
-      if (!cache.has(url)) {
-        cache.set(url, cache.has(limited) ? Promise.resolve(`${UNVERIFIED}HTTP 429 (host rate limited)`)
-          : resolveLink(request, url, { onRateLimit: () => { if (!FIRST_PARTY(hostname)) cache.set(slowed, true); } }));
-      }
-      const status = await cache.get(url);
-      if (status === `${UNVERIFIED}HTTP 429`) cache.set(limited, true);
-      if (status.startsWith(UNVERIFIED)) unverified.push(`${url}: ${status.slice(UNVERIFIED.length)}`);
-      else if (status !== 'ok') broken.push(`${url}: ${status}`);
+  return [...new Set(links.filter((url) => /^https?:/.test(url))
+    .map((url) => { const target = new URL(url); target.hash = ''; return target.href; }))];
+}
+
+// One cache for a whole run: each URL is requested once, and an outside host
+// that stays rate limited after a retry is not asked again.
+export function createLinkCache() {
+  return { results: new Map(), limitedHosts: new Set() };
+}
+
+export async function checkLinkUrls(urls, request, { cache = createLinkCache(), budgetMs = 45_000, resolve = resolveLink } = {}) {
+  const outcome = { count: urls.length, broken: [], unverified: [] };
+  const deadline = Date.now() + budgetMs;
+  // Set when this page waited out an outside rate limit: links it then had no
+  // time left for are unverified, not broken.
+  let waitedOnRateLimit = false;
+  const lookup = async (url) => {
+    const { host, hostname } = new URL(url);
+    if (!cache.results.has(url)) {
+      const onRateLimit = () => { if (!FIRST_PARTY(hostname)) waitedOnRateLimit = true; };
+      cache.results.set(url, cache.limitedHosts.has(host)
+        ? Promise.resolve(`${UNVERIFIED}HTTP 429 (host rate limited)`) : resolve(request, url, { onRateLimit }));
     }
-  }));
-  if (unverified.length) result.unverifiedLinks = unverified;
-  if (broken.length) throw new Error(`Broken links: ${broken.join('; ')}`);
-  return [...new Set(urls)].length;
+    const status = await cache.results.get(url);
+    if (status === `${UNVERIFIED}HTTP 429`) cache.limitedHosts.add(host);
+    return status;
+  };
+  const record = (url, status) => {
+    if (status.startsWith(UNVERIFIED)) outcome.unverified.push(`${url}: ${status.slice(UNVERIFIED.length)}`);
+    else if (status !== 'ok') outcome.broken.push(`${url}: ${status}`);
+  };
+  const checkOne = async (url) => {
+    if (Date.now() < deadline) return record(url, await lookup(url));
+    record(url, waitedOnRateLimit ? `${UNVERIFIED}link-check deadline exceeded after an outside rate limit` : 'link-check deadline exceeded');
+  };
+  // Bound concurrency so a page with hundreds of source links cannot burst a host.
+  const pending = [...urls];
+  const worker = async () => { while (pending.length) await checkOne(pending.shift()); };
+  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, worker));
+  return outcome;
 }
 
 // An outside site's rate limit (429) or bot wall (403) says nothing about

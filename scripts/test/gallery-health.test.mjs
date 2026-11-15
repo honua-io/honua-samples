@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import reportHealth from '../../.github/scripts/report-gallery-health.cjs';
-import { resolveLink, UNVERIFIED } from '../lib/gallery-health-check.mjs';
+import { checkLinkUrls, createLinkCache, resolveLink, UNVERIFIED } from '../lib/gallery-health-check.mjs';
 import { countLaidOut, MAP_CONTAINER_SELECTOR, renderedMapEvidence } from '../lib/gallery-health-map.mjs';
 
 test('loaded source features and basemap pixels cannot substitute for painted application features', () => {
@@ -183,4 +183,51 @@ test('GET transport errors remain link failures', async () => {
     get: async () => { throw new Error('connection refused'); },
   };
   assert.equal(await resolveLink(request, 'https://example.org/download'), 'connection refused');
+});
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const slowRateLimited = async (_request, url, { onRateLimit }) => {
+  if (url.includes('github.com') || url.includes('honua.io')) { onRateLimit(); await sleep(40); }
+  return 'ok';
+};
+const deadlineUrls = [1, 2, 3, 4].map((n) => `https://github.com/o/r/${n}`).concat(['https://www.npmjs.com/a', 'https://docs.example.org/b']);
+
+test('links left after an outside rate-limit wait on the page are unverified, not broken', async () => {
+  const links = await checkLinkUrls(deadlineUrls, null, { budgetMs: 10, resolve: slowRateLimited });
+  assert.deepEqual(links.broken, []);
+  assert.equal(links.unverified.length, 2);
+  assert.match(links.unverified[0], /npmjs.*deadline exceeded after an outside rate limit/);
+});
+
+test('a missed deadline stays broken when the page saw no outside rate limit', async () => {
+  const slow = async () => { await sleep(40); return 'ok'; };
+  const links = await checkLinkUrls(deadlineUrls, null, { budgetMs: 10, resolve: slow });
+  assert.equal(links.broken.length, 2);
+  assert.deepEqual(links.unverified, []);
+});
+
+test('a Honua host rate limit does not excuse a missed deadline', async () => {
+  const urls = [1, 2, 3, 4].map((n) => `https://samples.honua.io/${n}`).concat(['https://www.npmjs.com/a']);
+  const links = await checkLinkUrls(urls, null, { budgetMs: 10, resolve: slowRateLimited });
+  assert.equal(links.broken.length, 1);
+});
+
+test('the rate-limit excuse does not carry over to a later page', async () => {
+  const cache = createLinkCache();
+  await checkLinkUrls(deadlineUrls, null, { cache, budgetMs: 10, resolve: slowRateLimited });
+  const slow = async () => { await sleep(40); return 'ok'; };
+  const later = [1, 2, 3, 4, 5].map((n) => `https://docs.example.org/later/${n}`);
+  const links = await checkLinkUrls(later, null, { cache, budgetMs: 10, resolve: slow });
+  assert.equal(links.broken.length, 1);
+});
+
+test('an outside host that stays rate limited is not requested again', async () => {
+  const cache = createLinkCache();
+  let calls = 0;
+  const limited = async () => { calls++; return `${UNVERIFIED}HTTP 429`; };
+  await checkLinkUrls(['https://github.com/o/r/1'], null, { cache, resolve: limited });
+  const links = await checkLinkUrls(['https://github.com/o/r/2', 'https://github.com/o/r/3'], null, { cache, resolve: limited });
+  assert.equal(calls, 1);
+  assert.equal(links.unverified.length, 2);
+  assert.deepEqual(links.broken, []);
 });

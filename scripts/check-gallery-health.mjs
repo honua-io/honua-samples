@@ -3,7 +3,7 @@ import path from 'node:path';
 import { chromium, firefox } from '@playwright/test';
 import { discoverGallery } from './lib/gallery-health-discovery.mjs';
 import { captureMaps } from './lib/gallery-health-map.mjs';
-import { checkGalleryPage } from './lib/gallery-health-check.mjs';
+import { checkGalleryPage, createLinkCache } from './lib/gallery-health-check.mjs';
 import { DESKTOP_VIEWPORT, MOBILE_VIEWPORT } from './lib/gallery-visual-contract.mjs';
 
 const manifest = JSON.parse(await readFile(process.env.GALLERY_HEALTH_MANIFEST ?? 'config/gallery-health.v1.json', 'utf8'));
@@ -14,7 +14,7 @@ const report = { format: 'honua.gallery-health-result.v1', checkedAt: new Date()
 const profiles = { desktop: DESKTOP_VIEWPORT, mobile: MOBILE_VIEWPORT };
 // One link cache for the whole run: each outside URL is requested once, not once
 // per browser and viewport, which keeps the run under outside rate limits.
-const linkCache = new Map();
+const linkCache = createLinkCache();
 
 async function checkEntry(browser, entry, options) {
   // Each demo starts with new anonymous storage and cookies, including embedded frames.
