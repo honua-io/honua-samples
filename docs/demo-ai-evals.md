@@ -1,6 +1,8 @@
 # State and local demo answer checks
 
-Run `npm ci`, `npx playwright install chromium`,
+Run `npm ci`, `npx playwright install chromium`, create the catalog environment
+(`python3 -m venv artifacts/catalog-python`, then
+`artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt`),
 `node scripts/state-local/build-display-site.mjs`,
 `node scripts/build-gallery.mjs --check`, then
 `npm run test:demo-ai:browser`.

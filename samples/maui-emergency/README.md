@@ -28,7 +28,7 @@ be enabled explicitly; no administrative credential belongs in the browser URL.
 ```sh
 npm ci --prefix samples/maui-emergency
 npm run build --prefix samples/maui-emergency
-npm exec --prefix samples/maui-emergency -- vite preview --host 127.0.0.1
+npm exec --prefix samples/maui-emergency -- vite preview samples/maui-emergency --host 127.0.0.1
 ```
 
 Open the preview URL with these query parameters (replace the four placeholders):
@@ -106,6 +106,7 @@ captures stay in ignored artifacts; real source data is fetched by the pipeline.
 ```sh
 HONUA_BASE_URL=http://localhost:8080 \
 HONUA_ADMIN_API_KEY=your-local-admin-key \
+HONUA_SAMPLE_PYTHON="$PWD/artifacts/state-local/venv/bin/python" \
 node scripts/state-local/sdk/verify.mjs emergency
 ```
 
