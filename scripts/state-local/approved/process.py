@@ -1,17 +1,12 @@
 import json, sys, os, re
-from shapely.geometry import shape, mapping, box, Point
+from shapely.geometry import shape, box, Point
+from display_geometry import round_coordinates, serialize_geometry
 from shapely.ops import unary_union
 from shapely import make_valid
 RAW, OUT = sys.argv[1], sys.argv[2]
 W = box(-156.535, 20.855, -156.42, 20.915)
 P = box(-156.49, 20.875, -156.462, 20.895)
 def L(n): return json.load(open(os.path.join(RAW, n + '.geojson')))['features']
-def rnd(o, nd=5):
-    if isinstance(o, float): return round(o, nd)
-    if isinstance(o, (list, tuple)): return [rnd(x, nd) for x in o]
-    return o
-def geom_out(g):
-    m = mapping(g); return {"type": m["type"], "coordinates": rnd(m["coordinates"])}
 def poly_only(g):
     if g.is_empty: return None
     if g.geom_type in ("Polygon", "MultiPolygon"): return g
@@ -33,14 +28,14 @@ def polys(name, clip, tol, props):
         if g is None: continue
         g = g.simplify(tol, preserve_topology=True)
         if g.is_empty or g.area < tol * tol * 4: continue
-        out.append({"type": "Feature", "properties": props(f["properties"]), "geometry": geom_out(g)})
+        out.append({"type": "Feature", "properties": props(f["properties"]), "geometry": serialize_geometry(g)})
     return out
 def title(s): return " ".join(w.capitalize() for w in (s or "").split())
 
 # land/ocean
 land = unary_union([make_valid(shape(f["geometry"])) for f in L("coastline")]).intersection(W.buffer(0.01))
 land = poly_only(land).simplify(0.00004, preserve_topology=True)
-save("land", [{"type": "Feature", "properties": {}, "geometry": geom_out(land)}])
+save("land", [{"type": "Feature", "properties": {}, "geometry": serialize_geometry(land)}])
 
 ZONES = {}
 zoning = polys("zoning", W, 0.00003, lambda p: {"code": p["zone_code"], "name": p["zone_dist"]})
@@ -62,13 +57,13 @@ for f in L("roads"):
     g = g.simplify(0.00001)
     n = f["properties"]["fullname"] or ""
     cls = "hwy" if "HIGHWAY" in n else ("major" if MAJOR.search(n) else "local")
-    roads.append({"type": "Feature", "properties": {"name": title(n), "cls": cls}, "geometry": geom_out(g)})
+    roads.append({"type": "Feature", "properties": {"name": title(n), "cls": cls}, "geometry": serialize_geometry(g)})
 save("roads", roads)
 streams = []
 for f in L("streams"):
     g = shape(f["geometry"]).intersection(W)
     if g.is_empty: continue
-    streams.append({"type": "Feature", "properties": {"name": title(f["properties"]["stream_nam"])}, "geometry": geom_out(g.simplify(0.00003))})
+    streams.append({"type": "Feature", "properties": {"name": title(f["properties"]["stream_nam"])}, "geometry": serialize_geometry(g.simplify(0.00003))})
 save("streams", streams)
 
 # parcels with derived zoning / flood / tsunami
@@ -94,7 +89,7 @@ for f in L("parcels"):
         "ho": p["homeowner"], "nh": p["nhoodcode"], "pitt": p["pittcode"],
         "zone": z["code"] if z else None, "zname": z["name"] if z else None,
         "fld": fl["zone"] if fl else None, "tsu": tz,
-        "c": rnd([c.x, c.y])}, "geometry": geom_out(g)})
+        "c": round_coordinates([c.x, c.y])}, "geometry": serialize_geometry(g)})
 save("parcels", parcels)
 
 def pts(name, props):
@@ -102,7 +97,7 @@ def pts(name, props):
     for f in L(name):
         g = f.get("geometry")
         if not g: continue
-        out.append({"type": "Feature", "properties": props(f["properties"]), "geometry": {"type": "Point", "coordinates": rnd(g["coordinates"])}})
+        out.append({"type": "Feature", "properties": props(f["properties"]), "geometry": serialize_geometry(shape(g))})
     return out
 save("fire", pts("fire", lambda p: {"name": p["alt_name"] or p["name"]}))
 save("police", pts("police", lambda p: {"name": p["station_name"], "addr": p["full_address"]}))
@@ -141,7 +136,7 @@ for code, gs in byc.items():
     u = unary_union([g.buffer(0) for g in gs]).simplify(0.00004, preserve_topology=True)
     u = poly_only(u)
     if u is None: continue
-    zd.append({"type": "Feature", "properties": {"code": code, "name": names[code]}, "geometry": geom_out(u)})
+    zd.append({"type": "Feature", "properties": {"code": code, "name": names[code]}, "geometry": serialize_geometry(u)})
 compact("zoning", zd, ["code", "name"], "poly")
 compact("roads", roads, ["name", "cls"], "line")
 # ---- Hawaii multi-layer land use: state LUD, SMA, Maui Island Plan, community plan ----
@@ -192,7 +187,7 @@ cont = []
 for f in L("contours"):
     g = shape(f["geometry"]).intersection(W)
     if g.is_empty or g.geom_type not in ("LineString", "MultiLineString"): continue
-    cont.append({"type": "Feature", "properties": {"ft": f["properties"]["contour"]}, "geometry": geom_out(g.simplify(0.00005))})
+    cont.append({"type": "Feature", "properties": {"ft": f["properties"]["contour"]}, "geometry": serialize_geometry(g.simplify(0.00005))})
 compact("contours", cont, ["ft"], "line")
 wb = polys("waterbodies", W, 0.00002, lambda p: {"name": p["gnis_name"]})
 wb = [f for f in wb if shape(f["geometry"]).area > 2e-8]

@@ -46,7 +46,7 @@ on:
 
 permissions:
   contents: read
-  actions: read # to best-effort download the latest run-samples.yml run-results artifact below
+  actions: read # download the latest run-samples.yml run-results artifact
   pages: write
   id-token: write
 
@@ -157,26 +157,27 @@ jobs:
             run_build "$script"
           done
 
-      - name: Download latest run-results artifact (best effort)
-        # Feeds scripts/build-gallery.mjs's honest per-sample run badges. Not
-        # fatal if absent (no run-samples.yml run yet, or its artifact
-        # already expired) -- the gallery then just shows "no run results
-        # yet" for active samples instead of a badge, same as a local build.
+      - name: Download latest run-results artifact
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set +e
-          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow run-samples.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')
-          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
-            echo "No successful run-samples.yml run found yet -- continuing without run-results."
-            exit 0
+          set -euo pipefail
+          # Successful workflows may skip sample execution; start from available artifacts.
+          candidates=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?name=run-results&per_page=100" | jq -sr '[.[].artifacts[] | select(.expired == false and .workflow_run.head_branch == "trunk")] | sort_by(.created_at) | reverse | .[].workflow_run.id')
+          run_id=""
+          for candidate in $candidates; do
+            usable=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate" --jq '.path == ".github/workflows/run-samples.yml" and .conclusion == "success" and .head_branch == "trunk"')
+            if [ "$usable" = "true" ]; then
+              run_id="$candidate"
+              break
+            fi
+          done
+          if [ -z "$run_id" ]; then
+            echo "::error::No successful trunk run-samples.yml run with available run-results found; refusing to publish without run results."
+            exit 1
           fi
           mkdir -p results
-          if gh run download "$run_id" --repo "$GITHUB_REPOSITORY" -n run-results -D results; then
-            echo "Downloaded run-results artifact from run $run_id."
-          else
-            echo "Could not download the run-results artifact from run $run_id (may have expired) -- continuing without it."
-          fi
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" -n run-results -D results
 
       - name: Stage & verify sdk-js sample bundles
         # Reads the lock's content-addressed vendored release and SHA-256-verifies
@@ -195,7 +196,20 @@ jobs:
           MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/lib/sample-bundles.mjs
 
+      - name: Install pinned public catalog exporters
+        run: |
+          python3 -m venv artifacts/catalog-python
+          artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+
+      - name: Verify display geometry and public catalog export boundaries
+        run: artifacts/catalog-python/bin/python -m unittest discover -s scripts/state-local/approved -p 'test_*.py' -v
+
+      - name: Install gallery dependencies
+        run: npm ci
+
       - name: Build snapshot-backed state and local demos
+        env:
+          HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: node scripts/state-local/build-display-site.mjs
 
       - name: Build gallery
@@ -211,12 +225,12 @@ jobs:
         env:
           KEY_LIST_URL: https://raw.githubusercontent.com/honua-io/honua-server/9d2169cc12ee6323519567368774d0deba829686/docs/gis/data/capability-keys.v1.json
           MIN_RUNNABLE_BUNDLES: "11"
+          REQUIRE_RUN_RESULTS: "1"
         run: node scripts/build-gallery.mjs
 
       - name: Install gallery browser
         run: |
-          npm ci
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium firefox
 
       - name: Smoke the exact gallery artifact
         # Bundle supply is gated above. The publish floor is the named list in
@@ -224,9 +238,19 @@ jobs:
         # runnable in this artifact (scripts/smoke-published-gallery.mjs).
         run: npm run test:gallery:browser
 
+      - name: Verify light and dark gallery journeys
+        run: npm run test:gallery:themes
+
+      - name: Verify signed-out public catalog workflow
+        run: node scripts/smoke-public-catalog.mjs
+
+      - name: Island map layers draw in Chromium and Firefox
+        # The state-local maps read their PMTiles archives byte-exact from the demo CDN.
+        run: xvfb-run -a npm run test:island-layers:browser
+
       - name: Verify server-first job pages
         env:
-          MIN_JOB_PAGES: "4"
+          MIN_JOB_PAGES: "3"
         run: npm run test:job-pages:browser
 
       - name: Upload gallery browser evidence
@@ -250,6 +274,8 @@ jobs:
 
   verify-live:
     name: verify deployed gallery
+    permissions:
+      contents: read
     needs: deploy
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
@@ -267,6 +293,7 @@ jobs:
 
       - name: Verify every admitted live route and runnable app
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           GALLERY_BASE_URL: https://samples.honua.io
           EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
         run: npm run test:gallery:live

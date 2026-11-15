@@ -9,23 +9,23 @@ const collection = (geometry) => ({ type: "FeatureCollection", features: [{
 }] });
 
 test("default import budget includes closing vertices and accepts the exact vertex boundary", () => {
-  const coordinates = Array.from({ length: 10_000 }, () => ring[0]);
+  const coordinates = Array.from({ length: 100_000 }, () => ring[0]);
   assert.doesNotThrow(() => assertDefaultImportGeometry(collection({ type: "Polygon", coordinates: [coordinates] })));
   coordinates.push(ring[0]);
   assert.throws(() => assertDefaultImportGeometry(collection({ type: "Polygon", coordinates: [coordinates] })),
-    /Source feature source-2826.*10001 vertices \(maximum 10000\)/);
+    /Source feature source-2826.*100001 vertices \(maximum 100000\)/);
 });
 
 test("default import budget counts exterior and interior rings across all polygon parts", () => {
-  const coordinates = Array.from({ length: 50 }, () => [ring, ring]);
+  const coordinates = Array.from({ length: 500 }, () => [ring, ring]);
   assert.doesNotThrow(() => assertDefaultImportGeometry(collection({ type: "MultiPolygon", coordinates })));
   coordinates.push([ring]);
-  assert.throws(() => assertDefaultImportGeometry(collection({ type: "MultiPolygon", coordinates })), /101 rings/);
+  assert.throws(() => assertDefaultImportGeometry(collection({ type: "MultiPolygon", coordinates })), /1001 rings/);
 });
 
 test("oversized upload fails before transmitting data or making a server mutation", async (t) => {
   t.mock.method(globalThis, "fetch", () => { assert.fail("oversized geometry must not reach the server"); });
-  const geojson = collection({ type: "Polygon", coordinates: Array.from({ length: 101 }, () => ring) });
+  const geojson = collection({ type: "Polygon", coordinates: Array.from({ length: 1001 }, () => ring) });
   await assert.rejects(uploadSnapshotTable({ baseUrl: "https://server.test" }, { tableName: "demo_test", geojson }),
     /default import geometry limits/);
 });

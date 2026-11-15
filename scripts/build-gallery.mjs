@@ -1,5 +1,7 @@
 #!/usr/bin/env node
+import { themeBootstrap } from '../shared/design-system/theme-init.mjs';
 import { sampleAppPath } from './lib/sample-app-url.mjs';
+import { isPublishableHttpUrl } from './lib/publishable-http-url.mjs';
 // Builds the static samples.honua.io gallery into site/ (honua-io/honua-samples#3).
 //
 // DECISION (owner, 2026-07-17, on #3): samples.honua.io is the single
@@ -59,7 +61,8 @@ import { sampleAppPath } from './lib/sample-app-url.mjs';
 //                                             # gate PRs on a broken gallery build
 //
 // Env vars (all optional):
-//   RUN_RESULTS_PATH           default "results/run-results.v1.json" (missing is tolerated)
+//   RUN_RESULTS_PATH           default "results/run-results.v1.json"
+//   REQUIRE_RUN_RESULTS        "1" makes missing run results fatal (Pages deploy)
 //   KEY_LIST_URL                see scripts/lib/capability-keys.mjs
 //   SDKJS_HANDOFF_URL           see scripts/lib/sdkjs-handoff.mjs
 //   SDKJS_HANDOFF_FIXTURE_URL   see scripts/lib/sdkjs-handoff.mjs
@@ -74,6 +77,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCapabilityKeyRecords } from "./lib/capability-keys.mjs";
 import { renderMarkdown, escapeAttr, escapeHtml } from "./lib/markdown-lite.mjs";
+import { computeOwnRunBadge, httpsUrlOrNull, runBadgeHtml } from "./lib/run-badge.mjs";
 import { loadSdkJsCatalog, loadCapabilityCrosswalk, deriveCapabilityKeys, SDKJS_REPO } from "./lib/sdkjs-catalog.mjs";
 import { loadSdkJsHandoff, mergeSdkProjection } from "./lib/sdkjs-handoff.mjs";
 import { ensureSampleBundlesStaged } from "./lib/sample-bundles.mjs";
@@ -85,9 +89,12 @@ import {
   movedEntries,
   publicSampleIds,
 } from "./lib/gallery-public-portfolio.mjs";
+import { renderGalleryActions } from "./lib/gallery-actions.mjs";
+import { journeySourceUrl } from "./lib/gallery-action-contract.mjs";
 import { DATA_MODE_LABELS } from "./lib/data-mode-labels.mjs";
 import { buildStateLocalSite, validateStateLocalLinks } from "./state-local/build-site.mjs";
 import { loadJobPages } from "./validate-job-pages.mjs";
+import { writeReferenceRedirects } from "./lib/gallery-reference-redirects.mjs";
 import {
   dataOriginHost,
   isOwnBrowserSample,
@@ -285,7 +292,8 @@ async function main() {
     ...sdkCards.filter((c) => !c.bundleRunnable),
   ];
 
-  const taskGroups = groupByDeveloperTask(cards);
+  const taskGroups = groupByDeveloperTask(cards.filter((card) => card.kind !== "job"));
+  if (jobCards.length) taskGroups.push({ name: "Source walkthroughs", cards: jobCards });
   const generatedAt = new Date().toISOString();
   const bundleNotice = bundleState.degraded
     ? `Sample bundle fetch degraded this deploy: ${bundleState.degradedReason} -- no sdk-js samples are embedded; each shows "no runnable build published yet".`
@@ -308,6 +316,14 @@ async function main() {
 
   await copyAssets();
   await buildStateLocalSite({ repoRoot: REPO_ROOT, siteDir: SITE_DIR, cards });
+  await writeFile(path.join(SITE_DIR, "gallery-health.v1.json"), `${JSON.stringify({
+    format: "honua.gallery-health-inventory.v1",
+    entries: cards.map((card) => ({
+      url: card.detailPath,
+      ...(card.ownApp || (card.bundleRunnable && card.renderers?.some((renderer) => /maplibre|leaflet|openlayers|mapbox|cesium/i.test(renderer)))
+        ? { mapRequired: true } : {}),
+    })),
+  }, null, 2)}\n`, "utf8");
   const indexHtml = renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommit, bundleNotice });
   assertNoDuplicateArticles(indexHtml);
   await writeFile(path.join(SITE_DIR, "index.html"), indexHtml, "utf8");
@@ -399,6 +415,7 @@ async function main() {
     );
   }
 
+  await writeReferenceRedirects({ siteDir: SITE_DIR, sourceCommit });
   await validateStateLocalLinks(SITE_DIR);
   await assertNoMutableTrunkLinks(SITE_DIR);
 
@@ -465,11 +482,14 @@ async function loadRunResults() {
   let raw;
   try {
     raw = await readFile(RUN_RESULTS_PATH, "utf8");
-  } catch {
+  } catch (error) {
+    if (process.env.REQUIRE_RUN_RESULTS === "1" || error.code !== "ENOENT") {
+      throw new Error(`build-gallery: cannot read required run results at ${RUN_RESULTS_PATH}`, { cause: error });
+    }
     console.warn(
-      `build-gallery: no run results at ${path.relative(REPO_ROOT, RUN_RESULTS_PATH)} -- run badges will reflect "not yet run" instead of an actual outcome`,
+      `build-gallery: no run results at ${path.relative(REPO_ROOT, RUN_RESULTS_PATH)} -- own-sample cards will show no run badge`,
     );
-    return { resultsById: new Map(), generatedAt: null };
+    return { resultsById: new Map(), generatedAt: null, runUrl: null };
   }
   const envelope = JSON.parse(raw);
   const resultsById = new Map();
@@ -477,7 +497,7 @@ async function loadRunResults() {
     if (!result?.id) continue;
     resultsById.set(result.id, result);
   }
-  return { resultsById, generatedAt: envelope.generatedAt };
+  return { resultsById, generatedAt: envelope.generatedAt, runUrl: httpsUrlOrNull(envelope.runUrl) };
 }
 
 // ---- card normalization -------------------------------------------------
@@ -493,7 +513,7 @@ function toOwnCard(sample, runResults, keyByKey, problems, sourceCommit) {
   }
 
   const result = runResults.resultsById.get(id);
-  const runBadge = computeOwnRunBadge(manifest, result, runResults.generatedAt);
+  const runBadge = computeOwnRunBadge(manifest, result, runResults);
 
   return {
     kind: "own",
@@ -513,31 +533,11 @@ function toOwnCard(sample, runResults, keyByKey, problems, sourceCommit) {
     detailUrl: `${GALLERY_BASE_URL}/${id}/`,
     detailPath: `/${id}/`,
     githubUrl: `https://github.com/${OWN_REPO}/tree/${sourceCommit}/samples/${dirName}`,
-    readmeHtml: readme ? renderMarkdown(readme) : null,
+    readmeHtml: readme ? renderMarkdown(readme, `https://github.com/${OWN_REPO}/blob/${sourceCommit}/samples/${dirName}/README.md`) : null,
     sourcePath,
     sourceText,
     runBadge,
     entrypoint: manifest.entrypoint ?? null,
-  };
-}
-
-function computeOwnRunBadge(manifest, result, envelopeGeneratedAt) {
-  if (manifest.status === "draft") {
-    return { state: "draft", label: "Draft — outside the active gallery's verified sample set" };
-  }
-  if (!result) {
-    return { state: "none", label: "Active — no run results yet" };
-  }
-  const date = envelopeGeneratedAt ? envelopeGeneratedAt.slice(0, 10) : "an unknown date";
-  if (result.outcome === "pass") {
-    return {
-      state: "pass",
-      label: `Runs green — verified ${date} against server ${result.serverVersion ?? "unknown"}`,
-    };
-  }
-  return {
-    state: "fail",
-    label: `Last run failed on ${date} (server ${result.serverVersion ?? "unknown"})${result.error ? `: ${result.error}` : ""}`,
   };
 }
 
@@ -747,6 +747,8 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeAttr(description)}" />
+${themeBootstrap}
+<link rel="stylesheet" href="${assetPrefix}/tokens.css" />
 <link rel="stylesheet" href="${assetPrefix}/gallery.css" />
 </head>
 <body>
@@ -759,11 +761,13 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
     <a href="https://github.com/${OWN_REPO}" target="_blank" rel="noopener noreferrer">honua-samples ↗</a>
     <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js ↗</a>
   </nav>
+  <button class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">Dark mode</button>
 </header>
 <main>
 ${bodyHtml}
 </main>
 <footer class="site-footer">${renderFooter(generatedAt, sourceCommit, bundleNotice)}</footer>
+<script src="${assetPrefix}/theme.js"></script>
 ${depth === 0 ? `<script src="${assetPrefix}/gallery-filter.js"></script>` : `<script src="${assetPrefix}/source-preview.js"></script><script src="${assetPrefix}/job-page.js"></script>`}
 </body>
 </html>
@@ -793,11 +797,6 @@ function capabilityChips(capabilities, keyByKey) {
       return chip(`${label} (${key})`);
     })
     .join("")}</div>`;
-}
-
-function runBadgeHtml(badge) {
-  if (!badge) return "";
-  return `<span class="badge ${badge.state}">${escapeHtml(badge.label)}</span>`;
 }
 
 // ---- rendering: bundle embed / no-bundle / headless panels ---------------
@@ -916,7 +915,7 @@ function renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommi
 </section>
 <section id="journeys" class="starter-section" aria-labelledby="journeys-heading">
   <div class="section-heading"><div><p class="eyebrow">Use-case journeys</p><h2 id="journeys-heading">Start with a county job.</h2></div><p>Each journey is a complete county workflow on Maui data.</p></div>
-  <div class="starter-grid">${STATE_LOCAL_JOURNEYS.map(renderJourneyCard).join("\n")}</div>
+  <div class="starter-grid">${STATE_LOCAL_JOURNEYS.map((journey, index) => renderJourneyCard(journey, index, sourceCommit)).join("\n")}</div>
 </section>
 <section id="build" class="catalog-section" aria-labelledby="build-heading">
   <div class="catalog-heading"><div><p class="eyebrow">Build it yourself</p><h2 id="build-heading">Code samples by task.</h2></div><div class="catalog-search"><label for="filter-search">Search samples</label><input id="filter-search" type="search" placeholder="Try: OGC, tiles, geoprocessing..." autocomplete="off" /><kbd>/</kbd></div></div>
@@ -946,12 +945,15 @@ function renderIndexPage({ taskGroups, cards, keyByKey, generatedAt, sourceCommi
   });
 }
 
-function renderJourneyCard(journey, index) {
-  return `<a class="starter-card" href="${escapeAttr(journey.path)}">
+function renderJourneyCard(journey, index, sourceCommit) {
+  const slug = journey.path.split("/").filter(Boolean).at(-1);
+  const sourceUrl = journeySourceUrl(slug, sourceCommit);
+  return `<article class="starter-card" data-id="journey-${slug}">
   <span class="starter-number">${String(index + 1).padStart(2, "0")}</span><span class="starter-eyebrow">${escapeHtml(journey.eyebrow)}</span>
-  <h3>${escapeHtml(journey.title)}</h3><p>${escapeHtml(journey.summary)}</p>
-  <span class="starter-meta">Maui County <b>Open journey &rarr;</b></span>
-</a>`;
+  <h3><a href="${escapeAttr(journey.path)}">${escapeHtml(journey.title)}</a></h3><p>${escapeHtml(journey.summary)}</p>
+  <span class="starter-meta">Maui County</span>
+  ${renderGalleryActions({ openUrl: journey.path, sourceUrl })}
+</article>`;
 }
 
 function renderFilterPanel(cards, keyByKey) {
@@ -1021,18 +1023,21 @@ function renderCategorySection(category) {
 </section>`;
 }
 
+function hasPublishedBrowserApp(card) {
+  return (card.kind === "sdk" && card.bundleRunnable && card.evidence?.fixture?.status === "executed") ||
+    (card.kind === "own" && Boolean(card.ownApp));
+}
+
 function renderCard(card) {
   const dataCaps = escapeAttr(card.capabilities.join(","));
   const dataSdks = escapeAttr(card.sdks.join(","));
-  const runnable =
-    (card.kind === "sdk" && card.bundleRunnable && card.evidence?.fixture?.status === "executed") ||
-    (card.kind === "own" && Boolean(card.ownApp));
+  const runnable = hasPublishedBrowserApp(card);
   const extra =
     card.kind === "own"
       ? runBadgeHtml(card.runBadge)
       : `${chip(`support: ${card.supportTier}`, "support-tier")}${renderCardEvidenceBadges(card)}`;
   const runnableBadge = runnable
-    ? `<span class="badge runnable" title="Runs in the browser on this page">&#9654; Runnable</span>`
+    ? `<span class="badge runnable" title="Browser demo available; server verification is reported separately">&#9654; Browser demo</span>`
     : "";
   const evidenceScope = card.kind === "sdk" ? ` data-evidence-scope="gallery-only"` : "";
   const contentKind = CONTENT_KIND_BY_ID.get(card.contentKind);
@@ -1041,9 +1046,11 @@ function renderCard(card) {
     : card.track
       ? escapeHtml(card.track)
       : "SDK example";
-  const actions = card.contentKind === "project"
-    ? `<a class="card-open" href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">${card.kind === "job" ? "Open governed project contract" : "Open project source"} &nearr;</a><a href="${card.detailPath}">Project overview &rarr;</a>`
-    : `<a class="card-open" href="${card.detailPath}">${runnable ? "Run and view code" : "View code"} &rarr;</a><a href="${card.githubUrl}" target="_blank" rel="noopener noreferrer">GitHub &nearr;</a>`;
+  const actions = renderGalleryActions({
+    openUrl: runnable ? card.detailPath : null,
+    sourceUrl: card.githubUrl,
+    unavailableReason: "This sample has no published browser app. Open its overview for local run instructions.",
+  });
   return `<article class="card${runnable ? " has-runnable" : ""}" data-id="${escapeAttr(card.id)}" data-content-kind="${escapeAttr(card.contentKind)}" data-source="${escapeAttr(card.sourceRepo)}" data-job-page="${card.kind === "job" ? "yes" : "no"}"${evidenceScope} data-sdks="${dataSdks}" data-edition="${escapeAttr(card.edition)}" data-runnable="${runnable ? "yes" : "no"}" data-capabilities="${dataCaps}" data-search="${escapeAttr(`${contentKind.label} ${card.title} ${card.summary} ${card.id} ${card.capabilities.join(" ")} ${card.protocols.join(" ")} ${(card.searchAliases ?? []).join(" ")}`)}">
   <div class="card-topline"><span class="content-kind-label kind-${escapeAttr(card.contentKind)}">${escapeHtml(contentKind.singular)}</span><span class="learning-meta">${learningMeta}</span></div>
   <h3><a href="${card.detailPath}">${escapeHtml(card.title)}</a></h3>
@@ -1057,7 +1064,7 @@ function renderCard(card) {
     ${card.auth ? chip(card.auth) : ""}
   </div>
   <div class="card-evidence">${runnableBadge}${extra}</div>
-  <div class="card-actions">${actions}</div>
+  ${actions}
 </article>`;
 }
 
@@ -1224,7 +1231,7 @@ function renderJobServerPanel(job, keyByKey) {
 
 function renderProtocolContract(job, protocol, index) {
   const request = { method: protocol.method, endpoint: protocol.concreteEndpoint ?? protocol.endpointTemplate, payload: protocol.request };
-  const open = /\bGET\b/u.test(protocol.method) && isSafeHttpUrl(protocol.concreteEndpoint)
+  const open = /\bGET\b/u.test(protocol.method) && isPublishableHttpUrl(protocol.concreteEndpoint)
     ? `<a class="button protocol-open" href="${escapeAttr(protocol.concreteEndpoint)}" target="_blank" rel="noopener noreferrer">Open GET endpoint &nearr;</a>`
     : "";
   return `<article class="server-protocol" data-protocol="${escapeAttr(protocol.id)}" data-availability="${escapeAttr(protocol.availability)}">
@@ -1315,15 +1322,6 @@ function renderJobAiPanel(job) {
 
 function domId(value) {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "");
-}
-
-function isSafeHttpUrl(value) {
-  if (!value) return false;
-  try {
-    return new Set(["http:", "https:"]).has(new URL(value).protocol);
-  } catch {
-    return false;
-  }
 }
 
 function isSafeHttpsUrl(value) {
@@ -1611,6 +1609,11 @@ async function assertNoMutableTrunkLinks(root) {
 async function copyAssets() {
   const destDir = path.join(SITE_DIR, "assets");
   await mkdir(destDir, { recursive: true });
+  await cp(new URL('../shared/design-system/tokens.css', import.meta.url), path.join(destDir, 'tokens.css'));
+  const brandAssets = new URL('../samples/county-parcel-viewer/public/honua/', import.meta.url);
+  for (const name of ['theme.js', 'geist-latin.woff2', 'OFL.txt']) {
+    await cp(new URL(name, brandAssets), path.join(destDir, name));
+  }
   for (const name of ["gallery.css", "gallery-filter.js", "source-preview.js", "job-page.js"]) {
     const content = await readFile(path.join(ASSETS_SRC_DIR, name), "utf8");
     await writeFile(path.join(destDir, name), content, "utf8");

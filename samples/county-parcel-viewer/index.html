@@ -38,6 +38,7 @@
       </aside>
 
       <div class="map" role="region" aria-label="Map of the selected parcel and surrounding area">
+        <fieldset class="overlay-controls"><legend>Nearby planning layers</legend><label><input id="overlay-zoning" type="checkbox" checked /> Zoning candidates</label><label><input id="overlay-flood" type="checkbox" checked /> High-risk flood candidates</label></fieldset>
         <div id="map" class="map-canvas"></div>
         <p class="map-loading" id="map-loading" role="status"><span class="spinner" aria-hidden="true"></span>Loading map…</p>
         <p class="map-note" id="map-note" hidden></p>
@@ -47,6 +48,27 @@
         </div>
       </div>
     </main>
+
+    <section class="parcel-browser" aria-labelledby="browse-title">
+      <h2 id="browse-title">Browse Maui parcels</h2>
+      <p>Choose a row to inspect it on the map. Filter by an exact TMK; scroll for more results.</p>
+      <form id="parcel-filter" class="browser-actions">
+        <label for="filter-tmk">Filter by TMK</label>
+        <input id="filter-tmk" placeholder="All parcels" inputmode="numeric" aria-describedby="browse-status" />
+        <button class="btn quiet" type="submit">Apply filter</button>
+        <button class="btn quiet" type="reset">Clear filter</button>
+      </form>
+      <p id="browse-status" role="status">Connecting to the parcel layer…</p>
+      <div id="parcel-components" class="parcel-components">
+        <honua-feature-table id="parcel-table" label="Maui parcels" row-height="40"></honua-feature-table>
+        <honua-feature-inspection id="parcel-inspection"></honua-feature-inspection>
+      </div>
+      <div class="browser-actions">
+        <button id="export-csv" class="btn quiet" type="button" disabled>Export filtered CSV (up to 100 rows)</button>
+        <button id="export-geojson" class="btn quiet" type="button" disabled>Export selected parcel GeoJSON</button>
+      </div>
+      <p id="export-status" role="status">Exports re-query the public demo service. Custom data sources cannot be exported here.</p>
+    </section>
 
     <footer>
       <details class="tech" id="tech">

@@ -1,5 +1,10 @@
 # OGC API Tiles vector tiles in MapLibre GL JS
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The OGC tile integration below demonstrates **compatibility** for standards clients.
+
 Read a collection's OGC API Tiles tileset metadata, turn its templated tile
 link into a MapLibre vector source, and draw the tiles. The default is
 `maui-buildings` (about 42,000 Overture building footprints), extruded by

@@ -1,5 +1,13 @@
 # Maui Workbench
 
+Start with the [native application path](../../docs/native-applications.md):
+authenticated gRPC for live queries and approved edits, browser gRPC-Web setup,
+and versioned PMTiles/GeoParquet/COG range reads through the CDN for public or
+read-heavy data. Private files require authorized signed URLs and regeneration
+when data changes. The guide records this app's remaining native migration gaps.
+Existing REST SDK calls and OGC feeds below are **compatibility** examples; they
+do not establish native transport readiness.
+
 The numeric view reads the published JavaScript SDK's Float32 `readWindow` result once and
 uses those measurements for hover, click and arrow-key inspection. Colour is
 a separate presentation of the same numbers. Unknown cells remain unknown.

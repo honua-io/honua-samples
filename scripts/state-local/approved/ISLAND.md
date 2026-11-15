@@ -24,7 +24,8 @@ one metre display generalization. They are unsuitable for survey measurements.
 
 Preparation preserves the requested coordinates. It uses Shapely 2.1.2 `make_valid`
 for invalid source geometries, records each repair, and subdivides geometries to
-meet the default import limits of 10,000 vertices and 100 polygon rings per feature.
+stay within conservative bounds of 10,000 vertices and 100 polygon rings per
+feature, below the current default import limits of 100,000 vertices and 1,000 rings.
 It retains every dimension of repaired geometry collections, checks subdivision
 coverage, and preserves each original ID in `source_objectid`. Import IDs identify
 the parts; count original features by distinct `source_objectid`. The preparation
@@ -136,7 +137,14 @@ street basemap keeps default caching.
 
 The street basemap reuses the existing public Maui Protomaps archive from the demo
 server (7,089,102 bytes, OpenStreetMap/ODbL attribution). It creates no new hosting
-resource. Honua archives are static files served with HTTP byte-range support.
+resource. The Honua archives are read from the demo CDN at
+`https://demo.honua.io/demo-data/maui-island-display/<release>/`, which serves them
+byte-exact (no `Content-Encoding`, true `Content-Length`, 206 ranges, edge CORS
+preflight). GitHub Pages compresses binary files and cuts ranges from the compressed
+stream, which Firefox reads as corrupt tiles (#171). The demo CDN copy comes from the
+same release archive pinned in `island-display.lock.json`, so a new archive needs a new
+CDN prefix and a matching `island-map.js` change; `island-map-cache.test.mjs` fails
+until both agree.
 
 ## Check camera interaction and performance
 

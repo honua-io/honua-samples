@@ -124,14 +124,23 @@ async function main() {
 }
 
 function runResultsEnvelope(serverVersion, results) {
+  const runUrl = actionsRunUrl();
   return {
     schema: "run-results.v1",
     generatedAt: new Date().toISOString(),
     serverVersion,
     baseUrl: BASE_URL,
     edition: RUNNER_EDITION,
+    ...(runUrl && { runUrl }),
     results,
   };
+}
+
+function actionsRunUrl() {
+  const { GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_RUN_ATTEMPT } = process.env;
+  if (!GITHUB_SERVER_URL || !GITHUB_REPOSITORY || !GITHUB_RUN_ID) return null;
+  const attempt = GITHUB_RUN_ATTEMPT ? `/attempts/${GITHUB_RUN_ATTEMPT}` : "";
+  return `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}${attempt}`;
 }
 
 /**

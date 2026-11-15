@@ -2,7 +2,18 @@
 
 **Runnable samples as executable evidence.**
 
-Cross-SDK, cross-protocol samples for [Honua Server](https://github.com/honua-io/honua-server). Active gallery samples use the canonical capability vocabulary and run headless in CI against a real composed server. Standalone operator and authoring examples have separate checks below. Active run results feed the [honua-evidence](https://github.com/honua-io/honua-evidence) capability matrix.
+Build customer applications with **authenticated gRPC for live data and edits**,
+and **PMTiles, GeoParquet and COG over CDN HTTP range reads for public and read-heavy
+data**. Start with the [native application guide](docs/native-applications.md):
+browser gRPC-Web setup, private signed files, regeneration and the current Maui
+migration gaps.
+
+The repository also retains OGC API and GeoServices REST samples as **compatibility**
+examples for third-party tools and existing clients during coexistence. Their
+passing results do not certify the native path. Active gallery samples use the
+canonical capability vocabulary and run headless in CI against a real composed
+[Honua Server](https://github.com/honua-io/honua-server). Active results feed the
+[honua-evidence](https://github.com/honua-io/honua-evidence) capability matrix.
 
 ## Layout
 
@@ -175,16 +186,21 @@ You need, from a clone of this repository:
   `http://localhost:3000`, the one origin `docker/compose.yml` allows through
   CORS.
 - Python 3 on `PATH` as `python` (`ogc-features-python` runs `python src/run.py`).
+- The .NET 10 SDK: the state/local samples verify their JS, Python and .NET
+  snippets against the published SDKs.
 - Internet access: the `public-live` samples query `https://demo.honua.io`.
 - Chromium for the [browser lane](#browser-lane). Playwright is locked in
   `package.json`; `--with-deps` also installs Chromium's system libraries
   (it uses `sudo` on Linux).
 
-Install the browser lane once:
+Install the browser lane and the published state/local SDKs once:
 
 ```bash
 npm ci
 npx playwright install --with-deps chromium
+npm ci --prefix scripts/state-local/sdk
+python3 -m pip install -r scripts/state-local/sdk/requirements.txt
+dotnet restore scripts/state-local/sdk/StateLocal.csproj
 ```
 
 Then start the 2026.1 candidate, run every sample, and stop the stack.
@@ -192,7 +208,7 @@ Licensing is disabled. The admin password is passed to Compose and to the
 browser fixture harness:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e
+export HONUA_SERVER_IMAGE="${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e}"
 export HONUA_ADMIN_PASSWORD="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
 export HONUA_ADMIN_API_KEY="$HONUA_ADMIN_PASSWORD"
 docker compose -f docker/compose.yml up -d --wait
@@ -206,7 +222,10 @@ docker compose -f docker/compose.yml down -v
 ```
 
 `docker/compose.yml` defaults to that same candidate image and sets
-`Licensing__Mode=Disabled`. `HONUA_SERVER_IMAGE` overrides the image. The
+`Licensing__Mode=Disabled`. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it).
+The Honua service pins `platform: linux/amd64`, including with an image override.
+On an arm64 host, Docker runs the amd64 server under emulation; this is not a
+supported 2026.1 deployment topology. The
 floating `:trunk` tag is not the 2026.1 candidate. `HONUA_ADMIN_API_KEY`
 must match the composed server's admin password; browser specs use it when
 they create fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
@@ -221,7 +240,62 @@ Additional optional environment variables: `HONUA_BASE_URL` (default `http://loc
 `HONUA_PUBLIC_BASE_URL` (default `https://demo.honua.io`) and `HONUA_BROWSER_STATIC_PORT` (see
 [Browser lane](#browser-lane) below).
 
-### Browser lane
+### Nightly public gallery health
+
+[Latest health result](https://github.com/honua-io/honua-samples/actions/workflows/gallery-health.yml)
+ · [Failure tracking issue](https://github.com/honua-io/honua-samples/issues?q=label%3Agallery-health)
+
+`gallery-health.yml` runs daily at 08:37 UTC and on manual dispatch on existing
+GitHub Actions runners. Each listed demo opens in a fresh signed-out context in
+Chromium and Firefox at desktop and mobile widths. Checks require rendered
+application features on maps, reject console/page errors and dead HTTP links,
+and record first contentful paint. A loaded basemap alone cannot pass. PMTiles
+decoding failures fail even when Chromium renders the same page successfully.
+
+The gallery generator publishes `gallery-health.v1.json` from the same admitted
+cards it renders. The source manifest `config/gallery-health.v1.json` follows
+that inventory plus the website's deployed route cards and state/local
+navigation, including embedded frames. Adding a card needs no workflow edit.
+A missing or empty inventory fails visibly; other inventories still run.
+
+Every run has a readable Actions summary and a 14-day artifact containing JSON,
+Markdown and screenshots of failed pages. Failures open or update one issue
+labelled `gallery-health`; a passing run updates and closes it. Runner failures
+also update that issue. No maintainer needs to open CI logs to see the result.
+
+This optional diagnostic runs from this repository's root with Node.js 22+,
+`npm` and internet access to the public gallery and its linked services. It
+runs independently of the local Compose stack and needs no admin credentials.
+Install dependencies with `npm ci` and Playwright's locked Chromium and Firefox
+with `npx playwright install --with-deps chromium firefox`; the latter installs
+system libraries and uses `sudo` on Linux.
+
+On Linux, install Xvfb and `xauth` (Debian/Ubuntu packages `xvfb` and `xauth`)
+and run both commands under `xvfb-run`, as the gallery workflow does. This gives
+Firefox a display for its WebGL checks. Other platforms can run each `node`
+command directly using their installed browsers.
+
+```sh
+npm ci
+npx playwright install --with-deps chromium firefox
+xvfb-run -a node scripts/smoke-gallery-health-controls.mjs
+xvfb-run -a node scripts/check-gallery-health.mjs
+```
+
+The first command starts its own local fixture server and writes results to
+`.artifacts/gallery-health-controls/`. The second checks the deployed public
+pages and writes `.artifacts/gallery-health/`; upstream availability can fail
+that check. A passing PR controls run proves the injected failure checks, while
+a scheduled or manually dispatched live run checks the published gallery.
+
+The controls run on relevant PRs and deliberately introduce a blank map, console
+error, dead link and broken inventory in both browsers and viewports. They verify
+failures have screenshots, healthy pages pass and new cards are discovered.
+`GALLERY_HEALTH_MANIFEST` and `GALLERY_HEALTH_OUTPUT` override input and output
+paths for a local check. These page checks complement the demo API canary and
+exact-head gallery tests; they do not qualify a native SDK data path.
+
+## Browser lane
 
 `entrypoint.type: "browser"` samples run headless in a real browser instead
 of a Node/Python/.NET child process -- needed for anything that actually
@@ -290,14 +364,25 @@ internal capability metadata.
 
 Published at [samples.honua.io](https://samples.honua.io) -- **the single canonical Honua
 sample gallery** (decided on [honua-io/honua-samples#3](https://github.com/honua-io/honua-samples/issues/3)).
+The gallery and SDK Explorer use `shared/design-system/tokens.css`, pinned to
+the approved Honua design source identified in that file. Update that shared
+file when advancing the design revision; both builds consume it directly.
+Product pages default to light and share the `honua-theme` browser preference.
+After building the gallery, `npm run test:gallery:themes` checks desktop/mobile
+light and dark views, text contrast, route persistence, and unavailable storage.
+The nightly sample workflow uploads the screenshots and contrast results as
+`gallery-theme-journeys`. The marketing-side rollout is tracked in
+[honua-site#402](https://github.com/honua-io/honua-site/issues/402).
+
 Every deploy runs `node scripts/build-gallery.mjs`, which renders `site/` fresh
 from **two inputs**:
 
 1. **This repo's own samples** -- every `samples/<id>/sample.json` manifest,
    its `README.md`, and (when available) the matching entry in the latest
    `results/run-results.v1.json` for an honest run badge. A badge only ever
-   says "runs green" when there's an actual passing run behind it; a `draft`
-   sample or an `active` sample that hasn't run yet says so plainly instead.
+   says "runs green" when there's an actual passing run behind it, and links
+   to the CI run that produced it; a `draft` sample says so, and an `active`
+   sample with no recorded run shows no run badge at all.
 2. **honua-sdk-js's versioned site-consumer handoff** -- the AUTHORITATIVE
    SDK projection since
    [honua-io/honua-samples#16](https://github.com/honua-io/honua-samples/issues/16),
@@ -321,6 +406,10 @@ from **two inputs**:
    ([honua-io/honua-sdk-js#635](https://github.com/honua-io/honua-sdk-js/issues/635));
    its immutable identity fields must agree with the handoff or generation
    fails.
+
+Pages downloads the latest successful trunk `run-samples.yml` artifact and builds
+with `REQUIRE_RUN_RESULTS=1`. Missing or unreadable results stop publication.
+Local builds may omit that flag to preview cards without run badges.
 
 Both inputs are validated against the same canonical capability key list
 `scripts/validate-manifests.mjs` uses (`scripts/lib/capability-keys.mjs`) --

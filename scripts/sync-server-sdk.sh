@@ -26,8 +26,8 @@ git -C "${sdk}" sparse-checkout set --no-cone --stdin <<'PATHS'
 /README.md
 /THIRD-PARTY-NOTICES.md
 /src/Honua.Analyzers/
-/src/Honua.Core.Abstractions/
-/src/Honua.Plugins.Abstractions/
+/src/Honua.Core/Abstractions/
+/src/Honua.Plugins/Abstractions/
 /docker/worker-customcode-dotnet/harness/
 /docker/worker-customcode-python/harness/
 PATHS

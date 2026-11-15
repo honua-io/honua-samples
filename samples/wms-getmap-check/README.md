@@ -1,5 +1,10 @@
 # Verify a WMS GetMap response
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The WMS checks below demonstrate **compatibility** for existing map clients.
+
 Publish three points to a local Honua deployment, enable WMS, request
 `GetCapabilities`, and verify that `GetMap` returns a real `317x241` PNG.
 The runner is zero-dependency Node.js using the platform `fetch()` API.

@@ -1,5 +1,10 @@
 # GP process templates (Python and .NET)
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+These authoring templates test custom GP processes; they do not qualify a native application transport.
+
 Executable evidence for the two geoprocessing process templates under
 [`templates/`](../../templates): [`gp-python`](../../templates/gp-python/README.md)
 and [`gp-dotnet`](../../templates/gp-dotnet/README.md). Each template is a

@@ -1,5 +1,10 @@
 # Honua developer samples program
 
+Start with the [native application path](native-applications.md) for authenticated
+gRPC, browser gRPC-Web, public cloud-native files through the CDN, and private
+signed files regenerated when data changes. Historical audits below retain their
+recorded scope; protocol-specific examples provide compatibility coverage.
+
 This directory records the research, product decisions, and delivery plan for the Honua developer learning experience.
 
 ## Repository and domain ownership
@@ -10,6 +15,10 @@ This directory records the research, product decisions, and delivery plan for th
 - `honua-sdk-js` owns the JavaScript SDK and SDK-maintained example source. Publishable examples are projected into `honua-samples` through the verified bundle handoff.
 
 The infrastructure repository was renamed from `honua-demo` to `honua-demo-infra` on 2026-08-08. Existing deployed resource identifiers beginning with `honua-demo` remain unchanged unless an infrastructure migration explicitly replaces them.
+
+## Reference guidance
+
+- [Zarr, NetCDF and HDF5 readiness](multidimensional-format-maturity.md) records the format limitations and pinned evidence; it is reference material rather than a runnable sample.
 
 ## Research artifacts
 

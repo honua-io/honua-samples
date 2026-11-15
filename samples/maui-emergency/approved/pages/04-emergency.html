@@ -114,6 +114,7 @@
 </div>
 <div class="demostrip" role="note">
   <span class="tag-real">Real data</span> Tsunami zones, FEMA flood zones, sea-level rise, facilities, roads (Hawaii Statewide GIS Program), school locations (exercise shelters, not designated sites)
+  <span class="tag-real">Live data</span> NWS alerts, USGS stream gauge, NOAA tide gauge
   <span class="tag-demo">Exercise data</span> Warning, occupancy, road status, requests, feed readings, drafts
 </div>
 
@@ -128,12 +129,17 @@
       <div class="sec-h"><svg class="ico"><use href="#i-route"/></svg><h2 id="rdH">Road status</h2><span class="aside"><span class="tag-demo">exercise</span></span></div>
       <div id="roadList"></div>
     </section>
+    <section class="sec" aria-labelledby="lfH">
+      <div class="sec-h"><svg class="ico"><use href="#i-activity"/></svg><h2 id="lfH">Live public feeds</h2><span class="aside"><span class="tag-real">real data</span></span></div>
+      <div id="liveFeeds" aria-live="polite"></div>
+      <p class="faint" style="font-size:12px;margin-top:8px">Read in your browser from NWS, USGS and NOAA (U.S. Government works, public domain). Not part of the exercise. Follow official guidance in a real emergency.</p>
+    </section>
     <section class="sec eoc-only" aria-labelledby="fdH">
-      <div class="sec-h"><svg class="ico"><use href="#i-activity"/></svg><h2 id="fdH">Simulated feeds</h2><span class="aside">age since last reading</span></div>
+      <div class="sec-h"><svg class="ico"><use href="#i-activity"/></svg><h2 id="fdH">Simulated feeds</h2><span class="aside"><span class="tag-demo">exercise</span> age since last reading</span></div>
       <div class="feed"><span>NWS alerts · Maui zones</span><span class="age" data-age="18"></span><small>Tsunami Warning (simulated) · via NOAA Weather Wire satellite</small></div>
       <div class="feed"><span>Pacific Tsunami Warning Center</span><span class="age" data-age="42"></span><small>Message 7 of exercise series · satellite relay</small></div>
-      <div class="feed"><span>NOAA tide gauge Kahului 1615680</span><span class="age" data-age="61"></span><small>+0.42 ft above predicted · state radio network</small></div>
-      <div class="feed"><span>USGS stream gauge Iao Stream 16604500</span><span class="age stale" data-age="846"></span><small>38 ft³/s, normal · backfills when the uplink returns</small></div>
+      <div class="feed"><span>NOAA tide gauge Kahului 1615680 (simulated)</span><span class="age" data-age="61"></span><small>+0.42 ft above predicted · state radio network</small></div>
+      <div class="feed"><span>USGS stream gauge Iao Stream 16604500 (simulated)</span><span class="age stale" data-age="846"></span><small>38 ft³/s, normal · backfills when the uplink returns</small></div>
       <div class="feed"><span>EOC board · resource requests</span><span class="age" data-age="9"></span><small>Fictional resource board · 5 open</small></div>
     </section>
     <section class="sec" aria-labelledby="pfH">
@@ -143,7 +149,7 @@
       <div class="endpoint"><span class="p" style="min-width:120px">Road status</span><code>/ogc/collections/road-status/items</code></div>
       <div class="endpoint"><span class="p" style="min-width:120px">All, GeoJSON</span><code>/feeds/maui-emergency.geojson</code></div>
       <div class="endpoint"><span class="p" style="min-width:120px">Alerts (CAP 1.2)</span><code>/feeds/alerts.cap.xml</code></div>
-      <p class="faint" style="font-size:12px;margin-top:8px">Illustrative endpoint shapes only; feed publication is coming soon. No live feeds are connected.</p>
+      <p class="faint" style="font-size:12px;margin-top:8px">Illustrative endpoint shapes only; Honua feed publication is coming soon.</p>
     </section>
   </aside>
 
@@ -315,13 +321,20 @@
   const baldwin = shelters.find((s) => s.label === "Baldwin High"), mauiHigh = shelters.find((s) => s.label === "Maui High");
   document.getElementById("balanceText").innerHTML = `Baldwin High is at <b>${pct(baldwin)}%</b> (${fmt(baldwin.occ)} of ${fmt(baldwin.cap)}) and a fictional exercise shelter. Maui High has <b>${fmt(mauiHigh.cap - mauiHigh.occ)}</b> spaces free and the highlighted road statuses are fictional exercise records. ${cite("shelters/" + baldwin.fid, "baldwin")} ${cite("shelters/" + mauiHigh.fid, "mauihigh")} ${cite("road-status/kaahumanu", "roads")}`;
 
+  const RR = [
+    { id: "RR-114", what: "Generator, 150 kW", where: "Baldwin High shelter", pri: "Critical", c: [-156.4893, 20.8921] },
+    { id: "RR-117", what: "Cots ×300", where: "Maui High shelter", pri: "High", c: [-156.4724, 20.8752] },
+    { id: "RR-118", what: "Traffic control, 4 officers", where: "Waiehu Beach Rd at Lower Main St", pri: "High", c: [-156.4935, 20.8985] },
+    { id: "RR-120", what: "Paratransit vans ×2", where: "Kahului senior housing, Kaʻahumanu Ave", pri: "High", c: [-156.4655, 20.8895] },
+    { id: "RR-121", what: "Potable water, 2,000 gal", where: "Iao Intermediate shelter", pri: "Medium", c: [-156.4995, 20.8857] },
+  ];
   document.getElementById("sitrep").innerHTML = `<ol>
     <li><b>Situation.</b> Simulated tsunami warning in effect since 08:52 HST; simulated first wave 12:10 HST. ${cite("nws/HIZ016-exercise", "feeds")} ${cite("ptwc/msg-7", "feeds")} Demo tide gauge reads +0.42 ft above predicted. ${cite("noaa/1615680", "feeds")}</li>
     <li><b>Evacuation.</b> Exercise zones are highlighted; no real warning is active on this page. Parcel exposure has not been verified in this exercise. ${cite("tsunami/zone-1", "zone")} ${cite("query/parcels-in-zone", "zone")}</li>
     <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.length ? inExtreme.map((f) => f.name).join(", ") + " are in the extreme zone only." : "Extreme-zone exposure was not analysed: the exercise snapshot has no extreme-zone polygons."} ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
     <li><b>Shelters.</b> ${open.length} of ${shelters.length} open; ${fmt(totOcc)} of ${fmt(totCap)} spaces used (${Math.round((totOcc / totCap) * 100)}%). Baldwin High at ${pct(baldwin)}%. ${cite("shelters/*", "shelters")} ${cite("shelters/" + baldwin.fid, "baldwin")}</li>
-    <li><b>Roads.</b> Fictional scenario: 3 closed roads; Waiehu Beach Rd in contraflow. ${cite("road-status/*", "roads")}</li>
-    <li><b>Resources.</b> 5 open requests, 1 critical: 150 kW generator for Baldwin High. ${cite("eoc-board/RR-114", "rr")}</li>
+    <li><b>Roads.</b> Fictional scenario: ${ROADS.filter((r) => r.st === "closed").length} closed roads; Waiehu Beach Rd in contraflow. ${cite("road-status/*", "roads")}</li>
+    <li><b>Resources.</b> ${RR.length} fictional open requests, ${RR.filter((r) => r.pri === "Critical").length} critical: 150 kW generator for Baldwin High. ${cite("eoc-board/RR-114", "rr")}</li>
     <li><b>Systems.</b> Simulated deployment and outage; no county system connection.</li>
   </ol>`;
 
@@ -346,13 +359,6 @@
   const near = open.slice().sort((a, b) => dist(sample, a.c) - dist(sample, b.c))[0];
   document.getElementById("pubNearest").textContent = `${near.label}, ${(dist(sample, near.c) / 1000).toFixed(1)} km`;
 
-  const RR = [
-    { id: "RR-114", what: "Generator, 150 kW", where: "Baldwin High shelter", pri: "Critical", c: [-156.4893, 20.8921] },
-    { id: "RR-117", what: "Cots ×300", where: "Maui High shelter", pri: "High", c: [-156.4724, 20.8752] },
-    { id: "RR-118", what: "Traffic control, 4 officers", where: "Waiehu Beach Rd at Lower Main St", pri: "High", c: [-156.4935, 20.8985] },
-    { id: "RR-120", what: "Paratransit vans ×2", where: "Kahului senior housing, Kaʻahumanu Ave", pri: "High", c: [-156.4655, 20.8895] },
-    { id: "RR-121", what: "Potable water, 2,000 gal", where: "Iao Intermediate shelter", pri: "Medium", c: [-156.4995, 20.8857] },
-  ];
   const STAGE = [{ name: "War Memorial Complex", c: [-156.4873, 20.8929] }, { name: "Maui High lot", c: [-156.4712, 20.8731] }];
 
   const eocMarkers = [];
@@ -426,5 +432,6 @@
   tick(); setInterval(tick, 1000);
 })();
 </script>
+<script type="module" src="live-feeds.js"></script>
 </body>
 </html>

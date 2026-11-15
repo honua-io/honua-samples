@@ -1,3 +1,4 @@
+import { stateLocalServer } from '../../../shared/state-local/server.mjs';
 import { spatialClause } from './analysis-spatial.mjs';
 import { queryFilter } from '@honua/sdk-js/contract';
 import { compileOgcApiFeaturesQuery } from '@honua/sdk-js/query-planner';
@@ -31,6 +32,6 @@ export function previewAnalysisCql2(clauses) {
     ? queryFilter.spatial('intersects', spatialClause(clause.value).spatialScope.filter)
     : queryFilter[comparisons[clause.operator]](clause.field, clause.value));
   const source = { id: 'preview', protocol: 'ogc-features', collectionId: 'preview',
-    endpoint: 'https://demo.honua.io/ogc', authorizationScope: [], capabilities: [] };
+    endpoint: `${stateLocalServer}/ogc`, authorizationScope: [], capabilities: [] };
   return compileOgcApiFeaturesQuery(source, { filter: filters.length === 1 ? filters[0] : queryFilter.and(...filters) }).filter;
 }

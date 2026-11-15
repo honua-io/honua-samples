@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:gallery:themes": "node scripts/smoke-gallery-themes.mjs",
     "test:gallery:browser": "node scripts/smoke-published-gallery.mjs",
     "test:state-local:browser": "node scripts/smoke-state-local.mjs --require-previews",
     "release:audit:validate": "node scripts/release-certification.mjs validate",
@@ -12,9 +13,13 @@
     "test:gallery:live": "node scripts/smoke-live-gallery.mjs",
     "test:job-pages": "node scripts/validate-job-pages.mjs",
     "test:job-pages:browser": "node scripts/smoke-job-pages-gallery.mjs",
-    "test:samples:browser": "playwright test"
+    "test:samples:browser": "playwright test",
+    "test:island-layers:browser": "node scripts/smoke-island-layers.mjs",
+    "test:demo-ai:browser": "node scripts/smoke-demo-ai.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.2"
+    "@honua/sdk-js": "0.4.0",
+    "@playwright/test": "1.58.2",
+    "esbuild": "0.25.12"
   }
 }

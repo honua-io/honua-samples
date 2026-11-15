@@ -1,5 +1,10 @@
 # FeatureServer layer in MapLibre GL JS
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The FeatureServer layer integration below demonstrates **compatibility** for existing clients.
+
 Load a GeoServices FeatureServer layer as GeoJSON, draw it in MapLibre GL JS,
 fit the map to it and open a popup on click. One HTML file, no build step,
 no account and no API key.

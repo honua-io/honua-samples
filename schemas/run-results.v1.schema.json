@@ -13,6 +13,11 @@
       "description": "Best-effort; \"unknown\" when no authenticated version endpoint was reachable."
     },
     "baseUrl": { "type": "string" },
+    "runUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "The CI run that produced this envelope, when it ran in GitHub Actions; the gallery links run badges to it."
+    },
     "edition": {
       "type": "string",
       "enum": ["community", "pro", "enterprise"],

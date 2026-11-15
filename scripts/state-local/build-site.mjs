@@ -2,6 +2,7 @@
 import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { approvedPage } from '../../shared/state-local/approved-page.mjs';
+import { stateLocalServer } from '../../shared/state-local/server.mjs';
 import { DATA_MODE_LABELS } from '../lib/data-mode-labels.mjs';
 import { sampleAppPath } from '../lib/sample-app-url.mjs';
 
@@ -22,7 +23,7 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   }));
   await buildSdkExplorer({ repoRoot, siteDir, cards, source });
   await cp(path.join(source, 'overview.css'), path.join(assets, 'overview.css'));
-  await cp(path.join(sample, 'src/tokens.css'), path.join(assets, 'tokens.css'));
+  await cp(new URL('../../shared/design-system/tokens.css', import.meta.url), path.join(assets, 'tokens.css'));
   const shared = await readFile(path.join(sample, 'src/shared.css'), 'utf8');
   await writeFile(path.join(assets, 'shared.css'), shared.replace('../public/honua/', './'));
   for (const file of ['theme.js', 'geist-latin.woff2', 'OFL.txt', 'honua-lockup.svg', 'honua-lockup-on-dark.svg']) {
@@ -47,7 +48,7 @@ async function buildSdkExplorer({ repoRoot, siteDir, cards, source }) {
   }));
   await writeFile(path.join(output, 'previews.json'), JSON.stringify(previews));
   const catalog = JSON.parse(await readFile(path.join(source, 'sdk-explorer/catalog.json'), 'utf8'));
-  catalog.server = 'https://demo.honua.io';
+  catalog.server = stateLocalServer;
   const display = await loadApprovedDisplay(siteDir);
   catalog.display = Boolean(display);
   for (const entry of catalog.samples) {

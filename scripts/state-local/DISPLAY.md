@@ -33,3 +33,32 @@ npm ci
 npx playwright install chromium
 node scripts/smoke-state-local-display.mjs
 ```
+
+## Server endpoint
+
+The journeys read live tiles and services from one Honua server, `https://demo.honua.io`
+by default. `shared/state-local/server.mjs` holds the defaults and checks these build
+settings:
+
+| Setting | Default | Used by |
+| --- | --- | --- |
+| `VITE_STATE_LOCAL_SERVER` | `https://demo.honua.io` | sample bindings, workbench analysis, parcel viewer, SDK Explorer |
+| `VITE_STATE_LOCAL_BASEMAP` | server + `/api/v1/tiles/pmtiles/maui-basemap` | street basemap PMTiles archive on every journey map |
+| `VITE_STATE_LOCAL_ISLAND_DATA` | demo server + `/demo-data/maui-island-display/2026-11-11/` | island PMTiles archives (island GeoJSON stays on the site) |
+
+The basemap and island-data settings apply to the assembled journey pages only; the Vite
+sample apps derive their basemap from the server. The archive locations must allow
+cross-origin range requests from the site.
+
+```sh
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org node scripts/state-local/build-display-site.mjs
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org node scripts/build-gallery.mjs
+```
+
+Serve the built `site/` and run the six journeys against the same settings. The project
+is skipped unless `VITE_STATE_LOCAL_SERVER` and `STATE_LOCAL_SITE_URL` are both set:
+
+```sh
+VITE_STATE_LOCAL_SERVER=https://rehearsal.example.org STATE_LOCAL_SITE_URL=http://localhost:8080 \
+  npx playwright test --project state-local-journeys
+```

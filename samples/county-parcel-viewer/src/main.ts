@@ -13,9 +13,12 @@ import "./shared.css";
 import "./styles.css";
 import { h, fill } from "./dom.js";
 import { planningPanel } from "./planning.js";
+import { provenancePanel } from "./provenance.js";
 
-import { EXAMPLE_TMK, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
-import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelByTmk } from "./data.js";
+import { EXAMPLE_TMK, OFFLINE_FIXTURE, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
+import { addressChoices } from "./address-precision.js";
+import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelById, parcelByTmk } from "./data.js";
+import { createParcelBrowser } from "./parcel-browser.js";
 import { createParcelMap, type ParcelMap } from "./map.js";
 import { floodMeaning } from "./meanings.js";
 import { type GeometryOps, type OverlapGroup, countedFlood, countedZoning, overlapByCode, shareLabel } from "./overlap.js";
@@ -26,16 +29,20 @@ const FEMA_MSC_URL = "https://msc.fema.gov/portal/home";
 const FLOOD_EMPTY_TEXT =
   "No flood zone found for this parcel in the county's copy of the FEMA flood map. This is not a flood determination; check the official FEMA Flood Map Service Center.";
 
+if (OFFLINE_FIXTURE) {
+  document.querySelector(".tag")!.textContent = "Synthetic fixture · no live county data";
+  document.getElementById("q-hint")!.textContent = "Sample TMKs: 234008053, 234008054, 234008055. Address search is unavailable.";
+  document.querySelector(".foot")!.textContent = "Synthetic geometry, acreage, zoning and flood zones for software demonstrations only. Not county records or land-use advice.";
+  document.getElementById("export-status")!.textContent = "Exports re-query the local synthetic fixture. No live county data.";
+}
+
 const config: ViewerConfig = readConfig(new URLSearchParams(location.search));
+document.querySelector(".search .field")!.append(provenancePanel(config));
 const usingDemoParcels = !new URLSearchParams(location.search).get("parcelsUrl") && config.baseUrl === DEFAULT_BASE_URL;
 
 // The overlap math lives in its own chunk; if it cannot load, both sections
 // say "Overlap check unavailable" instead of guessing (design D9).
-const geometryOps: Promise<GeometryOps> = import("@honua/sdk-js/geometry").then((geometry) => ({
-  intersect: (a, b) => geometry.intersect(a, b),
-  union: (...parts) => geometry.union(...parts),
-  area: (input) => geometry.area(input),
-}));
+const geometryOps: Promise<GeometryOps> = import("./geometry-ops.js").then((module) => module.geometryOps);
 geometryOps.catch(() => {});
 
 
@@ -125,6 +132,8 @@ type HistoryMode = "push" | "replace" | "none";
 let generation = 0;
 let inflight: AbortController | undefined;
 let parcelMap: ParcelMap | undefined;
+let parcelBrowser: Awaited<ReturnType<typeof createParcelBrowser>> | undefined;
+let selectedParcel: Parcel | undefined;
 let startedAt = performance.now();
 
 /** Starts a new lookup: aborts the last one and clears its result first (design D9 "New search"). */
@@ -133,6 +142,8 @@ function beginLookup(statusText: string): { id: number; signal: AbortSignal } {
   inflight = new AbortController();
   generation += 1;
   startedAt = performance.now();
+  selectedParcel = undefined;
+  parcelBrowser?.clear();
   parcelMap?.clearSelection();
   panel.replaceChildren(h("p", { class: "panel-status", role: "status" }, statusText));
   findButton.disabled = true;
@@ -214,6 +225,23 @@ async function lookupTmk(digits: string, { mode, example = false, focus = true }
   }
 }
 
+async function lookupId(id: string | number): Promise<void> {
+  clearInvalid();
+  const lookup = beginLookup("Loading the selected parcel…");
+  try {
+    const parcel = await parcelById(config, id, lookup.signal);
+    if (!current(lookup.id)) return;
+    if (!parcel) throw new Error("The selected parcel is no longer available.");
+    input.value = parcel.tmk;
+    writeHistory("push", { tmk: parcel.tmk });
+    await showParcel(lookup, parcel, { example: false, focus: false });
+  } catch (error) {
+    if (!current(lookup.id) || lookup.signal.aborted) return;
+    panelProblem(message(error), { alert: true });
+    finishLookup(lookup.id, "fail", message(error));
+  }
+}
+
 async function lookupPoint(lngLat: [number, number], source: "map" | "address", label: string): Promise<void> {
   clearInvalid();
   const lookup = beginLookup(source === "map" ? "Looking up the parcel at that spot…" : `Looking up ${label}…`);
@@ -237,6 +265,37 @@ async function lookupPoint(lngLat: [number, number], source: "map" | "address", 
   }
 }
 
+function streetNote(labels: readonly string[]): string {
+  const named = labels.length === 1
+    ? `the street ${labels[0]}`
+    : `streets ${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
+  return `OpenStreetMap found ${named}, not a house number. Search by TMK or click a parcel on the map.`;
+}
+
+function showStreet(lookupId: number, text: string, labels: readonly string[]): void {
+  panel.replaceChildren(h("p", { class: "panel-status", role: "status", id: "street-note" }, streetNote(labels)));
+  signal({ searchState: "street" });
+  finishLookup(lookupId, "pass", `street-level geocoder candidate for "${text}"`);
+}
+
+function showAddressPicks(lookupId: number, matches: readonly AddressMatch[]): void {
+  panel.replaceChildren(
+    h("p", { class: "panel-status", id: "picks-label" }, `${matches.length} addresses match. Pick one:`),
+    h(
+      "ul",
+      { class: "picks", "aria-labelledby": "picks-label" },
+      ...matches.map((match) => {
+        const button = h("button", { class: "btn quiet", type: "button" }, match.address);
+        button.addEventListener("click", () => void lookupPoint([...match.lngLat] as [number, number], "address", match.address));
+        return h("li", {}, button);
+      }),
+    ),
+  );
+  signal({ searchState: "picks", pickCount: String(matches.length) });
+  finishLookup(lookupId, "pass", `${matches.length} geocoder candidates`);
+  (panel.querySelector(".picks button") as HTMLButtonElement | null)?.focus();
+}
+
 async function lookupAddress(text: string): Promise<void> {
   clearInvalid();
   const lookup = beginLookup(`Looking up ${text}…`);
@@ -252,31 +311,23 @@ async function lookupAddress(text: string): Promise<void> {
     return;
   }
   if (!current(lookup.id)) return;
-  if (matches.length === 0) {
+  const choice = addressChoices(matches);
+  if (choice.kind === "none") {
     panelProblem("No parcel at that address");
     signal({ searchState: "not-found" });
     finishLookup(lookup.id, "pass", `no geocoder candidate for "${text}"`);
     return;
   }
-  if (matches.length === 1) {
-    await lookupPoint([...matches[0].lngLat] as [number, number], "address", matches[0].address);
+  if (choice.kind === "street") {
+    showStreet(lookup.id, text, choice.labels);
     return;
   }
-  panel.replaceChildren(
-    h("p", { class: "panel-status", id: "picks-label" }, `${matches.length} addresses match. Pick one:`),
-    h(
-      "ul",
-      { class: "picks", "aria-labelledby": "picks-label" },
-      ...matches.map((match) => {
-        const button = h("button", { class: "btn quiet", type: "button" }, match.address);
-        button.addEventListener("click", () => void lookupPoint([...match.lngLat] as [number, number], "address", match.address));
-        return h("li", {}, button);
-      }),
-    ),
-  );
-  signal({ searchState: "picks", pickCount: String(matches.length) });
-  finishLookup(lookup.id, "pass", `${matches.length} geocoder candidates`);
-  (panel.querySelector(".picks button") as HTMLButtonElement | null)?.focus();
+  const usable = choice.matches;
+  if (usable.length === 1) {
+    await lookupPoint([...usable[0].lngLat] as [number, number], "address", usable[0].address);
+    return;
+  }
+  showAddressPicks(lookup.id, usable);
 }
 
 function message(error: unknown): string {
@@ -456,6 +507,8 @@ interface Lookup {
 }
 
 async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { example: boolean; focus: boolean }): Promise<void> {
+  selectedParcel = parcel;
+  parcelBrowser?.select(parcel);
   const sections = renderParcel(parcel, example, lookup.signal);
   signal({ tmk: parcel.tmk, searchState: "found", example: example ? "true" : undefined });
   input.value = example ? parcel.tmk : input.value || parcel.tmk;
@@ -478,6 +531,7 @@ async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { 
     try {
       const candidates = await candidatesFor(config.zoningUrl, parcel, { code: "zone_code", label: "zone_dist", signal: lookup.signal });
       if (!current(lookup.id)) return;
+      parcelMap?.showZoning(candidates.map((candidate) => candidate.geometry));
       const counted = countedZoning(overlapByCode(parcel.geometry, candidates, ops).groups);
       renderZoning(sections.zoning, counted.length ? "success" : "empty", counted);
       signal({ zoningState: counted.length ? "success" : "empty", zoningMain: counted[0]?.code, zoningCodes: counted.map((g) => `${g.code}:${shareLabel(g.share)}`).join(" ") });
@@ -598,6 +652,19 @@ function startMap(): void {
 function start(): void {
   updateFullscreen(null);
   startMap();
+  let closed = false;
+  void createParcelBrowser(config, (id) => void lookupId(id)).then((browser) => {
+    if (closed) { browser.dispose(); return; }
+    parcelBrowser = browser;
+    if (selectedParcel) browser.select(selectedParcel);
+  }).catch((error) => { if (!closed) byId("browse-status").textContent = `Parcel browsing unavailable: ${message(error)}`; });
+  window.addEventListener("pagehide", (event) => {
+    if (event.persisted || closed) return;
+    closed = true;
+    inflight?.abort();
+    parcelBrowser?.dispose();
+    parcelMap?.map.remove();
+  });
   const raw = new URLSearchParams(location.search).get("tmk");
   if (raw !== null) {
     input.value = raw;

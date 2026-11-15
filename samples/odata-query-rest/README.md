@@ -1,5 +1,10 @@
 # Read spatial features with OData v4
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The OData requests below demonstrate a protocol-specific integration rather than the native application path.
+
 Discover one public layer and read three features through OData with plain
 `fetch()`. No account or SDK is required.
 

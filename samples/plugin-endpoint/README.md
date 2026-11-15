@@ -1,5 +1,10 @@
 # A public plugin endpoint
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+This authoring sample tests the custom endpoint contract; it does not qualify a native application transport.
+
 Implement `ICustomEndpoint` from the public Honua plugin contract and execute it
 without a server. The example returns a typed JSON response for a read-only
 `utility/status` endpoint and verifies its status code, media type, and payload.

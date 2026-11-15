@@ -1,0 +1,16 @@
+export const SERVER_SETTING: string;
+export const BASEMAP_SETTING: string;
+export const ISLAND_DATA_SETTING: string;
+export const DEFAULT_SERVER: string;
+export const BASEMAP_ROUTE: string;
+export const ISLAND_DATA_ROUTE: string;
+export const stateLocalServer: string;
+export const stateLocalBasemap: string;
+export const stateLocalIslandData: string;
+export const PAGE_PLACEHOLDERS: Readonly<Record<string, string>>;
+export function isLocalServer(url: URL): boolean;
+export function serverOrigin(value?: string | null): string;
+export function basemapUrl(value: string | null | undefined, server: string): string;
+export function islandDataUrl(value?: string | null): string;
+export function withStateLocalEndpoints(text: string): string;
+export function deployedOrigin(origin: string): string;

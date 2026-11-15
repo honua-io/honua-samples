@@ -1,5 +1,10 @@
 # Query a public FeatureServer
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The FeatureServer requests below demonstrate **compatibility** for existing clients.
+
 Read three real Maui building features with plain `fetch()`. No account, API
 key, database, import, or SDK is required.
 

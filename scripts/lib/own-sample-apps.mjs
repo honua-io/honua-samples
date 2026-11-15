@@ -20,7 +20,7 @@
 // A built sample (entrypoint.build, e.g. a Vite app) follows the same rules
 // with three differences:
 //   - The build runs in a clean `git archive` export of samples/<id>/ at the
-//     source commit, including shared/state-local/ when present. The working
+//     source commit, including shared/ when present. The working
 //     tree (edited or not) never reaches the published bytes;
 //     the build's outputDir is what gets staged and digested.
 //   - Output symlinks, special files, and paths escaping outputDir fail.
@@ -32,13 +32,14 @@
 // shows the honest no-bundle panel and --check / the browser smoke go red.
 
 import { sha256 } from "./checksum.mjs";
+import { deployedOrigin } from "../../shared/state-local/server.mjs";
 export { sha256 };
 import { execFileSync } from "node:child_process";
 import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const SHARED_SOURCE_PATH = "shared/state-local";
+const SHARED_SOURCE_PATH = "shared";
 
 export const OWN_APP_MANIFEST_FORMAT = "honua.samples.own-app.v1";
 export const OWN_APP_MANIFEST_NAME = "app.manifest.v1.json";
@@ -52,7 +53,14 @@ export const LIBRARY_ORIGINS = Object.freeze(["https://cdn.jsdelivr.net", "https
 // Sites a sample only links to (attribution and the official flood map), never
 // fetches from (R13). They are not data origins. The browser verify lanes
 // assert at runtime that no request goes to them.
-export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://msc.fema.gov", "https://publicweb1.co.maui.hi.us", "https://overturemaps.org", "https://opendatacommons.org"]);
+export const NAVIGATION_ORIGINS = Object.freeze(["https://www.openstreetmap.org", "https://www.mauicounty.gov", "https://msc.fema.gov", "https://publicweb1.co.maui.hi.us", "https://overturemaps.org", "https://opendatacommons.org"]);
+
+// Apps importing the shared server setting read from the configured server, not the source default.
+const SERVER_SETTING_IMPORT = /\bfrom\s+["'][^"']*shared\/state-local\/(?:server|binding)\.mjs["']/u;
+
+export function importsServerSetting(text) {
+  return SERVER_SETTING_IMPORT.test(text);
+}
 
 const REGULAR_FILE_MODES = new Set(["100644", "100755"]);
 const ORIGIN_PATTERN = /https:\/\/[a-z0-9.-]+(?::\d+)?/giu;
@@ -144,12 +152,13 @@ function listCommittedFiles(repoRoot, commit, treePath) {
 export async function stageOwnBrowserApp({ repoRoot, dirName, manifest, sourceCommit, destDir }) {
   try {
     if (!/^[0-9a-f]{40}$/u.test(sourceCommit ?? "")) throw new Error(`source commit ${JSON.stringify(sourceCommit)} is not a full git sha`);
-    const { files, entrypoint, builtFrom, sourceText } = hasAppBuild(manifest)
+    const { files, entrypoint, builtFrom, sourceText, followsServerSetting } = hasAppBuild(manifest)
       ? await collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit })
       : await collectCommittedFiles({ repoRoot, dirName, manifest, sourceCommit });
 
     const dataMode = manifest.dataMode ?? null;
-    const dataOrigins = dataOriginsOf(sourceText);
+    const scannedOrigins = dataOriginsOf(sourceText);
+    const dataOrigins = followsServerSetting ? [...new Set(scannedOrigins.map(deployedOrigin))].sort() : scannedOrigins;
     if ((dataMode === "public-live" || dataMode === "live") && dataOrigins.length !== 1) {
       throw new Error(`a ${dataMode} sample must reference exactly one data origin; found ${dataOrigins.length ? dataOrigins.join(", ") : "none"}`);
     }
@@ -275,6 +284,7 @@ async function collectBuiltFiles({ repoRoot, dirName, manifest, sourceCommit }) 
         build: { command, outputDir, lockfile: "package-lock.json", lockfileSha256: sha256(lockfile) },
       },
       sourceText: scanned.map((f) => f.bytes.toString("utf8")).join("\n"),
+      followsServerSetting: sources.some((f) => importsServerSetting(f.bytes.toString("utf8"))),
     };
   } finally {
     await rm(exportRoot, { recursive: true, force: true }).catch(() => {});

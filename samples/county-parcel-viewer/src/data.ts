@@ -11,13 +11,15 @@ import {
 } from "@honua/sdk-js/honua";
 import type { GeoJsonGeometry } from "@honua/sdk-js/geometry";
 
-import { DISPLAY_SNAPSHOT, type ViewerConfig } from "./config.js";
+import { addressPrecision, type AddressPrecision } from "./address-precision.js";
+import { DISPLAY_SNAPSHOT, OFFLINE_FIXTURE, type ViewerConfig } from "./config.js";
 import { displayCandidates, displayParcelAtPoint, displayParcelByTmk } from "./display-data.js";
 import type { OverlapCandidate } from "./overlap.js";
 import { loggedFetch } from "./request-log.js";
 import { tmkWhere } from "./tmk.js";
 
 export interface Parcel {
+  readonly id?: string | number;
   readonly tmk: string;
   readonly gisAcres: number | null;
   readonly taxAcres: number | null;
@@ -30,6 +32,7 @@ export interface Parcel {
 }
 
 interface LayerHandle {
+  readonly source: import("@honua/sdk-js/contract").CapabilityAwareSource<Record<string, unknown>>;
   readonly client: HonuaClient;
   readonly serviceId: string;
   readonly layerId: number;
@@ -61,7 +64,7 @@ export function layer(url: string): Promise<LayerHandle> {
       const metadata = await client.getLayerMetadata(serviceId, layerId);
       const idField = metadata.objectIdField;
       if (!idField || !/^[a-zA-Z_][a-zA-Z0-9_]*$/u.test(idField)) throw new Error("Layer has no valid object ID field.");
-      return { client, serviceId, layerId, idField, fields: new Set(metadata.fields?.map((field) => field.name)) };
+      return { source: connection.source(), client, serviceId, layerId, idField, fields: new Set(metadata.fields?.map((field) => field.name)) };
     })();
     // A failed discovery is retried on the next call, not cached.
     handle.catch(() => handles.delete(url));
@@ -70,7 +73,7 @@ export function layer(url: string): Promise<LayerHandle> {
   return handle;
 }
 
-function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unknown }): Parcel {
+function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unknown }, idField: string): Parcel {
   const attributes = feature.attributes;
   const esri = feature.geometry as { rings?: number[][][] } | null | undefined;
   const geometry = geoServicesGeometryToGeoJSON(esri as Record<string, unknown> | null);
@@ -79,6 +82,7 @@ function toParcel(feature: { attributes: Record<string, unknown>; geometry?: unk
   if (typeof tmk !== "string" || !tmk.trim()) throw new Error("The parcel has no source TMK; County permit lookup is unavailable.");
   const number = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
   return {
+    id: typeof attributes[idField] === "number" || typeof attributes[idField] === "string" ? attributes[idField] as string | number : undefined,
     tmk,
     gisAcres: number(attributes["gisacres"]),
     taxAcres: number(attributes["taxacres"]),
@@ -99,37 +103,47 @@ function parcelFields(fields: ReadonlySet<string>): string[] {
 export async function parcelByTmk(config: ViewerConfig, digits: string, signal: AbortSignal): Promise<Parcel | null> {
   const where = tmkWhere(digits);
   if (DISPLAY_SNAPSHOT) return displayParcelByTmk(config.parcelsUrl, digits, signal);
-  const { client, serviceId, layerId, fields } = await layer(config.parcelsUrl);
+  const { client, serviceId, layerId, fields, idField } = await layer(config.parcelsUrl);
   const response = await QueryBuilder.for(client, serviceId, layerId)
     .where(where)
-    .outFields(...parcelFields(fields))
+    .outFields(idField, ...parcelFields(fields))
     .returnGeometry(true)
     .limit(2)
     .extraParams({ outSR: 4326 })
     .signal(signal)
     .run();
   const feature = response.features?.[0];
-  return feature ? toParcel(feature) : null;
+  return feature ? toParcel(feature, idField) : null;
+}
+
+/** Resolve a table selection by its source object ID, never its row position. */
+export async function parcelById(config: ViewerConfig, id: string | number, signal: AbortSignal): Promise<Parcel | null> {
+  const { client, serviceId, layerId, fields, idField } = await layer(config.parcelsUrl);
+  const response = await QueryBuilder.for(client, serviceId, layerId)
+    .objectIds(String(id)).outFields(idField, ...parcelFields(fields))
+    .returnGeometry(true).limit(1).extraParams({ outSR: 4326 }).signal(signal).run();
+  const feature = response.features?.[0];
+  return feature ? toParcel(feature, idField) : null;
 }
 
 /** The parcel under a WGS84 point (map click or geocoded address), or null. */
 export async function parcelAtPoint(config: ViewerConfig, lngLat: readonly [number, number], signal: AbortSignal): Promise<Parcel | null> {
   if (DISPLAY_SNAPSHOT) return displayParcelAtPoint(config.parcelsUrl, lngLat, signal);
-  const { client, serviceId, layerId, fields } = await layer(config.parcelsUrl);
+  const { client, serviceId, layerId, fields, idField } = await layer(config.parcelsUrl);
   const filter = point(lngLat[0], lngLat[1], { wkid: 4326 });
   const response = await QueryBuilder.for(client, serviceId, layerId)
     .where("1=1")
     .geometry(filter.geometry)
     .geometryType(filter.geometryType)
     .spatialRel("esriSpatialRelIntersects")
-    .outFields(...parcelFields(fields))
+    .outFields(idField, ...parcelFields(fields))
     .returnGeometry(true)
     .limit(1)
     .extraParams({ outSR: 4326 })
     .signal(signal)
     .run();
   const feature = response.features?.[0];
-  return feature ? toParcel(feature) : null;
+  return feature ? toParcel(feature, idField) : null;
 }
 
 /**
@@ -181,6 +195,8 @@ export async function candidatesFor(
 export interface AddressMatch {
   readonly address: string;
   readonly lngLat: readonly [number, number];
+  readonly precision: AddressPrecision;
+  readonly shortLabel: string;
 }
 
 export class GeocoderUnavailableError extends Error {}
@@ -206,6 +222,7 @@ async function checkGeocoderProvider(config: ViewerConfig): Promise<string> {
 
 /** Up to five address matches. Throws GeocoderUnavailableError when address search cannot run. */
 export async function geocode(config: ViewerConfig, text: string): Promise<AddressMatch[]> {
+  if (OFFLINE_FIXTURE) throw new GeocoderUnavailableError("Address search is unavailable in the synthetic fixture. Use one of the three sample TMKs.");
   if (DISPLAY_SNAPSHOT) throw new GeocoderUnavailableError("Live data coming. Search by TMK or click a parcel in this snapshot.");
   providerCheck ??= checkGeocoderProvider(config);
   providerCheck.catch(() => (providerCheck = undefined));
@@ -219,7 +236,12 @@ export async function geocode(config: ViewerConfig, text: string): Promise<Addre
       if (!OSM_PROVIDER.test(String(result.attributes["Provider"] ?? "nominatim"))) continue;
       if (!Number.isFinite(result.longitude) || !Number.isFinite(result.latitude) || seen.has(result.address)) continue;
       seen.add(result.address);
-      matches.push({ address: result.address, lngLat: [result.longitude, result.latitude] });
+      matches.push({
+        address: result.address,
+        lngLat: [result.longitude, result.latitude],
+        precision: addressPrecision(result.attributes),
+        shortLabel: result.attributes.ShortLabel ?? result.attributes.Address ?? "",
+      });
     }
     return matches.slice(0, 5);
   } catch (error) {

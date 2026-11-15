@@ -1,5 +1,10 @@
 # Read OGC API Features with Python
 
+Start application development with the [native application path](../../docs/native-applications.md):
+authenticated gRPC and browser gRPC-Web, public PMTiles/GeoParquet/COG via CDN
+range reads, and private signed files regenerated when their data changes.
+The OGC API Features requests below demonstrate **compatibility** for standards clients.
+
 Use only Python's standard library to discover a public collection and read two
 GeoJSON features.
 

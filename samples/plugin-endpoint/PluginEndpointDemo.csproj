@@ -10,6 +10,6 @@
     <HonuaServerCheckout Condition="'$(HonuaServerCheckout)' == ''">$(MSBuildThisFileDirectory)../../artifacts/server-sdk</HonuaServerCheckout>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="$(HonuaServerCheckout)/src/Honua.Plugins.Abstractions/Honua.Plugins.Abstractions.csproj" />
+    <ProjectReference Include="$(HonuaServerCheckout)/src/Honua.Plugins/Abstractions/Honua.Plugins.Abstractions.csproj" />
   </ItemGroup>
 </Project>
