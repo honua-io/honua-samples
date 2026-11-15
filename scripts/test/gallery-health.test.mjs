@@ -143,10 +143,23 @@ test('an outside bot wall (403 on HEAD and GET) is unverified, not broken', asyn
   assert.equal(await resolveLink(request, 'https://www.npmjs.com/package/x'), `${UNVERIFIED}HTTP 403`);
 });
 
-test('a 403 from a Honua host stays a broken link', async () => {
+test('a 403 or 429 from a Honua host stays a broken link', async () => {
   for (const url of ['https://honua.io/demo.html', 'https://samples.honua.io/x/']) {
-    const request = { head: async () => fixed(403), get: async () => fixed(403) };
-    assert.equal(await resolveLink(request, url), 'HTTP 403');
+    for (const code of [403, 429]) {
+      const request = { head: async () => fixed(code), get: async () => fixed(code) };
+      assert.equal(await resolveLink(request, url, { wait: async () => {} }), `HTTP ${code}`);
+    }
+  }
+});
+
+test('a blank or zero Retry-After uses the default delay and reports the rate limit', async () => {
+  for (const value of ['', '0', 'soon']) {
+    const waits = [];
+    let seen = 0;
+    const request = { head: async () => fixed(429, { 'retry-after': value }), get: async () => fixed(200) };
+    assert.equal(await resolveLink(request, 'https://github.com/o/r', { wait: async (ms) => waits.push(ms), onRateLimit: () => seen++ }), 'ok');
+    assert.deepEqual(waits, [3_000]);
+    assert.equal(seen, 1);
   }
 });
 

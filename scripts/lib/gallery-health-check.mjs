@@ -65,10 +65,20 @@ async function checkLinks(page, request, cache, result = {}) {
   await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
     while (pending.length) {
       const url = pending.shift();
-      if (Date.now() >= deadline) { broken.push(`${url}: link-check deadline exceeded`); continue; }
-      // After one persistent rate limit, stop requesting that host for the rest of the run.
-      const limited = `rate-limited:${new URL(url).host}`;
-      if (!cache.has(url)) cache.set(url, cache.has(limited) ? Promise.resolve(`${UNVERIFIED}HTTP 429 (host rate limited)`) : resolveLink(request, url));
+      const { host, hostname } = new URL(url);
+      const slowed = `rate-limit-seen:${host}`;
+      if (Date.now() >= deadline) {
+        // Time spent waiting out an outside host's rate limit is not a broken link.
+        if (cache.has(slowed)) unverified.push(`${url}: link-check deadline exceeded after HTTP 429 from ${host}`);
+        else broken.push(`${url}: link-check deadline exceeded`);
+        continue;
+      }
+      // After one persistent outside rate limit, stop requesting that host for the rest of the run.
+      const limited = `rate-limited:${host}`;
+      if (!cache.has(url)) {
+        cache.set(url, cache.has(limited) ? Promise.resolve(`${UNVERIFIED}HTTP 429 (host rate limited)`)
+          : resolveLink(request, url, { onRateLimit: () => { if (!FIRST_PARTY(hostname)) cache.set(slowed, true); } }));
+      }
       const status = await cache.get(url);
       if (status === `${UNVERIFIED}HTTP 429`) cache.set(limited, true);
       if (status.startsWith(UNVERIFIED)) unverified.push(`${url}: ${status.slice(UNVERIFIED.length)}`);
@@ -80,18 +90,19 @@ async function checkLinks(page, request, cache, result = {}) {
   return [...new Set(urls)].length;
 }
 
-// A rate limit (429) or an outside site's bot wall (403) says nothing about
-// whether the link exists: report it as unverified instead of broken. A 403
-// from Honua's own hosts stays a failure.
+// An outside site's rate limit (429) or bot wall (403) says nothing about
+// whether the link exists: report it as unverified instead of broken. A 403 or
+// 429 from Honua's own hosts stays a failure.
 export const UNVERIFIED = 'unverified: ';
 const FIRST_PARTY = (hostname) => hostname === 'honua.io' || hostname.endsWith('.honua.io');
 
 function retryDelayMs(response) {
-  const seconds = Number(response.headers()['retry-after']);
-  return Number.isFinite(seconds) && seconds >= 0 ? Math.min(seconds * 1000, 5_000) : 3_000;
+  const header = String(response.headers()['retry-after'] ?? '').trim();
+  const seconds = /^\d+$/.test(header) ? Number(header) : 0;
+  return seconds > 0 ? Math.min(seconds * 1000, 5_000) : 3_000;
 }
 
-export async function resolveLink(request, url, { wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = {}) {
+export async function resolveLink(request, url, { wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), onRateLimit = () => {} } = {}) {
   try {
     let response = await request.head(url, { timeout: 15_000 });
     if ([403, 404, 405, 501].includes(response.status())) {
@@ -99,6 +110,7 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
       response = await request.get(url, { timeout: 15_000 });
     }
     if (response.status() === 429) {
+      onRateLimit();
       const delay = retryDelayMs(response);
       await response.dispose();
       await wait(delay);
@@ -106,7 +118,7 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
     }
     const code = response.status();
     const status = response.ok() ? 'ok'
-      : code === 429 || (code === 403 && !FIRST_PARTY(new URL(url).hostname)) ? `${UNVERIFIED}HTTP ${code}`
+      : (code === 429 || code === 403) && !FIRST_PARTY(new URL(url).hostname) ? `${UNVERIFIED}HTTP ${code}`
         : `HTTP ${code}`;
     await response.dispose();
     return status;
