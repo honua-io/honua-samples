@@ -276,6 +276,8 @@ Firefox a display for its WebGL checks. Other platforms can run each `node`
 command directly using their installed browsers.
 
 ```sh
+npm ci
+npx playwright install --with-deps chromium firefox
 xvfb-run -a node scripts/smoke-gallery-health-controls.mjs
 xvfb-run -a node scripts/check-gallery-health.mjs
 ```

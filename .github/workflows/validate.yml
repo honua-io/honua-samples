@@ -186,8 +186,6 @@ jobs:
         run: npm run test:gallery:browser
 
       - name: Run exact-head gallery semantic canaries
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         # Keep GALLERY_BASE_URL unset: the verifier serves this job's exact
         # generated site/ artifact locally and exercises packaged fixtures.
         env:
