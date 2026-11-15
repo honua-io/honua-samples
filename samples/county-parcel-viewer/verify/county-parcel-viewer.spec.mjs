@@ -343,6 +343,31 @@ test("a blocked clipboard shows the link selected in a read-only box", async ({ 
   await expect(page.locator("#share-url")).toBeFocused();
 });
 
+test("a street-level geocoder candidate does not claim the address has no parcel", async ({ page }) => {
+  await page.route("**/GeocodeServer/findAddressCandidates**", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({
+      spatialReference: { wkid: 4326 },
+      candidates: [{
+        address: "South High Street, Wailuku",
+        score: 33,
+        location: { x: -156.5047888, y: 20.884148 },
+        attributes: { Provider: "nominatim", class: "highway", type: "primary", Addr_type: "Locality", Type: "Locality" },
+      }],
+    }),
+  }));
+  await page.goto(appUrl());
+  await settled(page);
+  await page.locator("#q").fill("200 S High St, Wailuku, HI");
+  await page.locator("#find").click();
+  await settled(page);
+  await expect(page.locator("body")).toHaveAttribute("data-search-state", "street");
+  await expect(page.locator("#panel-inner")).toContainText("Found the street South High Street, Wailuku");
+  await expect(page.locator("#panel-inner")).not.toContainText("No parcel at that address");
+  const pointQueries = queries((request) => request.url.startsWith(PARCELS) && request.url.includes("esriGeometryPoint"));
+  expect(pointQueries).toHaveLength(0);
+});
+
 test("address search follows the server's geocoder provider", async ({ page }) => {
   const metadata = await fetch(`${DATA_BASE}/rest/services/World/GeocodeServer?f=json`).then((response) => response.json());
   const provider = String(metadata.locatorProperties?.Provider ?? "unknown");

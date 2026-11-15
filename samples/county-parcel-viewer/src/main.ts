@@ -16,6 +16,7 @@ import { planningPanel } from "./planning.js";
 import { provenancePanel } from "./provenance.js";
 
 import { EXAMPLE_TMK, OFFLINE_FIXTURE, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
+import { planAddressLookup, streetLevelNotice } from "./address-match.js";
 import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelById, parcelByTmk } from "./data.js";
 import { createParcelBrowser } from "./parcel-browser.js";
 import { createParcelMap, type ParcelMap } from "./map.js";
@@ -264,6 +265,13 @@ async function lookupPoint(lngLat: [number, number], source: "map" | "address", 
   }
 }
 
+function reportStreet(addresses: readonly string[]): void {
+  const lookup = beginLookup("Reading the street match…");
+  panel.replaceChildren(h("p", { class: "panel-status" }, streetLevelNotice(addresses)));
+  signal({ searchState: "street" });
+  finishLookup(lookup.id, "pass", `street-level candidate "${addresses[0] ?? ""}"`);
+}
+
 async function lookupAddress(text: string): Promise<void> {
   clearInvalid();
   const lookup = beginLookup(`Looking up ${text}…`);
@@ -279,13 +287,18 @@ async function lookupAddress(text: string): Promise<void> {
     return;
   }
   if (!current(lookup.id)) return;
-  if (matches.length === 0) {
+  const plan = planAddressLookup(matches);
+  if (plan.kind === "none") {
     panelProblem("No parcel at that address");
     signal({ searchState: "not-found" });
     finishLookup(lookup.id, "pass", `no geocoder candidate for "${text}"`);
     return;
   }
-  if (matches.length === 1) {
+  if (plan.kind === "street") {
+    reportStreet(plan.addresses);
+    return;
+  }
+  if (plan.kind === "point") {
     await lookupPoint([...matches[0].lngLat] as [number, number], "address", matches[0].address);
     return;
   }
@@ -296,7 +309,10 @@ async function lookupAddress(text: string): Promise<void> {
       { class: "picks", "aria-labelledby": "picks-label" },
       ...matches.map((match) => {
         const button = h("button", { class: "btn quiet", type: "button" }, match.address);
-        button.addEventListener("click", () => void lookupPoint([...match.lngLat] as [number, number], "address", match.address));
+        button.addEventListener("click", () => {
+          if (match.street) reportStreet([match.address]);
+          else void lookupPoint([...match.lngLat] as [number, number], "address", match.address);
+        });
         return h("li", {}, button);
       }),
     ),
