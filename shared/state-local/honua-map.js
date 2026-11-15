@@ -98,8 +98,12 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountToggle); else mountToggle();
   function unavailableMap(el, message) {
-    const notice = document.createElement("p"); notice.style.padding = "16px"; notice.setAttribute("role", "status"); notice.textContent = message;
-    el.replaceChildren(notice); return null;
+    // Pages keep controls inside #map: drop only MapLibre's partial DOM and lay the notice over the dead controls.
+    el.querySelectorAll(":scope > .maplibregl-canvas-container, :scope > .maplibregl-control-container, :scope > .map-unavailable").forEach((n) => n.remove()); el.classList.remove("maplibregl-map");
+    const notice = document.createElement("p"); notice.className = "map-unavailable"; notice.setAttribute("role", "status"); notice.textContent = message;
+    notice.style.cssText = "position:absolute;z-index:20;left:50%;top:50%;transform:translate(-50%,-50%);max-width:calc(100% - 32px);margin:0;padding:12px 16px;border-radius:8px;background:var(--c-surface,#fff);color:var(--c-text,#111);box-shadow:0 2px 12px rgba(0,0,0,.25)";
+    if (getComputedStyle(el).position === "static") el.style.position = "relative";
+    el.prepend(notice); return null;
   }
   function create(el, opts) {
     opts = opts || {};
