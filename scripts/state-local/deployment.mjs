@@ -53,9 +53,18 @@ export async function saveDeployment(env, options) {
   return deployment;
 }
 
+async function deploymentText(directory, name) {
+  try {
+    return await readFile(receiptPath(directory, name), "utf8");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    throw new Error(`${name} has no deployment receipt in ${directory}; stage it there first`);
+  }
+}
+
 export async function readDeployment(env, options) {
   const { name, directory } = options;
-  const deployment = JSON.parse(await readFile(receiptPath(directory, name), "utf8"));
+  const deployment = JSON.parse(await deploymentText(directory, name));
   const receipt = options.snapshotReceipt ?? (await readSnapshot(name, directory)).receipt;
   if (deployment.format !== "honua.samples.deployment.v1" || deployment.source !== name
     || deployment.baseUrl !== serverUrl(env) || deployment.cleanSha256 !== receipt.cleanSha256

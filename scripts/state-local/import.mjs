@@ -86,6 +86,13 @@ async function departmentFolder(env, department) {
   return matches[0].metadata.id;
 }
 
+async function requireManagedConnection(env, connection) {
+  const connections = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/connections" });
+  if (!(connections?.data ?? []).some((candidate) => candidate?.name === connection)) {
+    throw new Error(`Create the ${connection} managed connection to this server's import database before staging`);
+  }
+}
+
 export async function uploadSnapshotTable(env, snapshot) {
   assertDefaultImportGeometry(snapshot.geojson);
   const request = snapshot.sourceUrl ? {
@@ -124,6 +131,7 @@ export async function stageVerifiedSnapshot(env, options) {
   if (!connection) throw new Error("HONUA_SAMPLE_CONNECTION must name this server's managed import database");
   assertDefaultImportGeometry(geojson);
   const folderId = await departmentFolder(env, source.department);
+  await requireManagedConnection(env, connection);
   const runId = options.runId ?? randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);
   const serviceName = stagingServiceName(name, runId);
