@@ -97,7 +97,7 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountToggle); else mountToggle();
   function unavailableMap(el, message) {
     const notice = document.createElement("p"); notice.style.padding = "16px"; notice.setAttribute("role", "status"); notice.textContent = message;
-    el.replaceChildren(notice); return null;
+    el.prepend(notice); return null; // pages keep controls inside #map
   }
   function create(el, opts) {
     opts = opts || {};
