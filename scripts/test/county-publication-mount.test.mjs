@@ -1,19 +1,5 @@
 import assert from 'node:assert/strict';
-import { mock, test } from 'node:test';
-
-const opened = [];
-mock.module('@honua/sdk-js/publication', {
-  namedExports: {
-    openPublication: async () => {
-      opened.push('open');
-      return {
-        display: { pmtilesUrl: 'https://example.test/parcels.pmtiles', promoteId: 'tmk_txt', minzoom: 0, maxzoom: 14, sourceLayer: 'parcels' },
-        publicFields: [],
-      };
-    },
-    publicationSource: () => ({ lookup: async () => ({ result: { features: [] } }) }),
-  },
-});
+import test from 'node:test';
 
 globalThis.location = new URL('https://demo.example/property');
 globalThis.window = { HM: { bbox: () => [0, 0, 1, 1] } };
@@ -41,6 +27,19 @@ class Node {
   }
 
   removeAttribute(name) { if (name === 'href') this.href = undefined; }
+}
+
+function publicationApi(opened) {
+  return {
+    openPublication: async () => {
+      opened.push('open');
+      return {
+        display: { pmtilesUrl: 'https://example.test/parcels.pmtiles', promoteId: 'tmk_txt', minzoom: 0, maxzoom: 14, sourceLayer: 'parcels' },
+        publicFields: [],
+      };
+    },
+    publicationSource: () => ({ lookup: async () => ({ result: { features: [] } }) }),
+  };
 }
 
 function page({ open }) {
@@ -83,17 +82,17 @@ function page({ open }) {
 }
 
 test('an already-open county panel connects and attaches its map at mount', async () => {
-  opened.length = 0;
+  const opened = [];
   const { root, map, sources } = page({ open: true });
-  mountCountyPublication({ root, map: () => map });
-  for (let i = 0; i < 10; i += 1) await Promise.resolve();
+  mountCountyPublication({ root, map: () => map, publication: publicationApi(opened) });
+  await new Promise((resolve) => setImmediate(resolve));
   assert.equal(opened.length, 1);
   assert.ok(sources['county-publication']);
 });
 
 test('closing the county panel restores the snapshot layers the user had hidden', async () => {
   const { root, map, layers } = page({ open: false });
-  mountCountyPublication({ root, map: () => map });
+  mountCountyPublication({ root, map: () => map, publication: publicationApi([]) });
   root.open = true;
   await root.dispatch('toggle');
   root.open = false;
