@@ -143,6 +143,40 @@ the 3D view displays this limitation. These are contextual estimates, not survey
 The SDK `scene-workspace` export remains available in the pinned 0.3.x release; its documented
 successor is `@honua/app-platform/scene-workspace` for a future SDK upgrade.
 
+## Compatibility: published SDK queries
+
+Query the imported `maui-zoning` layer with the same filter in JavaScript, Python and .NET.
+These examples run one bounded, read-only REST query. They print the source citation and
+returned attributes, with at most 20 results; they do not perform parcel overlays, permit
+lookups or a complete export, or establish native transport readiness.
+
+From the repository root, install the published packages:
+
+```sh
+npm ci --prefix scripts/state-local/sdk
+python3 -m venv artifacts/state-local/venv
+artifacts/state-local/venv/bin/pip install -r scripts/state-local/sdk/requirements.txt
+dotnet restore scripts/state-local/sdk/StateLocal.csproj
+```
+
+Use the exact service name and numeric zoning layer ID from the activated deployment
+receipt, following [the import recipe](../../docs/state-local-data.md). The layer must
+allow anonymous queries; do not put an admin key in a public client.
+
+```sh
+export HONUA_BASE_URL=http://localhost:8080
+export HONUA_SERVICE_ID=your-published-zoning-service-name
+export HONUA_LAYER_ID=0
+node scripts/state-local/sdk/query.mjs property
+artifacts/state-local/venv/bin/python scripts/state-local/sdk/query.py property
+dotnet run --project scripts/state-local/sdk/StateLocal.csproj -- property
+```
+
+The shared `property` scenario filters on `zone_code IS NOT NULL`. Select the zoning
+layer from the receipt even when parcels and zoning share a service; this query does
+not join them. Results describe the imported dataset and do not establish current
+zoning or a land-use determination.
+
 ## Verification
 
 `verify/county-parcel-fixture.spec.mjs` builds the fixture and drives desktop and phone layouts in Chromium,
