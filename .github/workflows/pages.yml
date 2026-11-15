@@ -201,8 +201,8 @@ jobs:
           python3 -m venv artifacts/catalog-python
           artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
 
-      - name: Verify public catalog export boundary
-        run: artifacts/catalog-python/bin/python -m unittest discover -s scripts/state-local/approved -p test_catalog.py -v
+      - name: Verify display geometry and public catalog export boundaries
+        run: artifacts/catalog-python/bin/python -m unittest discover -s scripts/state-local/approved -p 'test_*.py' -v
 
       - name: Install gallery dependencies
         run: npm ci

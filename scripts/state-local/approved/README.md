@@ -27,6 +27,9 @@ licence-policy receipts, original CRS, selection, and hashes. Source coordinates
 explicitly requested in EPSG:4326; source metadata records EPSG:3750. Display processing
 clips to Kahului, repairs geometry, simplifies boundaries and joins planning/hazard
 layers to parcel representative points. These visual joins are not a legal determination.
+Five-decimal display serialization rejects empty or invalid rounded geometries.
+A precision collapse stops regeneration rather than silently dropping or repairing
+features; inspect the source and review any regenerated display data before publication.
 Distance counts use EPSG:32604. Community-plan boundaries and shoreline setbacks are
 not invented: their sources remain pending.
 
