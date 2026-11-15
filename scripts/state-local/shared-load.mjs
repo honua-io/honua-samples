@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { sha256 } from "../lib/checksum.mjs";
 import { adminFetch, serverEnv } from "../lib/admin-api.mjs";
+import { managedConnections } from "../lib/sample-connection.mjs";
 import { fetchSnapshot, readSnapshot } from "./snapshot.mjs";
 import { propertyLayers } from "./property-app.mjs";
 import { stageSnapshot, layersPath, stagingTableName, stagingServiceName } from "./import.mjs";
@@ -104,10 +105,8 @@ export async function runSharedLoad(env, request) {
     }
     await ensureDepartments(env);
   }
-  const connectionResponse = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/connections" });
-  const connections = connectionResponse?.data?.items ?? connectionResponse?.data;
-  const matches = connections?.filter((connection) => connection.name === "demo-rds");
-  if (matches?.length !== 1 || !matches[0].connectionId) throw new Error("Expected exactly one demo-rds managed import connection");
+  const matches = (await managedConnections(env)).filter((connection) => connection.name === "demo-rds");
+  if (matches.length !== 1 || !matches[0].connectionId) throw new Error("Expected exactly one demo-rds managed import connection");
   const connection = matches[0].connectionId;
   if (action === "activate") {
     for (const { name } of plan.layers) {

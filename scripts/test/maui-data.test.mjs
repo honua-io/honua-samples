@@ -265,6 +265,7 @@ test('NBI snapshot preserves real ratings and vintage with an explicit Maui coun
   let published;
   globalThis.fetch = async (url, options) => {
     if (url.endsWith('/folders')) return new Response(JSON.stringify({ data: [{ metadata: { id: 'works-folder', title: 'Public Works' } }] }), { headers: { ETag: '"version-1"' } });
+    if (url.endsWith('/admin/connections')) return response({ data: [{ name: 'managed' }] });
     if (url.endsWith('/import/upload')) return response({ featureCount: 1, physicalTableName: 'nbi_fixture', schema: 'honua_data' });
     published = JSON.parse(options.body);
     return response({ success: true, data: { layerId: 7, enabled: false } });

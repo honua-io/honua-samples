@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout } from "node:timers/promises";
 import { adminFetch } from "../lib/admin-api.mjs";
+import { managedConnections } from "../lib/sample-connection.mjs";
 import { getSource } from "./sources.mjs";
 import { readSnapshot } from "./snapshot.mjs";
 import { assertDefaultImportGeometry } from "./import-geometry.mjs";
@@ -86,6 +87,13 @@ async function departmentFolder(env, department) {
   return matches[0].metadata.id;
 }
 
+async function requireManagedConnection(env, connection) {
+  const connections = await managedConnections(env);
+  if (!connections.some((candidate) => candidate?.name === connection || candidate?.connectionId === connection)) {
+    throw new Error(`Create the ${connection} managed connection to this server's import database before staging`);
+  }
+}
+
 export async function uploadSnapshotTable(env, snapshot) {
   assertDefaultImportGeometry(snapshot.geojson);
   const request = snapshot.sourceUrl ? {
@@ -124,6 +132,7 @@ export async function stageVerifiedSnapshot(env, options) {
   if (!connection) throw new Error("HONUA_SAMPLE_CONNECTION must name this server's managed import database");
   assertDefaultImportGeometry(geojson);
   const folderId = await departmentFolder(env, source.department);
+  await requireManagedConnection(env, connection);
   const runId = options.runId ?? randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);
   const serviceName = stagingServiceName(name, runId);
