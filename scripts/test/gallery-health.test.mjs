@@ -279,3 +279,11 @@ test('an outside timeout excuses the late links and short-circuits its host', as
   await checkLinkUrls(['https://msc.fema.gov/7'], null, { cache, resolve });
   assert.equal(calls, 4);
 });
+
+test('a Honua host that resets is not short-circuited: its later 404 stays broken', async () => {
+  const cache = createLinkCache();
+  const resolve = async (_request, url) => url.endsWith('/1') ? 'read ECONNRESET' : 'HTTP 404';
+  await checkLinkUrls(['https://samples.honua.io/1'], null, { cache, resolve });
+  const links = await checkLinkUrls(['https://samples.honua.io/2'], null, { cache, resolve });
+  assert.deepEqual(links.broken, ['https://samples.honua.io/2: HTTP 404']);
+});

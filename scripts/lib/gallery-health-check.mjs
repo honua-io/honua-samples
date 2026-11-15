@@ -90,7 +90,7 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
     }
     const { status, delayed } = await cache.results.get(url);
     if (delayed && !isHonuaHost(hostname)) waitedOnOutsideHost = true;
-    if (stalls(status)) cache.stalledHosts.add(host);
+    if (stalls(status) && !isHonuaHost(hostname)) cache.stalledHosts.add(host);
     return status;
   };
   const record = (url, status) => {
@@ -119,7 +119,7 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
 export const UNVERIFIED = 'unverified: ';
 // A rate limit that outlived its retry, or a reset or timeout: later links to
 // that host would only wait out the same answer.
-const stalls = (status) => status === `${UNVERIFIED}HTTP 429` || OUTSIDE_TRANSPORT.test(status);
+const stalls = (status) => status.startsWith(UNVERIFIED) && (status === `${UNVERIFIED}HTTP 429` || OUTSIDE_TRANSPORT.test(status));
 const OUTSIDE_TRANSPORT = /ECONNRESET|ETIMEDOUT|Timeout \d+ms exceeded/;
 const isHonuaHost = (hostname) => hostname === 'honua.io' || hostname.endsWith('.honua.io');
 
