@@ -8,6 +8,7 @@
 <style>[aria-disabled="true"]{opacity:.55;cursor:default}</style>
 <style>
   body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
+  #copyStatus:not(:empty) { position: fixed; z-index: 100; bottom: 16px; left: 16px; max-width: calc(100vw - 32px); padding: 12px 16px; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); }
   .sx { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; }
   .sx > .col { position: relative; min-height: 0; overflow-y: auto; background: var(--c-surface); }
   .left { border-right: 1px solid var(--c-border); display: flex; flex-direction: column; overflow: hidden !important; }
@@ -225,6 +226,7 @@
 </style>
 </head>
 <body class="app-shell app-explorer">
+<div id="copyStatus" role="status" aria-live="polite" aria-atomic="true"></div>
 <a class="skip-link" href="#samplePanels">Skip to the selected sample</a>
 {{ICONS}}
 <header class="appbar">
@@ -986,6 +988,7 @@ try {
   function copyText(text, btn) {
     if (latestCopyButton) resetCopyFeedback(latestCopyButton);
     latestCopyButton = btn;
+    $("#copyStatus").textContent = "";
     const label = btn.querySelector("span");
     const feedback = { label, text: label?.textContent, title: btn.title };
     copyFeedback.set(btn, feedback);
@@ -996,7 +999,10 @@ try {
     const done = (ok) => {
       if (!current()) return;
       if (!visibleSource()) { resetCopyFeedback(btn); return; }
-      if (!ok) selectCopySource(source);
+      if (!ok) {
+        selectCopySource(source);
+        $("#copyStatus").textContent = "Code selected. Use your device's copy command to copy it.";
+      }
       if (label) label.textContent = ok ? "Copied" : "Copy manually";
       btn.title = ok ? "Copied" : "Code selected; use your device's copy command";
       feedback.timer = setTimeout(() => { if (current()) resetCopyFeedback(btn); }, 1600);
