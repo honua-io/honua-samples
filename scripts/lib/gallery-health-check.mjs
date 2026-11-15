@@ -68,7 +68,7 @@ async function pageLinks(page) {
 // One cache for a whole run: each URL is requested once, and an outside host
 // that stays rate limited after a retry is not asked again.
 export function createLinkCache() {
-  return { results: new Map(), limitedHosts: new Set() };
+  return { results: new Map(), stalledHosts: new Set() };
 }
 
 export async function checkLinkUrls(urls, request, { cache = createLinkCache(), budgetMs = 45_000, resolve = resolveLink } = {}) {
@@ -76,21 +76,21 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
   const deadline = Date.now() + budgetMs;
   // Set when this page waited out an outside rate limit: links it then had no
   // time left for are unverified, not broken.
-  let waitedOnRateLimit = false;
+  let waitedOnOutsideHost = false;
   const lookup = async (url) => {
     const { host, hostname } = new URL(url);
     if (!cache.results.has(url)) {
       // The rate-limit fact travels with the cached result, so every page that
       // waited on this request (not only the one that started it) is excused.
-      let rateLimited = false;
-      const onRateLimit = () => { rateLimited = true; };
-      cache.results.set(url, cache.limitedHosts.has(host)
-        ? Promise.resolve({ status: `${UNVERIFIED}HTTP 429 (host rate limited)`, rateLimited: false })
-        : resolve(request, url, { onRateLimit }).then((status) => ({ status, rateLimited })));
+      let delayed = false;
+      const onOutsideDelay = () => { delayed = true; };
+      cache.results.set(url, cache.stalledHosts.has(host)
+        ? Promise.resolve({ status: `${UNVERIFIED}host already rate limited or unreachable in this run`, delayed: false })
+        : resolve(request, url, { onOutsideDelay }).then((status) => ({ status, delayed })));
     }
-    const { status, rateLimited } = await cache.results.get(url);
-    if (rateLimited && !isHonuaHost(hostname)) waitedOnRateLimit = true;
-    if (status === `${UNVERIFIED}HTTP 429`) cache.limitedHosts.add(host);
+    const { status, delayed } = await cache.results.get(url);
+    if (delayed && !isHonuaHost(hostname)) waitedOnOutsideHost = true;
+    if (stalls(status)) cache.stalledHosts.add(host);
     return status;
   };
   const record = (url, status) => {
@@ -108,7 +108,7 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
   await Promise.all(Array.from({ length: Math.min(4, pending.length) }, worker));
   // Classified only after every in-flight request settled, so a rate limit that
   // was still being waited out when the budget ran out is known here.
-  const missed = waitedOnRateLimit ? `${UNVERIFIED}link-check deadline exceeded after an outside rate limit` : 'link-check deadline exceeded';
+  const missed = waitedOnOutsideHost ? `${UNVERIFIED}link-check deadline exceeded after an outside host was rate limited or unreachable` : 'link-check deadline exceeded';
   for (const url of late) record(url, missed);
   return outcome;
 }
@@ -117,6 +117,10 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
 // whether the link exists: report it as unverified instead of broken. A 403 or
 // 429 from Honua's own hosts stays a failure.
 export const UNVERIFIED = 'unverified: ';
+// A rate limit that outlived its retry, or a reset or timeout: later links to
+// that host would only wait out the same answer.
+const stalls = (status) => status === `${UNVERIFIED}HTTP 429` || OUTSIDE_TRANSPORT.test(status);
+const OUTSIDE_TRANSPORT = /ECONNRESET|ETIMEDOUT|Timeout \d+ms exceeded/;
 const isHonuaHost = (hostname) => hostname === 'honua.io' || hostname.endsWith('.honua.io');
 
 function retryDelayMs(response) {
@@ -125,7 +129,7 @@ function retryDelayMs(response) {
   return seconds > 0 ? Math.min(seconds * 1000, 5_000) : 3_000;
 }
 
-export async function resolveLink(request, url, { wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), onRateLimit = () => {} } = {}) {
+export async function resolveLink(request, url, { wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), onOutsideDelay = () => {} } = {}) {
   try {
     let response = await request.head(url, { timeout: 15_000 });
     if ([403, 404, 405, 501].includes(response.status())) {
@@ -133,7 +137,7 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
       response = await request.get(url, { timeout: 15_000 });
     }
     if (response.status() === 429) {
-      onRateLimit();
+      onOutsideDelay();
       const delay = retryDelayMs(response);
       await response.dispose();
       await wait(delay);
@@ -148,7 +152,8 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
   } catch (error) {
     // An outside host that resets or times out cloud runners is unreachable from
     // here, not proven gone; a DNS failure (the host no longer exists) stays broken.
-    const blocked = /ECONNRESET|ETIMEDOUT|Timeout \d+ms exceeded/.test(error.message) && !isHonuaHost(new URL(url).hostname);
-    return blocked ? `${UNVERIFIED}${error.message}` : error.message;
+    if (!OUTSIDE_TRANSPORT.test(error.message) || isHonuaHost(new URL(url).hostname)) return error.message;
+    onOutsideDelay();
+    return `${UNVERIFIED}${error.message}`;
   }
 }

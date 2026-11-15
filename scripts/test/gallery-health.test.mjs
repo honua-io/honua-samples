@@ -157,7 +157,7 @@ test('a blank or zero Retry-After uses the default delay and reports the rate li
     const waits = [];
     let seen = 0;
     const request = { head: async () => stubResponse(429, { 'retry-after': value }), get: async () => stubResponse(200) };
-    assert.equal(await resolveLink(request, 'https://github.com/o/r', { wait: async (ms) => waits.push(ms), onRateLimit: () => seen++ }), 'ok');
+    assert.equal(await resolveLink(request, 'https://github.com/o/r', { wait: async (ms) => waits.push(ms), onOutsideDelay: () => seen++ }), 'ok');
     assert.deepEqual(waits, [3_000]);
     assert.equal(seen, 1);
   }
@@ -186,8 +186,8 @@ test('GET transport errors remain link failures', async () => {
 });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const slowRateLimited = async (_request, url, { onRateLimit }) => {
-  if (url.includes('github.com') || url.includes('honua.io')) { onRateLimit(); await sleep(40); }
+const slowRateLimited = async (_request, url, { onOutsideDelay }) => {
+  if (url.includes('github.com') || url.includes('honua.io')) { onOutsideDelay(); await sleep(40); }
   return 'ok';
 };
 const deadlineUrls = [1, 2, 3, 4].map((n) => `https://github.com/o/r/${n}`).concat(['https://www.npmjs.com/a', 'https://docs.example.org/b']);
@@ -196,7 +196,7 @@ test('links left after an outside rate-limit wait on the page are unverified, no
   const links = await checkLinkUrls(deadlineUrls, null, { budgetMs: 10, resolve: slowRateLimited });
   assert.deepEqual(links.broken, []);
   assert.equal(links.unverified.length, 2);
-  assert.match(links.unverified[0], /npmjs.*deadline exceeded after an outside rate limit/);
+  assert.match(links.unverified[0], /npmjs.*deadline exceeded after an outside host was rate limited or unreachable/);
 });
 
 test('a missed deadline stays broken when the page saw no outside rate limit', async () => {
@@ -251,8 +251,8 @@ test('a page that waits on another page\'s rate-limited request is excused too',
 });
 
 test('links that miss the budget while an outside rate limit is still being waited out are unverified', async () => {
-  const resolve = async (_request, url, { onRateLimit }) => {
-    if (url.includes('github.com')) { onRateLimit(); await sleep(60); }
+  const resolve = async (_request, url, { onOutsideDelay }) => {
+    if (url.includes('github.com')) { onOutsideDelay(); await sleep(60); }
     else await sleep(20);
     return 'ok';
   };
@@ -261,4 +261,21 @@ test('links that miss the budget while an outside rate limit is still being wait
   const links = await checkLinkUrls(urls, null, { budgetMs: 10, resolve });
   assert.deepEqual(links.broken, []);
   assert.equal(links.unverified.length, 2);
+});
+
+test('an outside timeout excuses the late links and short-circuits its host', async () => {
+  let calls = 0;
+  const resolve = async (request, url, options) => {
+    if (!url.includes('fema')) return 'ok';
+    calls++;
+    await sleep(30);
+    return resolveLink({ head: async () => { throw new Error('apiRequestContext.head: Timeout 15000ms exceeded.'); } }, url, options);
+  };
+  const cache = createLinkCache();
+  const urls = [1, 2, 3, 4, 5, 6].map((n) => `https://msc.fema.gov/${n}`);
+  const links = await checkLinkUrls(urls, null, { cache, budgetMs: 10, resolve });
+  assert.deepEqual(links.broken, []);
+  assert.equal(links.unverified.length, 6);
+  await checkLinkUrls(['https://msc.fema.gov/7'], null, { cache, resolve });
+  assert.equal(calls, 4);
 });
