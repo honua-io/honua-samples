@@ -484,6 +484,8 @@
   let map, drawn = [], mode = "select", measurePts = [];
   const reqFC = () => ({ type: "FeatureCollection", features: filtered().map((r) => ({ type: "Feature", id: r._i, properties: { id: r.id, sel: S.sel.has(r.id) ? 1 : 0 }, geometry: { type: "Point", coordinates: r.c } })) });
   function renderMap(rows) {
+    document.getElementById("nShown").textContent = rows.length.toLocaleString();
+    document.getElementById("nOf").textContent = `of ${LAYERS[S.layer].rows.length.toLocaleString()} ${LAYERS[S.layer].sum}`;
     if (!map || !map.getSource("reqs")) return;
     const isP = S.layer === "parcels";
     const is3d = document.getElementById("v3d").getAttribute("aria-pressed") === "true";
@@ -497,8 +499,6 @@
       map.setFilter("p3d", all ? null : ["in", ["get", "id"], ["literal", ids]]);
       map.setFilter("parcels-sel", ["in", ["get", "id"], ["literal", [...S.sel]]]);
     } else map.getSource("reqs").setData(reqFC());
-    document.getElementById("nShown").textContent = rows.length.toLocaleString();
-    document.getElementById("nOf").textContent = `of ${LAYERS[S.layer].rows.length.toLocaleString()} ${LAYERS[S.layer].sum}`;
   }
   function selectionLayers() {
     if (S.layer !== "parcels") return ["reqs"];
@@ -511,7 +511,8 @@
     const tr = document.querySelector(`#dt tbody tr[data-id="${ids[0]}"]`); if (tr && !fly) tr.scrollIntoView({ block: "nearest" });
   }
   const linkHash = HM.hashParams();
-  map = HM.create(document.getElementById("map"), { bounds: [[-156.4925, 20.874], [-156.4595, 20.896]], navPos: "top-right", onload: (m) => {
+  const MAP_BOUNDS = [[-156.4925, 20.874], [-156.4595, 20.896]];
+  map = HM.create(document.getElementById("map"), { bounds: MAP_BOUNDS, navPos: "top-right", onload: (m) => {
     HM.overlays(m, ["zoning", "flood", "tsunami", "parcels"], "roads-casing");
     HM.add(m, "sma", HD.sma); m.addLayer({ id: "sma-line", type: "line", source: "sma", paint: { "line-color": HM.cssVar("--hz-slr"), "line-width": 2, "line-dasharray": [2, 1.5] } });
     ["zoning", "zoning-line", "flood", "flood-line", "tsunami", "tsunami-x", "tsunami-line", "sma-line"].forEach((l) => m.setLayoutProperty(l, "visibility", "none"));
@@ -570,13 +571,14 @@
   document.getElementById("hintCancel").addEventListener("click", () => setMode("select"));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && mode !== "select") setMode("select"); });
   // 2D / 3D
+  const CAMERA_3D = { pitch: 58, bearing: -28, center: [-156.4705, 20.8905], zoom: 15.7 };
   function set3d(on, animate = true) {
     document.getElementById("v2d").setAttribute("aria-pressed", !on); document.getElementById("v3d").setAttribute("aria-pressed", on);
     document.getElementById("note3d").dataset.on = on;
     if (!map) return;
     HM.toggle(map, ["p3d"], on && S.layer === "parcels"); HM.toggle(map, ["pf-hit"], !on && S.layer === "parcels");
     map.dragRotate[on ? "enable" : "disable"]();
-    if (animate) map.easeTo(on ? { pitch: 58, bearing: -28, center: [-156.4705, 20.8905], zoom: 15.7, duration: 900 } : { pitch: 0, bearing: 0, duration: 700 });
+    if (animate) map.easeTo(on ? { ...CAMERA_3D, duration: 900 } : { pitch: 0, bearing: 0, duration: 700 });
   }
   document.getElementById("v2d").addEventListener("click", () => set3d(false));
   document.getElementById("v3d").addEventListener("click", () => set3d(true));
@@ -782,9 +784,11 @@
   document.getElementById("expCsv").addEventListener("click", () => { const L = LAYERS[S.layer], rows = filtered(); const esc = (v) => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v; download(`maui-${S.layer}.csv`, [L.cols.map((c) => c[1]).join(","), ...rows.map((r) => L.cols.map((c) => esc(r[c[0]])).join(","))].join("\n"), "text/csv"); });
   document.getElementById("expGj").addEventListener("click", () => { const L = LAYERS[S.layer], rows = filtered(); const byId = new Map(parcelsFC.features.map((f) => [f.properties.id, f.geometry])); download(`maui-${S.layer}.geojson`, JSON.stringify({ type: "FeatureCollection", features: rows.map((r) => { const { c, _i, ...props } = r; return { type: "Feature", properties: props, geometry: S.layer === "parcels" ? byId.get(r.id) : { type: "Point", coordinates: c } }; }) }), "application/geo+json"); });
   function openShare() {
-    // Without a map (no WebGL) share the default camera so the link still validates and restores elsewhere.
-    const view = map ? { center: map.getCenter().toArray(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() } : { center: [-156.476, 20.885], zoom: 15, pitch: 0, bearing: 0 };
-    const state = { ...snap(), view, sort: S.sort, tq: S.tq, selOnly: S.selOnly, is3d: document.getElementById("v3d").getAttribute("aria-pressed") === "true" }; delete state.plan; delete state.prop;
+    // Without a map (library, PMTiles or WebGL unavailable) share the default camera for the chosen view so the link still validates.
+    const is3d = document.getElementById("v3d").getAttribute("aria-pressed") === "true";
+    const view = map ? { center: map.getCenter().toArray(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() }
+      : is3d ? CAMERA_3D : { center: [(MAP_BOUNDS[0][0] + MAP_BOUNDS[1][0]) / 2, (MAP_BOUNDS[0][1] + MAP_BOUNDS[1][1]) / 2], zoom: 15, pitch: 0, bearing: 0 };
+    const state = { ...snap(), view, sort: S.sort, tq: S.tq, selOnly: S.selOnly, is3d }; delete state.plan; delete state.prop;
     const url = new URL(location.href); url.searchParams.delete("s"); url.hash = new URLSearchParams({ s: JSON.stringify(state) }).toString();
     document.getElementById("shareLink").textContent = url.href;
     document.getElementById("embedCode").textContent = `<iframe src="${url.href.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" width="100%" height="640" title="Maui analysis"></iframe>`;
