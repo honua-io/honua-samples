@@ -8,6 +8,7 @@
 <style>[aria-disabled="true"]{opacity:.55;cursor:default}</style>
 <style>
   body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
+  #copyHint:not(:empty) { flex: none; padding: 12px 16px; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); }
   .sx { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; }
   .sx > .col { position: relative; min-height: 0; overflow-y: auto; background: var(--c-surface); }
   .left { border-right: 1px solid var(--c-border); display: flex; flex-direction: column; overflow: hidden !important; }
@@ -225,6 +226,8 @@
 </style>
 </head>
 <body class="app-shell app-explorer">
+<div id="copyStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="copyHint" aria-hidden="true"></div>
 <a class="skip-link" href="#samplePanels">Skip to the selected sample</a>
 {{ICONS}}
 <header class="appbar">
@@ -520,7 +523,7 @@ try {
   const tok = (n) => HM.cssVar(n);
   const fmt = (n) => Number(n).toLocaleString("en-US");
   const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
-  const BY = Object.fromEntries(D.samples.map((s) => [s.id, s]));
+  const BY = Object.assign(Object.create(null), Object.fromEntries(D.samples.map((s) => [s.id, s])));
   const tpl = (id) => document.getElementById("T-" + id).textContent.replace("</scr@@ipt>", "</" + "script>");
   const fill = (text, vals) => text.replace(/@@(\w+)@@/g, (m, k) => (k in vals ? vals[k] : m));
   const jsStr = (v) => String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -954,6 +957,7 @@ try {
   }
   function currentFiles() { const s = BY[state.id], sm = sim(); return (sm ? sm.files(state.params) : s.files).filter(Boolean); }
   function renderSource(changed) {
+    clearCopyNotice();
     const s = BY[state.id], sm = sim(), files = currentFiles();
     if (state.file >= files.length) state.file = 0;
     $("#fileTabs").innerHTML = files.map((f, i) => `<button type="button" data-i="${i}" aria-pressed="${i === state.file}">${esc(f.name)}</button>`).join("") || `<span class="faint" style="padding:4px 8px;font-size:12px">No source files</span>`;
@@ -973,11 +977,83 @@ try {
     if (changed) { const first = $("#code .ln.flash"), box = $("#code"); if (first && state.tab === "src" && (first.offsetTop < box.scrollTop || first.offsetTop > box.scrollTop + box.clientHeight - 30)) box.scrollTop = first.offsetTop - 60; }
   }
   $("#copyBtn").addEventListener("click", (e) => { const f = currentFiles()[state.file]; if (f) copyText(f.code, e.currentTarget); });
-  function copyText(text, btn) {
-    const done = (ok) => { const sp = btn.querySelector("span"); const old = sp ? sp.textContent : btn.title; if (sp) sp.textContent = ok ? "Copied" : "Press Ctrl+C"; btn.title = ok ? "Copied" : "Copy failed"; setTimeout(() => { if (sp) sp.textContent = old; btn.title = "Copy"; }, 1600); };
-    try { navigator.clipboard.writeText(text).then(() => done(true), () => done(fallbackCopy(text))); } catch (e) { done(fallbackCopy(text)); }
+  const copyStatus = $("#copyStatus");
+  const copyHint = $("#copyHint");
+  let copyNoticeFrame = 0;
+  function clearCopyNotice() {
+    cancelAnimationFrame(copyNoticeFrame);
+    copyStatus.textContent = "";
+    copyHint.textContent = "";
   }
-  function fallbackCopy(text) { try { const t = document.createElement("textarea"); t.value = text; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); const ok = document.execCommand("copy"); t.remove(); return ok; } catch (e) { return false; } }
+  const copyFeedback = new WeakMap();
+  let latestCopyButton;
+  function resetCopyFeedback(btn) {
+    const feedback = copyFeedback.get(btn);
+    if (!feedback) return;
+    clearTimeout(feedback.timer);
+    if (feedback.label) feedback.label.textContent = feedback.text;
+    btn.title = feedback.title;
+    copyFeedback.delete(btn);
+  }
+  function copyText(text, btn) {
+    if (latestCopyButton) resetCopyFeedback(latestCopyButton);
+    latestCopyButton = btn;
+    clearCopyNotice();
+    const label = btn.querySelector("span");
+    const feedback = { label, text: label?.textContent, title: btn.title };
+    copyFeedback.set(btn, feedback);
+    const source = btn.closest(".snip") || $("#code");
+    const current = () => latestCopyButton === btn && copyFeedback.get(btn) === feedback;
+    const visibleSource = () => source.isConnected && source.getClientRects().length &&
+      (btn.closest(".snip") ? source.dataset.text : currentFiles()[state.file]?.code) === text;
+    const done = (ok) => {
+      if (!current()) return;
+      if (!visibleSource()) { resetCopyFeedback(btn); return; }
+      if (!ok) {
+        selectCopySource(source);
+        const notice = "Code selected. Use your device's copy command to copy it.";
+        source.before(copyHint);
+        copyHint.textContent = notice;
+        copyHint.scrollIntoView({ block: "nearest", inline: "nearest" });
+        copyNoticeFrame = requestAnimationFrame(() => { if (current()) copyStatus.textContent = notice; });
+      }
+      if (label) label.textContent = ok ? "Copied" : "Copy manually";
+      btn.title = ok ? "Copied" : "Code selected; use your device's copy command";
+      feedback.timer = setTimeout(() => { if (current()) resetCopyFeedback(btn); }, 1600);
+    };
+    const failed = () => {
+      if (!current()) return;
+      if (!visibleSource()) { resetCopyFeedback(btn); return; }
+      done(fallbackCopy(text));
+    };
+    try { navigator.clipboard.writeText(text).then(() => done(true), failed); } catch (e) { failed(); }
+  }
+  function selectCopySource(source) {
+    if (!source.hasAttribute("tabindex")) source.tabIndex = -1;
+    source.focus({ preventScroll: true });
+    const range = document.createRange();
+    range.selectNodeContents(source);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  function fallbackCopy(text) {
+    const input = document.createElement("textarea");
+    input.value = text;
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    input.readOnly = true;
+    const focused = document.activeElement;
+    try {
+      document.body.appendChild(input);
+      input.select();
+      return document.execCommand("copy");
+    } catch (e) { return false; }
+    finally {
+      input.remove();
+      if (focused && focused !== document.body && focused.isConnected) focused.focus({ preventScroll: true });
+    }
+  }
 
 function sanitizedReadme(html) {
   const parsed = new DOMParser().parseFromString(html, 'text/html');
