@@ -225,9 +225,11 @@ docker compose -f docker/compose.yml down -v
 ```
 
 `docker/compose.yml` defaults to that same candidate image and sets
-`Licensing__Mode=Disabled`. It also sets `PUBLIC_BASE_URL` to
-`http://localhost:<HONUA_HTTP_PORT>`: without it the server, which does not trust
-request `Host` headers, builds catalog and self links from the container's own address. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it).
+`Licensing__Mode=Disabled`. It also sets the server's `PUBLIC_BASE_URL` to
+`http://localhost:<HONUA_HTTP_PORT>` (unrelated to the runner's
+`HONUA_PUBLIC_BASE_URL` below): without it the server, which does not trust
+request `Host` headers, builds catalog and self links from the container's own
+address. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it).
 The Honua service pins `platform: linux/amd64`, including with an image override.
 On an arm64 host, Docker runs the amd64 server under emulation; this is not a
 supported 2026.1 deployment topology. The

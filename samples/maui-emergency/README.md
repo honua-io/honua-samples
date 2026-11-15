@@ -94,10 +94,13 @@ The browser contract runs through the capability-keyed sample manifest against a
 disposable, default PostGIS-only candidate server:
 
 ```sh
+HONUA_BASE_URL=http://localhost:8080 \
+HONUA_ADMIN_API_KEY=your-local-admin-key \
+HONUA_SAMPLE_PYTHON="$PWD/artifacts/state-local/venv/bin/python" \
 npx playwright test samples/maui-emergency/verify/exercise.spec.mjs
 ```
 
-Install the SDK dependencies below and set `HONUA_SAMPLE_PYTHON` before running.
+Install the SDK dependencies above first.
 The browser check imports synthetic validation fixtures through Honua's own API,
 checks all three published SDKs, then exercises the rendered map and refresh.
 The fixture geometry is synthetic, not county source evidence. Generated browser
@@ -116,7 +119,7 @@ server. CI checks the filter, returned feature IDs, geometry and exercise labels
 The bounded `EM-01` browser slice checks the rendered map, filters, fictional
 occupancy and keyboard detail selection. It does not claim the full released
 Studio/MCP journey passes. Dependencies must be installed as above;
-set `HONUA_SAMPLE_PYTHON` to the virtual environment's Python executable.
+the command points `HONUA_SAMPLE_PYTHON` at that environment's Python.
 
 [Import data and record provenance](../../docs/state-local-data.md).
 

@@ -58,7 +58,7 @@ three published SDKs anonymously. Never point it at the shared demo or a product
 server. CI checks the filter, returned feature IDs, geometry and exercise labels.
 Its `PW-01` test name identifies the SDK query portion only; it does
 not claim the full UI requirement passes. Dependencies must be installed as above;
-set `HONUA_SAMPLE_PYTHON` to the virtual environment's Python executable.
+the command points `HONUA_SAMPLE_PYTHON` at that environment's Python.
 
 [Import data and record provenance](../../docs/state-local-data.md).
 
