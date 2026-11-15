@@ -13,20 +13,34 @@ export function mountCountyPublication({ root, map }) {
     event.preventDefault();
     selectCountyParcel(state, root.querySelector('#countyTmk').value);
   });
-  root.addEventListener('toggle', async () => {
-    if (!root.open) {
-      cancelSelection(state); countyVisibility(state);
-      if (state.camera) state.map()?.jumpTo(state.camera);
-      state.camera = null;
-      return;
-    }
-    const currentMap = state.map();
-    if (currentMap) state.camera = { center: currentMap.getCenter(), zoom: currentMap.getZoom(), bearing: currentMap.getBearing(), pitch: currentMap.getPitch() };
-    try { await connectCounty(state); if (root.open) attachCountyMap(state); }
-    catch { state.status.textContent = 'County publication unavailable. Close and reopen this panel to retry. Snapshot data remains available.'; }
-  });
+  root.addEventListener('toggle', () => onCountyToggle(state));
   const sharedTmk = new URL(location.href).searchParams.get('countyTmk');
-  if (sharedTmk !== null) { root.open = true; selectCountyParcel(state, sharedTmk); }
+  if (sharedTmk !== null) root.open = true;
+  if (root.open) void onCountyToggle(state);
+  if (sharedTmk !== null) void selectCountyParcel(state, sharedTmk);
+}
+
+function rememberCamera(state) {
+  const currentMap = state.map();
+  if (!currentMap || state.camera) return;
+  state.camera = { center: currentMap.getCenter(), zoom: currentMap.getZoom(), bearing: currentMap.getBearing(), pitch: currentMap.getPitch() };
+}
+
+async function onCountyToggle(state) {
+  if (!state.root.open) {
+    cancelSelection(state);
+    countyVisibility(state);
+    if (state.camera) state.map()?.jumpTo(state.camera);
+    state.camera = null;
+    return;
+  }
+  rememberCamera(state);
+  try {
+    await connectCounty(state);
+    if (state.root.open) attachCountyMap(state);
+  } catch {
+    state.status.textContent = 'County publication unavailable. Close and reopen this panel to retry. Snapshot data remains available.';
+  }
 }
 
 async function connectCounty(state) {
@@ -107,12 +121,29 @@ function attachCountyMap(state) {
   if (state.selection) showCountySelection(state, state.selection);
 }
 
+function rememberSnapshotVisibility(state) {
+  if (state.snapshotVisibility) return;
+  const map = state.map();
+  if (!map) return;
+  state.snapshotVisibility = {};
+  for (const layer of snapshotLayers) {
+    if (map.getLayer(layer)) state.snapshotVisibility[layer] = map.getLayoutProperty(layer, 'visibility') ?? 'visible';
+  }
+}
+
 function countyVisibility(state) {
   const map = state.map();
   if (!map) return;
-  for (const layer of countyLayers) if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', state.root.open && !state.mapFailed ? 'visible' : 'none');
-  const connected = state.root.open && !state.mapFailed && Boolean(map.getSource('county-publication'));
-  for (const layer of snapshotLayers) if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', connected ? 'none' : 'visible');
+  const showCounty = state.root.open && !state.mapFailed;
+  if (showCounty) rememberSnapshotVisibility(state);
+  for (const layer of countyLayers) if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', showCounty ? 'visible' : 'none');
+  const hideSnapshot = showCounty && Boolean(map.getSource('county-publication'));
+  for (const layer of snapshotLayers) {
+    if (!map.getLayer(layer)) continue;
+    if (hideSnapshot) map.setLayoutProperty(layer, 'visibility', 'none');
+    else if (state.snapshotVisibility?.[layer]) map.setLayoutProperty(layer, 'visibility', state.snapshotVisibility[layer]);
+  }
+  if (!state.root.open) state.snapshotVisibility = null;
 }
 
 function clearCountySelection(state) {
