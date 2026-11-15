@@ -49,6 +49,7 @@ for the agent moment. Setup generation does not mark the stock-client journey co
 ```sh
 HONUA_BASE_URL=http://localhost:8080 \
 HONUA_ADMIN_API_KEY=your-local-admin-key \
+HONUA_SAMPLE_PYTHON="$PWD/artifacts/state-local/venv/bin/python" \
 node scripts/state-local/sdk/verify.mjs public-works
 ```
 
@@ -57,7 +58,7 @@ three published SDKs anonymously. Never point it at the shared demo or a product
 server. CI checks the filter, returned feature IDs, geometry and exercise labels.
 Its `PW-01` test name identifies the SDK query portion only; it does
 not claim the full UI requirement passes. Dependencies must be installed as above;
-set `HONUA_SAMPLE_PYTHON` to the virtual environment's Python executable.
+the command points `HONUA_SAMPLE_PYTHON` at that environment's Python.
 
 [Import data and record provenance](../../docs/state-local-data.md).
 
@@ -98,6 +99,8 @@ repository root:
 
 ```sh
 npm ci
+python3 -m venv artifacts/catalog-python
+artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
 node scripts/state-local/build-display-site.mjs
 node scripts/build-gallery.mjs --check
 npm ci --prefix samples/maui-public-works

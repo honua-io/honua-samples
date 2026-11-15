@@ -30,6 +30,8 @@ Build and run the repository gallery (shared fonts, theme and logos are gallery 
 
 ```sh
 npm ci
+python3 -m venv artifacts/catalog-python
+artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
 node scripts/state-local/build-display-site.mjs
 node scripts/build-gallery.mjs --check
 npm ci --prefix samples/maui-311
@@ -98,6 +100,7 @@ Default filter: `record_type = 'service_request' AND status <> 'exercise_closed'
 ```sh
 HONUA_BASE_URL=http://localhost:8080 \
 HONUA_ADMIN_API_KEY=your-local-admin-key \
+HONUA_SAMPLE_PYTHON="$PWD/artifacts/state-local/venv/bin/python" \
 node scripts/state-local/sdk/verify.mjs 311
 ```
 
@@ -106,7 +109,7 @@ three published SDKs anonymously. Never point it at the shared demo or a product
 server. CI checks the filter, returned feature IDs, geometry and exercise labels.
 Its `SR-01` test name identifies the SDK query portion only; it does
 not claim the full UI requirement passes. Dependencies must be installed as above;
-set `HONUA_SAMPLE_PYTHON` to the virtual environment's Python executable.
+the command points `HONUA_SAMPLE_PYTHON` at that environment's Python.
 
 [Import data and record provenance](../../docs/state-local-data.md).
 

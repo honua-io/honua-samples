@@ -545,6 +545,7 @@ for (const missing of ["metadata", "value"]) {
     await expect(page.locator("body")).toHaveAttribute("data-sample-status", "fail");
     await expect(page.locator("#county-permit-link")).toHaveCount(0);
     await expect(page.locator("#panel-inner [role=alert]")).toBeVisible();
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 }
 

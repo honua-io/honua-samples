@@ -28,7 +28,7 @@ be enabled explicitly; no administrative credential belongs in the browser URL.
 ```sh
 npm ci --prefix samples/maui-emergency
 npm run build --prefix samples/maui-emergency
-npm exec --prefix samples/maui-emergency -- vite preview --host 127.0.0.1
+npm exec --prefix samples/maui-emergency -- vite preview samples/maui-emergency --host 127.0.0.1
 ```
 
 Open the preview URL with these query parameters (replace the four placeholders):
@@ -94,10 +94,13 @@ The browser contract runs through the capability-keyed sample manifest against a
 disposable, default PostGIS-only candidate server:
 
 ```sh
+HONUA_BASE_URL=http://localhost:8080 \
+HONUA_ADMIN_API_KEY=your-local-admin-key \
+HONUA_SAMPLE_PYTHON="$PWD/artifacts/state-local/venv/bin/python" \
 npx playwright test samples/maui-emergency/verify/exercise.spec.mjs
 ```
 
-Install the SDK dependencies below and set `HONUA_SAMPLE_PYTHON` before running.
+Install the SDK dependencies above first.
 The browser check imports synthetic validation fixtures through Honua's own API,
 checks all three published SDKs, then exercises the rendered map and refresh.
 The fixture geometry is synthetic, not county source evidence. Generated browser
@@ -106,6 +109,7 @@ captures stay in ignored artifacts; real source data is fetched by the pipeline.
 ```sh
 HONUA_BASE_URL=http://localhost:8080 \
 HONUA_ADMIN_API_KEY=your-local-admin-key \
+HONUA_SAMPLE_PYTHON="$PWD/artifacts/state-local/venv/bin/python" \
 node scripts/state-local/sdk/verify.mjs emergency
 ```
 
@@ -115,7 +119,7 @@ server. CI checks the filter, returned feature IDs, geometry and exercise labels
 The bounded `EM-01` browser slice checks the rendered map, filters, fictional
 occupancy and keyboard detail selection. It does not claim the full released
 Studio/MCP journey passes. Dependencies must be installed as above;
-set `HONUA_SAMPLE_PYTHON` to the virtual environment's Python executable.
+the command points `HONUA_SAMPLE_PYTHON` at that environment's Python.
 
 [Import data and record provenance](../../docs/state-local-data.md).
 
