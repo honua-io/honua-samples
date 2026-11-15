@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { sampleAppPath } from './lib/sample-app-url.mjs';
+import { isPublishableHttpUrl } from './lib/publishable-http-url.mjs';
 // Builds the static samples.honua.io gallery into site/ (honua-io/honua-samples#3).
 //
 // DECISION (owner, 2026-07-17, on #3): samples.honua.io is the single
@@ -1225,7 +1226,7 @@ function renderJobServerPanel(job, keyByKey) {
 
 function renderProtocolContract(job, protocol, index) {
   const request = { method: protocol.method, endpoint: protocol.concreteEndpoint ?? protocol.endpointTemplate, payload: protocol.request };
-  const open = /\bGET\b/u.test(protocol.method) && isSafeHttpUrl(protocol.concreteEndpoint)
+  const open = /\bGET\b/u.test(protocol.method) && isPublishableHttpUrl(protocol.concreteEndpoint)
     ? `<a class="button protocol-open" href="${escapeAttr(protocol.concreteEndpoint)}" target="_blank" rel="noopener noreferrer">Open GET endpoint &nearr;</a>`
     : "";
   return `<article class="server-protocol" data-protocol="${escapeAttr(protocol.id)}" data-availability="${escapeAttr(protocol.availability)}">
@@ -1316,15 +1317,6 @@ function renderJobAiPanel(job) {
 
 function domId(value) {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "");
-}
-
-function isSafeHttpUrl(value) {
-  if (!value) return false;
-  try {
-    return new Set(["http:", "https:"]).has(new URL(value).protocol);
-  } catch {
-    return false;
-  }
 }
 
 function isSafeHttpsUrl(value) {
