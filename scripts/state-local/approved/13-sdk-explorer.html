@@ -8,7 +8,7 @@
 <style>[aria-disabled="true"]{opacity:.55;cursor:default}</style>
 <style>
   body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
-  #copyStatus:not(:empty) { flex: none; padding: 12px 16px; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); }
+  #copyHint:not(:empty) { flex: none; padding: 12px 16px; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); }
   .sx { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; }
   .sx > .col { position: relative; min-height: 0; overflow-y: auto; background: var(--c-surface); }
   .left { border-right: 1px solid var(--c-border); display: flex; flex-direction: column; overflow: hidden !important; }
@@ -226,7 +226,8 @@
 </style>
 </head>
 <body class="app-shell app-explorer">
-<div id="copyStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="copyStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="copyHint" aria-hidden="true"></div>
 <a class="skip-link" href="#samplePanels">Skip to the selected sample</a>
 {{ICONS}}
 <header class="appbar">
@@ -956,6 +957,7 @@ try {
   }
   function currentFiles() { const s = BY[state.id], sm = sim(); return (sm ? sm.files(state.params) : s.files).filter(Boolean); }
   function renderSource(changed) {
+    clearCopyNotice();
     const s = BY[state.id], sm = sim(), files = currentFiles();
     if (state.file >= files.length) state.file = 0;
     $("#fileTabs").innerHTML = files.map((f, i) => `<button type="button" data-i="${i}" aria-pressed="${i === state.file}">${esc(f.name)}</button>`).join("") || `<span class="faint" style="padding:4px 8px;font-size:12px">No source files</span>`;
@@ -976,6 +978,13 @@ try {
   }
   $("#copyBtn").addEventListener("click", (e) => { const f = currentFiles()[state.file]; if (f) copyText(f.code, e.currentTarget); });
   const copyStatus = $("#copyStatus");
+  const copyHint = $("#copyHint");
+  let copyNoticeFrame = 0;
+  function clearCopyNotice() {
+    cancelAnimationFrame(copyNoticeFrame);
+    copyStatus.textContent = "";
+    copyHint.textContent = "";
+  }
   const copyFeedback = new WeakMap();
   let latestCopyButton;
   function resetCopyFeedback(btn) {
@@ -989,7 +998,7 @@ try {
   function copyText(text, btn) {
     if (latestCopyButton) resetCopyFeedback(latestCopyButton);
     latestCopyButton = btn;
-    copyStatus.textContent = "";
+    clearCopyNotice();
     const label = btn.querySelector("span");
     const feedback = { label, text: label?.textContent, title: btn.title };
     copyFeedback.set(btn, feedback);
@@ -1002,9 +1011,11 @@ try {
       if (!visibleSource()) { resetCopyFeedback(btn); return; }
       if (!ok) {
         selectCopySource(source);
-        source.before(copyStatus);
-        copyStatus.textContent = "Code selected. Use your device's copy command to copy it.";
-        copyStatus.scrollIntoView({ block: "nearest", inline: "nearest" });
+        const notice = "Code selected. Use your device's copy command to copy it.";
+        source.before(copyHint);
+        copyHint.textContent = notice;
+        copyHint.scrollIntoView({ block: "nearest", inline: "nearest" });
+        copyNoticeFrame = requestAnimationFrame(() => { if (current()) copyStatus.textContent = notice; });
       }
       if (label) label.textContent = ok ? "Copied" : "Copy manually";
       btn.title = ok ? "Copied" : "Code selected; use your device's copy command";
@@ -1031,12 +1042,17 @@ try {
     input.value = text;
     input.style.position = "fixed";
     input.style.opacity = "0";
+    input.readOnly = true;
+    const focused = document.activeElement;
     try {
       document.body.appendChild(input);
       input.select();
       return document.execCommand("copy");
     } catch (e) { return false; }
-    finally { input.remove(); }
+    finally {
+      input.remove();
+      if (focused && focused !== document.body && focused.isConnected) focused.focus({ preventScroll: true });
+    }
   }
 
 function sanitizedReadme(html) {
