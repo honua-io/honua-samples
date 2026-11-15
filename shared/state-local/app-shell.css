@@ -17,8 +17,9 @@ body.app-shell {
 .app-shell .demostrip { max-height: 72px; overflow: auto; }
 .app-emergency .xbanner { flex-wrap: wrap; max-height: 100px; overflow: auto; }
 .app-emergency .xbanner .t { white-space: normal; }
-.app-emergency .statusbar { height: auto; max-height: 54px; padding: 4px 10px; gap: 4px 12px; flex-wrap: wrap; white-space: normal; overflow: auto; }
+.app-emergency .statusbar { position: static; height: auto; max-height: 54px; padding: 4px 10px; gap: 4px 12px; flex-wrap: wrap; white-space: normal; overflow: auto; }
 .app-emergency .statusbar > span { flex-wrap: wrap; }
+.app-emergency .legend { max-width: calc(100% - 24px); max-height: calc(100% - 130px); overflow: auto; }
 .app-shell .layout, .app-shell .wb, .app-shell .sx {
   flex: 1;
   min-height: 0;
@@ -95,11 +96,9 @@ body.app-shell {
   body.app-emergency { height: auto; overflow: auto; }
   .app-emergency .layout { flex: none; grid-template-rows: auto; overflow: visible; }
   .app-emergency #map { grid-column: 1 / -1; height: 60vh; min-height: 320px; }
-  .app-emergency .legend { max-height: calc(100% - 130px); overflow: auto; }
   .app-emergency .col { overflow: auto; }
   .app-emergency .xbanner, .app-emergency .demostrip,
   .app-emergency .statusbar { max-height: none; overflow: visible; }
-  .app-emergency .statusbar { position: static; }
   .app-requests .page, .app-works .pw-main { padding: 10px; }
   .department-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
   .app-requests .ph, .app-works .pagehead { flex-shrink: 0; gap: 8px; margin-bottom: 10px; }
@@ -112,6 +111,19 @@ body.app-shell {
   .app-explorer .shead .path, .app-explorer .right { overflow-wrap: anywhere; }
 }
 
-@media (min-width: 1001px) and (max-height: 600px) {
-  body.app-explorer { height: 760px; overflow: auto; }
+@media (min-width: 901px) {
+  body.app-emergency { min-height: 800px; overflow: auto; }
+}
+
+@media (min-width: 901px) and (max-width: 1240px) {
+  .app-emergency .legend { bottom: 56px; max-height: calc(100% - 156px); }
+}
+
+@media (min-width: 901px) and (max-width: 1000px) {
+  .app-emergency .appbar .appnav { display: none; }
+  .app-emergency .wordmark { flex: 1; }
+}
+
+@media (min-width: 1001px) {
+  body.app-explorer { min-height: 800px; overflow: auto; }
 }
