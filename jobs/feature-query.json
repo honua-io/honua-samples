@@ -128,7 +128,7 @@
       "availability": "available",
       "label": "Source.query",
       "symbolOrCommand": "Source<T>.query(Query<T>)",
-      "deepLink": "https://honua-io.github.io/honua-sdk-js/api/interfaces/Source.html#query",
+      "deepLink": "https://honua-io.github.io/honua-sdk-js/api/interfaces/index.Source.html#query",
       "package": "@honua/sdk-js",
       "minVersion": "0.1.4-beta.0",
       "supportTier": "Stable root contract",

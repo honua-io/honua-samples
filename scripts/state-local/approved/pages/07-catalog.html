@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maui County Open Data</title>
+<meta name="description" content="Maui County open data hub: search datasets by text and map area, open dataset pages, APIs and downloads. Pinned public snapshots with publisher attribution.">
+{{HEAD}}
+<style>
+  :root { --brand: var(--c-accent); --brand-on: var(--c-on-accent); --hero-tint: var(--c-accent-soft); }
+  .site-h { background: var(--c-surface); border-bottom: 1px solid var(--c-border); }
+  .site-h .in { max-width: 1320px; margin: 0 auto; height: 56px; display: flex; align-items: center; gap: 18px; padding: 0 24px; }
+  .brand { color: var(--brand); font-weight: 700; font-size: 17px; letter-spacing: -0.02em; white-space: nowrap; }
+  .brand:hover { text-decoration: none; }
+  .brand span { color: var(--c-text-2); font-weight: 500; }
+  .site-nav { display: flex; gap: 4px; }
+  .site-nav a { padding: 6px 10px; color: var(--c-text-2); font-weight: 500; border-radius: var(--radius-md); }
+  .site-nav a:hover, .site-nav a[aria-current] { color: var(--c-text); background: var(--c-surface-2); text-decoration: none; }
+  .hero { background: linear-gradient(180deg, var(--hero-tint) 0%, var(--c-bg) 100%); border-bottom: 1px solid var(--c-rule); }
+  .hero .in { max-width: 1320px; margin: 0 auto; padding: 28px 24px 22px; }
+  .hero h1 { font-size: 28px; letter-spacing: -0.025em; }
+  .hero p { color: var(--c-text-2); margin-top: 4px; }
+  .bigsearch { display: flex; gap: 8px; margin-top: 16px; max-width: 760px; }
+  .bigsearch .field { height: 44px; flex: 1; font-size: 15px; background: var(--c-surface); }
+  .bigsearch .btn { height: 44px; padding: 0 20px; }
+  .topics { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .topics button { border: 1px solid var(--c-border); background: var(--c-surface); border-radius: 999px; height: 28px; padding: 0 12px; font-size: 13px; color: var(--c-text-2); }
+  .topics button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--brand-on); }
+  .main { max-width: 1320px; margin: 0 auto; padding: 20px 24px 48px; }
+  .search-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
+  .facets h2 { font-size: 13px; margin: 0 0 6px; }
+  .facet { padding: 12px 0; border-top: 1px solid var(--c-rule); }
+  .facet:first-child { border-top: 0; padding-top: 0; }
+  .facet label { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; cursor: pointer; }
+  .facet input { accent-color: var(--brand); margin: 0; }
+  .facet .n { margin-left: auto; color: var(--c-text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .res-h { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .res-h select { height: 30px; border: 1px solid var(--c-border); border-radius: var(--radius-md); background: var(--c-surface); padding: 0 8px; font-size: 13px; }
+  .result { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; padding: 14px 0; border-top: 1px solid var(--c-rule); }
+  .result:first-of-type { border-top: 0; }
+  .thumb { width: 56px; height: 56px; border-radius: 8px; background: var(--map-land); border: 1px solid var(--c-rule); overflow: hidden; }
+  .thumb svg { width: 100%; height: 100%; display: block; }
+  .result h3 { font-size: 15px; }
+  .result h3 a { color: var(--c-text); }
+  .result h3 a:hover { color: var(--c-link); }
+  .result .meta { font-size: 13px; color: var(--c-text-3); margin-top: 2px; }
+  .result p { font-size: 13px; color: var(--c-text-2); margin-top: 5px; max-width: 72ch; }
+  .result .fmts { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+  .fmt { font-size: 12px; padding: 1px 6px; border-radius: 4px; background: var(--c-surface-2); color: var(--c-text-2); font-weight: 500; }
+  .side-map { position: sticky; top: 16px; }
+  .side-map .map { height: 320px; border-radius: var(--radius-lg); border: 1px solid var(--c-rule); }
+  .side-map .mapattr { font-size: 9.5px; }
+  .extent-opt { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; }
+  .extent-opt input { accent-color: var(--brand); }
+  .feeds { margin-top: 16px; }
+  .feeds a { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  /* Dataset page */
+  .crumbs { font-size: 13px; color: var(--c-text-3); margin-bottom: 10px; }
+  .ds-head { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .ds-head h1 { font-size: 26px; letter-spacing: -0.02em; }
+  .ds-head .sub { color: var(--c-text-2); margin-top: 4px; }
+  .ds-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; margin-top: 18px; align-items: start; }
+  .ds-map { height: 380px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .ds-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--c-rule); }
+  .ds-stats > div { padding: 12px 16px; border-left: 1px solid var(--c-rule); }
+  .ds-stats > div:first-child { border-left: 0; }
+  .ds-stats .v { font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .ds-stats .l { font-size: 12px; color: var(--c-text-3); }
+  .tblwrap { overflow-x: auto; }
+  .tbl td { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .dl-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .dl-row:first-child { border-top: 0; }
+  .dl-row .fmt-n { font-weight: 600; min-width: 92px; }
+  .dl-row .sz { color: var(--c-text-3); margin-left: auto; font-variant-numeric: tabular-nums; font-size: 12px; }
+  .endpoint .p { min-width: 0; font-size: 13px; }
+  .endpoint code { font-size: 12px; }
+  .panel-h { flex-wrap: wrap; }
+  .ds-head > .row { flex-wrap: wrap; }
+  .ds-legend { left: 12px; top: 12px; }
+  .site-f { border-top: 1px solid var(--c-rule); padding: 20px 24px 32px; max-width: 1320px; margin: 0 auto; font-size: 13px; color: var(--c-text-2); }
+  @media (max-width: 1150px) { .search-grid { grid-template-columns: 200px minmax(0, 1fr); } .side-map { display: none; } .ds-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 760px) {
+    .site-nav { display: none; }
+    .site-h .in, .hero .in, .main { padding-left: 16px; padding-right: 16px; }
+    .search-grid { grid-template-columns: minmax(0, 1fr); }
+    .facets { display: none; }
+    .ds-stats { grid-template-columns: repeat(2, 1fr); }
+    .ds-stats > div:nth-child(3) { border-left: 0; }
+    .ds-map { height: 280px; }
+    .endpoint .p { min-width: 0; }
+    .hero h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to results</a>
+{{ICONS}}
+<header class="site-h">
+  <div class="in" data-theme-slot>
+    <a class="brand" href="07-catalog.html">Maui County <span>Open Data</span></a>
+    <nav class="site-nav" aria-label="Site"><a href="07-catalog.html" aria-current="page">Datasets</a><a href="02-property.html">Maps and apps</a><a href="#apis">APIs</a><a href="#about">About</a></nav>
+    <span style="flex:1"></span>
+    <span class="faint hide-sm" style="font-size:12px">Honua snapshot catalog</span>
+    <a class="btn ghost hide-sm" href="index.html">Demo index</a>
+  </div>
+</header>
+<div class="demostrip" role="note">
+  <span class="tag-real">Real data</span> 14 verified public datasets from the Hawaii Statewide GIS Program
+  <span class="tag-demo">Demo data</span> 311 requests and public works assets
+  <span class="faint">· Pinned snapshot · November 10, 2026 · not live county operations</span>
+</div>
+
+<div id="searchView">
+  <section class="hero">
+    <div class="in">
+      <h1>Find county data</h1>
+      <p>Parcels, zoning, hazards, infrastructure and services for Maui County. Public snapshots, downloads and source APIs.</p>
+      <form class="bigsearch" role="search" onsubmit="event.preventDefault()">
+        <label class="sr-only" for="q">Search datasets</label>
+        <div class="field"><svg class="ico faint"><use href="#i-search"/></svg><input id="q" placeholder="Try “flood”, “parcels” or “schools”" autocomplete="off"></div>
+        <button class="btn primary" type="submit">Search</button>
+      </form>
+      <div class="topics" id="topics" aria-label="Topics"></div>
+    </div>
+  </section>
+  <main class="main" id="main">
+    <div class="search-grid">
+      <aside class="facets" aria-label="Filters" id="facets"></aside>
+      <section aria-labelledby="resH">
+        <div class="res-h">
+          <h2 id="resH" style="font-size:15px"><span id="resN">16</span> datasets</h2>
+          <span class="faint" id="resExt" style="font-size:13px"></span>
+          <span style="flex:1"></span>
+          <label class="sr-only" for="sort">Sort</label>
+          <select id="sort"><option value="rel">Most relevant</option><option value="upd">Recently updated</option><option value="az">Name A–Z</option></select>
+        </div>
+        <div id="results"></div>
+      </section>
+      <aside class="side-map" aria-label="Search by map area">
+        <div class="map" id="extMap" role="region" aria-label="Map extent for search"></div>
+        <label class="extent-opt"><input type="checkbox" id="extOnly">Only datasets in the map area</label>
+        <p class="faint" style="font-size:12px;margin-top:4px">Pan or zoom the map to set the search area.</p>
+        <div class="feeds" id="apis">
+          <div class="kicker" style="margin-bottom:4px">Catalog feeds</div>
+          <a href="/state-local/data/catalog/catalog.json"><svg class="ico"><use href="#i-code"/></svg>Public snapshot catalog<span class="faint mono" style="margin-left:auto">JSON</span></a>
+          <a href="/state-local/data/approved/manifest.json"><svg class="ico"><use href="#i-code"/></svg>Source receipts and checksums<span class="faint mono" style="margin-left:auto">JSON</span></a>
+          <p class="faint" style="font-size:12px">Static public projection; restricted datasets are excluded. Source services may have newer records.</p>
+          <details style="font-size:12px"><summary>Search evaluation</summary><p>Try “show me flood data”. Expected: FEMA flood hazard zones and sea-level rise exposure; counts and snapshot date appear on each dataset. “Parcels with flood zones” returns Parcels (TMK) and those two hazard datasets. Search matches any meaningful keyword locally; no AI answer is generated.</p></details>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<main class="main" id="dsView" hidden></main>
+
+<footer class="site-f" id="about">Maui open data hub demonstration. Public-source extracts are generalized snapshots, not legal boundaries or operational advice. Attribution and source vintage appear on each dataset. Fictional records are labelled DEMO DATA and are for evaluation only.</footer>
+
+{{DATA land,roads,contours,streams,waterbodies,dfirm,tsunami,slr32,catalog,catalog_parcels,catalog_zoning,catalog_slud,catalog_sma,catalog_mip_growth,catalog_dfirm,catalog_tsunami,catalog_slr32,catalog_fire,catalog_roads,catalog_bridges,catalog_schools,catalog_streams,catalog_council,catalog_requests,catalog_assets}}
+{{MAPJS}}
+<script>
+(() => {
+  const D = HD.catalog.datasets;
+  const DATA = Object.fromEntries(D.map((d) => [d.id, () => HD["catalog_" + d.id]]));
+  const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const TOPIC_VAR = { "Land and property": "--viz-2", "Hazards and safety": "--hz-tsu", Transportation: "--viz-8", Infrastructure: "--viz-3", Environment: "--viz-1", Community: "--viz-5" };
+  const topicColor = (t) => HM.cssVar(TOPIC_VAR[t] || "--viz-1");
+  D.forEach((d) => {
+    const fc = DATA[d.id](); d.fc = fc; d.n = fc.features.length;
+    let a = [180, 90, -180, -90];
+    fc.features.forEach((f) => { const b = HM.bbox(f.geometry); a = [Math.min(a[0], b[0][0]), Math.min(a[1], b[0][1]), Math.max(a[2], b[1][0]), Math.max(a[3], b[1][1])]; });
+    d.bbox = a; d.bytes = JSON.stringify(fc).length;
+  });
+  const fmtSize = (b) => b > 1e6 ? (b / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1e3)) + " KB";
+  const fmtDate = (s) => new Date(s + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  function thumb(d) {
+    const [x0, y0, x1, y1] = d.bbox, w = x1 - x0 || 0.01, h = y1 - y0 || 0.01, s = Math.max(w, h * 1.07);
+    const P = ([x, y]) => `${(((x - x0) / s) * 50 + 3).toFixed(1)},${(53 - ((y - y0) / s) * 50 * 1.07).toFixed(1)}`;
+    const c = topicColor(d.topic); let out = "";
+    const fs = d.fc.features.length > 400 ? d.fc.features.filter((_, i) => i % Math.ceil(d.fc.features.length / 400) === 0) : d.fc.features;
+    fs.forEach((f) => {
+      const g = f.geometry;
+      if (g.type === "Point") out += `<circle cx="${P(g.coordinates).split(",")[0]}" cy="${P(g.coordinates).split(",")[1]}" r="2.2" fill="${c}"/>`;
+      else { const rings = g.type === "Polygon" ? [g.coordinates[0]] : g.type === "MultiPolygon" ? g.coordinates.map((p) => p[0]) : g.type === "LineString" ? [g.coordinates] : g.coordinates;
+        rings.forEach((r) => { const pts = r.filter((_, i) => i % Math.ceil(r.length / 30 || 1) === 0 || i === r.length - 1).map(P).join(" "); out += g.type.includes("Poly") ? `<polygon points="${pts}" fill="${c}" fill-opacity=".28" stroke="${c}" stroke-width=".5"/>` : `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width=".7"/>`; }); }
+    });
+    return `<svg viewBox="0 0 56 56" aria-hidden="true">${out}</svg>`;
+  }
+
+  // ---------- Search ----------
+  const state = { q: "", topic: null, f: { dept: new Set(), freq: new Set(), fmt: new Set(), kind: new Set() }, ext: null };
+  const FACETS = [["dept", "Department", (d) => [d.dept]], ["freq", "Update frequency", (d) => [d.freq]], ["fmt", "Format", (d) => d.formats], ["kind", "Data type", (d) => [d.real ? "Real public data" : "Demo data"]]];
+  const topics = ["Land and property", "Environment", "Hazards and safety", "Transportation", "Infrastructure", "Community"].filter((topic) => D.some((d) => d.topic === topic));
+  document.getElementById("topics").innerHTML = topics.map((t) => `<button type="button" aria-pressed="false" data-t="${t}">${t}</button>`).join("");
+  document.getElementById("topics").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; state.topic = state.topic === b.dataset.t ? null : b.dataset.t; document.querySelectorAll("#topics button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.t === state.topic)); render(); });
+  function baseMatch(d) {
+    const stop = new Set(["show", "me", "find", "please", "data", "dataset", "datasets", "about", "for", "the", "a", "and", "in", "maui", "county", "with", "zone", "zones"]);
+    const terms = state.q.toLowerCase().match(/[a-z0-9]+/g)?.filter((term) => !stop.has(term)) || [];
+    const text = [d.title, d.desc, d.tags.join(" "), d.dept, d.topic].join(" ").toLowerCase();
+    if (terms.length && !terms.some((term) => text.includes(term))) return false;
+    if (state.topic && d.topic !== state.topic) return false;
+    if (state.ext && document.getElementById("extOnly").checked) { const [a, b, c, e] = d.bbox, [[x0, y0], [x1, y1]] = state.ext; if (c < x0 || a > x1 || e < y0 || b > y1) return false; }
+    return true;
+  }
+  function facetMatch(d, skip) { return FACETS.every(([k, , fn]) => k === skip || !state.f[k].size || fn(d).some((v) => state.f[k].has(v))); }
+  function render() {
+    const base = D.filter(baseMatch);
+    document.getElementById("facets").innerHTML = FACETS.map(([k, label, fn]) => {
+      const counts = {}; base.filter((d) => facetMatch(d, k)).forEach((d) => fn(d).forEach((v) => (counts[v] = (counts[v] || 0) + 1)));
+      const vals = [...new Set(D.flatMap(fn))].sort((a, b) => (counts[b] || 0) - (counts[a] || 0) || a.localeCompare(b)).slice(0, k === "fmt" ? 8 : 9);
+      return `<div class="facet"><h2>${label}</h2>${vals.map((v) => `<label><input type="checkbox" data-k="${k}" value="${v}" ${state.f[k].has(v) ? "checked" : ""}>${v}<span class="n">${counts[v] || 0}</span></label>`).join("")}</div>`;
+    }).join("");
+    let rows = base.filter((d) => facetMatch(d));
+    const sort = document.getElementById("sort").value;
+    if (sort === "upd") rows.sort((a, b) => b.updated.localeCompare(a.updated)); else if (sort === "az") rows.sort((a, b) => a.title.localeCompare(b.title));
+    document.getElementById("resN").textContent = rows.length;
+    document.getElementById("resExt").textContent = state.ext && document.getElementById("extOnly").checked ? "in the map area" : "";
+    document.getElementById("results").innerHTML = rows.map((d) => `<article class="result">
+      <div class="thumb">${thumb(d)}</div>
+      <div><h3><a href="#ds=${d.id}">${d.title}</a> ${d.real ? "" : '<span class="tag-demo">Demo data</span>'}</h3>
+      <div class="meta">${d.dept} · ${d.geom.toLowerCase()} layer · ${d.n.toLocaleString()} feature${d.n === 1 ? "" : "s"} · snapshot ${fmtDate(d.updated)}</div>
+      <p>${d.desc}</p>
+      <div class="fmts">${d.formats.map((f) => `<span class="fmt">${f}</span>`).join("")}</div></div></article>`).join("") || `<p class="muted" style="padding:20px 0">No datasets match. Clear a filter or widen the map area.</p>`;
+  }
+  document.getElementById("facets").addEventListener("change", (e) => { const c = e.target; if (!c.dataset.k) return; c.checked ? state.f[c.dataset.k].add(c.value) : state.f[c.dataset.k].delete(c.value); render(); });
+  document.getElementById("q").addEventListener("input", (e) => { state.q = e.target.value; render(); });
+  document.getElementById("sort").addEventListener("change", render);
+  document.getElementById("extOnly").addEventListener("change", render);
+  render();
+
+  let extMap = null;
+  function initExtMap() {
+    if (extMap) return;
+    extMap = HM.create(document.getElementById("extMap"), { view: "wide", padding: 0, roadLabels: false, attr: "Hawaii Statewide GIS Program · Honua", onload: (m) => {
+      HM.overlays(m, ["tsunami", "flood"], "roads-casing");
+      const upd = () => { const b = m.getBounds(); state.ext = [[b.getWest(), b.getSouth()], [b.getEast(), b.getNorth()]]; if (document.getElementById("extOnly").checked) render(); };
+      m.on("moveend", upd); upd();
+    } });
+  }
+
+  // ---------- Dataset page ----------
+  let dsMap = null;
+  let activeDatasetId = null;
+  let routeInitialized = false;
+  function showDataset(id) {
+    const d = D.find((x) => x.id === id); if (!d) return showSearch();
+    activeDatasetId = id;
+    document.getElementById("searchView").hidden = true;
+    const v = document.getElementById("dsView"); v.hidden = false;
+    const props = d.fc.features[0] ? Object.keys(d.fc.features[0].properties).filter((k) => !["c"].includes(k)).slice(0, 7) : [];
+    const rows = d.fc.features.slice(0, 8);
+    const cell = (k, val) => escape(val == null ? "null" : typeof val === "object" ? JSON.stringify(val) : val);
+    v.innerHTML = `
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="#">Datasets</a> › ${d.topic} › ${d.title}</nav>
+      <div class="ds-head">
+        <div class="grow"><h1>${d.title} ${d.real ? '<span class="tag-real" style="vertical-align:6px">Real data</span>' : '<span class="tag-demo" style="vertical-align:6px">Demo data</span>'}</h1>
+          <p class="sub">${d.desc}</p>
+          <div class="row wrap" style="margin-top:10px"><span class="chip">${d.dept}</span><span class="chip">${d.topic}</span>${d.tags.map((t) => `<span class="chip">${t}</span>`).join("")}</div></div>
+        <div class="row"><a class="btn" href="#"><svg class="ico"><use href="#i-arrow-r" style="transform:rotate(180deg);transform-origin:center"/></svg>All datasets</a><button class="btn primary" id="jumpDownloads" type="button"><svg class="ico"><use href="#i-download"/></svg>Download</button></div>
+      </div>
+      <div class="ds-grid">
+        <div class="stack" style="margin:0">
+          <div class="panel" style="overflow:hidden">
+            <div class="map ds-map" id="dsMap" role="region" aria-label="Map preview of ${d.title}"></div>
+            <div class="ds-stats">
+              <div><div class="v">${d.n.toLocaleString()}</div><div class="l">features in this extract</div></div>
+              <div><div class="v">${d.geom}</div><div class="l">geometry</div></div>
+              <div><div class="v">${d.freq}</div><div class="l">snapshot policy</div></div>
+              <div><div class="v">${fmtDate(d.updated)}</div><div class="l">snapshot captured</div></div>
+            </div>
+          </div>
+          <section class="panel" aria-labelledby="attrH">
+            <div class="panel-h"><h2 id="attrH">Attribute preview</h2><span class="sub"><span id="tableRange">First ${rows.length} of ${d.n.toLocaleString()} rows</span></span><span style="flex:1"></span><button class="btn sm" id="fullTable" type="button">Browse full table</button></div>
+            <div class="panel-b tblwrap"><table class="tbl"><thead id="tableHead"><tr>${props.map((k) => `<th>${escape(k)}</th>`).join("")}</tr></thead><tbody id="tableRows">${rows.map((f) => `<tr>${props.map((k) => `<td>${cell(k, f.properties[k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+          </section>
+          <section class="panel" aria-labelledby="mdH">
+            <div class="panel-h"><h2 id="mdH">Metadata</h2><span class="sub">Verified snapshot provenance</span><span style="flex:1"></span><a class="btn sm" href="${d.metadataUrl}">Source metadata</a><a class="btn sm" href="/state-local/data/catalog/catalog.json">Catalog JSON</a></div>
+            <div class="panel-b"><dl class="dl">
+              <dt>Title (dct:title)</dt><dd>${d.title}</dd>
+              <dt>Publisher (dct:publisher)</dt><dd>${d.dept}</dd>
+              <dt>Source and attribution</dt><dd>${d.by}<br><code style="font-size:12px;word-break:break-all">${d.src}</code></dd>
+              <dt>Licence (dct:license)</dt><dd><a href="${d.licenseUrl}">${d.license}</a></dd>
+              <dt>Accrual periodicity</dt><dd>${d.freq}</dd>
+              <dt>Spatial extent</dt><dd class="num">${d.bbox.map((x) => x.toFixed(4)).join(", ")} (WGS 84)</dd>
+              <dt>Reference system</dt><dd>Downloads: WGS 84 longitude/latitude (EPSG:4326)</dd>
+              <dt>Lineage</dt><dd>${d.warning} · Source vintage: ${d.vintage}</dd>
+              <dt>Publisher service</dt><dd><a href="${d.src}">Open source service</a></dd>
+              <dt>Keywords</dt><dd>${d.tags.join(", ")}, Maui, Kahului, Wailuku</dd>
+            </dl></div>
+          </section>
+        </div>
+        <div class="stack" style="margin:0">
+          <section class="panel" aria-labelledby="apiH2">
+            <div class="panel-h"><h2 id="apiH2">APIs</h2><span class="sub">Public, no sign-in required</span></div>
+            <div class="panel-b">
+              ${[["Snapshot GeoJSON", d.downloads.find((link) => link.format === "GeoJSON").url], ["Publisher source", d.src], ["Public catalog JSON", "/state-local/data/catalog/catalog.json"]]
+                .map(([label, url]) => `<div class="endpoint"><div class="grow"><div class="p">${label}</div><a href="${url}"><code style="display:block">${url}</code></a></div><button class="iconbtn" data-copy="${url}" aria-label="Copy ${label} URL"><svg class="ico"><use href="#i-copy"/></svg></button></div>`).join("")}
+              <div class="notice" style="margin-top:10px"><svg class="ico"><use href="#i-info"/></svg><div style="font-size:13px">${d.real ? "Verified public-source snapshot. This page does not query a live Honua catalog." : "DEMO DATA: fictional records for evaluation; not for operational use."}</div></div>
+            </div>
+          </section>
+          <section class="panel" id="downloads" aria-labelledby="dlH">
+            <div class="panel-h"><h2 id="dlH">Downloads</h2><span class="sub">Pinned snapshot exports</span></div>
+            <div class="panel-b">
+              ${d.downloads.map((link) => `<div class="dl-row"><svg class="ico faint"><use href="#i-file"/></svg><span class="fmt-n">${link.format}</span><span class="faint" style="font-size:12px">${d.n.toLocaleString()} features</span><span class="sz">${fmtSize(link.bytes)}</span><a class="btn sm" href="${link.url}" download aria-label="Download ${link.format}"><svg class="ico"><use href="#i-download"/></svg></a></div>`).join("")}
+            </div>
+          </section>
+          <section class="panel" aria-labelledby="useH">
+            <div class="panel-h"><h2 id="useH">Used in</h2></div>
+            <div class="panel-b" style="font-size:13px">
+              <a class="row" href="02-property.html" style="padding:5px 0"><svg class="ico"><use href="#i-map"/></svg>Property and zoning app</a>
+              <a class="row" href="04-emergency.html" style="padding:5px 0"><svg class="ico"><use href="#i-waves"/></svg>Preparedness map</a>
+              <a class="row" href="12-workbench.html" style="padding:5px 0"><svg class="ico"><use href="#i-agent"/></svg>Spatial analysis workbench</a>
+            </div>
+          </section>
+        </div>
+      </div>`;
+    v.querySelectorAll("[data-copy]").forEach((button) => button.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(new URL(button.dataset.copy, location.href).href); button.setAttribute("aria-label", "URL copied"); }
+      catch { button.setAttribute("aria-label", "Copy unavailable; select the link URL"); }
+    }));
+    v.querySelector("#jumpDownloads").addEventListener("click", () => v.querySelector("#downloads").scrollIntoView({behavior: "smooth"}));
+    let offset = 0;
+    v.querySelector("#fullTable").addEventListener("click", (event) => {
+      const keys = Object.keys(d.fc.features[0]?.properties || {});
+      const page = d.fc.features.slice(offset, offset + 50);
+      v.querySelector("#tableHead").innerHTML = `<tr>${keys.map((key) => `<th>${escape(key)}</th>`).join("")}</tr>`;
+      v.querySelector("#tableRows").innerHTML = page.map((feature) => `<tr>${keys.map((key) => `<td>${cell(key, feature.properties[key])}</td>`).join("")}</tr>`).join("");
+      v.querySelector("#tableRange").textContent = `${offset + 1}–${offset + page.length} of ${d.n.toLocaleString()} rows`;
+      offset = offset + 50 >= d.n ? 0 : offset + 50;
+      event.currentTarget.textContent = offset ? "Next 50 rows" : "Back to first rows";
+    });
+    if (dsMap) { dsMap.remove(); dsMap = null; }
+    const c = topicColor(d.topic);
+    dsMap = HM.create(document.getElementById("dsMap"), { bounds: [[d.bbox[0], d.bbox[1]], [d.bbox[2], d.bbox[3]]], padding: 24, roadLabels: false, onload: (m) => {
+      HM.add(m, "ds", d.fc);
+      const fillC = d.id === "tsunami" ? ["match", ["get", "code"], 1, HM.cssVar("--hz-tsu"), 2, HM.cssVar("--hz-tsux"), HM.cssVar("--c-ok")] : c;
+      if (d.geom === "Polygon") { m.addLayer({ id: "ds-f", type: "fill", source: "ds", paint: { "fill-color": fillC, "fill-opacity": d.id === "parcels" ? 0.08 : d.id === "tsunami" ? ["match", ["get", "code"], 1, 0.32, 2, 0.2, 0.07] : 0.3 } }, "roads-casing"); m.addLayer({ id: "ds-l", type: "line", source: "ds", paint: { "line-color": fillC, "line-width": d.id === "parcels" ? 0.6 : 1.2 } }); }
+      else if (d.geom === "Line") m.addLayer({ id: "ds-l", type: "line", source: "ds", paint: { "line-color": c, "line-width": 2 } });
+      else m.addLayer({ id: "ds-p", type: "circle", source: "ds", paint: { "circle-color": c, "circle-radius": d.n > 100 ? 3.5 : 6, "circle-stroke-color": HM.cssVar("--map-pin-ring"), "circle-stroke-width": 1.5 } });
+    } });
+    window.scrollTo(0, 0);
+  }
+  function showSearch() { activeDatasetId = null; if (dsMap) { dsMap.remove(); dsMap = null; } document.getElementById("dsView").hidden = true; document.getElementById("searchView").hidden = false; initExtMap(); }
+  function route() { const m = location.hash.match(/ds=([\w]+)/); if (!routeInitialized || (m?.[1] || null) !== activeDatasetId) { routeInitialized = true; m ? showDataset(m[1]) : showSearch(); } }
+  window.addEventListener("hashchange", route); route();
+  document.addEventListener("honua:theme", () => { if (activeDatasetId) showDataset(activeDatasetId); else render(); });
+})();
+</script>
+</body>
+</html>

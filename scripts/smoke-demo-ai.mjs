@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium, expect } from '@playwright/test';
 import { evaluateCapitalProjects } from './lib/capital-project-eval.mjs';
 import { verifyRequestLoop } from './lib/verify-request-loop.mjs';
-import { startStaticServer } from './lib/browser-lane.mjs';
+import { startSmokeSite } from './lib/smoke-site.mjs';
 
 const root = fileURLToPath(new URL('../site/', import.meta.url));
 const evidence = fileURLToPath(new URL('../artifacts/demo-ai-evals/', import.meta.url));
@@ -243,7 +243,8 @@ async function workbench(page) {
 }
 
 await mkdir(evidence, { recursive: true });
-const server = await startStaticServer({ rootDir: root, port: 0 });
+const server = await startSmokeSite({ rootDir: root, baseUrl: process.env.STATE_LOCAL_SMOKE_BASE_URL });
+console.log(`Checking snapshots at ${server.url}`);
 const browser = await chromium.launch({ headless: true });
 try {
   for (const width of [1440, 390]) {

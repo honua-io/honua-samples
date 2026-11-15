@@ -16,6 +16,19 @@ function scenarioSources(name) {
   return name === "property" ? ["maui-parcels", scenario.source] : [scenario.source];
 }
 
+function sourceSegment(encoded) {
+  let segment;
+  try {
+    segment = decodeURIComponent(encoded);
+  } catch {
+    throw new Error("MCP source requires valid encoded service path segments");
+  }
+  if (/[\/\\\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(segment)) {
+    throw new Error("MCP source requires single-line service path segments without separators");
+  }
+  return segment;
+}
+
 function publicSource(deployment) {
   const { source, cleanSha256, layerUrl, baseUrl, layerId } = deployment;
   const url = new URL(layerUrl);
@@ -28,7 +41,7 @@ function publicSource(deployment) {
     throw new Error("MCP source requires a credential-free public layer URL and snapshot checksum");
   }
   const definition = getSource(source);
-  const service = match.slice(1, 3).map(decodeURIComponent).join("/");
+  const service = match.slice(1, 3).map(sourceSegment).join("/");
   return { source, cleanSha256, layerUrl, reference: `geoservices-feature-service:${service}/${layerId}`,
     attribution: definition.attribution, license: definition.license, licenseUrl: definition.licenseUrl };
 }

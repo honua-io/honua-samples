@@ -37,6 +37,9 @@ test('live public feeds show current, failed and stale states apart from the exe
   await expect(feed('nws')).toContainText('1 active for Maui County: High Surf Advisory');
   await expect(feed('usgs')).toHaveAttribute('data-state', 'error');
   await expect(feed('usgs')).toContainText('Unavailable: network request failed');
+  await expect(feed('usgs').locator('a')).toHaveAttribute('href', 'https://waterdata.usgs.gov/monitoring-location/USGS-16604500/');
+  await expect(feed('nws').locator('a')).toHaveAttribute('href', 'https://forecast.weather.gov/showsigwx.php?warncounty=HIC009');
+  await expect(feed('tide').locator('a')).toHaveAttribute('href', 'https://tidesandcurrents.noaa.gov/stationhome.html?id=1615680');
   await expect(feed('tide')).toHaveAttribute('data-state', 'stale');
   await expect(feed('tide')).toContainText('stale: expected within 30 min');
   await expect(page.locator('section[aria-labelledby="lfH"] .tag-real')).toHaveText('real data');

@@ -263,12 +263,30 @@ Markdown and screenshots of failed pages. Failures open or update one issue
 labelled `gallery-health`; a passing run updates and closes it. Runner failures
 also update that issue. No maintainer needs to open CI logs to see the result.
 
-Run locally after `npm ci` and `npx playwright install --with-deps chromium firefox`:
+This optional diagnostic runs from this repository's root with Node.js 22+,
+`npm` and internet access to the public gallery and its linked services. It
+runs independently of the local Compose stack and needs no admin credentials.
+Install dependencies with `npm ci` and Playwright's locked Chromium and Firefox
+with `npx playwright install --with-deps chromium firefox`; the latter installs
+system libraries and uses `sudo` on Linux.
+
+On Linux, install Xvfb and `xauth` (Debian/Ubuntu packages `xvfb` and `xauth`)
+and run both commands under `xvfb-run`, as the gallery workflow does. This gives
+Firefox a display for its WebGL checks. Other platforms can run each `node`
+command directly using their installed browsers.
 
 ```sh
-node scripts/smoke-gallery-health-controls.mjs
-node scripts/check-gallery-health.mjs
+npm ci
+npx playwright install --with-deps chromium firefox
+xvfb-run -a node scripts/smoke-gallery-health-controls.mjs
+xvfb-run -a node scripts/check-gallery-health.mjs
 ```
+
+The first command starts its own local fixture server and writes results to
+`.artifacts/gallery-health-controls/`. The second checks the deployed public
+pages and writes `.artifacts/gallery-health/`; upstream availability can fail
+that check. A passing PR controls run proves the injected failure checks, while
+a scheduled or manually dispatched live run checks the published gallery.
 
 The controls run on relevant PRs and deliberately introduce a blank map, console
 error, dead link and broken inventory in both browsers and viewports. They verify
@@ -346,6 +364,16 @@ internal capability metadata.
 
 Published at [samples.honua.io](https://samples.honua.io) -- **the single canonical Honua
 sample gallery** (decided on [honua-io/honua-samples#3](https://github.com/honua-io/honua-samples/issues/3)).
+The gallery and SDK Explorer use `shared/design-system/tokens.css`, pinned to
+the approved Honua design source identified in that file. Update that shared
+file when advancing the design revision; both builds consume it directly.
+Product pages default to light and share the `honua-theme` browser preference.
+After building the gallery, `npm run test:gallery:themes` checks desktop/mobile
+light and dark views, text contrast, route persistence, and unavailable storage.
+The nightly sample workflow uploads the screenshots and contrast results as
+`gallery-theme-journeys`. The marketing-side rollout is tracked in
+[honua-site#402](https://github.com/honua-io/honua-site/issues/402).
+
 Every deploy runs `node scripts/build-gallery.mjs`, which renders `site/` fresh
 from **two inputs**:
 

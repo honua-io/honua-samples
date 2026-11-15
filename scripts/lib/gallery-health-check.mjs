@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { renderedMapEvidence, visibleMapContainers } from './gallery-health-map.mjs';
+import { countLaidOut, MAP_CONTAINER_SELECTOR, renderedMapEvidence, VISIBLE_MAP_SELECTOR } from './gallery-health-map.mjs';
 
 export async function checkGalleryPage(context, entry, { directory, id, timeout = 45_000, linkCache = new Map() }) {
   const page = await context.newPage();
@@ -11,7 +11,7 @@ export async function checkGalleryPage(context, entry, { directory, id, timeout 
     await page.bringToFront();
     const response = await page.goto(entry.url, { waitUntil: 'load', timeout });
     if (!response?.ok()) throw new Error(`HTTP ${response?.status()}`);
-    const mapContainers = await Promise.all(page.frames().map((frame) => frame.evaluate(visibleMapContainers)));
+    const mapContainers = await Promise.all(page.frames().map((frame) => frame.evaluate(countLaidOut, VISIBLE_MAP_SELECTOR)));
     const expectsMap = entry.mapRequired ?? mapContainers.some((count) => count > 0);
     result.mapRequired = expectsMap;
     await page.waitForFunction(() => performance.getEntriesByName('first-contentful-paint').length > 0, null, { timeout });
@@ -38,7 +38,11 @@ async function waitForMaps(page, { required, timeout }) {
   const deadline = Date.now() + timeout;
   let evidence;
   do {
-    evidence = await Promise.all(page.frames().map((frame) => frame.evaluate(renderedMapEvidence).catch(() => null)));
+    evidence = await Promise.all(page.frames().map(async (frame) => {
+      const rendered = await frame.evaluate(renderedMapEvidence).catch(() => null);
+      if (!rendered) return null;
+      return { ...rendered, containers: await frame.evaluate(countLaidOut, MAP_CONTAINER_SELECTOR) };
+    }));
     const candidates = evidence.filter(Boolean);
     const maps = candidates.flatMap((frame) => frame.maps);
     const hasFeatures = maps.length ? maps.every((map) => map.features > 0) : candidates.some((frame) => frame.leafletFeatures > 0);
@@ -70,10 +74,13 @@ async function checkLinks(page, request, cache) {
   return [...new Set(urls)].length;
 }
 
-async function resolveLink(request, url) {
+export async function resolveLink(request, url) {
   try {
     let response = await request.head(url, { timeout: 15_000 });
-    if ([405, 501].includes(response.status())) response = await request.get(url, { timeout: 15_000 });
+    if ([404, 405, 501].includes(response.status())) {
+      await response.dispose();
+      response = await request.get(url, { timeout: 15_000 });
+    }
     const status = response.ok() ? 'ok' : `HTTP ${response.status()}`;
     await response.dispose();
     return status;

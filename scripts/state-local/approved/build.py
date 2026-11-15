@@ -21,6 +21,10 @@ def read(p):
 
 
 def load(name):
+    if name == "catalog":
+        return json.loads(read(os.path.join(os.environ["HONUA_CATALOG_DATA"], "catalog.json")))
+    if name.startswith("catalog_"):
+        return json.loads(read(os.path.join(os.environ["HONUA_CATALOG_DATA"], name[8:] + ".geojson")))
     island = os.environ.get("HONUA_ISLAND_DATA")
     if island and name in os.environ["HONUA_ISLAND_POINT_LAYERS"].split(","):
         return json.loads(read(os.path.join(island, name + ".geojson")))
@@ -90,7 +94,8 @@ def build(name):
         src = src.replace('href="' + source + '"', 'href="' + target + '"')
     for source in ("04-emergency.html", "06-emergency.html"):
         src = src.replace('href="' + source + '"', 'href="/state-local/emergency/"')
-    for source in ("07-catalog.html", "08-catalog.html"):
+    src = src.replace('href="07-catalog.html"', 'href="/state-local/catalog/"')
+    for source in ("08-catalog.html",):
         src = src.replace('href="' + source + '"', 'href="/state-local/data/manifest.json"')
     src = src.replace('href="index.html"', 'href="/state-local/"')
     src = src.replace('href="../data/manifest.json"', 'href="/state-local/data/manifest.json"')

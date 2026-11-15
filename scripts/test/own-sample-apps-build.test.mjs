@@ -144,22 +144,34 @@ test("a built sample stages its build output from committed bytes, with provenan
 });
 
 test("built samples export and fingerprint shared sources from the same commit", async () => {
-  const shared = 'export const marker = "committed shared module";';
+  const shared = 'export { marker } from "../design-system/theme-init.mjs";';
+  const theme = 'export const marker = "committed theme module";';
+  const tokens = ":root { --accent: #5fc4a6; }";
   const script = `${BUILD_SCRIPT}
 const { marker } = await import('../../shared/state-local/module.mjs');
 writeFileSync('dist/shared.txt', marker);
+cpSync('../../shared/design-system/tokens.css', 'dist/tokens.css');
 `;
   const { root, commit } = await fixtureRepo({
     "shared/state-local/module.mjs": shared,
+    "shared/design-system/theme-init.mjs": theme,
+    "shared/design-system/tokens.css": tokens,
     "samples/demo/build.mjs": script,
   });
   try {
     await writeFile(path.join(root, "shared/state-local/module.mjs"), 'throw Error("uncommitted");');
     await writeFile(path.join(root, "shared/state-local/untracked.mjs"), 'fetch("https://other.example.org");');
+    await writeFile(path.join(root, "shared/design-system/theme-init.mjs"), 'throw Error("uncommitted theme");');
+    await writeFile(path.join(root, "shared/design-system/tokens.css"), "uncommitted tokens");
     const { destDir, result } = await stage(root, commit);
     assert.equal(result.ok, true, result.reason);
-    assert.equal(await readFile(path.join(destDir, "shared.txt"), "utf8"), "committed shared module");
-    assert.deepEqual(result.app.builtFrom.sharedFiles, [{ path: "shared/state-local/module.mjs", sha256: sha256(Buffer.from(shared)) }]);
+    assert.equal(await readFile(path.join(destDir, "shared.txt"), "utf8"), "committed theme module");
+    assert.equal(await readFile(path.join(destDir, "tokens.css"), "utf8"), tokens);
+    assert.deepEqual(result.app.builtFrom.sharedFiles, [
+      { path: "shared/design-system/theme-init.mjs", sha256: sha256(Buffer.from(theme)) },
+      { path: "shared/design-system/tokens.css", sha256: sha256(Buffer.from(tokens)) },
+      { path: "shared/state-local/module.mjs", sha256: sha256(Buffer.from(shared)) },
+    ]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -167,7 +179,7 @@ writeFileSync('dist/shared.txt', marker);
 
 test("shared sources count toward a built sample data origin", async () => {
   const { root, commit } = await fixtureRepo({
-    "shared/state-local/module.mjs": 'fetch("https://other.example.org/x");',
+    "shared/design-system/theme-init.mjs": 'fetch("https://other.example.org/x");',
   });
   try {
     const { result } = await stage(root, commit);

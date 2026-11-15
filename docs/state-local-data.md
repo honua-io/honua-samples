@@ -200,13 +200,15 @@ separate; none of these checks establishes a released demo or an agent eval pass
 ## Bounded shared load
 
 Staging checks every prepared layer against the pinned default server's geometry
-budget before making any server request: 10,000 vertices and 100 total polygon
+budget before making any server request: 100,000 vertices and 1,000 total polygon
 rings per feature. Single-layer uploads use the same check. An excess stops the
 load with the original source feature ID and measured counts; no geometry is
 discarded. Resolve the supported import contract before staging complex public
 coastal or regulatory layers. Preparation and valid checksums alone do not prove
 importability, and this size check does not validate topology or predict geometry
-repair outcomes. Rollback remains available for previously staged layers whose
+repair outcomes or the server’s separate WKB byte limit. These bounds match
+Honua’s default import limits following honua-server#7242; a candidate-server
+import remains required. Rollback remains available for previously staged layers whose
 receipts match the current source contract.
 
 The shared loader prepares the nine property layers as display geometry in EPSG:4326

@@ -7,7 +7,7 @@ import { islandPointLayers } from '../../../shared/state-local/island-points.mjs
 import { PAGE_PLACEHOLDERS } from '../../../shared/state-local/server.mjs';
 
 const pages = [['01-overview.html', ''], ['12-workbench.html', 'workbench'], ['02-property.html', 'property'], ['10-property-mobile.html', 'property/mobile'],
-  ['03-311.html', '311'], ['05-public-works.html', 'public-works']];
+  ['03-311.html', '311'], ['05-public-works.html', 'public-works'], ['07-catalog.html', 'catalog']];
 
 export async function buildApprovedDemos({ root, output, lock }) {
   const directory = path.join(root, 'artifacts/approved-download');
@@ -22,8 +22,11 @@ export async function buildApprovedDemos({ root, output, lock }) {
   await build({ entryPoints: [path.join(root, 'shared/state-local/county-publication.mjs')],
     outfile: path.join(shared, 'county-publication.mjs'), bundle: true, format: 'esm', platform: 'browser', minify: true });
   const built = path.join(root, 'artifacts/approved-pages');
+  const catalog = path.join(output, 'data/catalog');
+  execFileSync(process.env.HONUA_CATALOG_PYTHON || 'python3',
+    [path.join(root, 'scripts/state-local/approved/catalog.py'), directory, catalog], { stdio: 'inherit' });
   execFileSync('python3', [path.join(root, 'scripts/state-local/approved/build.py'), directory, built,
-    ...pages.map(([file]) => file)], { stdio: 'inherit', env: { ...process.env, HONUA_ISLAND_DATA: path.join(output, 'data/island'),
+    ...pages.map(([file]) => file)], { stdio: 'inherit', env: { ...process.env, HONUA_CATALOG_DATA: catalog, HONUA_ISLAND_DATA: path.join(output, 'data/island'),
       HONUA_ISLAND_POINT_LAYERS: islandPointLayers.join(','), HONUA_PAGE_PLACEHOLDERS: JSON.stringify(PAGE_PLACEHOLDERS) } });
   for (const file of ['capital-projects.mjs', 'capital-project-data.mjs', 'csv.mjs', 'download.mjs']) {
     await mkdir(path.join(output, 'public-works'), { recursive: true });
