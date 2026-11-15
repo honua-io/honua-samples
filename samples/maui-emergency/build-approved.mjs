@@ -6,6 +6,7 @@ import { readFile, writeFile, mkdir, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { LIVE_FEEDS } from './public/live-feeds.js';
+import { displayProvenance } from './src/display-provenance.mjs';
 import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const approved = path.join(root, 'approved');
@@ -66,5 +67,6 @@ const sources = JSON.parse(await read(sourceFile));
 const liveFeeds = LIVE_FEEDS.map(({ id, label, agency, url, staleAfterMs }) => ({ id, label, attribution: agency, sourceUrl: url,
   license: 'public-domain', licenseNote: 'U.S. Government work (17 U.S.C. 105)', staleAfterMinutes: staleAfterMs / 60_000,
   note: 'Real data read live by the visitor\'s browser; not stored, not part of the exercise.' }));
-await writeFile(sourceFile, JSON.stringify({ ...sources, displayLayers: receipts, liveFeeds }, null, 2));
+await writeFile(sourceFile, JSON.stringify({ ...sources,
+  displayLayers: displayProvenance({ receipts, manifest: islandManifest }), liveFeeds }, null, 2));
 console.log('Approved emergency desktop and mobile assembled with verified exercise snapshot.');
