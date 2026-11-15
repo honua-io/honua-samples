@@ -239,3 +239,13 @@ test('an outside host that resets or times out is unverified; DNS failures and H
   assert.equal(await resolveLink(failing('getaddrinfo ENOTFOUND gone.example.org'), 'https://gone.example.org/'), 'getaddrinfo ENOTFOUND gone.example.org');
   assert.equal(await resolveLink(failing('read ECONNRESET'), 'https://samples.honua.io/x/'), 'read ECONNRESET');
 });
+
+test('a page that waits on another page\'s rate-limited request is excused too', async () => {
+  const cache = createLinkCache();
+  const shared = [1, 2, 3, 4].map((n) => `https://github.com/o/r/${n}`);
+  const first = checkLinkUrls(shared, null, { cache, budgetMs: 10, resolve: slowRateLimited });
+  const second = checkLinkUrls(shared.concat(['https://www.npmjs.com/a']), null, { cache, budgetMs: 10, resolve: slowRateLimited });
+  const [, links] = await Promise.all([first, second]);
+  assert.deepEqual(links.broken, []);
+  assert.equal(links.unverified.length, 1);
+});

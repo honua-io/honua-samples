@@ -80,11 +80,16 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
   const lookup = async (url) => {
     const { host, hostname } = new URL(url);
     if (!cache.results.has(url)) {
-      const onRateLimit = () => { if (!FIRST_PARTY(hostname)) waitedOnRateLimit = true; };
+      // The rate-limit fact travels with the cached result, so every page that
+      // waited on this request (not only the one that started it) is excused.
+      let rateLimited = false;
+      const onRateLimit = () => { rateLimited = true; };
       cache.results.set(url, cache.limitedHosts.has(host)
-        ? Promise.resolve(`${UNVERIFIED}HTTP 429 (host rate limited)`) : resolve(request, url, { onRateLimit }));
+        ? Promise.resolve({ status: `${UNVERIFIED}HTTP 429 (host rate limited)`, rateLimited: false })
+        : resolve(request, url, { onRateLimit }).then((status) => ({ status, rateLimited })));
     }
-    const status = await cache.results.get(url);
+    const { status, rateLimited } = await cache.results.get(url);
+    if (rateLimited && !isHonuaHost(hostname)) waitedOnRateLimit = true;
     if (status === `${UNVERIFIED}HTTP 429`) cache.limitedHosts.add(host);
     return status;
   };
@@ -107,7 +112,7 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
 // whether the link exists: report it as unverified instead of broken. A 403 or
 // 429 from Honua's own hosts stays a failure.
 export const UNVERIFIED = 'unverified: ';
-const FIRST_PARTY = (hostname) => hostname === 'honua.io' || hostname.endsWith('.honua.io');
+const isHonuaHost = (hostname) => hostname === 'honua.io' || hostname.endsWith('.honua.io');
 
 function retryDelayMs(response) {
   const header = String(response.headers()['retry-after'] ?? '').trim();
@@ -131,14 +136,14 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
     }
     const code = response.status();
     const status = response.ok() ? 'ok'
-      : (code === 429 || code === 403) && !FIRST_PARTY(new URL(url).hostname) ? `${UNVERIFIED}HTTP ${code}`
+      : (code === 429 || code === 403) && !isHonuaHost(new URL(url).hostname) ? `${UNVERIFIED}HTTP ${code}`
         : `HTTP ${code}`;
     await response.dispose();
     return status;
   } catch (error) {
     // An outside host that resets or times out cloud runners is unreachable from
     // here, not proven gone; a DNS failure (the host no longer exists) stays broken.
-    const blocked = /ECONNRESET|ETIMEDOUT|Timeout \d+ms exceeded/.test(error.message) && !FIRST_PARTY(new URL(url).hostname);
+    const blocked = /ECONNRESET|ETIMEDOUT|Timeout \d+ms exceeded/.test(error.message) && !isHonuaHost(new URL(url).hostname);
     return blocked ? `${UNVERIFIED}${error.message}` : error.message;
   }
 }

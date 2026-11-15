@@ -12,8 +12,6 @@ const directory = path.resolve(process.env.GALLERY_HEALTH_OUTPUT ?? '.artifacts/
 await mkdir(directory, { recursive: true });
 const report = { format: 'honua.gallery-health-result.v1', checkedAt: new Date().toISOString(), signedOut: true, results: [] };
 const profiles = { desktop: DESKTOP_VIEWPORT, mobile: MOBILE_VIEWPORT };
-// One link cache for the whole run: each outside URL is requested once, not once
-// per browser and viewport, which keeps the run under outside rate limits.
 const linkCache = createLinkCache();
 
 async function checkEntry(browser, entry, options) {
