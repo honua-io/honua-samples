@@ -96,12 +96,8 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountToggle); else mountToggle();
   function unavailableMap(el, message) {
-    const notice = document.createElement("p");
-    notice.style.padding = "16px";
-    notice.setAttribute("role", "status");
-    notice.textContent = message;
-    el.replaceChildren(notice);
-    return null;
+    const notice = document.createElement("p"); notice.style.padding = "16px"; notice.setAttribute("role", "status"); notice.textContent = message;
+    el.replaceChildren(notice); return null;
   }
   function create(el, opts) {
     opts = opts || {};
@@ -115,9 +111,7 @@
         bounds: opts.bounds || VIEW[opts.view || "core"], fitBoundsOptions: { padding: opts.padding || 20 },
         interactive: opts.interactive !== false, cooperativeGestures: !!opts.cooperative,
       });
-    } catch {
-      return unavailableMap(el, "Interactive map unavailable in this browser. Try a browser with WebGL enabled.");
-    }
+    } catch { return unavailableMap(el, "Interactive map unavailable in this browser. Try a browser with WebGL enabled."); }
     maps.push(map);
     // Containers that size after first paint (grid rows, fonts, embedded frames) leave the canvas short; follow the container.
     const fitBounds = opts.bounds || VIEW[opts.view || "core"];
