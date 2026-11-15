@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { publicLayerIndex } from "../lib/public-layer.mjs";
 import { adminFetch } from "../lib/admin-api.mjs";
 import { layersPath, listLayers, storageLayerId } from "./import.mjs";
 import { readSnapshot } from "./snapshot.mjs";
@@ -107,19 +108,6 @@ export async function activateDeployment(env, options) {
     await setLayerState(env, { receipt, enabled: true });
   }
   return activeDeployment(env, options);
-}
-
-// The public index is service-local and may differ from the storage handle, so
-// read it from the anonymous service listing rather than assume it.
-async function publicLayerIndex(serviceUrl, layer) {
-  const response = await fetch(`${serviceUrl}?f=json`);
-  const listing = response.ok ? await response.json() : null;
-  const layers = Array.isArray(listing?.layers) ? listing.layers : [];
-  const named = layers.filter((entry) => entry.name === layer.layerName);
-  // Fall back to the only layer solely for servers that do not report the admin layer name.
-  const match = layer.layerName ? (named.length === 1 ? named[0] : null) : layers.length === 1 ? layers[0] : null;
-  if (!Number.isInteger(match?.id)) throw new Error("Anonymous public layer index was not confirmed");
-  return match.id;
 }
 
 export async function activeDeployment(env, options) {

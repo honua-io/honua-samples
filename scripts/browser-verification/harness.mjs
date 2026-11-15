@@ -17,6 +17,7 @@
 // pixel), never a fixed sleep.
 
 import { adminFetch, serverEnv } from "../lib/admin-api.mjs";
+import { publicLayerIndex } from "../lib/public-layer.mjs";
 import { ensureConnection } from "../lib/sample-connection.mjs";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -161,7 +162,6 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
   if (published.data?.enabled !== true) {
     throw new Error(`layer publish did not confirm serving enablement: ${JSON.stringify(published).slice(0, 300)}`);
   }
-  const layerId = published.data.layerId;
 
   await adminFetch(env, { method: "PUT", apiPath: `/api/v1/admin/services/${serviceName}/protocols`, body: {
     enabledProtocols: ["FeatureServer", ...protocols.filter((protocol) => protocol !== "FeatureServer")],
@@ -171,9 +171,23 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
   }
 
   const serviceUrl = `${env.baseUrl}/rest/services/${serviceName}/FeatureServer`;
+  const headers = allowAnonymous ? undefined : { "X-API-Key": env.adminApiKey };
+  const layerId = await waitForLayerIndex(serviceUrl, published.data, headers);
   const layerUrl = `${serviceUrl}/${layerId}`;
   await waitForFeatureServer({ env, layerUrl, allowAnonymous, expectedCount: fixture.count });
   return { serviceName, layerId, layerName, serviceUrl, layerUrl, allowAnonymous, tableName };
+}
+
+async function waitForLayerIndex(serviceUrl, layer, headers) {
+  const deadline = Date.now() + CONVERGENCE_TIMEOUT_MS;
+  for (;;) {
+    try {
+      return await publicLayerIndex(serviceUrl, layer, headers);
+    } catch (error) {
+      if (Date.now() >= deadline) throw error;
+      await delay(CONVERGENCE_POLL_MS);
+    }
+  }
 }
 
 /**
