@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import { loadJobPages } from "./validate-job-pages.mjs";
 import { referenceRedirects, referenceDocumentUrl } from "./lib/gallery-reference-redirects.mjs";
+import { isPublishableHttpUrl } from "./lib/publishable-http-url.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = path.join(root, "site");
@@ -56,7 +57,7 @@ try {
       check(await page.locator('.request-response-inspector[data-kind="response"]').count() === job.server.protocols.length, "raw response inspector count does not match protocols");
       check(await page.locator('.request-response-inspector[data-kind="request"] [data-copy-target]').count() === job.server.protocols.length, "request inspectors must all expose copy");
       check(await page.locator('.request-response-inspector[data-kind="response"] [data-download-target]').count() === job.server.protocols.length, "response inspectors must all expose download");
-      const expectedOpenCount = job.server.protocols.filter((protocol) => /\bGET\b/u.test(protocol.method) && /^https?:\/\//u.test(protocol.concreteEndpoint ?? "")).length;
+      const expectedOpenCount = job.server.protocols.filter((protocol) => /\bGET\b/u.test(protocol.method) && isPublishableHttpUrl(protocol.concreteEndpoint)).length;
       check(await page.locator(".server-protocol .protocol-open").count() === expectedOpenCount, "conditional GET open actions do not match safe concrete endpoints");
 
       const referenceSurfaces = await page.locator(".job-reference tbody tr").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-reference-surface")));
