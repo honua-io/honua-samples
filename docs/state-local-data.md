@@ -216,15 +216,14 @@ separate; none of these checks establishes a released demo or an agent eval pass
 
 Staging checks every prepared layer against Honua's default import geometry
 limits after honua-server#7242 before making any server request: 100,000 vertices
-and 1,000 total polygon rings per feature. Single-layer uploads use the same check. An excess stops the
-load with the original source feature ID and measured counts; no geometry is
-discarded. Resolve the supported import contract before staging complex public
-coastal or regulatory layers. Preparation and valid checksums alone do not prove
-importability, and this size check does not validate topology or predict geometry
-repair outcomes or the server’s separate WKB byte limit. These bounds match
-Honua’s default import limits following honua-server#7242; a candidate-server
-import remains required. Rollback remains available for previously staged layers whose
-receipts match the current source contract.
+and 1,000 total polygon rings per feature. Single-layer uploads use the same
+check. An excess stops the load with the original source feature ID and measured
+counts; no geometry is discarded. Resolve the supported import contract before
+staging complex public coastal or regulatory layers. Preparation and valid
+checksums alone do not prove importability, and this size check does not validate
+topology or predict geometry repair outcomes or the server’s separate WKB byte
+limit. A candidate-server import remains required. Rollback remains available for
+previously staged layers whose receipts match the current source contract.
 
 The pinned Compose image `nightly-jit-9d2169c` predates honua-server#7242 and
 enforces 10,000 vertices and 100 rings per feature. On it `maui-zoning`,
