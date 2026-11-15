@@ -11,6 +11,7 @@ import {
 } from "@honua/sdk-js/honua";
 import type { GeoJsonGeometry } from "@honua/sdk-js/geometry";
 
+import { addressPrecision, type AddressPrecision } from "./address-precision.js";
 import { DISPLAY_SNAPSHOT, OFFLINE_FIXTURE, type ViewerConfig } from "./config.js";
 import { displayCandidates, displayParcelAtPoint, displayParcelByTmk } from "./display-data.js";
 import type { OverlapCandidate } from "./overlap.js";
@@ -194,6 +195,8 @@ export async function candidatesFor(
 export interface AddressMatch {
   readonly address: string;
   readonly lngLat: readonly [number, number];
+  readonly precision: AddressPrecision;
+  readonly shortLabel: string;
 }
 
 export class GeocoderUnavailableError extends Error {}
@@ -233,7 +236,12 @@ export async function geocode(config: ViewerConfig, text: string): Promise<Addre
       if (!OSM_PROVIDER.test(String(result.attributes["Provider"] ?? "nominatim"))) continue;
       if (!Number.isFinite(result.longitude) || !Number.isFinite(result.latitude) || seen.has(result.address)) continue;
       seen.add(result.address);
-      matches.push({ address: result.address, lngLat: [result.longitude, result.latitude] });
+      matches.push({
+        address: result.address,
+        lngLat: [result.longitude, result.latitude],
+        precision: addressPrecision(result.attributes),
+        shortLabel: result.attributes.ShortLabel ?? result.attributes.Address ?? "",
+      });
     }
     return matches.slice(0, 5);
   } catch (error) {

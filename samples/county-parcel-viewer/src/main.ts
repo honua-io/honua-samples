@@ -16,6 +16,7 @@ import { planningPanel } from "./planning.js";
 import { provenancePanel } from "./provenance.js";
 
 import { EXAMPLE_TMK, OFFLINE_FIXTURE, LAYER_PARAMS, type ViewerConfig, readConfig, DEFAULT_BASE_URL } from "./config.js";
+import { addressChoices } from "./address-precision.js";
 import { type AddressMatch, GeocoderUnavailableError, type Parcel, candidatesFor, geocode, parcelAtPoint, parcelById, parcelByTmk } from "./data.js";
 import { createParcelBrowser } from "./parcel-browser.js";
 import { createParcelMap, type ParcelMap } from "./map.js";
@@ -264,6 +265,37 @@ async function lookupPoint(lngLat: [number, number], source: "map" | "address", 
   }
 }
 
+function streetNote(labels: readonly string[]): string {
+  const named = labels.length === 1
+    ? `the street ${labels[0]}`
+    : `streets ${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
+  return `OpenStreetMap found ${named}, not a house number. Search by TMK or click a parcel on the map.`;
+}
+
+function showStreet(lookupId: number, text: string, labels: readonly string[]): void {
+  panel.replaceChildren(h("p", { class: "panel-status", role: "status", id: "street-note" }, streetNote(labels)));
+  signal({ searchState: "street" });
+  finishLookup(lookupId, "pass", `street-level geocoder candidate for "${text}"`);
+}
+
+function showAddressPicks(lookupId: number, matches: readonly AddressMatch[]): void {
+  panel.replaceChildren(
+    h("p", { class: "panel-status", id: "picks-label" }, `${matches.length} addresses match. Pick one:`),
+    h(
+      "ul",
+      { class: "picks", "aria-labelledby": "picks-label" },
+      ...matches.map((match) => {
+        const button = h("button", { class: "btn quiet", type: "button" }, match.address);
+        button.addEventListener("click", () => void lookupPoint([...match.lngLat] as [number, number], "address", match.address));
+        return h("li", {}, button);
+      }),
+    ),
+  );
+  signal({ searchState: "picks", pickCount: String(matches.length) });
+  finishLookup(lookupId, "pass", `${matches.length} geocoder candidates`);
+  (panel.querySelector(".picks button") as HTMLButtonElement | null)?.focus();
+}
+
 async function lookupAddress(text: string): Promise<void> {
   clearInvalid();
   const lookup = beginLookup(`Looking up ${text}…`);
@@ -279,31 +311,23 @@ async function lookupAddress(text: string): Promise<void> {
     return;
   }
   if (!current(lookup.id)) return;
-  if (matches.length === 0) {
+  const choice = addressChoices(matches);
+  if (choice.kind === "none") {
     panelProblem("No parcel at that address");
     signal({ searchState: "not-found" });
     finishLookup(lookup.id, "pass", `no geocoder candidate for "${text}"`);
     return;
   }
-  if (matches.length === 1) {
-    await lookupPoint([...matches[0].lngLat] as [number, number], "address", matches[0].address);
+  if (choice.kind === "street") {
+    showStreet(lookup.id, text, choice.labels);
     return;
   }
-  panel.replaceChildren(
-    h("p", { class: "panel-status", id: "picks-label" }, `${matches.length} addresses match. Pick one:`),
-    h(
-      "ul",
-      { class: "picks", "aria-labelledby": "picks-label" },
-      ...matches.map((match) => {
-        const button = h("button", { class: "btn quiet", type: "button" }, match.address);
-        button.addEventListener("click", () => void lookupPoint([...match.lngLat] as [number, number], "address", match.address));
-        return h("li", {}, button);
-      }),
-    ),
-  );
-  signal({ searchState: "picks", pickCount: String(matches.length) });
-  finishLookup(lookup.id, "pass", `${matches.length} geocoder candidates`);
-  (panel.querySelector(".picks button") as HTMLButtonElement | null)?.focus();
+  const usable = choice.matches;
+  if (usable.length === 1) {
+    await lookupPoint([...usable[0].lngLat] as [number, number], "address", usable[0].address);
+    return;
+  }
+  showAddressPicks(lookup.id, usable);
 }
 
 function message(error: unknown): string {

@@ -114,8 +114,9 @@ The pinned SDK 0.3.2 requires explicit attribute fields for inspection and a pub
 
 Address search uses the server's GeocodeServer (`World` locator). The page credits OpenStreetMap, so it first
 reads the locator's provider and only sends an address when the provider is Nominatim (OpenStreetMap). Any other
-provider gets "Address search is unavailable right now. Search by TMK instead." On 2026-10-28 demo.honua.io reported
-`amazon-location`, so address search on the demo stays off until its geocoder is switched to Nominatim.
+provider gets "Address search is unavailable right now. Search by TMK instead." A house or building match is
+looked up as a parcel. A street centre line (OpenStreetMap `highway`, with no house number) is labelled as that
+street and asks for a TMK or a map click. It does not report "No parcel at that address".
 
 ## Try it on your own layers
 
