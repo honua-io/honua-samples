@@ -122,6 +122,8 @@ body.app-shell {
 @media (min-width: 901px) and (max-width: 1000px) {
   .app-emergency .appbar .appnav { display: none; }
   .app-emergency .wordmark { flex: 1; }
+  .app-emergency .wordmark strong { flex-shrink: 0; }
+  .app-emergency .wordmark small { white-space: normal; }
 }
 
 @media (min-width: 1001px) {
