@@ -297,6 +297,12 @@
     },
     {
       "sourceRepo": "honua-samples",
+      "id": "maui-public-map",
+      "disposition": "internal-qualification",
+      "reason": "Real-source import to a Studio map publication request; the default PostGIS-only server holds it for a human approval (honua-server#7227), so there is no public card until a released map is screenshot-approved."
+    },
+    {
+      "sourceRepo": "honua-samples",
       "id": "maui-emergency",
       "disposition": "internal-qualification",
       "reason": "Published SDK query contract only; the complete Studio application and MCP journey must qualify before public gallery promotion."

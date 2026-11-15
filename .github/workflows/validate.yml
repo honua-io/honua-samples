@@ -129,6 +129,9 @@ jobs:
           python3 -m venv artifacts/catalog-python
           artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
 
+      - name: Install build dependencies
+        run: npm ci --ignore-scripts
+
       - name: Build snapshot-backed state and local demos
         env:
           HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
@@ -199,6 +202,8 @@ jobs:
       - name: Run exact-head gallery semantic canaries
         # Keep GALLERY_BASE_URL unset: the verifier serves this job's exact
         # generated site/ artifact locally and exercises packaged fixtures.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: npm run test:gallery:live
 
       - name: Run every admitted job page

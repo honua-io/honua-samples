@@ -14,7 +14,7 @@
   .suggest { position: absolute; left: 0; right: 0; top: 40px; z-index: 20; background: var(--c-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 6px; display: none; }
   .suggest[data-open="true"] { display: block; }
   .suggest button { display: flex; width: 100%; gap: 10px; align-items: center; border: 0; background: transparent; text-align: left; padding: 7px 8px; border-radius: 5px; font-size: 13px; }
-  .suggest button:hover, .suggest button:focus-visible { background: var(--c-surface-2); }
+  .suggest button:hover, .suggest button:focus-visible, .suggest button[aria-selected="true"] { background: var(--c-surface-2); }
   .suggest .k { color: var(--c-text-3); font-size: 12px; margin-left: auto; }
   .ph-title { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
   .ph-sub { color: var(--c-text-2); margin-top: 3px; font-size: 13px; }
@@ -110,6 +110,11 @@
         <div><a class="v" id="fPerm" href="#" style="display:inline-flex;gap:4px;align-items:center">MAPPS <svg class="ico" style="width:13px;height:13px"><use href="#i-external"/></svg></a><div class="l">Permits for this TMK</div></div>
       </div>
     </div>
+
+    <section class="side-sec" aria-labelledby="snapshotQuestions" id="parcelQuestions">
+      <h2 id="snapshotQuestions" style="font-size:13px">Questions about this snapshot</h2>
+      <p class="faint" style="font-size:12px">Demo answers · scripted snapshot · updated 2026-11-10 · <a href="/state-local/data/approved/manifest.json">Hawaii Statewide GIS sources</a></p>
+    </section>
 
     <section class="side-sec" style="padding-top:4px" aria-labelledby="askH">
       <div class="ai-card">
@@ -212,6 +217,16 @@
       </ul>
     </section>
 
+    {{COUNTY_PUBLICATION}}
+
+    <section class="side-sec" aria-labelledby="browseHeading">
+      <details><summary id="browseHeading">Browse parcel snapshot</summary><div id="parcelBrowser"></div></details>
+    </section>
+    <section class="side-sec" aria-labelledby="exportHeading">
+      <h2 id="exportHeading">Selected parcel snapshot</h2>
+      <div id="parcelExports" class="row wrap"><p class="faint">Loading snapshot exports…</p></div>
+    </section>
+
     <section class="side-sec apis" aria-labelledby="apiH">
       <div class="row"><h2 id="apiH" style="font-size:13px">Data and APIs</h2><span class="faint" style="font-size:12px;margin-left:auto">Same parcels, every standard</span></div>
       <div style="margin-top:6px">
@@ -254,12 +269,33 @@
 
 {{DATA land,roads,contours,streams,waterbodies,zoning,dfirm,tsunami,slr32,parcels,shelters,zone_names,slud,sma,mip_growth,cplan,cp_names}}
 {{MAPJS}}
+{{PARCEL_SEARCH}}
+{{PARCEL_ANSWERS}}
 <script>
 (() => {
+  const parcelAnswers = HonuaParcelAnswers.mount(document.getElementById("parcelQuestions"));
   const FEAT = 27904;
 
   const parcels = HM.get("parcels");
   const byId = new Map(parcels.features.map((f) => [f.properties.id, f]));
+  import('/state-local/shared/county-publication.mjs').then(({ mountCountyPublication }) => mountCountyPublication({
+    root: document.getElementById('countyPublication'), map: () => map,
+  })).catch(() => { document.getElementById('countyStatus').textContent = 'County publication controls unavailable. Snapshot data remains available.'; });
+  let parcelBrowser;
+  import('/state-local/shared/parcel-browser.mjs').then(({ mountParcelBrowser, parcelViewUrl }) => {
+    parcelBrowser = mountParcelBrowser({
+      root: document.getElementById('parcelBrowser'), parcels: parcels.features, zoneNames: HD.zone_names,
+      selected: () => byId.get(selected), map: () => map, formatTmk: HM.tmk,
+      onSelect: (feature) => { select(feature.properties.id, true); }, onChange: () => { updateShare(byId.get(selected).properties.t9); },
+    });
+    shareParcelUrl = (tmk) => parcelViewUrl(location.href, { tmk, zone: parcelBrowser.zone });
+    updateShare(byId.get(selected).properties.t9);
+  }).catch(() => { document.getElementById('parcelBrowser').textContent = 'Parcel list unavailable. Search remains available.'; });
+  let shareParcelUrl = (tmk) => { const url = new URL(location.href); url.searchParams.set('tmk', tmk); return url.href; };
+  import('/state-local/shared/parcel-export-control.mjs').then(({ mountParcelExports }) => mountParcelExports({
+    root: document.getElementById('parcelExports'), selected: () => byId.get(selected),
+  })).catch(() => { document.getElementById('parcelExports').textContent = 'Snapshot exports unavailable.'; });
+
   const ZN = HD.zone_names;
   const FLOOD = { AE: "AE, special flood hazard area", VE: "VE, coastal high hazard area", X: "X, minimal hazard", A: "A, special flood hazard area" };
   let map, selected = null;
@@ -291,10 +327,13 @@
     document.getElementById("luCount").textContent = `${rows.length} layers`;
   }
   function select(id, fly) {
-    const f = byId.get(id); if (!f || !map) return;
-    if (selected != null) map.setFeatureState({ source: "parcels", id: selected }, { sel: false });
-    selected = id; map.setFeatureState({ source: "parcels", id }, { sel: true });
-    map.setFilter("parcels-sel", ["==", ["get", "id"], id]);
+    const f = byId.get(id); if (!f) return;
+    if (map?.getSource("parcels")) {
+      if (selected != null) map.setFeatureState({ source: "parcels", id: selected }, { sel: false });
+      map.setFeatureState({ source: "parcels", id }, { sel: true });
+      map.setFilter("parcels-sel", ["==", ["get", "id"], id]);
+    }
+    selected = id;
     if (window._selPin) { const b = HM.bbox(f.geometry); window._selPin.setLngLat([(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2]); }
     const p = f.properties, t = HM.tmk(p.t9), zn = ZN[p.zone] || "Not zoned";
     document.getElementById("pTitle").textContent = "TMK " + t;
@@ -304,6 +343,7 @@
     if (p.fld && p.fld !== "X") chips.push(`<span class="chip info">Flood zone ${p.fld}</span>`); else chips.push(`<span class="chip">Flood zone X</span>`);
     if (p.ts === 1) chips.push(`<span class="chip warn">Tsunami evacuation zone</span>`); else if (p.ts === 2) chips.push(`<span class="chip">Extreme tsunami zone</span>`);
     document.getElementById("pChips").innerHTML = chips.join("");
+    parcelAnswers.update(p);
     document.getElementById("fLand").textContent = HM.money(p.land); document.getElementById("fBldg").textContent = HM.money(p.bldg);
     document.getElementById("ovTmk").textContent = t; document.getElementById("ovArea").textContent = `${p.acres.toFixed(3)} acres (GIS)`;
     document.getElementById("ovZone").textContent = zn; document.getElementById("ovFlood").textContent = FLOOD[p.fld] || p.fld || "—";
@@ -318,8 +358,9 @@
     document.querySelector("#p2 table").hidden = id !== FEAT;
     document.getElementById("askAnswer").hidden = id !== FEAT;
     fillPermits(p.t9, t); luStack(p);
+    parcelBrowser?.refresh();
     updateShare(p.t9);
-    if (fly) map.fitBounds(HM.bbox(f.geometry), { padding: 160, maxZoom: 17.6, duration: 700 });
+    if (fly && map) map.fitBounds(HM.bbox(f.geometry), { padding: 160, maxZoom: 17.6, duration: 700 });
   }
 
   map = HM.create(document.getElementById("map"), {
@@ -336,15 +377,17 @@
       HM.bindToggles(m);
       const sh = HD.shelters.features.find((s) => s.properties.name.startsWith("Kahului Elementary"));
       if (sh) { const el = document.createElement("div"); el.className = "mappin shelter"; el.innerHTML = '<svg class="ico"><use href="#i-home"/></svg>'; el.title = "School exercise anchor: Kahului Elementary"; new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(sh.geometry.coordinates).addTo(m); HM.label(m, [sh.geometry.coordinates[0], sh.geometry.coordinates[1] - 0.00045], "Kahului Elementary · exercise anchor", "poi"); }
-      m.on("click", "parcels-fill", (e) => select(e.features[0].properties.id, false));
+      m.on("click", "parcels-fill", (e) => { if (!document.getElementById("countyPublication").open) select(e.features[0].properties.id, false); });
       let hov = null;
       m.on("mousemove", "parcels-fill", (e) => { m.getCanvas().style.cursor = "pointer"; const id = e.features[0].id; if (hov !== id) { if (hov != null) m.setFeatureState({ source: "parcels", id: hov }, { hover: false }); hov = id; m.setFeatureState({ source: "parcels", id }, { hover: true }); } });
       m.on("mouseleave", "parcels-fill", () => { m.getCanvas().style.cursor = ""; if (hov != null) m.setFeatureState({ source: "parcels", id: hov }, { hover: false }); hov = null; });
       const sel = document.createElement("div"); sel.className = "mappin selpin"; sel.innerHTML = '<svg class="ico"><use href="#i-pin"/></svg>'; sel.title = "Selected parcel";
       window._selPin = new maplibregl.Marker({ element: sel, anchor: "bottom" }).setLngLat([-156.47016, 20.88951]).addTo(m);
-      select([...byId.values()].find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT, false);
+      select(selected ?? [...byId.values()].find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT, false);
     },
   });
+
+  select([...byId.values()].find(f => String(f.properties.t9) === new URLSearchParams(location.search).get("tmk"))?.properties.id ?? FEAT, false);
 
   // Citations: each one shows its source on the map
   const CITE = {
@@ -364,27 +407,15 @@
   document.querySelectorAll("[data-cite]").forEach((b) => b.addEventListener("click", () => CITE[b.dataset.cite] && CITE[b.dataset.cite]()));
 
   // Search
-  const q = document.getElementById("q"), sug = document.getElementById("sug");
-  const streets = [...new Set(HM.get("roads").features.map((f) => f.properties.name).filter(Boolean))].sort();
-  function suggest() {
-    const v = q.value.trim().toLowerCase(); const digits = v.replace(/\D/g, "");
-    if (!v) { sug.dataset.open = false; q.setAttribute("aria-expanded", "false"); return; }
-    const ps = digits.length >= 3 ? parcels.features.filter((f) => String(f.properties.t9).includes(digits)).slice(0, 5) : [];
-    const ss = streets.filter((s) => s.toLowerCase().includes(v)).slice(0, 4);
-    sug.innerHTML = ps.map((f) => `<button role="option" data-id="${f.properties.id}"><svg class="ico faint"><use href="#i-map"/></svg>TMK ${HM.tmk(f.properties.t9)}<span class="k">${ZN[f.properties.zone] || ""}</span></button>`).join("") +
-      ss.map((s) => `<button role="option" data-street="${s}"><svg class="ico faint"><use href="#i-route"/></svg>${s}<span class="k">Street</span></button>`).join("") || `<div class="muted" style="padding:8px">No matches in Kahului.</div>`;
-    sug.dataset.open = true; q.setAttribute("aria-expanded", "true");
-  }
-  q.addEventListener("input", suggest); q.addEventListener("focus", suggest);
-  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) sug.dataset.open = false; });
-  sug.addEventListener("click", (e) => {
-    const b = e.target.closest("button"); if (!b) return; sug.dataset.open = false;
-    if (b.dataset.id) { select(+b.dataset.id, true); q.value = b.textContent.replace(/^TMK /, "").split(/[A-Z]-|R-|M-|P-/)[0]; }
-    if (b.dataset.street) { const fs = HM.get("roads").features.filter((f) => f.properties.name === b.dataset.street); let bb = [[180, 90], [-180, -90]]; fs.forEach((f) => { const x = HM.bbox(f.geometry); bb = [[Math.min(bb[0][0], x[0][0]), Math.min(bb[0][1], x[0][1])], [Math.max(bb[1][0], x[1][0]), Math.max(bb[1][1], x[1][1])]]; }); map.fitBounds(bb, { padding: 80, maxZoom: 17, duration: 700 }); q.value = b.dataset.street; }
+  const q = document.getElementById("q");
+  window.HonuaParcelSearch({ input: q, list: document.getElementById("sug"), parcels: parcels.features,
+    streets: HM.streetNames(), formatTmk: HM.tmk,
+    onParcel: (parcel) => select(parcel.properties.id, true),
+    onStreet: (name) => HM.fitStreet(map, name, 80),
   });
   document.addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); q.select(); } });
   function updateShare(tmk) {
-    const url = new URL(location.href); url.searchParams.set("tmk", tmk);
+    const url = new URL(shareParcelUrl(tmk));
     document.getElementById("shareUrl").textContent = url.href;
     document.getElementById("shareEmbed").textContent = `<iframe src="${url.href}" width="100%" height="560" title="Maui property snapshot"></iframe>`;
   }

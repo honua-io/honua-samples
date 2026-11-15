@@ -1,4 +1,4 @@
-const defaultImportLimits = { vertices: 10_000, rings: 100 };
+const defaultImportLimits = { vertices: 100_000, rings: 1_000 };
 
 function vertexCount(coordinates) {
   return Array.isArray(coordinates[0])

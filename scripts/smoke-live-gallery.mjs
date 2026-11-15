@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { verifyGalleryActions } from "./lib/gallery-action-smoke.mjs";
 
 import { createReadStream } from "node:fs";
 import { mkdir, stat, writeFile } from "node:fs/promises";
@@ -305,6 +306,7 @@ async function main() {
   try {
     browser = await chromium.launch({ headless: true });
     const cards = await discoverCards(browser, baseUrl);
+    await verifyGalleryActions(browser, baseUrl);
     if (cards.length === 0) throw new Error("gallery root contains no admitted cards");
     const identities = new Set();
     for (const card of cards) {
@@ -493,27 +495,14 @@ async function verifyCard(browser, baseUrl, card) {
 function validateRootCardContract(card, baseUrl, failures) {
   if (!card.id || !card.title) failures.push("card identity or title is empty");
   if (!new Set(["example", "walkthrough", "project"]).has(card.contentKind)) failures.push(`unsupported content kind ${JSON.stringify(card.contentKind)}`);
-  if (card.actions.length !== 2) failures.push(`card must expose exactly two actions, found ${card.actions.length}`);
-  const [primary, secondary] = card.actions;
   const detailUrl = new URL(card.detailHref, `${baseUrl}/`);
   if (detailUrl.origin !== new URL(baseUrl).origin) failures.push("card detail route is not gallery-local");
+  const source = card.actions.find((action) => action.text.startsWith("View code"));
   if (card.jobPage) {
     if (detailUrl.pathname !== `/jobs/${card.id}/`) failures.push("job card detail route is not canonical");
-    if (card.contentKind === "project") {
-      if (!isJobContract(primary?.href, card.id)) failures.push("job project primary action is not its governed contract");
-      if (new URL(secondary?.href ?? "", `${baseUrl}/`).pathname !== detailUrl.pathname) failures.push("job project secondary action is not its local overview");
-    } else {
-      if (new URL(primary?.href ?? "", `${baseUrl}/`).pathname !== detailUrl.pathname) failures.push("job primary action is not its local server-first route");
-      if (!isJobContract(secondary?.href, card.id)) failures.push("job secondary action is not its governed contract");
-    }
-    return;
-  }
-  if (card.contentKind === "project") {
-    if (!isSdkExampleFolder(primary?.href, card.id)) failures.push("project primary action is not its complete SDK example folder");
-    if (new URL(secondary?.href ?? "", `${baseUrl}/`).pathname !== detailUrl.pathname) failures.push("project secondary action is not its local overview");
-  } else {
-    if (new URL(primary?.href ?? "", `${baseUrl}/`).pathname !== detailUrl.pathname) failures.push(`${card.contentKind} primary action is not its local detail/code route`);
-    if (!/^https:\/\/github\.com\/honua-io\/(honua-sdk-js|honua-samples)\//u.test(secondary?.href ?? "")) failures.push(`${card.contentKind} secondary action is not GitHub source`);
+    if (!isJobContract(source?.href, card.id)) failures.push("job source is not its governed contract");
+  } else if (card.contentKind === "project" && !isSdkExampleFolder(source?.href, card.id)) {
+    failures.push("project source is not its complete SDK example folder");
   }
 }
 

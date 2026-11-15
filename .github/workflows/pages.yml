@@ -204,6 +204,9 @@ jobs:
       - name: Verify public catalog export boundary
         run: artifacts/catalog-python/bin/python -m unittest discover -s scripts/state-local/approved -p test_catalog.py -v
 
+      - name: Install gallery dependencies
+        run: npm ci
+
       - name: Build snapshot-backed state and local demos
         env:
           HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
@@ -227,7 +230,6 @@ jobs:
 
       - name: Install gallery browser
         run: |
-          npm ci
           npx playwright install --with-deps chromium firefox
 
       - name: Smoke the exact gallery artifact
@@ -269,6 +271,8 @@ jobs:
 
   verify-live:
     name: verify deployed gallery
+    permissions:
+      contents: read
     needs: deploy
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
@@ -286,6 +290,7 @@ jobs:
 
       - name: Verify every admitted live route and runnable app
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           GALLERY_BASE_URL: https://samples.honua.io
           EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
         run: npm run test:gallery:live

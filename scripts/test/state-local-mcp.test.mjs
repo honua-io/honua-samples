@@ -60,3 +60,22 @@ test("MCP setup rejects credential URLs, unverified activation, mismatched layer
     assert.throws(() => buildMcpJourney("311", [{ ...deployment("maui-demo-requests"), ...changes }]), /credential-free public layer/);
   }
 });
+
+
+test("MCP source references reject decoded separators, controls and malformed escapes", () => {
+  for (const segment of ["road%2Fassets", "road%5Cassets", "bad%00name", "bad%0Aname", "bad%0Dname",
+    "bad%C2%85name", "bad%E2%80%A8name", "bad%E2%80%A9name", "bad%E2%80%AEname", "%E0%A4%A"]) {
+    for (const path of [`${segment}/public-source`, `Public%20Works/${segment}`]) {
+      const receipt = deployment("maui-demo-requests");
+      receipt.layerUrl = `https://server.test/rest/services/${path}/FeatureServer/7`;
+      assert.throws(() => buildMcpJourney("311", [receipt]), /service path segments/, path);
+    }
+  }
+});
+
+test("MCP source references preserve encoded spaces and Unicode names", () => {
+  const receipt = deployment("maui-demo-requests");
+  receipt.layerUrl = "https://server.test/rest/services/Public%20Works/Caf%C3%A9%20assets/FeatureServer/7";
+  assert.equal(buildMcpJourney("311", [receipt]).sources[0].reference,
+    "geoservices-feature-service:Public Works/Café assets/7");
+});
