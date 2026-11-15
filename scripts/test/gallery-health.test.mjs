@@ -231,3 +231,11 @@ test('an outside host that stays rate limited is not requested again', async () 
   assert.equal(links.unverified.length, 2);
   assert.deepEqual(links.broken, []);
 });
+
+test('an outside host that resets or times out is unverified; DNS failures and Honua hosts stay broken', async () => {
+  const failing = (message) => ({ head: async () => { throw new Error(message); }, get: async () => assert.fail('unexpected GET') });
+  assert.equal(await resolveLink(failing('apiRequestContext.head: read ECONNRESET'), 'https://msc.fema.gov/portal/home'), `${UNVERIFIED}apiRequestContext.head: read ECONNRESET`);
+  assert.equal(await resolveLink(failing('apiRequestContext.head: Timeout 15000ms exceeded.'), 'https://example.org/x'), `${UNVERIFIED}apiRequestContext.head: Timeout 15000ms exceeded.`);
+  assert.equal(await resolveLink(failing('getaddrinfo ENOTFOUND gone.example.org'), 'https://gone.example.org/'), 'getaddrinfo ENOTFOUND gone.example.org');
+  assert.equal(await resolveLink(failing('read ECONNRESET'), 'https://samples.honua.io/x/'), 'read ECONNRESET');
+});

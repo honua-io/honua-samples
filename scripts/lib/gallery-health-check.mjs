@@ -135,5 +135,10 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
         : `HTTP ${code}`;
     await response.dispose();
     return status;
-  } catch (error) { return error.message; }
+  } catch (error) {
+    // An outside host that resets or times out cloud runners is unreachable from
+    // here, not proven gone; a DNS failure (the host no longer exists) stays broken.
+    const blocked = /ECONNRESET|ETIMEDOUT|Timeout \d+ms exceeded/.test(error.message) && !FIRST_PARTY(new URL(url).hostname);
+    return blocked ? `${UNVERIFIED}${error.message}` : error.message;
+  }
 }
