@@ -132,3 +132,17 @@ test('Escape, Tab, outside clicks and unmatched input clear active suggestions',
   input.value = ''; input.fire('input');
   assert.equal(list.dataset.open, 'false');
 });
+
+for (const query of ['3-7-004:0', '3-7-004:00', '(2) 3-7-004:00']) {
+  test(`partial formatted parcel search preserves suggestions for ${query}`, async () => {
+    const { input, list } = await fixture();
+    input.value = query; input.fire('input');
+    assert.deepEqual(list.children.map((child) => child.textContent), ['TMK 237004006', 'TMK 237004007']);
+  });
+}
+
+test('partial formatted search finds the property while its parcel number is unfinished', async () => {
+  const { input, list } = await fixture();
+  input.value = '3-8-007:00'; input.fire('input');
+  assert.equal(list.children[0].textContent, 'TMK 238007001');
+});

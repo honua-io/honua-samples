@@ -2,16 +2,18 @@ function normalizeParcelQuery(query) {
   const formatted = query.match(/^(?:\((\d)\)\s*)?(\d)\s*[-:]\s*(\d)\s*[-:]\s*(\d{1,3})\s*[-:]\s*(\d{1,3})(?:\s*[-:]\s*(\d{4}))?$/);
   let digits = query.replace(/\D/g, '');
   let suffix = '';
+  let partialDigits = '';
   if (formatted) {
     const [, island = '', zone, section, plat, parcel, cpr = ''] = formatted;
     digits = island + zone + section + plat.padStart(3, '0') + parcel.padStart(3, '0');
     suffix = cpr;
+    if (!cpr && plat.length === 3 && parcel.length < 3) partialDigits = query.replace(/\D/g, '');
   } else if (/^\d{12,13}$/.test(query)) {
     suffix = digits.slice(-4);
     digits = digits.slice(0, -4);
   }
   const unsupportedCpr = suffix !== '' && suffix !== '0000';
-  return { digits: unsupportedCpr ? '' : digits, unsupportedCpr };
+  return { digits: unsupportedCpr ? '' : digits, partialDigits, unsupportedCpr };
 }
 
 class ParcelSearch {
@@ -67,9 +69,10 @@ class ParcelSearch {
     this.close();
     const query = this.input.value.trim().toLowerCase();
     if (!query) return;
-    const { digits, unsupportedCpr } = normalizeParcelQuery(query);
+    const { digits, partialDigits, unsupportedCpr } = normalizeParcelQuery(query);
     const parcelMatches = digits.length < 3 ? [] : this.parcels
-      .filter((parcel) => String(parcel.properties.t9).includes(digits)).slice(0, 5)
+      .filter((parcel) => String(parcel.properties.t9).includes(digits)
+        || (partialDigits && String(parcel.properties.t9).includes(partialDigits))).slice(0, 5)
       .map((parcel) => ({ parcel, label: `TMK ${this.formatTmk(parcel.properties.t9)}` }));
     this.matches = [...parcelMatches, ...this.streets.filter((street) => street.toLowerCase().includes(query))
       .slice(0, 4).map((label) => ({ label }))];
