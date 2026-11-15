@@ -75,7 +75,8 @@ body.app-shell {
   .app-workbench .rbody { overflow: auto; }
 }
 @media (max-width: 1000px) and (min-width: 641px) {
-  .app-explorer .sx { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
+  body.app-explorer { height: auto; overflow: auto; }
+  .app-explorer .sx { flex: none; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(640px, 70vh) 420px; }
   .app-explorer .sx > .center { grid-column: 1 / -1; grid-row: 1; min-height: 0; overflow: hidden !important; }
   .app-explorer .sx > .left { max-height: none; grid-column: 1; grid-row: 2; }
   .app-explorer .sx > .right { grid-column: 2; grid-row: 2; overflow: auto !important; }
@@ -94,6 +95,7 @@ body.app-shell {
   body.app-emergency { height: auto; overflow: auto; }
   .app-emergency .layout { flex: none; grid-template-rows: auto; overflow: visible; }
   .app-emergency #map { grid-column: 1 / -1; height: 60vh; min-height: 320px; }
+  .app-emergency .legend { max-height: calc(100% - 130px); overflow: auto; }
   .app-emergency .col { overflow: auto; }
   .app-emergency .xbanner, .app-emergency .demostrip,
   .app-emergency .statusbar { max-height: none; overflow: visible; }
@@ -106,4 +108,10 @@ body.app-shell {
 @media (max-width: 640px) {
   body.app-explorer, body.app-workbench { height: auto; overflow: auto; }
   .app-explorer .sx, .app-workbench .wb { overflow: visible; }
+  .app-explorer .sx > .center { min-height: 760px; }
+  .app-explorer .shead .path, .app-explorer .right { overflow-wrap: anywhere; }
+}
+
+@media (min-width: 1001px) and (max-height: 600px) {
+  body.app-explorer { height: 760px; overflow: auto; }
 }
