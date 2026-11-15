@@ -124,10 +124,17 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install catalog exporters
+        run: |
+          python3 -m venv artifacts/catalog-python
+          artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+
       - name: Install build dependencies
         run: npm ci --ignore-scripts
 
       - name: Build snapshot-backed state and local demos
+        env:
+          HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: node scripts/state-local/build-display-site.mjs
 
       - name: Build gallery in --check mode
@@ -171,7 +178,14 @@ jobs:
       - name: Stage the vendored immutable SDK release
         run: node scripts/lib/sample-bundles.mjs
 
+      - name: Install catalog exporters
+        run: |
+          python3 -m venv artifacts/catalog-python
+          artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+
       - name: Build snapshot-backed state and local demos
+        env:
+          HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: node scripts/state-local/build-display-site.mjs
 
       - name: Build the exact-head gallery
@@ -182,12 +196,13 @@ jobs:
       - name: Verify snapshot-backed state and local routes
         run: node scripts/smoke-state-local-display.mjs
 
+      - name: Verify property keyboard entry and skip navigation
+        run: node scripts/smoke-property-focus.mjs
+
       - name: Run every admitted SDK app
         run: npm run test:gallery:browser
 
       - name: Run exact-head gallery semantic canaries
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         # Keep GALLERY_BASE_URL unset: the verifier serves this job's exact
         # generated site/ artifact locally and exercises packaged fixtures.
         env:
