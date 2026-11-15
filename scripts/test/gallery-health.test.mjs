@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import reportHealth from '../../.github/scripts/report-gallery-health.cjs';
+import { resolveLink } from '../lib/gallery-health-check.mjs';
 import { renderedMapEvidence } from '../lib/gallery-health-map.mjs';
 
 test('loaded source features and basemap pixels cannot substitute for painted application features', () => {
@@ -63,4 +64,40 @@ test('nightly reporter reuses one issue, closes on recovery and reopens on incom
     process.chdir(original);
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+for (const headStatus of [404, 405, 501]) {
+  for (const getStatus of [200, 404, 500]) {
+    test(`link check resolves HEAD ${headStatus} through GET ${getStatus}`, async () => {
+      const calls = [];
+      const response = (status, method) => ({
+        status: () => status, ok: () => status === 200,
+        dispose: async () => calls.push(`dispose ${method}`),
+      });
+      const request = {
+        head: async () => { calls.push('HEAD'); return response(headStatus, 'HEAD'); },
+        get: async () => { calls.push('GET'); return response(getStatus, 'GET'); },
+      };
+      assert.equal(await resolveLink(request, 'https://example.org/download'), getStatus === 200 ? 'ok' : `HTTP ${getStatus}`);
+      assert.deepEqual(calls, ['HEAD', 'dispose HEAD', 'GET', 'dispose GET']);
+    });
+  }
+}
+
+for (const status of [200, 401, 403, 429, 500]) {
+  test(`link check preserves HEAD ${status} without a GET retry`, async () => {
+    const request = {
+      head: async () => ({ status: () => status, ok: () => status === 200, dispose: async () => {} }),
+      get: async () => assert.fail('unexpected GET retry'),
+    };
+    assert.equal(await resolveLink(request, 'https://example.org/download'), status === 200 ? 'ok' : `HTTP ${status}`);
+  });
+}
+
+test('GET transport errors remain link failures', async () => {
+  const request = {
+    head: async () => ({ status: () => 404, dispose: async () => {} }),
+    get: async () => { throw new Error('connection refused'); },
+  };
+  assert.equal(await resolveLink(request, 'https://example.org/download'), 'connection refused');
 });

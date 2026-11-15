@@ -70,10 +70,13 @@ async function checkLinks(page, request, cache) {
   return [...new Set(urls)].length;
 }
 
-async function resolveLink(request, url) {
+export async function resolveLink(request, url) {
   try {
     let response = await request.head(url, { timeout: 15_000 });
-    if ([405, 501].includes(response.status())) response = await request.get(url, { timeout: 15_000 });
+    if ([404, 405, 501].includes(response.status())) {
+      await response.dispose();
+      response = await request.get(url, { timeout: 15_000 });
+    }
     const status = response.ok() ? 'ok' : `HTTP ${response.status()}`;
     await response.dispose();
     return status;
