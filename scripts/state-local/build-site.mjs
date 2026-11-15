@@ -23,7 +23,7 @@ export async function buildStateLocalSite({ repoRoot, siteDir, cards = [] }) {
   }));
   await buildSdkExplorer({ repoRoot, siteDir, cards, source });
   await cp(path.join(source, 'overview.css'), path.join(assets, 'overview.css'));
-  await cp(path.join(sample, 'src/tokens.css'), path.join(assets, 'tokens.css'));
+  await cp(new URL('../../shared/design-system/tokens.css', import.meta.url), path.join(assets, 'tokens.css'));
   const shared = await readFile(path.join(sample, 'src/shared.css'), 'utf8');
   await writeFile(path.join(assets, 'shared.css'), shared.replace('../public/honua/', './'));
   for (const file of ['theme.js', 'geist-latin.woff2', 'OFL.txt', 'honua-lockup.svg', 'honua-lockup-on-dark.svg']) {

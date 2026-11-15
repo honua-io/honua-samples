@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { themeBootstrap } from '../shared/design-system/theme-init.mjs';
 import { sampleAppPath } from './lib/sample-app-url.mjs';
 import { isPublishableHttpUrl } from './lib/publishable-http-url.mjs';
 // Builds the static samples.honua.io gallery into site/ (honua-io/honua-samples#3).
@@ -746,6 +747,8 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeAttr(description)}" />
+${themeBootstrap}
+<link rel="stylesheet" href="${assetPrefix}/tokens.css" />
 <link rel="stylesheet" href="${assetPrefix}/gallery.css" />
 </head>
 <body>
@@ -758,11 +761,13 @@ function pageShell({ title, description, bodyHtml, depth, generatedAt, sourceCom
     <a href="https://github.com/${OWN_REPO}" target="_blank" rel="noopener noreferrer">honua-samples ↗</a>
     <a href="https://github.com/${SDKJS_REPO}" target="_blank" rel="noopener noreferrer">honua-sdk-js ↗</a>
   </nav>
+  <button class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">Dark mode</button>
 </header>
 <main>
 ${bodyHtml}
 </main>
 <footer class="site-footer">${renderFooter(generatedAt, sourceCommit, bundleNotice)}</footer>
+<script src="${assetPrefix}/theme.js"></script>
 ${depth === 0 ? `<script src="${assetPrefix}/gallery-filter.js"></script>` : `<script src="${assetPrefix}/source-preview.js"></script><script src="${assetPrefix}/job-page.js"></script>`}
 </body>
 </html>
@@ -1604,6 +1609,11 @@ async function assertNoMutableTrunkLinks(root) {
 async function copyAssets() {
   const destDir = path.join(SITE_DIR, "assets");
   await mkdir(destDir, { recursive: true });
+  await cp(new URL('../shared/design-system/tokens.css', import.meta.url), path.join(destDir, 'tokens.css'));
+  const brandAssets = new URL('../samples/county-parcel-viewer/public/honua/', import.meta.url);
+  for (const name of ['theme.js', 'geist-latin.woff2', 'OFL.txt']) {
+    await cp(new URL(name, brandAssets), path.join(destDir, name));
+  }
   for (const name of ["gallery.css", "gallery-filter.js", "source-preview.js", "job-page.js"]) {
     const content = await readFile(path.join(ASSETS_SRC_DIR, name), "utf8");
     await writeFile(path.join(destDir, name), content, "utf8");

@@ -20,7 +20,7 @@
 // A built sample (entrypoint.build, e.g. a Vite app) follows the same rules
 // with three differences:
 //   - The build runs in a clean `git archive` export of samples/<id>/ at the
-//     source commit, including shared/state-local/ when present. The working
+//     source commit, including shared/ when present. The working
 //     tree (edited or not) never reaches the published bytes;
 //     the build's outputDir is what gets staged and digested.
 //   - Output symlinks, special files, and paths escaping outputDir fail.
@@ -39,7 +39,7 @@ import { lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } fro
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const SHARED_SOURCE_PATH = "shared/state-local";
+const SHARED_SOURCE_PATH = "shared";
 
 export const OWN_APP_MANIFEST_FORMAT = "honua.samples.own-app.v1";
 export const OWN_APP_MANIFEST_NAME = "app.manifest.v1.json";

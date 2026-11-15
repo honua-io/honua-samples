@@ -196,6 +196,9 @@ jobs:
       - name: Verify snapshot-backed state and local routes
         run: node scripts/smoke-state-local-display.mjs
 
+      - name: Verify light and dark gallery journeys
+        run: npm run test:gallery:themes
+
       - name: Verify property keyboard entry and skip navigation
         run: node scripts/smoke-property-focus.mjs
 
