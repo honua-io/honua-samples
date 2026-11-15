@@ -1,0 +1,24 @@
+{
+  "pack": "maui-approved-display-2026-11-15",
+  "note": "Layers copied unchanged from the approved Maui display pack; sha256 must match the file beside this receipt.",
+  "layers": {
+    "dfirm": {
+      "file": "dfirm.cjson",
+      "sha256": "f5166289d8e44d9bcb11e64a5fd6bb6ae254bda4b479bf1b66c8d2a7fbe45df2",
+      "sourceUrl": "https://geodata.hawaii.gov/arcgis/rest/services/Hazards/MapServer/4",
+      "attribution": "Federal Emergency Management Agency; Hawaii Statewide GIS Program",
+      "license": "public-domain",
+      "licenseUrl": "https://planning.hawaii.gov/gis/download-gis-data-expanded/",
+      "retrievedAt": "2026-11-15T20:48:38.435Z"
+    },
+    "slr32": {
+      "file": "slr32.cjson",
+      "sha256": "c9f1c107e5e10c0f3a9ed0de0a71e87cb9f6643e778c27062c06d622f83feb57",
+      "sourceUrl": "https://geodata.hawaii.gov/arcgis/rest/services/Climate/MapServer/45",
+      "attribution": "University of Hawaii Coastal Geology Group; PacIOOS; Tetra Tech, Inc.; Hawaii Statewide GIS Program",
+      "license": "public-domain",
+      "licenseUrl": "https://planning.hawaii.gov/gis/download-gis-data-expanded/",
+      "retrievedAt": "2026-11-15T20:48:46.667Z"
+    }
+  }
+}

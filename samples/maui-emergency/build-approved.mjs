@@ -33,11 +33,27 @@ const overrides = {
   } }))),
 };
 const approvedData = { exerciseShelters };
+// Layers regenerated from a released display pack carry their source receipt; the rest predate receipts.
+const layerReceipts = JSON.parse(await read(path.join(approved, 'data', 'receipts.json')));
 const receipts = [];
 const endpoints = { land: 'Terrestrial/MapServer/3', contours: 'Elevation/MapServer/5',
   streams: 'FreshWater/MapServer/1', waterbodies: 'FreshWater/MapServer/19',
   dfirm: 'Hazards/MapServer/4', slr32: 'Climate/MapServer/45', fire: 'EmergMgmtPubSafety/MapServer/7',
   police: 'EmergMgmtPubSafety/MapServer/5', hospitals: 'Infrastructure/MapServer/5', schools: 'Infrastructure/MapServer/7' };
+function layerReceipt(name, file, raw) {
+  const sha256 = createHash('sha256').update(raw).digest('hex');
+  const known = layerReceipts.layers[name];
+  if (!known) {
+    return { dataset: name, sourceUrl: `https://geodata.hawaii.gov/arcgis/rest/services/${endpoints[name]}`, sha256,
+      attribution: 'Hawaii Statewide GIS Program', license: 'Public domain',
+      licenseUrl: 'https://planning.hawaii.gov/gis/download-gis-data-expanded/',
+      retrievalDate: null, note: 'Approved simplified display snapshot; original retrieval date was not recorded.' };
+  }
+  if (known.file !== file || known.sha256 !== sha256) throw new Error(`approved/data/receipts.json does not match ${file}`);
+  return { dataset: name, sourceUrl: known.sourceUrl, sha256, attribution: known.attribution,
+    license: known.license, licenseUrl: known.licenseUrl, retrievalDate: known.retrievedAt,
+    note: `Generalized display snapshot from the ${layerReceipts.pack} release; not a legal boundary.` };
+}
 for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'dfirm', 'tsunami', 'slr32', 'shelters', 'fire', 'police', 'hospitals', 'schools']) {
   if (overrides[name]) { approvedData[name] = overrides[name]; continue; }
   for (const extension of ['cjson', 'geojson', 'json']) {
@@ -45,10 +61,7 @@ for (const name of ['land', 'roads', 'contours', 'streams', 'waterbodies', 'dfir
     try { raw = await read(path.join(approved, 'data', `${name}.${extension}`)); }
     catch (error) { if (error.code === 'ENOENT') continue; throw error; }
     approvedData[name] = JSON.parse(raw);
-    receipts.push({ dataset: name, sourceUrl: `https://geodata.hawaii.gov/arcgis/rest/services/${endpoints[name]}`, sha256: createHash('sha256').update(raw).digest('hex'),
-      attribution: 'Hawaii Statewide GIS Program', license: 'Public domain',
-      licenseUrl: 'https://planning.hawaii.gov/gis/download-gis-data-expanded/',
-      retrievalDate: null, note: 'Approved simplified display snapshot; original retrieval date was not recorded.' });
+    receipts.push(layerReceipt(name, `${name}.${extension}`, raw));
     break;
   }
   if (!approvedData[name]) throw new Error(`Missing approved display layer: ${name}`);
