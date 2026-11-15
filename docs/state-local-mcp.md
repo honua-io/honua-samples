@@ -24,8 +24,9 @@ node scripts/state-local/cli.mjs mcp-client property artifacts/state-local/maui 
 ```
 
 Replace `property` with `311`, `public-works` or `emergency` for the other demos.
-The property question binds both `maui-parcels` and `maui-zoning`; each other
-question binds its own exercise layer. Missing or changed receipts fail closed.
+The property question binds both `maui-parcels` and `maui-zoning`; the pinned
+server image cannot import zoning yet ([load limits](state-local-data.md#bounded-shared-load)).
+Each other question binds its own exercise layer. Missing or changed receipts fail closed.
 Administrative credentials are used only by the generator's verification calls.
 The output whitelists public fields and contains no administrative key, connection
 name, schema, table name or internal service name.

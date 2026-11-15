@@ -87,7 +87,7 @@ Every requested tile must be processed with no failures or warnings; empty ocean
 tiles may be omitted. The export checks the PMTiles v3 header, exact byte count,
 100 MB per-archive budget and SHA-256. Signed download URLs are excluded from saved
 receipts. Local file downloads require the explicit shared storage root and cannot
-escape it through symlinks. Delete the isolated Docker build volume after use.
+escape it through symlinks. [Remove the isolated server](#remove-the-isolated-server) after use.
 HTTPS downloads never receive the administrator key.
 Existing archives are reused only when their receipt and checksum match the
 prepared source. An archive without its receipt is refused for manual inspection.
@@ -145,6 +145,19 @@ stream, which Firefox reads as corrupt tiles (#171). The demo CDN copy comes fro
 same release archive pinned in `island-display.lock.json`, so a new archive needs a new
 CDN prefix and a matching `island-map.js` change; `island-map-cache.test.mjs` fails
 until both agree.
+
+## Remove the isolated server
+
+The server writes archives as its container user, so the host user cannot delete
+them directly. Delete them from a root container, then remove the stack and its
+database volume:
+
+```sh
+docker compose -p samples-island -f docker/compose.yml -f docker/compose.island-tiles.yml \
+  run --rm --no-deps --user 0 --entrypoint find honua "$HONUA_TILE_STORAGE_ROOT" -mindepth 1 -delete
+docker compose -p samples-island -f docker/compose.yml -f docker/compose.island-tiles.yml down -v
+rmdir "$HONUA_TILE_STORAGE_ROOT"
+```
 
 ## Check camera interaction and performance
 
