@@ -22,7 +22,7 @@ test('USGS gauge reports the latest flow and stage and skips no-data sentinels',
     series('00065', [{ value: '0.99', qualifiers: ['P'], dateTime: '2026-11-14T06:50:00.000-10:00' }]),
   ] } });
   assert.equal(result.observedAt.toISOString(), '2026-11-14T16:50:00.000Z');
-  assert.equal(result.summary, '69.3 ft³/s · gage 0.99 ft · provisional');
+  assert.equal(result.summary, '69.3 ft³/s · gage 0.99 ft · provisional, estimated');
   assert.equal(parseUsgsGauge({ value: { timeSeries: [series('00060', [{ value: '-999999', dateTime: '2026-11-14T06:50:00-10:00' }]),
     series('00065', [{ value: '1.02', dateTime: '2026-11-14T06:50:00-10:00' }])] } }).summary, 'gage 1.02 ft');
   assert.throws(() => parseUsgsGauge({ value: { timeSeries: [] } }), /no current reading/);
@@ -34,6 +34,27 @@ test('NOAA tide gauge reads GMT times and surfaces API errors', () => {
   assert.equal(result.summary, '2.33 ft above MLLW · preliminary');
   assert.throws(() => parseTideGauge({ error: { message: 'No data was found.' } }), /No data was found/);
   assert.throws(() => parseTideGauge({ data: [] }), /no current reading/);
+});
+
+test('missing and non-finite readings are unavailable while a measured zero is valid', () => {
+  for (const value of ['', '  ', null, undefined, 'NaN', 'Infinity', 'not a number', false]) {
+    const tide = parseFeed(feed('tide'), { data: [{ t: '2026-11-14 17:00', v: value }] });
+    const usgs = parseFeed(feed('usgs'), { value: { timeSeries: [{
+      variable: { variableCode: [{ value: '00060' }] },
+      values: [{ value: [{ value, dateTime: '2026-11-14T17:00:00Z' }] }],
+    }] } });
+    assert.match(tide.error, /no current reading/);
+    assert.match(usgs.error, /no current reading/);
+    assert.equal(feedState(feed('tide'), tide, Date.now()).stale, true);
+  }
+  assert.match(parseTideGauge({ data: [{ t: '2026-11-14 17:00', v: '0' }] }).summary, /^0.00 ft/);
+});
+
+test('stage estimates remain disclosed even when flow is the primary reading', () => {
+  const series = (code, qualifiers) => ({ variable: { variableCode: [{ value: code }] },
+    values: [{ value: [{ value: '1', dateTime: '2026-11-14T17:00:00Z', qualifiers }] }] });
+  const result = parseUsgsGauge({ value: { timeSeries: [series('00060', ['P']), series('00065', ['e'])] } });
+  assert.match(result.summary, /provisional, estimated$/);
 });
 
 test('feed state shows age, Hawaii update time and a stale warning past the cadence', () => {
