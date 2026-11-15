@@ -49,3 +49,21 @@ node scripts/smoke-state-local-display.mjs
 
 Importing these sources into department folders uses the separate Maui import pipeline;
 these snapshot pages do not claim to have completed that live-server journey.
+
+## Linked 311 browser demo
+
+The expandable 311 demo links a fictional resident report (location, category and optional
+photo), a demo staff board (crew assignment and status), and public status through one
+browser-session store. No account or county submission is involved. It resets at the
+next UTC midnight, on explicit reset, or when the browser session is closed. If browser
+storage is blocked, changes last only until the page reloads. The snapshot dashboard
+below it continues to show the published snapshot.
+
+Open-request CSV exports retain synthetic/exercise provenance. The scripted **Demo answer**
+triage suggestion uses the selected category and the nearest open report of that category
+within 80 metres, naming its board ID and offering a control to show it. It is a local
+rule, not a live model response. Live persistence remains a separate server dependency.
+
+`node --test scripts/test/request-records.test.mjs` checks reset, persistence, export and
+grounded triage. The display browser smoke runs the complete linked journey at desktop
+and mobile widths, including a photo, reload, and CSV download.

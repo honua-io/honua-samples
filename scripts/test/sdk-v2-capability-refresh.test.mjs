@@ -96,7 +96,7 @@ test("preserves governed support, fixture, and live states for admitted cloud-na
 });
 
 test("keeps multidimensional guidance preview-only and non-runnable", async () => {
-  const job = await json("jobs/multidimensional-format-maturity.json");
+  const job = await json("docs/multidimensional-format-maturity.json");
   assert.equal(job.kind, "walkthrough");
   assert.equal(job.maturity.state, "source-preview");
   assert.equal(job.server.fixture.evidenceState, "unavailable");

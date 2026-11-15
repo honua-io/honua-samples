@@ -16,6 +16,10 @@ This directory records the research, product decisions, and delivery plan for th
 
 The infrastructure repository was renamed from `honua-demo` to `honua-demo-infra` on 2026-08-08. Existing deployed resource identifiers beginning with `honua-demo` remain unchanged unless an infrastructure migration explicitly replaces them.
 
+## Reference guidance
+
+- [Zarr, NetCDF and HDF5 readiness](multidimensional-format-maturity.md) records the format limitations and pinned evidence; it is reference material rather than a runnable sample.
+
 ## Research artifacts
 
 - [Competitive sample audit](competitive-sample-audit.md) compares ArcGIS, Mapbox, CARTO, and AppStudio, identifies Honua SDK gaps, and defines the curriculum and delivery sequence.

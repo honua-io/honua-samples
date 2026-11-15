@@ -24,26 +24,33 @@ export function parseUsgsGauge(body) {
   const latest = (code) => {
     const values = series.find((entry) => entry.variable?.variableCode?.[0]?.value === code)?.values?.[0]?.value ?? [];
     const reading = values.at(-1);
-    return reading && Number(reading.value) > -999_999 ? reading : null;
+    return reading && isNumericReading(reading.value) && Number(reading.value) > -999_999 ? reading : null;
   };
   const flow = latest('00060');
   const stage = latest('00065');
   const reading = flow ?? stage;
   if (!reading) throw new Error('USGS returned no current reading');
   const parts = [flow && `${flow.value} ft³/s`, stage && `gage ${stage.value} ft`].filter(Boolean);
-  const provisional = reading.qualifiers?.includes('P') ? ' · provisional' : '';
-  return { observedAt: requireTime(reading.dateTime, 'USGS reading time'), summary: `${parts.join(' · ')}${provisional}` };
+  const qualifiers = [flow, stage].flatMap((entry) => entry?.qualifiers ?? []);
+  const labels = [['P', 'provisional'], ['e', 'estimated']]
+    .filter(([code]) => qualifiers.includes(code)).map(([, label]) => label);
+  const qualification = labels.length ? ` · ${labels.join(', ')}` : '';
+  return { observedAt: requireTime(reading.dateTime, 'USGS reading time'), summary: `${parts.join(' · ')}${qualification}` };
 }
 
 export function parseTideGauge(body) {
   if (body.error) throw new Error(body.error.message ?? 'NOAA returned an error');
   const reading = body.data?.at(-1);
-  if (!reading) throw new Error('NOAA returned no current reading');
+  if (!reading || !isNumericReading(reading.v)) throw new Error('NOAA returned no current reading');
   const preliminary = reading.q === 'p' ? ' · preliminary' : '';
   return {
     observedAt: requireTime(`${reading.t.replace(' ', 'T')}:00Z`, 'NOAA reading time'),
     summary: `${Number(reading.v).toFixed(2)} ft above MLLW${preliminary}`,
   };
+}
+
+function isNumericReading(value) {
+  return (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '')) && Number.isFinite(Number(value));
 }
 
 function requireTime(value, label) {
@@ -55,15 +62,18 @@ function requireTime(value, label) {
 export const LIVE_FEEDS = [
   {
     id: 'nws', label: 'NWS active alerts · Maui County', agency: 'National Weather Service',
+    agencyUrl: 'https://forecast.weather.gov/showsigwx.php?warncounty=HIC009',
     url: 'https://api.weather.gov/alerts/active?area=HI', staleAfterMs: 15 * MINUTE, parse: parseNwsAlerts,
   },
   {
     id: 'usgs', label: 'USGS 16604500 · Wailuku River at Kepaniwai Park', agency: 'U.S. Geological Survey',
+    agencyUrl: 'https://waterdata.usgs.gov/monitoring-location/USGS-16604500/',
     url: 'https://waterservices.usgs.gov/nwis/iv/?format=json&sites=16604500&parameterCd=00060,00065&siteStatus=all',
     staleAfterMs: 2 * 60 * MINUTE, parse: parseUsgsGauge,
   },
   {
     id: 'tide', label: 'NOAA tide gauge · Kahului Harbor 1615680', agency: 'NOAA CO-OPS',
+    agencyUrl: 'https://tidesandcurrents.noaa.gov/stationhome.html?id=1615680',
     url: 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=1615680&product=water_level&datum=MLLW&units=english&time_zone=gmt&format=json&date=latest&application=honua_samples',
     staleAfterMs: 30 * MINUTE, parse: parseTideGauge,
   },
@@ -129,7 +139,7 @@ export function mountLiveFeeds(container) {
     row.dataset.feed = feed.id;
     row.dataset.state = 'loading';
     const label = document.createElement('a');
-    label.href = feed.url;
+    label.href = feed.agencyUrl;
     label.rel = 'noopener';
     label.textContent = feed.label;
     const age = document.createElement('span');

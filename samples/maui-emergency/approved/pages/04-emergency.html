@@ -321,13 +321,20 @@
   const baldwin = shelters.find((s) => s.label === "Baldwin High"), mauiHigh = shelters.find((s) => s.label === "Maui High");
   document.getElementById("balanceText").innerHTML = `Baldwin High is at <b>${pct(baldwin)}%</b> (${fmt(baldwin.occ)} of ${fmt(baldwin.cap)}) and a fictional exercise shelter. Maui High has <b>${fmt(mauiHigh.cap - mauiHigh.occ)}</b> spaces free and the highlighted road statuses are fictional exercise records. ${cite("shelters/" + baldwin.fid, "baldwin")} ${cite("shelters/" + mauiHigh.fid, "mauihigh")} ${cite("road-status/kaahumanu", "roads")}`;
 
+  const RR = [
+    { id: "RR-114", what: "Generator, 150 kW", where: "Baldwin High shelter", pri: "Critical", c: [-156.4893, 20.8921] },
+    { id: "RR-117", what: "Cots ×300", where: "Maui High shelter", pri: "High", c: [-156.4724, 20.8752] },
+    { id: "RR-118", what: "Traffic control, 4 officers", where: "Waiehu Beach Rd at Lower Main St", pri: "High", c: [-156.4935, 20.8985] },
+    { id: "RR-120", what: "Paratransit vans ×2", where: "Kahului senior housing, Kaʻahumanu Ave", pri: "High", c: [-156.4655, 20.8895] },
+    { id: "RR-121", what: "Potable water, 2,000 gal", where: "Iao Intermediate shelter", pri: "Medium", c: [-156.4995, 20.8857] },
+  ];
   document.getElementById("sitrep").innerHTML = `<ol>
     <li><b>Situation.</b> Simulated tsunami warning in effect since 08:52 HST; simulated first wave 12:10 HST. ${cite("nws/HIZ016-exercise", "feeds")} ${cite("ptwc/msg-7", "feeds")} Demo tide gauge reads +0.42 ft above predicted. ${cite("noaa/1615680", "feeds")}</li>
     <li><b>Evacuation.</b> Exercise zones are highlighted; no real warning is active on this page. Parcel exposure has not been verified in this exercise. ${cite("tsunami/zone-1", "zone")} ${cite("query/parcels-in-zone", "zone")}</li>
     <li><b>Facilities.</b> ${inEvac.map((f) => f.name).join(" and ")} are inside the zone; ${inExtreme.length ? inExtreme.map((f) => f.name).join(", ") + " are in the extreme zone only." : "Extreme-zone exposure was not analysed: the exercise snapshot has no extreme-zone polygons."} ${inEvac.map((f) => cite(f.id)).join(" ")}</li>
     <li><b>Shelters.</b> ${open.length} of ${shelters.length} open; ${fmt(totOcc)} of ${fmt(totCap)} spaces used (${Math.round((totOcc / totCap) * 100)}%). Baldwin High at ${pct(baldwin)}%. ${cite("shelters/*", "shelters")} ${cite("shelters/" + baldwin.fid, "baldwin")}</li>
-    <li><b>Roads.</b> Fictional scenario: 3 closed roads; Waiehu Beach Rd in contraflow. ${cite("road-status/*", "roads")}</li>
-    <li><b>Resources.</b> 5 open requests, 1 critical: 150 kW generator for Baldwin High. ${cite("eoc-board/RR-114", "rr")}</li>
+    <li><b>Roads.</b> Fictional scenario: ${ROADS.filter((r) => r.st === "closed").length} closed roads; Waiehu Beach Rd in contraflow. ${cite("road-status/*", "roads")}</li>
+    <li><b>Resources.</b> ${RR.length} fictional open requests, ${RR.filter((r) => r.pri === "Critical").length} critical: 150 kW generator for Baldwin High. ${cite("eoc-board/RR-114", "rr")}</li>
     <li><b>Systems.</b> Simulated deployment and outage; no county system connection.</li>
   </ol>`;
 
@@ -352,13 +359,6 @@
   const near = open.slice().sort((a, b) => dist(sample, a.c) - dist(sample, b.c))[0];
   document.getElementById("pubNearest").textContent = `${near.label}, ${(dist(sample, near.c) / 1000).toFixed(1)} km`;
 
-  const RR = [
-    { id: "RR-114", what: "Generator, 150 kW", where: "Baldwin High shelter", pri: "Critical", c: [-156.4893, 20.8921] },
-    { id: "RR-117", what: "Cots ×300", where: "Maui High shelter", pri: "High", c: [-156.4724, 20.8752] },
-    { id: "RR-118", what: "Traffic control, 4 officers", where: "Waiehu Beach Rd at Lower Main St", pri: "High", c: [-156.4935, 20.8985] },
-    { id: "RR-120", what: "Paratransit vans ×2", where: "Kahului senior housing, Kaʻahumanu Ave", pri: "High", c: [-156.4655, 20.8895] },
-    { id: "RR-121", what: "Potable water, 2,000 gal", where: "Iao Intermediate shelter", pri: "Medium", c: [-156.4995, 20.8857] },
-  ];
   const STAGE = [{ name: "War Memorial Complex", c: [-156.4873, 20.8929] }, { name: "Maui High lot", c: [-156.4712, 20.8731] }];
 
   const eocMarkers = [];

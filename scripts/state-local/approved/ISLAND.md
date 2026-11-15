@@ -24,7 +24,8 @@ one metre display generalization. They are unsuitable for survey measurements.
 
 Preparation preserves the requested coordinates. It uses Shapely 2.1.2 `make_valid`
 for invalid source geometries, records each repair, and subdivides geometries to
-meet the default import limits of 10,000 vertices and 100 polygon rings per feature.
+stay within conservative bounds of 10,000 vertices and 100 polygon rings per
+feature, below the current default import limits of 100,000 vertices and 1,000 rings.
 It retains every dimension of repaired geometry collections, checks subdivision
 coverage, and preserves each original ID in `source_objectid`. Import IDs identify
 the parts; count original features by distinct `source_objectid`. The preparation

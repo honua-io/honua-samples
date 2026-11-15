@@ -716,6 +716,7 @@
     const out = document.getElementById("nlqOut");
     if (!lastPlan) { out.hidden = true; document.getElementById("nlqExp").hidden = true; return; }
     out.hidden = false;
+    renderPlanTab(lastPlan);
     const L = LAYERS[S.layer];
     const chips = S.attr.map((a, i) => `<span class="qchip" role="listitem"><button type="button" class="ql" data-qe="${i}" title="Edit this clause">${chipText(a)}</button><button type="button" class="qx" data-qr="${i}" aria-label="Remove ${escapeHtml(LABEL(L, a.f))} clause"><svg class="ico"><use href="#i-x"/></svg></button></span>`);
     if (S.time) chips.push(`<span class="qchip" role="listitem"><span class="ql"><b>Opened</b> ${escapeHtml(S.time[0])} → ${escapeHtml(S.time[1])}</span><button type="button" class="qx" data-qr="time" aria-label="Remove date range"><svg class="ico"><use href="#i-x"/></svg></button></span>`);

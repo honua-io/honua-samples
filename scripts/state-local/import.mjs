@@ -18,6 +18,13 @@ export function layersPath(connection) {
   return `/api/v1/admin/connections/${encodeURIComponent(connection)}/layers`;
 }
 
+// The admin storage handle is storageLayerId, or layerId on servers that
+// report that name. Public URLs use the service-local index instead
+// (see activeDeployment).
+export function storageLayerId(layer) {
+  return layer?.storageLayerId ?? layer?.layerId;
+}
+
 export async function listLayers(env, connection, serviceName) {
   const response = await adminFetch(env, { method: "GET",
     apiPath: `${layersPath(connection)}?serviceName=${encodeURIComponent(serviceName)}` });
@@ -34,14 +41,26 @@ async function publishedLayer(env, publication) {
     if (["Failed", "Cancelled"].includes(job?.data?.status)) throw new Error("Layer publication failed; inspect Console before retrying");
     if (job?.data?.status === "Completed") {
       const layers = await listLayers(env, connection, serviceName);
-      return layers.find((layer) => layer.layerId === job.data.layerId);
+      return layers.find((layer) => storageLayerId(layer) === storageLayerId(job.data));
     }
     await setTimeout(500);
   }
   throw new Error("Layer publication still pending; inspect Console before retrying");
 }
 
-async function completedUpload(env, uploaded) {
+function validatedImportReceipt(job, uploaded, snapshot) {
+  if (typeof job.physicalTableName !== "string" || !job.physicalTableName.trim()
+    || typeof job.schema !== "string" || !job.schema.trim()) {
+    throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
+  }
+  if (job.jobId !== uploaded.jobId || job.tableName !== snapshot.tableName
+    || !snapshot.connection || job.connectionId !== snapshot.connection) {
+    throw new Error(`Import receipt does not match this job, table and managed connection; inspect Console job ${uploaded.jobId} before publishing`);
+  }
+  return { ...job, featureCount: job.featuresProcessed };
+}
+
+async function completedUpload(env, uploaded, snapshot) {
   if (!uploaded?.jobId) return uploaded;
   const apiPath = `/api/v1/admin/import/jobs/${encodeURIComponent(uploaded.jobId)}`;
   const deadline = Date.now() + 120_000;
@@ -51,7 +70,7 @@ async function completedUpload(env, uploaded) {
       throw new Error(`Import failed or cancelled; inspect Console job ${uploaded.jobId} before retrying`);
     }
     if ([2, "Completed"].includes(job?.status)) {
-      throw new Error(`Import completed but lacks a physical table receipt; inspect Console job ${uploaded.jobId} before publishing manually`);
+      return validatedImportReceipt(job, uploaded, snapshot);
     }
     await setTimeout(500);
   }
@@ -74,7 +93,7 @@ export async function uploadSnapshotTable(env, snapshot) {
     body: { sourceUrl: snapshot.sourceUrl, fileName: "snapshot.geojson", tableName: snapshot.tableName,
       overwriteExisting: false, sourceSrid: 4326, targetSrid: 4326 },
   } : { apiPath: "/api/v1/admin/import/upload", body: snapshotForm(snapshot) };
-  const uploaded = await completedUpload(env, await adminFetch(env, { method: "POST", ...request }));
+  const uploaded = await completedUpload(env, await adminFetch(env, { method: "POST", ...request }), snapshot);
   if (uploaded?.featureCount !== snapshot.geojson.features.length || !uploaded.physicalTableName) {
     throw new Error("Import did not confirm the snapshot table and feature count");
   }
@@ -108,7 +127,7 @@ export async function stageVerifiedSnapshot(env, options) {
   const runId = options.runId ?? randomUUID().replaceAll("-", "");
   const tableName = stagingTableName(name, runId);
   const serviceName = stagingServiceName(name, runId);
-  const uploaded = await uploadSnapshotTable(env, { tableName, geojson, sourceUrl: options.sourceUrl });
+  const uploaded = await uploadSnapshotTable(env, { tableName, geojson, connection, sourceUrl: options.sourceUrl });
   const published = await adminFetch(env, {
     method: "POST", apiPath: layersPath(connection),
     body: {
@@ -120,9 +139,10 @@ export async function stageVerifiedSnapshot(env, options) {
     },
   });
   const layer = await publishedLayer(env, { response: published, connection, serviceName });
-  if (!Number.isInteger(layer?.layerId) || layer.enabled !== false) {
+  const layerId = storageLayerId(layer);
+  if (!Number.isInteger(layerId) || layer.enabled !== false) {
     throw new Error("Publish did not confirm a disabled layer; inspect Console before retrying");
   }
-  return { source: name, ...sourceLicense(source), serviceName, folderId, layerId: layer.layerId, enabled: false,
+  return { source: name, ...sourceLicense(source), serviceName, folderId, layerId, enabled: false,
     schema: uploaded.schema ?? "honua_data", table: uploaded.physicalTableName, cleanSha256: receipt.cleanSha256 };
 }
