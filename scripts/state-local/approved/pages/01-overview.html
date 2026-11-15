@@ -294,7 +294,8 @@
     HM.themed(map, { id, type: "circle", source: id, paint: { "circle-color": color, "circle-radius": radius, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
   }
   const hero = HM.create(document.getElementById("heroMap"), {
-    view: "wide", padding: 10, cooperative: true,
+    // Top-left: the agent card covers the default top-right zoom buttons.
+    view: "wide", padding: 10, cooperative: true, navPos: "top-left",
     onload: (m) => {
       HM.overlays(m, ["zoning", "flood", "tsunami"], "roads-casing");
       m.setPaintProperty("zoning", "fill-opacity", 0.35);
