@@ -97,14 +97,19 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
     if (status.startsWith(UNVERIFIED)) outcome.unverified.push(`${url}: ${status.slice(UNVERIFIED.length)}`);
     else if (status !== 'ok') outcome.broken.push(`${url}: ${status}`);
   };
+  const late = [];
   const checkOne = async (url) => {
-    if (Date.now() < deadline) return record(url, await lookup(url));
-    record(url, waitedOnRateLimit ? `${UNVERIFIED}link-check deadline exceeded after an outside rate limit` : 'link-check deadline exceeded');
+    if (Date.now() < deadline) record(url, await lookup(url));
+    else late.push(url);
   };
   // Bound concurrency so a page with hundreds of source links cannot burst a host.
   const pending = [...urls];
   const worker = async () => { while (pending.length) await checkOne(pending.shift()); };
   await Promise.all(Array.from({ length: Math.min(4, pending.length) }, worker));
+  // Classified only after every in-flight request settled, so a rate limit that
+  // was still being waited out when the budget ran out is known here.
+  const missed = waitedOnRateLimit ? `${UNVERIFIED}link-check deadline exceeded after an outside rate limit` : 'link-check deadline exceeded';
+  for (const url of late) record(url, missed);
   return outcome;
 }
 

@@ -136,17 +136,17 @@ for (const status of [200, 401, 500]) {
   });
 }
 
-const fixed = (status, headers = {}) => ({ status: () => status, ok: () => status === 200, headers: () => headers, dispose: async () => {} });
+const stubResponse = (status, headers = {}) => ({ status: () => status, ok: () => status === 200, headers: () => headers, dispose: async () => {} });
 
 test('an outside bot wall (403 on HEAD and GET) is unverified, not broken', async () => {
-  const request = { head: async () => fixed(403), get: async () => fixed(403) };
+  const request = { head: async () => stubResponse(403), get: async () => stubResponse(403) };
   assert.equal(await resolveLink(request, 'https://www.npmjs.com/package/x'), `${UNVERIFIED}HTTP 403`);
 });
 
 test('a 403 or 429 from a Honua host stays a broken link', async () => {
   for (const url of ['https://honua.io/demo.html', 'https://samples.honua.io/x/']) {
     for (const code of [403, 429]) {
-      const request = { head: async () => fixed(code), get: async () => fixed(code) };
+      const request = { head: async () => stubResponse(code), get: async () => stubResponse(code) };
       assert.equal(await resolveLink(request, url, { wait: async () => {} }), `HTTP ${code}`);
     }
   }
@@ -156,7 +156,7 @@ test('a blank or zero Retry-After uses the default delay and reports the rate li
   for (const value of ['', '0', 'soon']) {
     const waits = [];
     let seen = 0;
-    const request = { head: async () => fixed(429, { 'retry-after': value }), get: async () => fixed(200) };
+    const request = { head: async () => stubResponse(429, { 'retry-after': value }), get: async () => stubResponse(200) };
     assert.equal(await resolveLink(request, 'https://github.com/o/r', { wait: async (ms) => waits.push(ms), onRateLimit: () => seen++ }), 'ok');
     assert.deepEqual(waits, [3_000]);
     assert.equal(seen, 1);
@@ -166,15 +166,15 @@ test('a blank or zero Retry-After uses the default delay and reports the rate li
 test('a rate limit waits for Retry-After (capped) and retries once with GET', async () => {
   const waits = [];
   let gets = 0;
-  const request = { head: async () => fixed(429, { 'retry-after': '120' }), get: async () => fixed(++gets === 1 ? 200 : 500) };
+  const request = { head: async () => stubResponse(429, { 'retry-after': '120' }), get: async () => stubResponse(++gets === 1 ? 200 : 500) };
   assert.equal(await resolveLink(request, 'https://github.com/o/r/blob/x', { wait: async (ms) => waits.push(ms) }), 'ok');
   assert.deepEqual(waits, [5_000]);
 });
 
 test('a rate limit that persists is unverified, and a 404 after the wait is broken', async () => {
   const wait = async () => {};
-  assert.equal(await resolveLink({ head: async () => fixed(429), get: async () => fixed(429) }, 'https://github.com/o/r', { wait }), `${UNVERIFIED}HTTP 429`);
-  assert.equal(await resolveLink({ head: async () => fixed(429), get: async () => fixed(404) }, 'https://github.com/o/r', { wait }), 'HTTP 404');
+  assert.equal(await resolveLink({ head: async () => stubResponse(429), get: async () => stubResponse(429) }, 'https://github.com/o/r', { wait }), `${UNVERIFIED}HTTP 429`);
+  assert.equal(await resolveLink({ head: async () => stubResponse(429), get: async () => stubResponse(404) }, 'https://github.com/o/r', { wait }), 'HTTP 404');
 });
 
 test('GET transport errors remain link failures', async () => {
@@ -248,4 +248,17 @@ test('a page that waits on another page\'s rate-limited request is excused too',
   const [, links] = await Promise.all([first, second]);
   assert.deepEqual(links.broken, []);
   assert.equal(links.unverified.length, 1);
+});
+
+test('links that miss the budget while an outside rate limit is still being waited out are unverified', async () => {
+  const resolve = async (_request, url, { onRateLimit }) => {
+    if (url.includes('github.com')) { onRateLimit(); await sleep(60); }
+    else await sleep(20);
+    return 'ok';
+  };
+  const urls = ['https://github.com/o/r/1', 'https://docs.example.org/1', 'https://docs.example.org/2', 'https://docs.example.org/3',
+    'https://docs.example.org/4', 'https://docs.example.org/5'];
+  const links = await checkLinkUrls(urls, null, { budgetMs: 10, resolve });
+  assert.deepEqual(links.broken, []);
+  assert.equal(links.unverified.length, 2);
 });
