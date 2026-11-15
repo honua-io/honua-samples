@@ -287,3 +287,15 @@ test('a Honua host that resets is not short-circuited: its later 404 stays broke
   const links = await checkLinkUrls(['https://samples.honua.io/2'], null, { cache, resolve });
   assert.deepEqual(links.broken, ['https://samples.honua.io/2: HTTP 404']);
 });
+
+test('a later page reading a settled delayed result is not excused', async () => {
+  const cache = createLinkCache();
+  await checkLinkUrls(['https://github.com/o/r/1'], null, { cache, budgetMs: 1000, resolve: slowRateLimited });
+  const slow = async () => { await sleep(40); return 'ok'; };
+  const later = ['https://github.com/o/r/1', 'https://docs.example.org/a', 'https://docs.example.org/b', 'https://docs.example.org/c',
+    'https://docs.example.org/d', 'https://docs.example.org/e'];
+  const links = await checkLinkUrls(later, null, { cache, budgetMs: 10, resolve: slow });
+  // The cached link frees its worker at once, so four fresh links start and one misses the budget.
+  assert.deepEqual(links.broken, ['https://docs.example.org/e: link-check deadline exceeded']);
+  assert.deepEqual(links.unverified, []);
+});

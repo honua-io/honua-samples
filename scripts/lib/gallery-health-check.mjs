@@ -71,6 +71,17 @@ export function createLinkCache() {
   return { results: new Map(), stalledHosts: new Set() };
 }
 
+function startLookup(request, url, cache, resolve) {
+  const entry = { settled: false };
+  let delayed = false;
+  const onOutsideDelay = () => { delayed = true; };
+  const status = cache.stalledHosts.has(new URL(url).host)
+    ? Promise.resolve(`${UNVERIFIED}host already rate limited or unreachable in this run`)
+    : resolve(request, url, { onOutsideDelay });
+  entry.promise = status.then((value) => { entry.settled = true; return { status: value, delayed }; });
+  return entry;
+}
+
 export async function checkLinkUrls(urls, request, { cache = createLinkCache(), budgetMs = 45_000, resolve = resolveLink } = {}) {
   const outcome = { count: urls.length, broken: [], unverified: [] };
   const deadline = Date.now() + budgetMs;
@@ -79,17 +90,13 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
   let waitedOnOutsideHost = false;
   const lookup = async (url) => {
     const { host, hostname } = new URL(url);
-    if (!cache.results.has(url)) {
-      // The rate-limit fact travels with the cached result, so every page that
-      // waited on this request (not only the one that started it) is excused.
-      let delayed = false;
-      const onOutsideDelay = () => { delayed = true; };
-      cache.results.set(url, cache.stalledHosts.has(host)
-        ? Promise.resolve({ status: `${UNVERIFIED}host already rate limited or unreachable in this run`, delayed: false })
-        : resolve(request, url, { onOutsideDelay }).then((status) => ({ status, delayed })));
-    }
-    const { status, delayed } = await cache.results.get(url);
-    if (delayed && !isHonuaHost(hostname)) waitedOnOutsideHost = true;
+    if (!cache.results.has(url)) cache.results.set(url, startLookup(request, url, cache, resolve));
+    const entry = cache.results.get(url);
+    // Only a page that actually waited on the delayed request (it was still in
+    // flight) is excused; a later page reading the settled result is not.
+    const waited = !entry.settled;
+    const { status, delayed } = await entry.promise;
+    if (waited && delayed && !isHonuaHost(hostname)) waitedOnOutsideHost = true;
     if (stalls(status) && !isHonuaHost(hostname)) cache.stalledHosts.add(host);
     return status;
   };
