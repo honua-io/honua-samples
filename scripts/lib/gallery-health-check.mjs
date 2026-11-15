@@ -158,7 +158,7 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
     return status;
   } catch (error) {
     // An outside host that resets or times out cloud runners is unreachable from
-    // here, not proven gone; a DNS failure (the host no longer exists) stays broken.
+    // here, not proven gone; a DNS failure (the host does not exist) stays broken.
     if (!OUTSIDE_TRANSPORT.test(error.message) || isHonuaHost(new URL(url).hostname)) return error.message;
     onOutsideDelay();
     return `${UNVERIFIED}${error.message}`;

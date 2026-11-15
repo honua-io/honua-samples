@@ -186,8 +186,9 @@ test('GET transport errors remain link failures', async () => {
 });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const hostOf = (url) => new URL(url).hostname;
 const slowRateLimited = async (_request, url, { onOutsideDelay }) => {
-  if (url.includes('github.com') || url.includes('honua.io')) { onOutsideDelay(); await sleep(40); }
+  if (hostOf(url) === 'github.com' || hostOf(url) === 'samples.honua.io') { onOutsideDelay(); await sleep(40); }
   return 'ok';
 };
 const deadlineUrls = [1, 2, 3, 4].map((n) => `https://github.com/o/r/${n}`).concat(['https://www.npmjs.com/a', 'https://docs.example.org/b']);
@@ -252,7 +253,7 @@ test('a page that waits on another page\'s rate-limited request is excused too',
 
 test('links that miss the budget while an outside rate limit is still being waited out are unverified', async () => {
   const resolve = async (_request, url, { onOutsideDelay }) => {
-    if (url.includes('github.com')) { onOutsideDelay(); await sleep(60); }
+    if (hostOf(url) === 'github.com') { onOutsideDelay(); await sleep(60); }
     else await sleep(20);
     return 'ok';
   };
@@ -266,7 +267,7 @@ test('links that miss the budget while an outside rate limit is still being wait
 test('an outside timeout excuses the late links and short-circuits its host', async () => {
   let calls = 0;
   const resolve = async (request, url, options) => {
-    if (!url.includes('fema')) return 'ok';
+    if (hostOf(url) !== 'msc.fema.gov') return 'ok';
     calls++;
     await sleep(30);
     return resolveLink({ head: async () => { throw new Error('apiRequestContext.head: Timeout 15000ms exceeded.'); } }, url, options);
