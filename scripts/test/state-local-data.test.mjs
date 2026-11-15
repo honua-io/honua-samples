@@ -97,7 +97,7 @@ test("deployment activation rechecks table, snapshot, service and department bef
 test("a missing deployment receipt names the source to stage", async (t) => {
   const { output, env, state } = await deploymentFixture(t);
   await assert.rejects(activateDeployment(env, { name: "basins", directory: output }),
-    new RegExp(`basins has no deployment receipt in ${output}; stage it there first`));
+    (error) => error.message === `basins has no deployment receipt in ${output}; stage it there first`);
   assert.equal(state.writes, 0);
 });
 

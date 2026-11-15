@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout } from "node:timers/promises";
 import { adminFetch } from "../lib/admin-api.mjs";
+import { managedConnections } from "../lib/sample-connection.mjs";
 import { getSource } from "./sources.mjs";
 import { readSnapshot } from "./snapshot.mjs";
 import { assertDefaultImportGeometry } from "./import-geometry.mjs";
@@ -84,12 +85,6 @@ async function departmentFolder(env, department) {
     && folder.metadata.id.length > 0);
   if (matches?.length !== 1) throw new Error(`Create exactly one ${department} department folder in Console before staging`);
   return matches[0].metadata.id;
-}
-
-export async function managedConnections(env) {
-  const response = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/connections" });
-  const connections = response?.data?.items ?? response?.data;
-  return Array.isArray(connections) ? connections : [];
 }
 
 async function requireManagedConnection(env, connection) {

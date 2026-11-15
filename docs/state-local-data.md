@@ -132,7 +132,8 @@ folders in Console with exact titles `Planning`, `Public Works`,
 `HONUA_SAMPLE_CONNECTION` names a managed connection, created in Console or
 through `POST /api/v1/admin/connections`, that points at the database this
 server imports into. On the local sample Compose stack that is host `postgres`,
-database `honua_dev`, user `honua_user`. Staging stops before uploading when the
+database `honua_dev`, user `honua_user`, the defaults the island staging script
+uses when it creates its own connection. Staging stops before uploading when the
 folder or the named connection is missing.
 
 ```sh
@@ -213,29 +214,29 @@ separate; none of these checks establishes a released demo or an agent eval pass
 
 ## Bounded shared load
 
-Staging checks every prepared layer against the pinned default server's geometry
-budget before making any server request: 100,000 vertices and 1,000 total polygon
-rings per feature. Single-layer uploads use the same check. An excess stops the
+Staging checks every prepared layer against Honua's default import geometry
+limits after honua-server#7242 before making any server request: 100,000 vertices
+and 1,000 total polygon rings per feature. Single-layer uploads use the same check. An excess stops the
 load with the original source feature ID and measured counts; no geometry is
 discarded. Resolve the supported import contract before staging complex public
 coastal or regulatory layers. Preparation and valid checksums alone do not prove
 importability, and this size check does not validate topology or predict geometry
 repair outcomes or the server’s separate WKB byte limit. These bounds match
 Honua’s default import limits following honua-server#7242; a candidate-server
-import remains required.
-
-The pinned Compose image predates honua-server#7242 and still enforces 10,000
-vertices and 100 rings per feature, as does every server image published by
-15 November 2026. On those images `maui-zoning`, `maui-flood-hazard` and
-`maui-special-management-area` pass this check but the server rejects the upload
-with `import.geometry_invalid`; inspect and delete the failed import in Console.
-One `maui-sea-level-rise` feature has 6,516 polygon rings, so this check refuses
-it on every default server. `property-app` needs all nine layers and therefore
-cannot complete on a default server today. The other three MCP questions and their
-seven sources stage, activate and generate on the pinned image. The island import
-in [ISLAND.md](../scripts/state-local/approved/ISLAND.md) subdivides geometry
-below both limits and feeds the public property display. Rollback remains available for previously staged layers whose
+import remains required. Rollback remains available for previously staged layers whose
 receipts match the current source contract.
+
+The pinned Compose image `nightly-jit-9d2169c` predates honua-server#7242 and
+enforces 10,000 vertices and 100 rings per feature. On it `maui-zoning`,
+`maui-flood-hazard` and `maui-special-management-area` pass this check but the
+server rejects the upload with `import.geometry_invalid`; inspect and delete the
+failed import in Console. One `maui-sea-level-rise` feature has 6,516 polygon
+rings, so this check refuses it under both sets of limits. `property-app` needs all
+nine layers and therefore cannot complete on `nightly-jit-9d2169c`. The other three
+MCP questions and their seven sources stage, activate and generate on it.
+
+The island import in [ISLAND.md](../scripts/state-local/approved/ISLAND.md)
+subdivides geometry below both sets of limits and feeds the public property display.
 
 The shared loader prepares the nine property layers as display geometry in EPSG:4326
 with a 0.00002-degree simplification tolerance and 15 decimal places in the source
