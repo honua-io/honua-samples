@@ -40,6 +40,8 @@ const LARGE_TMK = "249002001";
 // A coastal parcel in a VE flood zone, distinct from the example parcel.
 const COASTAL_TMK = "215010777";
 const OSM_HOUSE_ADDRESS = "2145 Wells St, Wailuku, HI";
+// OSM has no house number here, so Nominatim returns the street centre line.
+const OSM_STREET_ADDRESS = "200 S High St, Wailuku, HI";
 
 test.describe.configure({ mode: "serial" });
 
@@ -369,6 +371,26 @@ test("address search follows the server's geocoder provider", async ({ page }) =
     expect(candidates).toEqual([]);
     await expect(page.locator("#panel-inner [role=alert]")).toHaveText("Address search is unavailable right now. Search by TMK instead.");
   }
+});
+
+test("a street-centre-line match names the street instead of a missing parcel", async ({ page }) => {
+  const metadata = await fetch(`${DATA_BASE}/rest/services/World/GeocodeServer?f=json`).then((response) => response.json());
+  const provider = String(metadata.locatorProperties?.Provider ?? "unknown");
+  test.skip(!/nominatim|openstreetmap|\bosm\b/iu.test(provider), "street classification applies only to the credited OpenStreetMap geocoder");
+  await page.goto(appUrl());
+  await settled(page);
+  await page.locator("#q").fill(OSM_STREET_ADDRESS);
+  const geocodingResponse = page.waitForResponse((response) => response.url().includes("/GeocodeServer/findAddressCandidates"));
+  await page.locator("#find").click();
+  await settled(page);
+  const response = await geocodingResponse;
+  expect(response.ok()).toBe(true);
+  const body = await response.json();
+  expect(body.candidates[0]?.attributes?.class).toBe("highway");
+  const pointQueries = queries((request) => request.url.startsWith(PARCELS) && request.url.includes("esriGeometryPoint"));
+  expect(pointQueries).toHaveLength(0);
+  await expect(page.locator("body")).toHaveAttribute("data-search-state", "street");
+  await expect(page.locator("#street-note")).toHaveText("OpenStreetMap found the street South High Street, not a house number. Search by TMK or click a parcel on the map.");
 });
 
 test("phone: sticky search, a 38vh map, the results sheet below it, 44px targets", async ({ page }, testInfo) => {
