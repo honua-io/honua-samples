@@ -15,7 +15,7 @@ class Element {
   fire(name, event = {}) { this.listeners[name]?.({ preventDefault() {}, ...event }); }
 }
 
-async function fixture() {
+async function fixture(parcels) {
   const input = new Element(), list = new Element();
   input.id = 'q'; list.id = 'sug';
   const selected = [], streets = [], document = new Element();
@@ -24,7 +24,7 @@ async function fixture() {
   const source = await readFile(new URL('../../shared/state-local/parcel-search.js', import.meta.url), 'utf8');
   vm.runInNewContext(source, { window, document });
   window.HonuaParcelSearch({ input, list,
-    parcels: [{ properties: { id: 7, t9: '001234567', zone: 'R-1' } }, { properties: { id: 8, t9: '237004006', zone: 'B-2' } },
+    parcels: parcels ?? [{ properties: { id: 7, t9: '001234567', zone: 'R-1' } }, { properties: { id: 8, t9: '237004006', zone: 'B-2' } },
       { properties: { id: 9, t9: '237004007', zone: 'R-1' } }, { properties: { id: 10, t9: '238007001', zone: 'R-1' } }],
     streets: ['Lono Avenue', '<Street>'], formatTmk: (value) => value,
     onParcel: (parcel) => selected.push(parcel.properties), onStreet: (street) => streets.push(street),
@@ -146,3 +146,17 @@ test('partial formatted search finds the property while its parcel number is unf
   input.value = '3-8-007:00'; input.fire('input');
   assert.equal(list.children[0].textContent, 'TMK 238007001');
 });
+
+for (const query of ['3-7-004:1', '(2) 3-7-004:1']) {
+  test(`normalized parcel ranks ahead of five partial matches for ${query}`, async () => {
+    const parcels = ['237004100', '237004101', '237004102', '237004103', '237004104', '237004001']
+      .map((t9, id) => ({ properties: { id, t9 } }));
+    const { input, list, selected } = await fixture(parcels);
+    input.value = query; input.fire('input');
+    assert.equal(list.children.length, 5);
+    assert.equal(list.children[0].textContent, 'TMK 237004001');
+    assert.equal(list.children[1].textContent, 'TMK 237004100');
+    input.fire('keydown', { key: 'Enter' });
+    assert.equal(selected[0].t9, '237004001');
+  });
+}

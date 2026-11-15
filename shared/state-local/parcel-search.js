@@ -72,7 +72,9 @@ class ParcelSearch {
     const { digits, partialDigits, unsupportedCpr } = normalizeParcelQuery(query);
     const parcelMatches = digits.length < 3 ? [] : this.parcels
       .filter((parcel) => String(parcel.properties.t9).includes(digits)
-        || (partialDigits && String(parcel.properties.t9).includes(partialDigits))).slice(0, 5)
+        || (partialDigits && String(parcel.properties.t9).includes(partialDigits)))
+      .sort((a, b) => Number(String(b.properties.t9).includes(digits)) - Number(String(a.properties.t9).includes(digits)))
+      .slice(0, 5)
       .map((parcel) => ({ parcel, label: `TMK ${this.formatTmk(parcel.properties.t9)}` }));
     this.matches = [...parcelMatches, ...this.streets.filter((street) => street.toLowerCase().includes(query))
       .slice(0, 4).map((label) => ({ label }))];
