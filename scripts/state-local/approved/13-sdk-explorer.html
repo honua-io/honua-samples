@@ -973,18 +973,40 @@ try {
     if (changed) { const first = $("#code .ln.flash"), box = $("#code"); if (first && state.tab === "src" && (first.offsetTop < box.scrollTop || first.offsetTop > box.scrollTop + box.clientHeight - 30)) box.scrollTop = first.offsetTop - 60; }
   }
   $("#copyBtn").addEventListener("click", (e) => { const f = currentFiles()[state.file]; if (f) copyText(f.code, e.currentTarget); });
+  const copyFeedback = new WeakMap();
+  function resetCopyFeedback(btn) {
+    const feedback = copyFeedback.get(btn);
+    if (!feedback) return;
+    clearTimeout(feedback.timer);
+    if (feedback.label) feedback.label.textContent = feedback.text;
+    btn.title = feedback.title;
+    copyFeedback.delete(btn);
+  }
   function copyText(text, btn) {
+    resetCopyFeedback(btn);
+    const label = btn.querySelector("span");
+    const feedback = { label, text: label?.textContent, title: btn.title };
+    copyFeedback.set(btn, feedback);
+    const source = btn.closest(".snip") || $("#code");
+    const current = () => copyFeedback.get(btn) === feedback;
+    const visibleSource = () => source.isConnected && source.getClientRects().length &&
+      (btn.closest(".snip") ? source.dataset.text : currentFiles()[state.file]?.code) === text;
     const done = (ok) => {
-      const label = btn.querySelector("span"), oldTitle = btn.title, oldLabel = label?.textContent;
-      if (!ok) selectCopySource(btn);
+      if (!current()) return;
+      if (!visibleSource()) { resetCopyFeedback(btn); return; }
+      if (!ok) selectCopySource(source);
       if (label) label.textContent = ok ? "Copied" : "Copy manually";
       btn.title = ok ? "Copied" : "Code selected; use your device's copy command";
-      setTimeout(() => { if (label) label.textContent = oldLabel; btn.title = oldTitle; }, 1600);
+      feedback.timer = setTimeout(() => { if (current()) resetCopyFeedback(btn); }, 1600);
     };
-    try { navigator.clipboard.writeText(text).then(() => done(true), () => done(fallbackCopy(text))); } catch (e) { done(fallbackCopy(text)); }
+    const failed = () => {
+      if (!current()) return;
+      if (!visibleSource()) { resetCopyFeedback(btn); return; }
+      done(fallbackCopy(text));
+    };
+    try { navigator.clipboard.writeText(text).then(() => done(true), failed); } catch (e) { failed(); }
   }
-  function selectCopySource(btn) {
-    const source = btn.closest(".snip") || $("#code");
+  function selectCopySource(source) {
     if (!source.hasAttribute("tabindex")) source.tabIndex = -1;
     source.focus({ preventScroll: true });
     const range = document.createRange();
