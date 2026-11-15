@@ -113,13 +113,10 @@ body.app-shell {
 
 @media (min-width: 901px) {
   body.app-emergency { min-height: 800px; overflow: auto; }
-}
-
-@media (min-width: 901px) and (max-width: 1240px) {
   .app-emergency .legend { bottom: 56px; max-height: calc(100% - 156px); }
 }
 
-@media (min-width: 901px) and (max-width: 1000px) {
+@media (min-width: 901px) and (max-width: 1240px) {
   .app-emergency .appbar .appnav { display: none; }
   .app-emergency .wordmark { flex: 1; }
   .app-emergency .wordmark strong { flex-shrink: 0; }
