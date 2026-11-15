@@ -86,9 +86,15 @@ async function departmentFolder(env, department) {
   return matches[0].metadata.id;
 }
 
+export async function managedConnections(env) {
+  const response = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/connections" });
+  const connections = response?.data?.items ?? response?.data;
+  return Array.isArray(connections) ? connections : [];
+}
+
 async function requireManagedConnection(env, connection) {
-  const connections = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/connections" });
-  if (!(connections?.data ?? []).some((candidate) => candidate?.name === connection)) {
+  const connections = await managedConnections(env);
+  if (!connections.some((candidate) => candidate?.name === connection || candidate?.connectionId === connection)) {
     throw new Error(`Create the ${connection} managed connection to this server's import database before staging`);
   }
 }

@@ -15,7 +15,7 @@ const point = [-90.08, 29.95];
 const row = (id) => ({ ":id": `row-${id}`, objectid: String(id), gisid: `CB-${id}`,
   the_geom: { type: "Point", coordinates: point }, owner: "EXCLUDE", description: "EXCLUDE" });
 const folders = () => response({ data: [{ metadata: { id: "works-folder", title: "Public Works" } }] });
-const connections = () => response({ data: [{ name: "managed" }, { name: "managed/id" }] });
+const connections = () => response({ data: { items: [{ name: "managed" }, { name: "import-db", connectionId: "managed/id" }] } });
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status });
 
 async function directory(t) {
