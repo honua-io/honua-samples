@@ -975,6 +975,7 @@ try {
     if (changed) { const first = $("#code .ln.flash"), box = $("#code"); if (first && state.tab === "src" && (first.offsetTop < box.scrollTop || first.offsetTop > box.scrollTop + box.clientHeight - 30)) box.scrollTop = first.offsetTop - 60; }
   }
   $("#copyBtn").addEventListener("click", (e) => { const f = currentFiles()[state.file]; if (f) copyText(f.code, e.currentTarget); });
+  const copyStatus = $("#copyStatus");
   const copyFeedback = new WeakMap();
   let latestCopyButton;
   function resetCopyFeedback(btn) {
@@ -988,7 +989,7 @@ try {
   function copyText(text, btn) {
     if (latestCopyButton) resetCopyFeedback(latestCopyButton);
     latestCopyButton = btn;
-    $("#copyStatus").textContent = "";
+    copyStatus.textContent = "";
     const label = btn.querySelector("span");
     const feedback = { label, text: label?.textContent, title: btn.title };
     copyFeedback.set(btn, feedback);
@@ -1001,7 +1002,9 @@ try {
       if (!visibleSource()) { resetCopyFeedback(btn); return; }
       if (!ok) {
         selectCopySource(source);
-        $("#copyStatus").textContent = "Code selected. Use your device's copy command to copy it.";
+        source.before(copyStatus);
+        copyStatus.textContent = "Code selected. Use your device's copy command to copy it.";
+        copyStatus.scrollIntoView({ block: "nearest", inline: "nearest" });
       }
       if (label) label.textContent = ok ? "Copied" : "Copy manually";
       btn.title = ok ? "Copied" : "Code selected; use your device's copy command";
