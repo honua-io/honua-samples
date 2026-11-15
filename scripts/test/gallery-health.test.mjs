@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import reportHealth from '../../.github/scripts/report-gallery-health.cjs';
 import { resolveLink } from '../lib/gallery-health-check.mjs';
-import { renderedMapEvidence } from '../lib/gallery-health-map.mjs';
+import { countLaidOut, MAP_CONTAINER_SELECTOR, renderedMapEvidence } from '../lib/gallery-health-map.mjs';
 
 test('loaded source features and basemap pixels cannot substitute for painted application features', () => {
   let rendered = [];
@@ -22,6 +22,48 @@ test('loaded source features and basemap pixels cannot substitute for painted ap
     assert.equal(renderedMapEvidence().painted, false);
     rendered = [{ id: 'visible-feature' }];
     assert.equal(renderedMapEvidence().painted, true);
+  } finally { delete globalThis.window; delete globalThis.document; }
+});
+
+test('a hidden map canvas does not count as a container that must paint', () => {
+  const hidden = { getBoundingClientRect: () => ({ width: 0, height: 0 }) };
+  const visible = { getBoundingClientRect: () => ({ width: 320, height: 280 }) };
+  const hiddenMap = {
+    getCanvas: () => ({ getBoundingClientRect: () => ({ width: 0, height: 0 }) }),
+    getStyle: () => ({ sources: { parcels: { type: 'geojson' } }, layers: [{ id: 'parcels', source: 'parcels' }] }),
+    queryRenderedFeatures: () => [{ id: 'hidden-feature' }],
+  };
+  const install = (nodes) => {
+    globalThis.window = { __galleryHealthMaps: [hiddenMap] };
+    globalThis.document = {
+      querySelectorAll: (selector) => (selector.startsWith('.leaflet-overlay') ? [] : nodes),
+    };
+  };
+  try {
+    install([hidden, visible]);
+    assert.equal(countLaidOut(MAP_CONTAINER_SELECTOR), 1);
+    assert.deepEqual(renderedMapEvidence().maps, []);
+    assert.equal(renderedMapEvidence().painted, false);
+    install([hidden]);
+    assert.equal(countLaidOut(MAP_CONTAINER_SELECTOR), 0);
+    assert.deepEqual(renderedMapEvidence().maps, []);
+    assert.equal(renderedMapEvidence().painted, false);
+  } finally { delete globalThis.window; delete globalThis.document; }
+});
+
+test('functions sent into the page do not call module helpers', () => {
+  const hidden = { getBoundingClientRect: () => ({ width: 0, height: 0 }) };
+  const visible = { getBoundingClientRect: () => ({ width: 320, height: 280 }) };
+  globalThis.document = {
+    querySelectorAll: (selector) => (selector.startsWith('.leaflet-overlay') ? [] : [hidden, visible]),
+  };
+  globalThis.window = { __galleryHealthMaps: [] };
+  try {
+    const count = new Function(`return (${countLaidOut})`)();
+    assert.equal(count(MAP_CONTAINER_SELECTOR), 1);
+    const evidence = new Function(`return (${renderedMapEvidence})`)();
+    assert.equal(evidence().painted, false);
+    assert.equal('containers' in evidence(), false);
   } finally { delete globalThis.window; delete globalThis.document; }
 });
 
