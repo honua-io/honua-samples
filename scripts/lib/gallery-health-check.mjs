@@ -22,7 +22,7 @@ export async function checkGalleryPage(context, entry, { directory, id, timeout 
     // Source-only cards can redirect to repository documentation. Verify that
     // destination resolves, without treating the external site's navigation as demo links.
     result.links = new URL(page.url()).origin === new URL(entry.url).origin
-      ? await checkLinks(page, context.request, linkCache) : 0;
+      ? await checkLinks(page, context.request, linkCache, result) : 0;
     if (errors.length) throw new Error(`Console/page errors: ${errors.join('; ')}`);
     result.ok = true;
   } catch (error) {
@@ -53,11 +53,12 @@ async function waitForMaps(page, { required, timeout }) {
   throw new Error(`Map never painted application features: ${JSON.stringify(evidence)}`);
 }
 
-async function checkLinks(page, request, cache) {
+async function checkLinks(page, request, cache, result = {}) {
   const links = (await Promise.all(page.frames().map((frame) => frame.locator('a[href]')
     .evaluateAll((nodes) => nodes.map((node) => node.href))))).flat();
   const urls = links.filter((url) => /^https?:/.test(url)).map((url) => { const target = new URL(url); target.hash = ''; return target.href; });
   const broken = [];
+  const unverified = [];
   // Bound concurrency so a page with hundreds of source links cannot burst a host.
   const pending = [...new Set(urls)];
   const deadline = Date.now() + 45_000;
@@ -65,23 +66,48 @@ async function checkLinks(page, request, cache) {
     while (pending.length) {
       const url = pending.shift();
       if (Date.now() >= deadline) { broken.push(`${url}: link-check deadline exceeded`); continue; }
-      if (!cache.has(url)) cache.set(url, resolveLink(request, url));
+      // After one persistent rate limit, stop requesting that host for the rest of the run.
+      const limited = `rate-limited:${new URL(url).host}`;
+      if (!cache.has(url)) cache.set(url, cache.has(limited) ? Promise.resolve(`${UNVERIFIED}HTTP 429 (host rate limited)`) : resolveLink(request, url));
       const status = await cache.get(url);
-      if (status !== 'ok') broken.push(`${url}: ${status}`);
+      if (status === `${UNVERIFIED}HTTP 429`) cache.set(limited, true);
+      if (status.startsWith(UNVERIFIED)) unverified.push(`${url}: ${status.slice(UNVERIFIED.length)}`);
+      else if (status !== 'ok') broken.push(`${url}: ${status}`);
     }
   }));
+  if (unverified.length) result.unverifiedLinks = unverified;
   if (broken.length) throw new Error(`Broken links: ${broken.join('; ')}`);
   return [...new Set(urls)].length;
 }
 
-export async function resolveLink(request, url) {
+// A rate limit (429) or an outside site's bot wall (403) says nothing about
+// whether the link exists: report it as unverified instead of broken. A 403
+// from Honua's own hosts stays a failure.
+export const UNVERIFIED = 'unverified: ';
+const FIRST_PARTY = (hostname) => hostname === 'honua.io' || hostname.endsWith('.honua.io');
+
+function retryDelayMs(response) {
+  const seconds = Number(response.headers()['retry-after']);
+  return Number.isFinite(seconds) && seconds >= 0 ? Math.min(seconds * 1000, 5_000) : 3_000;
+}
+
+export async function resolveLink(request, url, { wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = {}) {
   try {
     let response = await request.head(url, { timeout: 15_000 });
-    if ([404, 405, 501].includes(response.status())) {
+    if ([403, 404, 405, 501].includes(response.status())) {
       await response.dispose();
       response = await request.get(url, { timeout: 15_000 });
     }
-    const status = response.ok() ? 'ok' : `HTTP ${response.status()}`;
+    if (response.status() === 429) {
+      const delay = retryDelayMs(response);
+      await response.dispose();
+      await wait(delay);
+      response = await request.get(url, { timeout: 15_000 });
+    }
+    const code = response.status();
+    const status = response.ok() ? 'ok'
+      : code === 429 || (code === 403 && !FIRST_PARTY(new URL(url).hostname)) ? `${UNVERIFIED}HTTP ${code}`
+        : `HTTP ${code}`;
     await response.dispose();
     return status;
   } catch (error) { return error.message; }

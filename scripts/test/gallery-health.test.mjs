@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import reportHealth from '../../.github/scripts/report-gallery-health.cjs';
-import { resolveLink } from '../lib/gallery-health-check.mjs';
+import { resolveLink, UNVERIFIED } from '../lib/gallery-health-check.mjs';
 import { countLaidOut, MAP_CONTAINER_SELECTOR, renderedMapEvidence } from '../lib/gallery-health-map.mjs';
 
 test('loaded source features and basemap pixels cannot substitute for painted application features', () => {
@@ -108,7 +108,7 @@ test('nightly reporter reuses one issue, closes on recovery and reopens on incom
   }
 });
 
-for (const headStatus of [404, 405, 501]) {
+for (const headStatus of [403, 404, 405, 501]) {
   for (const getStatus of [200, 404, 500]) {
     test(`link check resolves HEAD ${headStatus} through GET ${getStatus}`, async () => {
       const calls = [];
@@ -126,7 +126,7 @@ for (const headStatus of [404, 405, 501]) {
   }
 }
 
-for (const status of [200, 401, 403, 429, 500]) {
+for (const status of [200, 401, 500]) {
   test(`link check preserves HEAD ${status} without a GET retry`, async () => {
     const request = {
       head: async () => ({ status: () => status, ok: () => status === 200, dispose: async () => {} }),
@@ -135,6 +135,34 @@ for (const status of [200, 401, 403, 429, 500]) {
     assert.equal(await resolveLink(request, 'https://example.org/download'), status === 200 ? 'ok' : `HTTP ${status}`);
   });
 }
+
+const fixed = (status, headers = {}) => ({ status: () => status, ok: () => status === 200, headers: () => headers, dispose: async () => {} });
+
+test('an outside bot wall (403 on HEAD and GET) is unverified, not broken', async () => {
+  const request = { head: async () => fixed(403), get: async () => fixed(403) };
+  assert.equal(await resolveLink(request, 'https://www.npmjs.com/package/x'), `${UNVERIFIED}HTTP 403`);
+});
+
+test('a 403 from a Honua host stays a broken link', async () => {
+  for (const url of ['https://honua.io/demo.html', 'https://samples.honua.io/x/']) {
+    const request = { head: async () => fixed(403), get: async () => fixed(403) };
+    assert.equal(await resolveLink(request, url), 'HTTP 403');
+  }
+});
+
+test('a rate limit waits for Retry-After (capped) and retries once with GET', async () => {
+  const waits = [];
+  let gets = 0;
+  const request = { head: async () => fixed(429, { 'retry-after': '120' }), get: async () => fixed(++gets === 1 ? 200 : 500) };
+  assert.equal(await resolveLink(request, 'https://github.com/o/r/blob/x', { wait: async (ms) => waits.push(ms) }), 'ok');
+  assert.deepEqual(waits, [5_000]);
+});
+
+test('a rate limit that persists is unverified, and a 404 after the wait is broken', async () => {
+  const wait = async () => {};
+  assert.equal(await resolveLink({ head: async () => fixed(429), get: async () => fixed(429) }, 'https://github.com/o/r', { wait }), `${UNVERIFIED}HTTP 429`);
+  assert.equal(await resolveLink({ head: async () => fixed(429), get: async () => fixed(404) }, 'https://github.com/o/r', { wait }), 'HTTP 404');
+});
 
 test('GET transport errors remain link failures', async () => {
   const request = {
