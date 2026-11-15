@@ -107,8 +107,16 @@ jobs:
       - name: Run active samples
         run: node scripts/run-samples.mjs --edition ${{ steps.edition.outputs.edition }}
 
+      - name: Install nightly catalog exporters
+        if: ${{ !cancelled() && github.event_name == 'schedule' }}
+        run: |
+          python3 -m venv artifacts/catalog-python
+          artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+
       - name: Verify nightly signed-out gallery theme journeys
         if: ${{ !cancelled() && github.event_name == 'schedule' }}
+        env:
+          HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: |
           node scripts/state-local/build-display-site.mjs
           node scripts/build-gallery.mjs --check
