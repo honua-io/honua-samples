@@ -520,7 +520,7 @@ try {
   const tok = (n) => HM.cssVar(n);
   const fmt = (n) => Number(n).toLocaleString("en-US");
   const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
-  const BY = Object.fromEntries(D.samples.map((s) => [s.id, s]));
+  const BY = Object.assign(Object.create(null), Object.fromEntries(D.samples.map((s) => [s.id, s])));
   const tpl = (id) => document.getElementById("T-" + id).textContent.replace("</scr@@ipt>", "</" + "script>");
   const fill = (text, vals) => text.replace(/@@(\w+)@@/g, (m, k) => (k in vals ? vals[k] : m));
   const jsStr = (v) => String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
