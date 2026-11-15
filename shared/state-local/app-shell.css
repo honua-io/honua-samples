@@ -91,9 +91,13 @@ body.app-shell {
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
   .app-property #map, .app-emergency #map { height: auto; order: -1; }
-  .app-emergency .layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); }
-  .app-emergency #map { grid-column: 1 / -1; }
+  body.app-emergency { height: auto; overflow: auto; }
+  .app-emergency .layout { flex: none; grid-template-rows: auto; overflow: visible; }
+  .app-emergency #map { grid-column: 1 / -1; height: 60vh; min-height: 320px; }
   .app-emergency .col { overflow: auto; }
+  .app-emergency .xbanner, .app-emergency .demostrip,
+  .app-emergency .statusbar { max-height: none; overflow: visible; }
+  .app-emergency .statusbar { position: static; }
   .app-requests .page, .app-works .pw-main { padding: 10px; }
   .department-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
   .app-requests .ph, .app-works .pagehead { flex-shrink: 0; gap: 8px; margin-bottom: 10px; }
