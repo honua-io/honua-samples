@@ -45,7 +45,12 @@ file, and exposes its manifest and labelled exports. The download is an optimiza
 the source pipeline above regenerates the data without a private dependency. Upstream
 changes yield new hashes and must be reviewed before updating the release lock.
 
+The build reads the catalog with pyarrow; create its environment once (see `CATALOG.md`).
+The build uses `artifacts/catalog-python` automatically, or `HONUA_CATALOG_PYTHON` when set.
+
 ```sh
+python3 -m venv artifacts/catalog-python
+artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
 node scripts/state-local/build-display-site.mjs
 node scripts/smoke-state-local-display.mjs
 ```

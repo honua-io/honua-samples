@@ -1,4 +1,5 @@
 import { cp, mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { build } from 'esbuild';
@@ -23,8 +24,16 @@ export async function buildApprovedDemos({ root, output, lock }) {
     outfile: path.join(shared, 'county-publication.mjs'), bundle: true, format: 'esm', platform: 'browser', minify: true });
   const built = path.join(root, 'artifacts/approved-pages');
   const catalog = path.join(output, 'data/catalog');
-  execFileSync(process.env.HONUA_CATALOG_PYTHON || 'python3',
-    [path.join(root, 'scripts/state-local/approved/catalog.py'), directory, catalog], { stdio: 'inherit' });
+  // catalog.py needs pyarrow; prefer the venv CATALOG.md creates over a bare system python3.
+  const catalogVenv = path.join(root, 'artifacts/catalog-python/bin/python');
+  const catalogPython = process.env.HONUA_CATALOG_PYTHON || (existsSync(catalogVenv) ? catalogVenv : 'python3');
+  try {
+    execFileSync(catalogPython, [path.join(root, 'scripts/state-local/approved/catalog.py'), directory, catalog], { stdio: 'inherit' });
+  } catch (error) {
+    if (catalogPython !== 'python3') throw error;
+    throw new Error(`catalog.py failed with the system python3. Create the catalog environment first (scripts/state-local/approved/CATALOG.md): `
+      + 'python3 -m venv artifacts/catalog-python && artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt', { cause: error });
+  }
   execFileSync('python3', [path.join(root, 'scripts/state-local/approved/build.py'), directory, built,
     ...pages.map(([file]) => file)], { stdio: 'inherit', env: { ...process.env, HONUA_CATALOG_DATA: catalog, HONUA_ISLAND_DATA: path.join(output, 'data/island'),
       HONUA_ISLAND_POINT_LAYERS: islandPointLayers.join(','), HONUA_PAGE_PLACEHOLDERS: JSON.stringify(PAGE_PLACEHOLDERS) } });

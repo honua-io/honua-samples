@@ -26,7 +26,12 @@ or execution evidence belongs in git.
 
 Build and check the published routes:
 
+The build reads the catalog with pyarrow; create its environment once (see `approved/CATALOG.md`).
+The build uses `artifacts/catalog-python` automatically, or `HONUA_CATALOG_PYTHON` when set.
+
 ```sh
+python3 -m venv artifacts/catalog-python
+artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
 node scripts/state-local/build-display-site.mjs
 node scripts/build-gallery.mjs --check
 npm ci

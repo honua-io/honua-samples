@@ -2,18 +2,20 @@
    The island adapter supplies native archives and the street basemap. */
 (function () {
   const HD = (window.HD = window.HD || {});
-  function decLine(a) {
+  function decLine(a, scale) {
     const out = []; let x = 0, y = 0;
-    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; out.push([x / 1e5, y / 1e5]); }
+    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; out.push([x / scale, y / scale]); }
     return out;
   }
   function decode(c) {
     if (!c || c.type === "FeatureCollection") return c;
+    // Compact collections carry "s" (decimal places) only when a shape needed more than 1e5.
+    const scale = 10 ** (c.s || 5), line = (a) => decLine(a, scale);
     const feats = c.p.map((vals, i) => {
       const props = {}; c.k.forEach((k, j) => (props[k] = vals[j]));
       const g = c.g[i]; let geometry;
-      if (c.t === "poly") geometry = g.length === 1 ? { type: "Polygon", coordinates: g[0].map(decLine) } : { type: "MultiPolygon", coordinates: g.map((p) => p.map(decLine)) };
-      else geometry = g.length === 1 ? { type: "LineString", coordinates: decLine(g[0]) } : { type: "MultiLineString", coordinates: g.map(decLine) };
+      if (c.t === "poly") geometry = g.length === 1 ? { type: "Polygon", coordinates: g[0].map(line) } : { type: "MultiPolygon", coordinates: g.map((p) => p.map(line)) };
+      else geometry = g.length === 1 ? { type: "LineString", coordinates: line(g[0]) } : { type: "MultiLineString", coordinates: g.map(line) };
       return { type: "Feature", id: props.id != null ? props.id : i, properties: props, geometry };
     });
     return { type: "FeatureCollection", features: feats };
