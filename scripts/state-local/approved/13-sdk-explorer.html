@@ -974,6 +974,7 @@ try {
   }
   $("#copyBtn").addEventListener("click", (e) => { const f = currentFiles()[state.file]; if (f) copyText(f.code, e.currentTarget); });
   const copyFeedback = new WeakMap();
+  let latestCopyButton;
   function resetCopyFeedback(btn) {
     const feedback = copyFeedback.get(btn);
     if (!feedback) return;
@@ -983,12 +984,13 @@ try {
     copyFeedback.delete(btn);
   }
   function copyText(text, btn) {
-    resetCopyFeedback(btn);
+    if (latestCopyButton) resetCopyFeedback(latestCopyButton);
+    latestCopyButton = btn;
     const label = btn.querySelector("span");
     const feedback = { label, text: label?.textContent, title: btn.title };
     copyFeedback.set(btn, feedback);
     const source = btn.closest(".snip") || $("#code");
-    const current = () => copyFeedback.get(btn) === feedback;
+    const current = () => latestCopyButton === btn && copyFeedback.get(btn) === feedback;
     const visibleSource = () => source.isConnected && source.getClientRects().length &&
       (btn.closest(".snip") ? source.dataset.text : currentFiles()[state.file]?.code) === text;
     const done = (ok) => {
