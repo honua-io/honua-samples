@@ -95,16 +95,29 @@
     setTheme(theme());
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountToggle); else mountToggle();
+  function unavailableMap(el, message) {
+    const notice = document.createElement("p");
+    notice.style.padding = "16px";
+    notice.setAttribute("role", "status");
+    notice.textContent = message;
+    el.replaceChildren(notice);
+    return null;
+  }
   function create(el, opts) {
     opts = opts || {};
-    if (!window.maplibregl || !window.pmtiles) { el.innerHTML = '<p style="padding:16px">Map library could not load. Connect to the internet to view the interactive map.</p>'; return null; }
+    if (!window.maplibregl || !window.pmtiles) return unavailableMap(el, "Map library could not load. Connect to the internet to view the interactive map.");
     HI.register();
-    const map = new maplibregl.Map({
-      container: el, attributionControl: false, maxBounds: opts.maxBounds || HI.bounds, dragRotate: false, pitchWithRotate: false, maxZoom: 19, minZoom: 8, hash: opts.interactive !== false && !opts.cooperative ? "map" : false,
-      style: { version: 8, glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": cssVar("--map-water", "#c9dfe8") } }] },
-      bounds: opts.bounds || VIEW[opts.view || "core"], fitBoundsOptions: { padding: opts.padding || 20 },
-      interactive: opts.interactive !== false, cooperativeGestures: !!opts.cooperative,
-    });
+    let map;
+    try {
+      map = new maplibregl.Map({
+        container: el, attributionControl: false, maxBounds: opts.maxBounds || HI.bounds, dragRotate: false, pitchWithRotate: false, maxZoom: 19, minZoom: 8, hash: opts.interactive !== false && !opts.cooperative ? "map" : false,
+        style: { version: 8, glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": cssVar("--map-water", "#c9dfe8") } }] },
+        bounds: opts.bounds || VIEW[opts.view || "core"], fitBoundsOptions: { padding: opts.padding || 20 },
+        interactive: opts.interactive !== false, cooperativeGestures: !!opts.cooperative,
+      });
+    } catch {
+      return unavailableMap(el, "Interactive map unavailable in this browser. Try a browser with WebGL enabled.");
+    }
     maps.push(map);
     // Containers that size after first paint (grid rows, fonts, embedded frames) leave the canvas short; follow the container.
     const fitBounds = opts.bounds || VIEW[opts.view || "core"];
