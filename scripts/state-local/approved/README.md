@@ -50,6 +50,12 @@ node scripts/smoke-state-local-display.mjs
 Importing these sources into department folders uses the separate Maui import pipeline;
 these snapshot pages do not claim to have completed that live-server journey.
 
+Public Works' header Export downloads fictional assets in the inspections view and
+the filtered published county records in Capital projects. The culvert shortlist
+CSV retains its demo planning estimates, parcel-count basis and exercise labels.
+Real NBI bridges show only the last inspection month supplied by the snapshot;
+earlier inspection history is unavailable.
+
 ## Linked 311 browser demo
 
 The expandable 311 demo links a fictional resident report (location, category and optional

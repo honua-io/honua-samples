@@ -1,4 +1,5 @@
 import { verifyRequestLoop } from './lib/verify-request-loop.mjs';
+import { verifyPublicWorksExports } from './lib/verify-public-works-exports.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
@@ -90,8 +91,9 @@ try {
   await page.click('#approvePlan');
   await expect(page.locator('#approvePlan')).toBeDisabled();
   await expect(page.locator('#approvePlan')).toContainText('Demo approval');
+  await verifyPublicWorksExports(page);
   assert.deepEqual(errors, []);
-  console.log('PASS Public Works: ranked plan, work-order board/list and scripted approval');
+  console.log('PASS Public Works: ranked plan, work-order board/list, scripted approval and labelled asset/shortlist/filtered capital exports');
 
   await open('property');
   await expect(page.locator('#pTitle')).toContainText('TMK');

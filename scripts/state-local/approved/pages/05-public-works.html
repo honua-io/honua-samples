@@ -110,7 +110,7 @@
     <div class="row wrap">
       <span class="chip ok" title="Synthetic asset inventory; download the labelled exercise data"><svg class="ico" style="width:13px;height:13px"><use href="#i-globe"/></svg>Demo catalog preview</span>
       <span class="chip" title="Illustrative integration; no external system is connected"><svg class="ico" style="width:13px;height:13px"><use href="#i-refresh"/></svg>EAM sync · preview</span>
-      <a class="btn" href="#"><svg class="ico"><use href="#i-download"/></svg>Export</a>
+      <a class="btn" href="#" id="publicWorksExport" title="Export demo assets, or filtered county projects in Capital projects"><svg class="ico"><use href="#i-download"/></svg>Export</a>
       <a class="btn primary" href="#"><svg class="ico"><use href="#i-plus"/></svg>New work order</a>
     </div>
   </div>
@@ -223,7 +223,7 @@
           <div class="tbl-scroll" style="margin-top:8px"><table class="tbl" id="capTbl"><thead><tr><th>#</th><th>Culvert</th><th class="r">Requests</th><th class="r">Parcels</th><th class="r">Est. cost <span class="tag-demo">demo</span></th></tr></thead><tbody></tbody></table></div>
           <p class="faint" style="font-size:12px;margin-top:6px" id="capNote"></p>
           <div class="row wrap" style="margin-top:10px">
-            <button class="btn sm" type="button"><svg class="ico"><use href="#i-download"/></svg>Export CSV</button>
+            <button class="btn sm" type="button" id="culvertExport"><svg class="ico"><use href="#i-download"/></svg>Export CSV</button>
             <button class="btn sm" type="button"><svg class="ico"><use href="#i-plus"/></svg>Add to CIP draft</button>
             <span class="faint" style="font-size:12px">Adding to the capital plan draft needs one approval.</span>
           </div>
@@ -274,7 +274,8 @@
 
 {{DATA land,roads,contours,streams,waterbodies,zoning,dfirm,tsunami,bridges,demo.assets,demo.workorders,demo.requests,demo.now,05-culvert-parcels}}
 {{MAPJS}}
-<script>
+<script type="module">
+import { mountPublicWorksExports } from './public-works-export.mjs';
 (() => {
   const NOW = new Date(HD.demo.now);
   const assets = HD.demo.assets, wos = HD.demo.workorders;
@@ -353,6 +354,7 @@
     return { a, reqs, parcels: PC[a.id] || 0, score: (4 - a.cond) * 3 + reqs.length * 2 + (PC[a.id] || 0) / 60 };
   }).sort((x, y) => y.score - x.score).slice(0, 5);
   const poorN = cand.filter((c) => c.a.cond <= 2).length;
+  mountPublicWorksExports({ assets, candidates: cand, costs: COST, actions: ACTION });
   document.querySelector("#capTbl tbody").innerHTML = cand.map((c, i) => `<tr><td><span class="rank">${i + 1}</span></td><td><b>${c.a.id}</b> <span class="chip ${c.a.cond <= 2 ? "danger" : "warn"}" style="height:18px">${c.a.cond} · ${COND[c.a.cond][0]}</span><span class="id">${c.a.street} · ${ACTION[c.a.cond]}</span><div class="cites" style="margin-top:2px"><button class="cite" data-asset="${c.a.id}">assets/${c.a.id}</button> ${c.reqs.slice(0, 2).map((r) => `<button class="cite" data-req="${r.id}">${r.id}</button>`).join(" ")}</div></td><td class="r num">${c.reqs.length}</td><td class="r num">${c.parcels}</td><td class="r num">${HM.money(COST[c.a.cond])}</td></tr>`).join("");
   document.getElementById("capNote").textContent = `${poorN} culverts are rated poor or failed; the next ${cand.length - poorN} are fair and listed to watch. Parcel counts: Maui County Parcels layer, within 300 m in this verified parcel snapshot. Costs are demo planning estimates.`;
 
@@ -443,7 +445,7 @@
       <div class="nbi"><div><div class="v">${r(p.deck)}</div><div class="l">Deck</div></div><div><div class="v">${r(p.sup)}</div><div class="l">Superstructure</div></div><div><div class="v">${r(p.sub)}</div><div class="l">Substructure</div></div><div><div class="v">${r(p.culv)}</div><div class="l">Culvert</div></div></div>
       <dl class="dl" style="margin-top:14px"><dt>Lowest rating</dt><dd>${p.low}</dd><dt>Last NBI inspection</dt><dd>${insDate}</dd><dt>Location</dt><dd>${p.loc}</dd><dt>Year built</dt><dd>${p.built}</dd><dt>Average daily traffic</dt><dd class="num">${p.adt.toLocaleString()}</dd></dl>
       <p class="faint" style="font-size:12px;margin-top:12px">Source: National Bridge Inventory via Hawaii Statewide GIS Program, layer Infrastructure/9.</p>`;
-    document.getElementById("ap2").innerHTML = `<ol class="tl"><li class="ok"><time>${insDate} · State DOT bridge inspection</time>Routine NBI inspection, lowest rating ${p.low}</li><li><time>24 months earlier</time>Routine NBI inspection</li></ol>`;
+    document.getElementById("ap2").innerHTML = `<ol class="tl"><li class="ok"><time>${insDate} · Last NBI inspection</time>Inspection month recorded in the source snapshot.</li></ol><p class="muted">Earlier inspection history is not supplied by this source.</p>`;
     document.getElementById("aLinkedN").textContent = 0;
     document.getElementById("ap3").innerHTML = '<p class="muted">No open requests or work orders.</p>';
     map.getSource("sel").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: f.geometry }] });
