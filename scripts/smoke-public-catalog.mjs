@@ -77,7 +77,9 @@ try {
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
-      await page.goto(`${baseUrl}/state-local/catalog/`);
+      await page.goto(`${baseUrl}/state-local/`);
+      await page.getByRole('link', { name: 'Snapshot catalogue' }).click();
+      await expect(page).toHaveURL(`${baseUrl}/state-local/catalog/`);
       assert.equal(await page.locator('html').getAttribute('data-theme'), colorScheme);
       await checkSearch(page);
       await checkDataset(page, baseUrl);
