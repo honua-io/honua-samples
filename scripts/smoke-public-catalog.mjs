@@ -4,6 +4,18 @@ import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
+async function checkSearchLayout(page) {
+  for (const fontSize of ['16px', '32px']) {
+    await page.locator('html').evaluate((element, size) => { element.style.fontSize = size; }, fontSize);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true,
+      `${page.viewportSize().width}px / ${fontSize}: search page overflows`);
+    const button = await page.getByRole('button', { name: 'Search', exact: true }).boundingBox();
+    assert.ok(button && button.x >= 0 && button.x + button.width <= page.viewportSize().width,
+      'Search button must fit without horizontal scrolling');
+  }
+  await page.locator('html').evaluate((element) => { element.style.fontSize = ''; });
+}
+
 async function checkSearch(page) {
   await expect(page.locator('#resN')).toHaveText('16');
   await page.locator('#q').fill('show me flood data');
@@ -70,7 +82,7 @@ const server = process.env.CATALOG_BASE_URL ? null : await startStaticServer({ r
 const baseUrl = process.env.CATALOG_BASE_URL?.replace(/\/+$/, '') ?? server.url;
 const browser = await chromium.launch();
 try {
-  for (const width of [1440, 390]) {
+  for (const width of [1440, 390, 320]) {
     for (const colorScheme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height: 1000 }, colorScheme, permissions: ['clipboard-read', 'clipboard-write'] });
       await context.addInitScript((theme) => localStorage.setItem('honua-theme', theme), colorScheme);
@@ -81,6 +93,7 @@ try {
       await page.getByRole('link', { name: 'Snapshot catalogue' }).click();
       await expect(page).toHaveURL(`${baseUrl}/state-local/catalog/`);
       assert.equal(await page.locator('html').getAttribute('data-theme'), colorScheme);
+      await checkSearchLayout(page);
       await checkSearch(page);
       await checkDataset(page, baseUrl);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${width}: horizontal overflow`);
