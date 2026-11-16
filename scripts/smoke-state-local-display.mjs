@@ -27,6 +27,8 @@ async function verifySnapshotLabels() {
   for (const route of ['', 'workbench', 'property', 'property/mobile', '311', 'public-works']) {
     const html = await (await fetch(`${server.url}/state-local/${route ? `${route}/` : ''}`)).text();
     assert.ok(html.includes(`snapshot ${snapshot}.`), `/state-local/${route} label names snapshot ${snapshot}`);
+    const stale = [...html.matchAll(/snapshot · updated (\d{4}-\d{2}-\d{2})/g)].filter((match) => match[1] !== snapshot);
+    assert.equal(stale.length, 0, `/state-local/${route} answer panel names snapshot ${snapshot}`);
   }
   console.log(`PASS snapshot labels name ${snapshot}`);
 }
