@@ -360,7 +360,13 @@
     fillPermits(p.t9, t); luStack(p);
     parcelBrowser?.refresh();
     updateShare(p.t9);
-    if (fly && map) map.fitBounds(HM.bbox(f.geometry), { padding: 160, maxZoom: 17.6, duration: 700 });
+    if (fly && map) {
+      const { clientWidth, clientHeight } = map.getContainer();
+      if (clientWidth > 0 && clientHeight > 0) {
+        const padding = Math.min(160, clientWidth / 4, clientHeight / 4);
+        map.fitBounds(HM.bbox(f.geometry), { padding, maxZoom: 17.6, duration: 700 });
+      }
+    }
   }
 
   map = HM.create(document.getElementById("map"), {
