@@ -82,7 +82,8 @@ node scripts/smoke-workbench-analysis.mjs
 
 The builder copies only referenced JSON artifacts after validating checksums
 and charts. Unreferenced files are excluded. Without the environment setting,
-previous analysis artifacts are removed. A live manifest can instead specify
+previous analysis artifacts are removed and the public manifest contains JSON `null`,
+so the panel can report availability without requesting a missing resource. A live manifest can instead specify
 public GET/POST requests; the browser omits credentials and requires HTTPS
 (localhost HTTP is allowed for verification). Server/CORS/entitlement errors
 are visible and never fall back to recordings.

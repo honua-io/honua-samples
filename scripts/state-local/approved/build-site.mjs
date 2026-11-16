@@ -23,9 +23,7 @@ export async function buildApprovedDemos({ root, output, lock }) {
     await cp(path.join(root, 'shared/state-local', file), path.join(shared, file));
   }
   await rm(path.join(output, 'data/analysis'), { recursive: true, force: true });
-  if (process.env.HONUA_WORKBENCH_ANALYSIS) {
-    await publishWorkbenchAnalysis(process.env.HONUA_WORKBENCH_ANALYSIS, path.join(output, 'data/analysis'));
-  }
+  await publishWorkbenchAnalysis(process.env.HONUA_WORKBENCH_ANALYSIS, path.join(output, 'data/analysis'));
   await build({ entryPoints: [path.join(root, 'shared/state-local/county-publication.mjs')],
     outfile: path.join(shared, 'county-publication.mjs'), bundle: true, format: 'esm', platform: 'browser', minify: true });
   const built = path.join(root, 'artifacts/approved-pages');

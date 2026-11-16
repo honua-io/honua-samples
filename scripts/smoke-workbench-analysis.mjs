@@ -59,6 +59,13 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/state-local/data/analysis/manifest.json', route => route.fulfill({ json: null }));
+    const unavailable = page.waitForResponse('**/state-local/data/analysis/manifest.json');
+    await page.goto(`${server.url}/state-local/workbench/`);
+    assert.equal((await unavailable).status(), 200);
+    await expect(page.locator('#serverAnalysis [role=status]')).toContainText('Server analysis is not published yet');
+    await expect(page.locator('#serverAnalysis [data-run]')).toBeDisabled();
+    await expect(page.locator('#serverAnalysis table')).toHaveCount(0);
     await page.route('**/state-local/data/analysis/*.json', async route => {
       const value = resources.get(new URL(route.request().url()).pathname.split('/').pop());
       await route.fulfill({ status: value ? 200 : 404, json: value ?? {} });

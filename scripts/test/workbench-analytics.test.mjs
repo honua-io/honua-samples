@@ -106,3 +106,10 @@ test('H3 requires the installed cap and rejects silently capped responses', () =
   assert.throws(() => resultRows(h3, 'h3', 100), /reached the server cell limit/);
   assert.equal(resultRows({ ...h3, numberReturned: 99, features: h3.features.slice(1) }, 'h3', 100).length, 99);
 });
+
+test('unconfigured publication serves an explicit unavailable manifest without inventing results', async () => {
+  const destination = await mkdtemp(path.join(tmpdir(), 'analysis-unavailable-'));
+  await publishWorkbenchAnalysis(undefined, destination);
+  assert.deepEqual(await readdir(destination), ['manifest.json']);
+  assert.equal(JSON.parse(await readFile(path.join(destination, 'manifest.json'), 'utf8')), null);
+});

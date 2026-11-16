@@ -103,8 +103,10 @@ async function execute() {
 async function initialize() {
   try {
     const response = await fetch(publicUrl('/state-local/data/analysis/manifest.json', location.href), { credentials: 'omit' });
-    if (!response.ok) throw new Error('Server analysis is not published yet. No recorded or live results are available.');
-    manifest = validateManifest(await response.json());
+    if (!response.ok) throw new Error(`Server analysis manifest unavailable: HTTP ${response.status}.`);
+    const published = await response.json();
+    if (published === null) throw new Error('Server analysis is not published yet. No recorded or live results are available.');
+    manifest = validateManifest(published);
     for (const option of select.options) option.disabled = !manifest.operations[option.value];
     const first = Array.from(select.options).find((option) => !option.disabled);
     if (!first) throw new Error('No server operations have been published for this dataset.');
