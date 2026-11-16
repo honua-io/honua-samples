@@ -31,10 +31,11 @@ async function checkDataset(page, baseUrl) {
   await page.goto(`${baseUrl}/state-local/catalog/#ds=dfirm`);
   await expect(page.locator('#dsView')).toBeVisible();
   await expect(page.locator('#dsView')).toContainText('Public domain');
-  // The page shows the dataset's own retrieval date, so a regenerated pack needs no edit here.
+  // The page shows the catalog's snapshot date, so a regenerated pack needs no edit here.
   const catalog = await (await page.request.get(`${baseUrl}/state-local/data/catalog/catalog.json`)).json();
   const { updated } = catalog.datasets.find((dataset) => dataset.id === 'dfirm');
   assert.match(updated, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(!Number.isNaN(Date.parse(`${updated}T12:00`)), updated);
   const shown = new Date(`${updated}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   await expect(page.locator('#dsView')).toContainText(shown);
   await page.locator('#fullTable').click();
