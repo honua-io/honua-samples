@@ -16,6 +16,14 @@ async function checkSearchLayout(page) {
   await page.locator('html').evaluate((element) => { element.style.fontSize = ''; });
 }
 
+async function checkSkipLink(page, target) {
+  const hash = await page.evaluate(() => location.hash);
+  await page.locator('.skip-link').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator(target)).toBeFocused();
+  assert.equal(await page.evaluate(() => location.hash), hash);
+}
+
 async function checkSearch(page) {
   await expect(page.locator('#resN')).toHaveText('16');
   await page.locator('#q').fill('show me flood data');
@@ -44,6 +52,7 @@ async function checkDataset(page, baseUrl) {
   await expect(page.locator('#dsView')).toBeVisible();
   await expect(page.locator('#dsView')).toContainText('Public domain');
   await expect(page.locator('#dsView')).toContainText('Nov 15, 2026');
+  await checkSkipLink(page, '#dsView');
   await page.locator('#fullTable').click();
   await expect(page.locator('#tableRange')).toHaveText('1–50 of 97 rows');
   await expect(page.locator('#dsView tbody tr')).toHaveCount(50);
@@ -94,6 +103,7 @@ try {
       await expect(page).toHaveURL(`${baseUrl}/state-local/catalog/`);
       assert.equal(await page.locator('html').getAttribute('data-theme'), colorScheme);
       await checkSearchLayout(page);
+      await checkSkipLink(page, '#main');
       await checkSearch(page);
       await checkDataset(page, baseUrl);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${width}: horizontal overflow`);

@@ -92,7 +92,7 @@
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to results</a>
+<a class="skip-link" href="#main">Skip to content</a>
 {{ICONS}}
 <header class="site-h">
   <div class="in" data-theme-slot>
@@ -122,7 +122,7 @@
       <div class="topics" id="topics" aria-label="Topics"></div>
     </div>
   </section>
-  <main class="main" id="main">
+  <main class="main" id="main" tabindex="-1">
     <div class="search-grid">
       <aside class="facets" aria-label="Filters" id="facets"></aside>
       <section aria-labelledby="resH">
@@ -151,7 +151,7 @@
   </main>
 </div>
 
-<main class="main" id="dsView" hidden></main>
+<main class="main" id="dsView" tabindex="-1" hidden></main>
 
 <footer class="site-f" id="about">Maui open data hub demonstration. Public-source extracts are generalized snapshots, not legal boundaries or operational advice. Attribution and source vintage appear on each dataset. Fictional records are labelled DEMO DATA and are for evaluation only.</footer>
 
@@ -342,6 +342,12 @@
   }
   function showSearch() { activeDatasetId = null; if (dsMap) { dsMap.remove(); dsMap = null; } document.getElementById("dsView").hidden = true; document.getElementById("searchView").hidden = false; initExtMap(); }
   function route() { const m = location.hash.match(/ds=([\w]+)/); if (!routeInitialized || (m?.[1] || null) !== activeDatasetId) { routeInitialized = true; m ? showDataset(m[1]) : showSearch(); } }
+  document.querySelector(".skip-link").addEventListener("click", (event) => {
+    event.preventDefault();
+    const content = document.getElementById(activeDatasetId ? "dsView" : "main");
+    content.focus();
+    content.scrollIntoView();
+  });
   window.addEventListener("hashchange", route); route();
   document.addEventListener("honua:theme", () => { if (activeDatasetId) showDataset(activeDatasetId); else render(); });
 })();
