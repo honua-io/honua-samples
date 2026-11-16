@@ -105,14 +105,30 @@
     if (getComputedStyle(el).position === "static") el.style.position = "relative";
     el.prepend(notice); return null;
   }
+  function cameraHashParams(bounds) {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const camera = params.get("map");
+    if (camera === null) return params;
+    const parts = camera.split("/"), values = parts.map(Number);
+    const [zoom, lat, lng] = values;
+    if (parts.length >= 3 && parts.length <= 5 && parts.every((part) => part.trim() !== "")
+      && values.every(Number.isFinite) && zoom >= 8 && zoom <= 19
+      && lng >= bounds[0][0] && lng <= bounds[1][0] && lat >= bounds[0][1] && lat <= bounds[1][1]) return params;
+    params.delete("map");
+    const hash = params.toString();
+    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search + (hash ? "#" + hash : ""));
+    return params;
+  }
   function create(el, opts) {
     opts = opts || {};
     if (!window.maplibregl || !window.pmtiles) return unavailableMap(el, "Map library could not load. Connect to the internet to view the interactive map.");
     HI.register();
+    const hash = opts.interactive !== false && !opts.cooperative ? "map" : false;
+    if (hash) cameraHashParams(opts.maxBounds || HI.bounds);
     let map;
     try {
       map = new maplibregl.Map({
-        container: el, attributionControl: false, maxBounds: opts.maxBounds || HI.bounds, dragRotate: false, pitchWithRotate: false, maxZoom: 19, minZoom: 8, hash: opts.interactive !== false && !opts.cooperative ? "map" : false,
+        container: el, attributionControl: false, maxBounds: opts.maxBounds || HI.bounds, dragRotate: false, pitchWithRotate: false, maxZoom: 19, minZoom: 8, hash,
         style: { version: 8, glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": cssVar("--map-water", "#c9dfe8") } }] },
         bounds: opts.bounds || VIEW[opts.view || "core"], fitBoundsOptions: { padding: opts.padding || 20 },
         interactive: opts.interactive !== false, cooperativeGestures: !!opts.cooperative,
@@ -188,7 +204,7 @@
   function tmk(t9) { const s = String(t9).padStart(9, "0"); return `(${s[0]}) ${s[1]}-${s[2]}-${s.slice(3, 6)}:${s.slice(6)}`; }
   function money(n) { return n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US"); }
   function icon(name) { return `<svg class="ico" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
-  function hashParams() { return new URLSearchParams(location.hash.slice(1)); }
+  function hashParams() { return cameraHashParams(HI.bounds); }
   window.HM = { hashParams, themed, cssVar, setTheme, theme, restyle, maps, decode, get, points, create, add, overlays, toggle, bindToggles, label, bbox, streetNames, fitStreet, tmk, money, icon, VIEW, ZONE_GROUP, ZONE_COLOR };
 
   /* Tabs: [role=tablist] buttons with aria-controls */
