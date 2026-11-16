@@ -85,10 +85,11 @@ body.app-shell {
   .app-explorer .shead { max-height: 120px; flex-shrink: 0; overflow: auto; }
 }
 @media (max-width: 900px) {
-  .app-shell .appbar { padding-inline: 10px; gap: 8px; }
+  .app-shell .appbar { padding: 8px 10px; gap: 8px; flex-wrap: wrap; height: auto; min-height: 52px; }
   .app-shell .appbar .appnav { display: none; }
-  .app-shell .wordmark { flex: 1; }
-  .app-shell .wordmark small { white-space: normal; }
+  .app-shell .wordmark { flex: 1 0 auto; }
+  .app-shell .wordmark strong { flex-shrink: 0; }
+  .app-shell .wordmark small { display: none; }
   .app-property .layout, .app-emergency .layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
