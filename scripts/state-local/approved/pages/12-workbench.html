@@ -713,13 +713,14 @@
   }
   // history for Undo (the SDK's AnalyticsLinkCommit.undo() restores one commit; this keeps a stack)
   const HIST = [];
-  const snap = () => JSON.parse(JSON.stringify({ layer: S.layer, attr: S.attr, chartF: Object.fromEntries(Object.entries(S.chartF).map(([k, a]) => [k, { ...a, v: Array.isArray(a.v) ? a.v.map((x) => (x === Infinity ? 1e15 : x)) : a.v }])), spatial: S.spatial, time: S.time, charts: S.charts, sel: [...S.sel], q: lastQ, plan: lastPlan, prop: proposal }));
+  const snap = () => JSON.parse(JSON.stringify({ layer: S.layer, attr: S.attr, chartF: Object.fromEntries(Object.entries(S.chartF).map(([k, a]) => [k, { ...a, v: Array.isArray(a.v) ? a.v.map((x) => (x === Infinity ? 1e15 : x)) : a.v }])), spatial: S.spatial, time: S.time, charts: S.charts, sel: [...S.sel], tq: S.tq, sort: S.sort, selOnly: S.selOnly, q: lastQ, plan: lastPlan, prop: proposal }));
   function pushHist() { HIST.push(snap()); if (HIST.length > 12) HIST.shift(); updUndo(); }
   function updUndo() { const b = document.getElementById("nlqUndo"), n = document.getElementById("undoN"); b.disabled = !HIST.length; n.hidden = !HIST.length; n.textContent = HIST.length; b.title = HIST.length ? `Undo (${HIST.length} step${HIST.length > 1 ? "s" : ""})` : "Nothing to undo"; }
   document.getElementById("nlqUndo").addEventListener("click", () => {
     const h = HIST.pop(); if (!h) return;
     if (S.layer !== h.layer) setLayer(h.layer);
-    Object.assign(S, { attr: h.attr, chartF: h.chartF, spatial: h.spatial, time: h.time, charts: h.charts, sel: new Set(h.sel) });
+    Object.assign(S, { attr: h.attr, chartF: h.chartF, spatial: h.spatial, time: h.time, charts: h.charts, sel: new Set(h.sel), tq: h.tq, sort: h.sort, selOnly: h.selOnly });
+    document.getElementById("tq").value = S.tq;
     document.getElementById("nlqIn").value = h.q; lastPlan = h.plan; proposal = h.prop; lastQ = h.q; document.getElementById("nlqMiss").hidden = true; setTimeInputs(); refresh(); renderNL(); updUndo();
   });
   let lastPlan = null, proposal = null, lastQ = "";
@@ -817,7 +818,7 @@
     const is3d = document.getElementById("v3d").getAttribute("aria-pressed") === "true";
     const view = map ? { center: map.getCenter().toArray(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() }
       : is3d ? CAMERA_3D : { center: [(MAP_BOUNDS[0][0] + MAP_BOUNDS[1][0]) / 2, (MAP_BOUNDS[0][1] + MAP_BOUNDS[1][1]) / 2], zoom: 15, pitch: 0, bearing: 0 };
-    const state = { ...snap(), view, sort: S.sort, tq: S.tq, selOnly: S.selOnly, is3d }; delete state.plan; delete state.prop;
+    const state = { ...snap(), view, is3d }; delete state.plan; delete state.prop;
     const url = new URL(location.href); url.searchParams.delete("s"); url.hash = new URLSearchParams({ s: JSON.stringify(state) }).toString();
     document.getElementById("shareLink").textContent = url.href;
     document.getElementById("embedCode").textContent = `<iframe src="${url.href.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" width="100%" height="640" title="Maui analysis"></iframe>`;
