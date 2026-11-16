@@ -105,7 +105,7 @@
     <div class="grow">
       <div class="kicker">Highways Division · Wailuku-Kahului district · Monday, November 9</div>
       <h1>Storm drain and roadway assets</h1>
-      <p>Inspections, condition and work for 160 assets, kept in one spatial register that field crews, the work order board and the public catalog all read.</p>
+      <p>Inspections, condition and work for <span id="assetIntroCount">—</span> demonstration assets. The map also shows <span id="bridgeIntroCount">—</span> real countywide bridge records as a separate reference layer.</p>
     </div>
     <div class="row wrap">
       <span class="chip ok" title="Synthetic asset inventory; download the labelled exercise data"><svg class="ico" style="width:13px;height:13px"><use href="#i-globe"/></svg>Demo catalog preview</span>
@@ -157,8 +157,8 @@
     <a class="btn sm" href="#plan">Review plan</a>
   </div>
 
-  <div class="kpis" style="--k:5" aria-label="Asset summary">
-    <div class="kpi lead"><div class="v num" id="kAssets">160</div><div class="l">Assets in this district</div><div class="d"><span id="kMix">110 inlets · 18 culverts · 22 signals · 10 bridges</span></div></div>
+  <div class="kpis" style="--k:5" aria-label="Demonstration asset summary">
+    <div class="kpi lead"><div class="v num" id="kAssets">—</div><div class="l">Demo assets</div><div class="d"><span id="kMix">Loading demonstration inventory</span></div></div>
     <div class="kpi"><div class="v num" id="kPoor">—</div><div class="l">Poor or failed (1–2 of 5)</div><div class="d up-bad" id="kPoorD"></div></div>
     <div class="kpi"><div class="v num" id="kOpen">—</div><div class="l">Open work orders</div><div class="d" id="kOpenD"></div></div>
     <div class="kpi"><div class="v num" id="kDue">—</div><div class="l">Inspections overdue (&gt; 18 months)</div><div class="d" id="kDueD">Drainage inlets and culverts</div></div>
@@ -308,7 +308,13 @@
   }
   assets.forEach((a) => { a.flood = floodPolys.some((f) => inPoly(a.c, f.geometry)); });
 
-  // KPIs
+  // Operational KPIs describe the demonstration inventory; NBI bridges are separate.
+  document.getElementById("assetIntroCount").textContent = assets.length;
+  document.getElementById("bridgeIntroCount").textContent = HD.bridges.features.length;
+  document.getElementById("kAssets").textContent = assets.length;
+  const assetKinds = new Map();
+  for (const asset of assets) assetKinds.set(asset.kind, (assetKinds.get(asset.kind) || 0) + 1);
+  document.getElementById("kMix").textContent = [...assetKinds].map(([kind, count]) => `${count} ${kind.toLowerCase()}${count === 1 ? "" : "s"}`).join(" · ");
   const poor = assets.filter((a) => a.cond <= 2);
   document.getElementById("kPoor").textContent = poor.length;
   document.getElementById("kPoorD").textContent = `${poor.filter((a) => a.evac).length} inside the tsunami evacuation zone`;
