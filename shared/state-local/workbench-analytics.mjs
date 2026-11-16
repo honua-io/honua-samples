@@ -17,7 +17,7 @@ export function publicUrl(value, base) {
 export function validateRequest(request) {
   if (!request || !['GET', 'POST'].includes(request.method) || typeof request.url !== 'string') throw new Error('A public GET/POST server request is required');
   if (Object.keys(request).some((key) => !['method', 'url', 'body'].includes(key))) throw new Error('Public requests cannot contain headers or credentials');
-  publicUrl(request.url, 'https://analysis.invalid/');
+  publicUrl(request.url, 'https://demo.honua.io/');
   return request;
 }
 

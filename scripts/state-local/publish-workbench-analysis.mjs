@@ -11,7 +11,7 @@ export async function publishWorkbenchAnalysis(source, destination) {
     if (!/^[a-z0-9-]+\.json$/.test(name)) throw new Error('Analysis artifact names must be local JSON basenames');
     files.set(name, await readFile(path.join(source, name), 'utf8'));
   }
-  const base = 'https://analysis.invalid/';
+  const base = 'https://demo.honua.io/';
   for (const key of Object.keys(manifest.operations)) {
     if (!manifest.operations[key].recording) continue;
     const result = await runAnalysis(manifest, key, { base, fetcher: async (url) => {
