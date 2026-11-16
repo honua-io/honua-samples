@@ -66,7 +66,7 @@ export async function verifyAppShells(context, baseUrl) {
       await page.goto(`${baseUrl}/state-local/${route}/`);
       if (viewport.width <= 640 && phoneFlowRoutes.has(route)) await verifyDocumentFlow(page, viewport, phoneFlowRoutes.get(route));
       else {
-        const pageHeight = ['emergency', 'sdk-explorer'].includes(route) ? Math.max(800, viewport.height) : viewport.height;
+        const pageHeight = ['emergency', 'sdk-explorer', 'workbench'].includes(route) ? Math.max(800, viewport.height) : viewport.height;
         await verifyViewport(page, viewport, pageHeight);
       }
       console.log(`PASS app shell: ${route} ${viewport.width} ${theme}`);
