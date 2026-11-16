@@ -96,6 +96,24 @@ try {
   console.log('PASS 311 linked browser loop: desktop/mobile submission, photo, triage citation, assignment, status, CSV, reload and reset');
 
   await open('public-works');
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const inventory = await page.evaluate(() => ({
+      assets: HD.demo.assets.length,
+      bridges: HD.bridges.features.length,
+      inlets: HD.demo.assets.filter((asset) => asset.kind === 'Storm drain inlet').length,
+      culverts: HD.demo.assets.filter((asset) => asset.kind === 'Culvert').length,
+      signals: HD.demo.assets.filter((asset) => asset.kind === 'Traffic signal').length,
+    }));
+    await expect(page.locator('#kAssets')).toHaveText(String(inventory.assets));
+    await expect(page.locator('#assetIntroCount')).toHaveText(String(inventory.assets));
+    await expect(page.locator('#bridgeIntroCount')).toHaveText(String(inventory.bridges));
+    await expect(page.locator('#kMix')).toHaveText(`${inventory.inlets} storm drain inlets · ${inventory.culverts} culverts · ${inventory.signals} traffic signals`);
+    await expect(page.getByLabel('Demonstration asset summary', { exact: true })).toContainText('Demo assets');
+    await expect(page.locator('.pagehead')).toContainText('real countywide bridge records as a separate reference layer');
+    await expect(page.locator('#kMix')).not.toContainText(/bridge/i);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(page.locator('#planTbl tbody tr')).toHaveCount(12);
   await page.locator('[data-view="list"]').click();
   await expect(page.locator('#list')).toBeVisible();
