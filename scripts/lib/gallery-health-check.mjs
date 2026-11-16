@@ -5,7 +5,7 @@ export async function checkGalleryPage(context, entry, { directory, id, timeout 
   const page = await context.newPage();
   const errors = [];
   const result = { ...entry, ok: false, errors, screenshot: null };
-  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(describeConsoleError(message)); });
   page.on('pageerror', (error) => errors.push(error.message));
   try {
     await page.bringToFront();
@@ -37,6 +37,13 @@ export async function checkGalleryPage(context, entry, { directory, id, timeout 
       .catch((failure) => { result.screenshotError = failure.message; });
   } finally { await page.close(); }
   return result;
+}
+
+// The browser's "Failed to load resource" text omits the address; the message location has it.
+export function describeConsoleError(message) {
+  const text = message.text();
+  const url = message.location()?.url;
+  return url && text.startsWith('Failed to load resource') ? `${text} (${url})` : text;
 }
 
 async function waitForMaps(page, { required, timeout }) {

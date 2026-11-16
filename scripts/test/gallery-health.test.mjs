@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import reportHealth from '../../.github/scripts/report-gallery-health.cjs';
-import { checkLinkUrls, createLinkCache, resolveLink, UNVERIFIED } from '../lib/gallery-health-check.mjs';
+import { checkLinkUrls, createLinkCache, describeConsoleError, resolveLink, UNVERIFIED } from '../lib/gallery-health-check.mjs';
 import { countLaidOut, MAP_CONTAINER_SELECTOR, renderedMapEvidence } from '../lib/gallery-health-map.mjs';
 
 test('loaded source features and basemap pixels cannot substitute for painted application features', () => {
@@ -299,4 +299,12 @@ test('a later page reading a settled delayed result is not excused', async () =>
   // The cached link frees its worker at once, so four fresh links start and one misses the budget.
   assert.deepEqual(links.broken, ['https://docs.example.org/e: link-check deadline exceeded']);
   assert.deepEqual(links.unverified, []);
+});
+
+test('a failed resource is reported with its address', () => {
+  const failed = 'Failed to load resource: the server responded with a status of 503 ()';
+  const message = (text, url) => ({ text: () => text, location: () => ({ url }) });
+  assert.equal(describeConsoleError(message(failed, 'https://demo.honua.io/tiles/1/0/0')), `${failed} (https://demo.honua.io/tiles/1/0/0)`);
+  assert.equal(describeConsoleError(message('TypeError: boom', 'https://honua.io/app.js')), 'TypeError: boom');
+  assert.equal(describeConsoleError(message(failed, '')), failed);
 });
