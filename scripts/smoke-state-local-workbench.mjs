@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
+import { verifyWorkbenchExports } from './lib/verify-workbench-exports.mjs';
 import { startSmokeSite } from './lib/smoke-site.mjs';
 
 const server = await startSmokeSite({ rootDir: path.resolve('site'), baseUrl: process.env.STATE_LOCAL_SMOKE_BASE_URL });
@@ -66,6 +67,7 @@ try {
   await page.goto(`${server.url}/state-local/`);
   await page.goto(`${server.url}/state-local/workbench/#s=${malicious}`);
   await expect(page.locator('[data-l="parcels"]')).toHaveAttribute('aria-pressed', 'true');
+  await verifyWorkbenchExports(page, server.url);
   assert.deepEqual(errors, []);
   console.log('PASS overview mini-maps; workbench chart filters, share round trip, sorted table, labelled GeoJSON and invalid-state fallback');
 } finally {
