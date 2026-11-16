@@ -4,6 +4,26 @@ import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
+async function checkSearchLayout(page) {
+  for (const fontSize of ['16px', '32px']) {
+    await page.locator('html').evaluate((element, size) => { element.style.fontSize = size; }, fontSize);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true,
+      `${page.viewportSize().width}px / ${fontSize}: search page overflows`);
+    const button = await page.getByRole('button', { name: 'Search', exact: true }).boundingBox();
+    assert.ok(button && button.x >= 0 && button.x + button.width <= page.viewportSize().width,
+      'Search button must fit without horizontal scrolling');
+  }
+  await page.locator('html').evaluate((element) => { element.style.fontSize = ''; });
+}
+
+async function checkSkipLink(page, target) {
+  const dataset = await page.evaluate(() => new URLSearchParams(location.hash.slice(1)).get('ds'));
+  await page.locator('.skip-link').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator(target)).toBeFocused();
+  assert.equal(await page.evaluate(() => new URLSearchParams(location.hash.slice(1)).get('ds')), dataset);
+}
+
 async function checkSearch(page) {
   await expect(page.locator('#resN')).toHaveText('16');
   await page.locator('#q').fill('show me flood data');
@@ -32,11 +52,19 @@ async function checkDataset(page, baseUrl) {
   await expect(page.locator('#dsView')).toBeVisible();
   await expect(page.locator('#dsView')).toContainText('Public domain');
   await expect(page.locator('#dsView')).toContainText('Nov 15, 2026');
+  await checkSkipLink(page, '#dsView');
   await page.locator('#fullTable').click();
   await expect(page.locator('#tableRange')).toHaveText('1–50 of 97 rows');
   await expect(page.locator('#dsView tbody tr')).toHaveCount(50);
   await page.locator('#fullTable').click();
   await expect(page.locator('#tableRange')).toHaveText('51–97 of 97 rows');
+  const rows = await page.locator('#tableRows').innerHTML();
+  for (let change = 0; change < 2; change++) {
+    await page.locator('.theme-toggle').click();
+    await expect(page.locator('#tableRange')).toHaveText('51–97 of 97 rows');
+    assert.equal(await page.locator('#tableRows').innerHTML(), rows);
+    await expect(page.locator('#fullTable')).toHaveText('Back to first rows');
+  }
   await page.evaluate(() => { location.hash += '&map=12/20.9/-156.4'; });
   await expect(page.locator('#tableRange')).toHaveText('51–97 of 97 rows');
   await page.locator('#jumpDownloads').click();
@@ -70,7 +98,7 @@ const server = process.env.CATALOG_BASE_URL ? null : await startStaticServer({ r
 const baseUrl = process.env.CATALOG_BASE_URL?.replace(/\/+$/, '') ?? server.url;
 const browser = await chromium.launch();
 try {
-  for (const width of [1440, 390]) {
+  for (const width of [1440, 390, 320]) {
     for (const colorScheme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height: 1000 }, colorScheme, permissions: ['clipboard-read', 'clipboard-write'] });
       await context.addInitScript((theme) => localStorage.setItem('honua-theme', theme), colorScheme);
@@ -81,6 +109,8 @@ try {
       await page.getByRole('link', { name: 'Snapshot catalogue' }).click();
       await expect(page).toHaveURL(`${baseUrl}/state-local/catalog/`);
       assert.equal(await page.locator('html').getAttribute('data-theme'), colorScheme);
+      await checkSearchLayout(page);
+      await checkSkipLink(page, '#main');
       await checkSearch(page);
       await checkDataset(page, baseUrl);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${width}: horizontal overflow`);

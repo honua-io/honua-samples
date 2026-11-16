@@ -20,7 +20,7 @@
   .hero h1 { font-size: 28px; letter-spacing: -0.025em; }
   .hero p { color: var(--c-text-2); margin-top: 4px; }
   .bigsearch { display: flex; gap: 8px; margin-top: 16px; max-width: 760px; }
-  .bigsearch .field { height: 44px; flex: 1; font-size: 15px; background: var(--c-surface); }
+  .bigsearch .field { height: 44px; flex: 1; min-width: 0; font-size: 15px; background: var(--c-surface); }
   .bigsearch .btn { height: 44px; padding: 0 20px; }
   .topics { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
   .topics button { border: 1px solid var(--c-border); background: var(--c-surface); border-radius: 999px; height: 28px; padding: 0 12px; font-size: 13px; color: var(--c-text-2); }
@@ -92,7 +92,7 @@
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to results</a>
+<a class="skip-link" href="#main">Skip to content</a>
 {{ICONS}}
 <header class="site-h">
   <div class="in" data-theme-slot>
@@ -122,7 +122,7 @@
       <div class="topics" id="topics" aria-label="Topics"></div>
     </div>
   </section>
-  <main class="main" id="main">
+  <main class="main" id="main" tabindex="-1">
     <div class="search-grid">
       <aside class="facets" aria-label="Filters" id="facets"></aside>
       <section aria-labelledby="resH">
@@ -151,7 +151,7 @@
   </main>
 </div>
 
-<main class="main" id="dsView" hidden></main>
+<main class="main" id="dsView" tabindex="-1" hidden></main>
 
 <footer class="site-f" id="about">Maui open data hub demonstration. Public-source extracts are generalized snapshots, not legal boundaries or operational advice. Attribution and source vintage appear on each dataset. Fictional records are labelled DEMO DATA and are for evaluation only.</footer>
 
@@ -330,20 +330,26 @@
       event.currentTarget.textContent = offset ? "Next 50 rows" : "Back to first rows";
     });
     if (dsMap) { dsMap.remove(); dsMap = null; }
-    const c = topicColor(d.topic);
+    const c = TOPIC_VAR[d.topic] || "--viz-1";
     dsMap = HM.create(document.getElementById("dsMap"), { bounds: [[d.bbox[0], d.bbox[1]], [d.bbox[2], d.bbox[3]]], padding: 24, roadLabels: false, onload: (m) => {
       HM.add(m, "ds", d.fc);
-      const fillC = d.id === "tsunami" ? ["match", ["get", "code"], 1, HM.cssVar("--hz-tsu"), 2, HM.cssVar("--hz-tsux"), HM.cssVar("--c-ok")] : c;
-      if (d.geom === "Polygon") { m.addLayer({ id: "ds-f", type: "fill", source: "ds", paint: { "fill-color": fillC, "fill-opacity": d.id === "parcels" ? 0.08 : d.id === "tsunami" ? ["match", ["get", "code"], 1, 0.32, 2, 0.2, 0.07] : 0.3 } }, "roads-casing"); m.addLayer({ id: "ds-l", type: "line", source: "ds", paint: { "line-color": fillC, "line-width": d.id === "parcels" ? 0.6 : 1.2 } }); }
-      else if (d.geom === "Line") m.addLayer({ id: "ds-l", type: "line", source: "ds", paint: { "line-color": c, "line-width": 2 } });
-      else m.addLayer({ id: "ds-p", type: "circle", source: "ds", paint: { "circle-color": c, "circle-radius": d.n > 100 ? 3.5 : 6, "circle-stroke-color": HM.cssVar("--map-pin-ring"), "circle-stroke-width": 1.5 } });
+      const fillC = d.id === "tsunami" ? ["match", ["get", "code"], 1, "--hz-tsu", 2, "--hz-tsux", "--c-ok"] : c;
+      if (d.geom === "Polygon") { HM.themed(m, { id: "ds-f", type: "fill", source: "ds", paint: { "fill-color": fillC, "fill-opacity": d.id === "parcels" ? 0.08 : d.id === "tsunami" ? ["match", ["get", "code"], 1, 0.32, 2, 0.2, 0.07] : 0.3 } }, "roads-casing"); HM.themed(m, { id: "ds-l", type: "line", source: "ds", paint: { "line-color": fillC, "line-width": d.id === "parcels" ? 0.6 : 1.2 } }); }
+      else if (d.geom === "Line") HM.themed(m, { id: "ds-l", type: "line", source: "ds", paint: { "line-color": c, "line-width": 2 } });
+      else HM.themed(m, { id: "ds-p", type: "circle", source: "ds", paint: { "circle-color": c, "circle-radius": d.n > 100 ? 3.5 : 6, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
     } });
     window.scrollTo(0, 0);
   }
   function showSearch() { activeDatasetId = null; if (dsMap) { dsMap.remove(); dsMap = null; } document.getElementById("dsView").hidden = true; document.getElementById("searchView").hidden = false; initExtMap(); }
   function route() { const m = location.hash.match(/ds=([\w]+)/); if (!routeInitialized || (m?.[1] || null) !== activeDatasetId) { routeInitialized = true; m ? showDataset(m[1]) : showSearch(); } }
+  document.querySelector(".skip-link").addEventListener("click", (event) => {
+    event.preventDefault();
+    const content = document.getElementById(activeDatasetId ? "dsView" : "main");
+    content.focus();
+    content.scrollIntoView();
+  });
   window.addEventListener("hashchange", route); route();
-  document.addEventListener("honua:theme", () => { if (activeDatasetId) showDataset(activeDatasetId); else render(); });
+  document.addEventListener("honua:theme", () => { if (!activeDatasetId) render(); });
 })();
 </script>
 </body>
