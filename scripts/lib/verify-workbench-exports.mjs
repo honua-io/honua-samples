@@ -31,7 +31,13 @@ async function checkLayer(page, url, layer) {
   await page.goto(`${url}/state-local/workbench/`);
   await page.locator(`[data-l="${layer}"]`).click();
   await expect(page.locator('#dt tbody tr[data-id]').first()).toBeVisible();
-  await page.locator(`#dt th[data-sort="${layer === 'parcels' ? 'tmk' : 'id'}"]`).click();
+  const heading = page.locator(`#dt th[data-sort="${layer === 'parcels' ? 'tmk' : 'id'}"]`);
+  await heading.focus();
+  for (const [key, direction] of [['Enter', 'ascending'], ['Space', 'descending'], ['Enter', 'ascending']]) {
+    await page.keyboard.press(key);
+    await expect(heading).toHaveAttribute('aria-sort', direction);
+    await expect(heading).toBeFocused();
+  }
   const full = JSON.parse(await downloadText(page, '#expGj')).features;
   const ids = full.map((f) => String(f.properties.id));
   assert.ok(ids.length > 250, 'Exports include rows beyond the rendered table cap');
@@ -46,8 +52,24 @@ async function checkLayer(page, url, layer) {
   assert.ok(all.lines.includes(searched.lines[1]), 'CSV search retains the original record values');
   assert.deepEqual(searched.features, [full[0]], 'Search preserves source geometry and properties');
   await page.locator('#tq').fill('');
-  await page.locator('#dt tbody tr[data-id]').first().click();
+  const rows = page.locator('#dt tbody tr[data-id]');
+  await page.locator('#dt th').last().focus();
+  await page.keyboard.press('Tab');
+  await expect(rows.nth(0)).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(rows.nth(0)).toHaveAttribute('aria-selected', 'true');
+  await expect(rows.nth(0)).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(rows.nth(1)).toBeFocused();
+  await page.keyboard.press('Shift+Space');
+  await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(rows.nth(1)).toBeFocused();
   await page.locator('#selOnly').click();
+  await checkExports(page, ids.slice(0, 2), layer);
+  await rows.nth(0).focus();
+  await page.keyboard.press('Space');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.nth(0)).toBeFocused();
   const selected = await checkExports(page, [firstId], layer);
   assert.deepEqual(selected, searched, 'Selected-only and searched exports contain the same record');
   await page.locator('#tq').fill('NO_MATCH_EXPORT_REGRESSION_72819');
@@ -62,5 +84,5 @@ export async function verifyWorkbenchExports(page, url) {
     await page.setViewportSize({ width, height: 1000 });
     for (const layer of ['requests', 'parcels']) await checkLayer(page, url, layer);
   }
-  console.log('PASS workbench CSV/GeoJSON: table search, selected-only, empty intersections, sorted full results and source geometry at 1440/390');
+  console.log('PASS workbench keyboard sorting/selection and CSV/GeoJSON: table search, selected-only, empty intersections, sorted full results and source geometry at 1440/390');
 }
