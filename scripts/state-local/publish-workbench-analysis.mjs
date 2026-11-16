@@ -4,6 +4,11 @@ import { runAnalysis, validateManifest } from '../../shared/state-local/workbenc
 
 // Publish only named, validated public artifacts. Never recursively copy an operator directory.
 export async function publishWorkbenchAnalysis(source, destination) {
+  if (!source) {
+    await mkdir(destination, { recursive: true });
+    await writeFile(path.join(destination, 'manifest.json'), 'null\n');
+    return;
+  }
   const manifest = validateManifest(JSON.parse(await readFile(path.join(source, 'manifest.json'), 'utf8')));
   const files = new Map();
   const names = Object.values(manifest.operations).flatMap(config => [config.recording, config.agentRecording].filter(Boolean));
