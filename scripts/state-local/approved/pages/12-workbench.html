@@ -376,7 +376,7 @@
     if (a.op === "not in") return `${a.f} NOT IN (${a.v.map(q).join(", ")})`;
     if (a.op === "between-date") return `${a.f} BETWEEN DATE('${a.v[0]}') AND DATE('${a.v[1]}')`;
     if (a.op === "between") return `${a.f} BETWEEN ${Math.round(a.v[0] * 1000) / 1000} AND ${Math.round(a.v[1] * 1000) / 1000}`;
-    if (a.op === "contains") return `${a.f} LIKE '%${a.v}%'`;
+    if (a.op === "contains") return `${a.f} LIKE ${q(`%${a.v}%`)}`;
     return `${a.f} ${a.op === "≠" ? "<>" : a.op === "≥" ? ">=" : a.op} ${isNaN(+a.v) || a.v === "" ? q(a.v) : +a.v}`;
   }
   function cqlText() {
@@ -431,6 +431,7 @@
     return rs;
   }
   function renderTable(rows) {
+    document.getElementById("selOnly").setAttribute("aria-pressed", String(S.selOnly));
     const L = LAYERS[S.layer], rs = tableRows(rows);
     const active = document.querySelector("#dt").contains(document.activeElement) ? document.activeElement : null;
     const focusedSort = active?.dataset.sort, focusedRow = active?.dataset.id;
@@ -454,7 +455,7 @@
     control.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: e.shiftKey, metaKey: e.metaKey }));
   });
   document.getElementById("tq").addEventListener("input", (e) => { S.tq = e.target.value; renderTable(filtered()); });
-  document.getElementById("selOnly").addEventListener("click", (e) => { S.selOnly = !S.selOnly; e.currentTarget.setAttribute("aria-pressed", S.selOnly); renderTable(filtered()); });
+  document.getElementById("selOnly").addEventListener("click", () => { S.selOnly = !S.selOnly; renderTable(filtered()); });
   // ---- charts (SVG) ----
   const W = 340;
   function binsOf(vals, n, clipQ) { const s = [...vals].sort((a, b) => a - b); const lo = s[0] || 0, hi = s[Math.floor((s.length - 1) * (clipQ || 1))] || 1; const step = (hi - lo) / n || 1; const b = Array.from({ length: n }, (_, i) => ({ x0: lo + i * step, x1: lo + (i + 1) * step, n: 0 })); vals.forEach((v) => { const i = Math.min(n - 1, Math.max(0, Math.floor((v - lo) / step))); b[i].n++; }); return b; }
