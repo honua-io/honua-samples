@@ -31,7 +31,12 @@ async function checkDataset(page, baseUrl) {
   await page.goto(`${baseUrl}/state-local/catalog/#ds=dfirm`);
   await expect(page.locator('#dsView')).toBeVisible();
   await expect(page.locator('#dsView')).toContainText('Public domain');
-  await expect(page.locator('#dsView')).toContainText('Nov 10, 2026');
+  // The page shows the dataset's own retrieval date, so a regenerated pack needs no edit here.
+  const catalog = await (await page.request.get(`${baseUrl}/state-local/data/catalog/catalog.json`)).json();
+  const { updated } = catalog.datasets.find((dataset) => dataset.id === 'dfirm');
+  assert.match(updated, /^\d{4}-\d{2}-\d{2}$/);
+  const shown = new Date(`${updated}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  await expect(page.locator('#dsView')).toContainText(shown);
   await page.locator('#fullTable').click();
   await expect(page.locator('#tableRange')).toHaveText('1–50 of 97 rows');
   await expect(page.locator('#dsView tbody tr')).toHaveCount(50);
