@@ -7,6 +7,7 @@ import { lockedArchive, copyManifestFiles } from '../../../shared/state-local/lo
 import { islandPointLayers } from '../../../shared/state-local/island-points.mjs';
 import { PAGE_PLACEHOLDERS } from '../../../shared/state-local/server.mjs';
 import { publishWorkbenchAnalysis } from '../publish-workbench-analysis.mjs';
+import { publishRequestSnapshots } from './request-snapshots.mjs';
 
 const pages = [['01-overview.html', ''], ['12-workbench.html', 'workbench'], ['02-property.html', 'property'], ['10-property-mobile.html', 'property/mobile'],
   ['03-311.html', '311'], ['05-public-works.html', 'public-works'], ['07-catalog.html', 'catalog']];
@@ -16,6 +17,7 @@ export async function buildApprovedDemos({ root, output, lock }) {
   const manifest = await lockedArchive(lock, directory);
   await copyManifestFiles({ manifest, directory, output: path.join(output, 'data/approved'),
     pattern: /^[a-z0-9_-]+\.(cjson|geojson|json|csv)$/ });
+  await publishRequestSnapshots(path.join(output, 'data/approved'), manifest);
   const shared = path.join(output, 'shared');
   await mkdir(shared, { recursive: true });
   for (const file of ['download.mjs', 'dom.mjs', 'parcel-browser.mjs', 'parcel-export-control.mjs', 'parcel-export.mjs', 'csv.mjs',
@@ -38,7 +40,7 @@ export async function buildApprovedDemos({ root, output, lock }) {
     throw new Error(`catalog.py failed with the system python3. Create the catalog environment first (scripts/state-local/approved/CATALOG.md): `
       + 'python3 -m venv artifacts/catalog-python && artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt', { cause: error });
   }
-  execFileSync('python3', [path.join(root, 'scripts/state-local/approved/build.py'), directory, built,
+  execFileSync('python3', [path.join(root, 'scripts/state-local/approved/build.py'), path.join(output, 'data/approved'), built,
     ...pages.map(([file]) => file)], { stdio: 'inherit', env: { ...process.env, HONUA_CATALOG_DATA: catalog, HONUA_ISLAND_DATA: path.join(output, 'data/island'),
       HONUA_ISLAND_POINT_LAYERS: islandPointLayers.join(','), HONUA_PAGE_PLACEHOLDERS: JSON.stringify(PAGE_PLACEHOLDERS) } });
   for (const file of ['capital-projects.mjs', 'capital-project-data.mjs', 'csv.mjs', 'download.mjs', 'public-works-export.mjs']) {

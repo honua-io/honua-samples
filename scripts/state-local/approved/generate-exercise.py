@@ -168,6 +168,8 @@ for i, st in enumerate(stages):
                 "created": created.date().isoformat(), "sched": sched.date().isoformat(), "hrs": rng.choice([2, 3, 4, 6, 8]), "c": a["c"]})
 for record in reqs + assets + WOS:
     record["data_origin"] = "synthetic_demo"
+    record["is_demo"] = True
+    record["exercise_only"] = True
     record["disclaimer"] = "DEMO DATA; not county operations"
 json.dump({"now": NOW.isoformat(timespec="minutes"), "requests": reqs, "agent": ans, "assets": assets, "workorders": WOS},
           open(f"{DATA}/demo.json", "w"), separators=(",", ":"))
