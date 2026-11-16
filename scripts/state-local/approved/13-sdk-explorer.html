@@ -9,7 +9,8 @@
 <style>
   body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
   #copyHint:not(:empty) { flex: none; padding: 12px 16px; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); }
-  .sx { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; }
+  .example-index { text-decoration: underline; }
+.sx { flex: 1 1 auto; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 300px minmax(0, 1fr) 340px; }
   .sx > .col { position: relative; min-height: 0; overflow-y: auto; background: var(--c-surface); }
   .left { border-right: 1px solid var(--c-border); display: flex; flex-direction: column; overflow: hidden !important; }
   .right { border-left: 1px solid var(--c-border); }
@@ -239,7 +240,7 @@
   <span class="env hide-sm" title="SDK source snapshot version"><span class="dot"></span>@honua/sdk-js <span id="verTop"></span></span>
   <span class="avatar" aria-hidden="true">DV</span>
 </header>
-<div class="demostrip" role="note">
+<div class="demostrip" role="note" tabindex="0" aria-label="Demo data and source disclosures">
   <span class="tag-real">Real data</span> Place names (USGS GNIS), County zoning and parcels with FEMA flood zones (Hawaii Statewide GIS Program)
   <span class="tag-demo">Demo data</span> Shelter points are an exercise on real school locations, not official shelters.
   <span class="faint" id="revNote"></span>
@@ -249,7 +250,7 @@
   <aside class="col left" aria-label="Samples">
     <div class="pagehead">
       <h1>SDK Explorer</h1>
-      <p>Every Honua JS SDK example and honua-sample, with the code, the readme and a live preview on Maui data. The <a id="examplesIndex" target="_blank" rel="noopener">SDK examples index</a> groups the examples by capability.</p>
+      <p>Every Honua JS SDK example and honua-sample, with the code, the readme and a live preview on Maui data. The <a class="example-index" id="examplesIndex" target="_blank" rel="noopener">SDK examples index</a> groups the examples by capability.</p>
     </div>
     <div class="finder">
       <label class="field"><svg class="ico faint" aria-hidden="true"><use href="#i-search"/></svg><span class="sr-only">Search samples</span><input id="q" type="search" placeholder="Search samples or API names" autocomplete="off"></label>
