@@ -413,7 +413,14 @@
     onParcel: (parcel) => select(parcel.properties.id, true),
     onStreet: (name) => HM.fitStreet(map, name, 80),
   });
-  document.addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); q.select(); } });
+  document.addEventListener("keydown", (e) => {
+  if (e.key !== "/" || e.defaultPrevented || e.isComposing || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    const target = e.target;
+    if (target instanceof HTMLElement && (target.isContentEditable || target.closest("input, textarea, select"))) return;
+    e.preventDefault();
+    q.focus();
+    q.select();
+  });
   function updateShare(tmk) {
     const url = new URL(shareParcelUrl(tmk));
     document.getElementById("shareUrl").textContent = url.href;
