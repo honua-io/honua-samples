@@ -421,12 +421,16 @@
   function setTimeInputs() { const L = LAYERS[S.layer]; if (!L.time) return; const ds = L.rows.map((r) => r[L.time]).sort(); document.getElementById("tFrom").value = S.time ? S.time[0] : ds[0]; document.getElementById("tTo").value = S.time ? S.time[1] : ds[ds.length - 1]; }
   ["tFrom", "tTo"].forEach((id) => document.getElementById(id).addEventListener("change", () => { S.time = [document.getElementById("tFrom").value, document.getElementById("tTo").value]; refresh(); }));
   // ---- table ----
-  function renderTable(rows) {
+  function tableRows(rows) {
     const L = LAYERS[S.layer];
     let rs = rows;
     if (S.tq) { const t = S.tq.toLowerCase(); rs = rs.filter((r) => L.cols.some((c) => String(r[c[0]]).toLowerCase().includes(t))); }
     if (S.selOnly) rs = rs.filter((r) => S.sel.has(r[L.idField]));
     if (S.sort) { const [f, d] = S.sort; rs = [...rs].sort((a, b) => (a[f] > b[f] ? 1 : a[f] < b[f] ? -1 : 0) * d); }
+    return rs;
+  }
+  function renderTable(rows) {
+    const L = LAYERS[S.layer], rs = tableRows(rows);
     document.querySelector("#dt thead").innerHTML = "<tr>" + L.cols.map((c) => `<th scope="col" data-sort="${escapeHtml(c[0])}" class="${["money", "num"].includes(c[2]) ? "n" : ""}" aria-sort="${S.sort && S.sort[0] === c[0] ? (S.sort[1] > 0 ? "ascending" : "descending") : "none"}" tabindex="0">${escapeHtml(c[1])}</th>`).join("") + "</tr>";
     const shown = rs.slice(0, 250);
     document.querySelector("#dt tbody").innerHTML = shown.map((r) => `<tr data-id="${escapeHtml(r[L.idField])}" aria-selected="${S.sel.has(r[L.idField])}">` + L.cols.map((c) => `<td class="${["money", "num"].includes(c[2]) ? "n" : ""} ${c[2] === "mono" ? "mono" : ""}">${escapeHtml(fmt(r[c[0]], c[2]))}</td>`).join("") + "</tr>").join("");
@@ -792,8 +796,8 @@
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-try]"); if (b) { document.getElementById("nlqIn").value = b.dataset.try; runNL(b.dataset.try); } });
   // ---- export / share / sdk ----
   function download(name, text, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
-  document.getElementById("expCsv").addEventListener("click", () => { const L = LAYERS[S.layer], rows = filtered(); const esc = (v) => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v; download(`maui-${S.layer}.csv`, [L.cols.map((c) => c[1]).join(","), ...rows.map((r) => L.cols.map((c) => esc(r[c[0]])).join(","))].join("\n"), "text/csv"); });
-  document.getElementById("expGj").addEventListener("click", () => { const L = LAYERS[S.layer], rows = filtered(); const byId = new Map(parcelsFC.features.map((f) => [f.properties.id, f.geometry])); download(`maui-${S.layer}.geojson`, JSON.stringify({ type: "FeatureCollection", features: rows.map((r) => { const { c, _i, ...props } = r; return { type: "Feature", properties: props, geometry: S.layer === "parcels" ? byId.get(r.id) : { type: "Point", coordinates: c } }; }) }), "application/geo+json"); });
+  document.getElementById("expCsv").addEventListener("click", () => { const L = LAYERS[S.layer], rows = tableRows(filtered()); const esc = (v) => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v; download(`maui-${S.layer}.csv`, [L.cols.map((c) => c[1]).join(","), ...rows.map((r) => L.cols.map((c) => esc(r[c[0]])).join(","))].join("\n"), "text/csv"); });
+  document.getElementById("expGj").addEventListener("click", () => { const L = LAYERS[S.layer], rows = tableRows(filtered()); const byId = new Map(parcelsFC.features.map((f) => [f.properties.id, f.geometry])); download(`maui-${S.layer}.geojson`, JSON.stringify({ type: "FeatureCollection", features: rows.map((r) => { const { c, _i, ...props } = r; return { type: "Feature", properties: props, geometry: S.layer === "parcels" ? byId.get(r.id) : { type: "Point", coordinates: c } }; }) }), "application/geo+json"); });
   function openShare() {
     // Without a map (library, PMTiles or WebGL unavailable) share the default camera for the chosen view so the link still validates.
     const is3d = document.getElementById("v3d").getAttribute("aria-pressed") === "true";

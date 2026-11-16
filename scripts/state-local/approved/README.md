@@ -81,3 +81,11 @@ rule, not a live model response. Live persistence remains a separate server depe
 `node --test scripts/test/request-records.test.mjs` checks reset, persistence, export and
 grounded triage. The display browser smoke runs the complete linked journey at desktop
 and mobile widths, including a photo, reload, and CSV download.
+
+## Workbench table exports
+
+CSV and GeoJSON export all rows matching the analysis filters, table search and
+Selected only toggle, in table sort order. The 250-row display cap does not limit
+downloads. Empty results produce CSV headers and an empty GeoJSON FeatureCollection.
+The display smoke tests both layers at desktop and mobile widths, including geometry
+and synthetic-request provenance.
