@@ -800,8 +800,8 @@
       const i = +ed.dataset.qe, a = S.attr[i]; const cur = Array.isArray(a.v) ? a.v.join(", ") : a.v;
       ed.outerHTML = `<span class="ql"><b>${escapeHtml(LABEL(LAYERS[S.layer], a.f))}</b> ${escapeHtml(a.op)}</span><input data-qi="${i}" value="${escapeHtml(cur)}" aria-label="Edit value for ${escapeHtml(LABEL(LAYERS[S.layer], a.f))}">`;
       const inp = document.querySelector(`[data-qi="${i}"]`); inp.focus(); inp.select();
-      const commit = () => { const v = inp.value.trim(); if (v && v !== String(cur)) { pushHist(); if (a.op === "between") { const nums = v.split(/\s*(?:[-–]|to|and)\s*/).map((x) => parseFloat(x.replace(/[$,]/g, ""))).filter((x) => !isNaN(x)); if (nums.length >= 2) a.v = nums.slice(0, 2); else if (nums.length === 1) { a.op = ">"; a.v = String(nums[0]); } } else a.v = Array.isArray(a.v) ? v.split(/\s*,\s*/) : v.replace(/[$,]/g, ""); refresh(); } renderNL(); };
-      inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(); } if (ev.key === "Escape") renderNL(); });
+      const commit = () => { inp.removeEventListener("blur", commit); const v = inp.value.trim(); if (v && v !== String(cur)) { pushHist(); if (a.op === "between") { const nums = v.split(/\s*(?:[-–]|to|and)\s*/).map((x) => parseFloat(x.replace(/[$,]/g, ""))).filter((x) => !isNaN(x)); if (nums.length >= 2) a.v = nums.slice(0, 2); else if (nums.length === 1) { a.op = ">"; a.v = String(nums[0]); } } else a.v = Array.isArray(a.v) ? v.split(/\s*,\s*/) : v.replace(/[$,]/g, ""); refresh(); } renderNL(); };
+      inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(); } if (ev.key === "Escape") { inp.removeEventListener("blur", commit); renderNL(); } });
       inp.addEventListener("blur", commit, { once: true });
     }
   });
