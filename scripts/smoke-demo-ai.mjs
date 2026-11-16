@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium, expect } from '@playwright/test';
 import { evaluateCapitalProjects } from './lib/capital-project-eval.mjs';
+import { verifyRequestDrawer } from './lib/verify-request-drawer.mjs';
 import { verifyRequestLoop } from './lib/verify-request-loop.mjs';
 import { startSmokeSite } from './lib/smoke-site.mjs';
 
@@ -137,6 +138,7 @@ async function requests(page) {
   await page.locator('#fDist').selectOption('');
   await page.locator('#fType').selectOption('');
   await page.locator('#clr').click();
+  await verifyRequestDrawer(page);
   await page.locator('#qBody tr').first().click();
   await expect(page.locator('#dBody .reply')).toContainText('Example reply · not sent');
   const id = await page.locator('#dKick').textContent();
