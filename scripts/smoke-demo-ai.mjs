@@ -6,6 +6,7 @@ import { chromium, expect } from '@playwright/test';
 import { evaluateCapitalProjects } from './lib/capital-project-eval.mjs';
 import { verifyRequestDrawer } from './lib/verify-request-drawer.mjs';
 import { verifyRequestLoop } from './lib/verify-request-loop.mjs';
+import { verifyWorkOrderKeyboard } from './lib/verify-work-order-keyboard.mjs';
 import { startSmokeSite } from './lib/smoke-site.mjs';
 
 const root = fileURLToPath(new URL('../site/', import.meta.url));
@@ -179,7 +180,8 @@ async function publicWorks(page) {
   await page.locator('#approvePlan').click();
   await expect(page.locator('#plan .chip.ok')).toContainText(`${rows} draft work orders`);
   const capitalProjects = await evaluateCapitalProjects(page);
-  return { rows, totalHours, capitalRows: conditions.length, poor, anomaly, capitalProjects };
+  const workOrderKeyboard = await verifyWorkOrderKeyboard(page);
+  return { rows, totalHours, capitalRows: conditions.length, poor, anomaly, capitalProjects, workOrderKeyboard };
 }
 
 async function emergency(page, route) {

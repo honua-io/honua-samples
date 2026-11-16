@@ -378,7 +378,7 @@
   document.getElementById("woSub").textContent = `${wos.length} this month · ${open.length} open`;
   document.getElementById("board").innerHTML = STAGES.map((s) => {
     const ws = wos.filter((w) => w.stage === s);
-    return `<div class="col"><h3>${s}<span class="chip">${ws.length}</span></h3>${ws.map((w) => `<article class="wo" tabindex="0" data-asset="${w.asset}"><div class="row"><span class="pri ${w.pri}">${w.pri}</span><span class="meta" style="margin:0">${w.id}</span></div><div class="t" style="margin-top:6px">${w.title}</div><div class="meta">${w.asset} · ${w.street}</div><div class="foot"><svg class="ico" style="width:13px;height:13px"><use href="#i-${w.crew ? "users" : "calendar"}"/></svg><span class="trunc">${w.crew ? w.crew.split(" · ")[1] : "Unassigned"}</span>${eamNo(w) ? `<span class="eam" title="Synced to EAM"><svg class="ico"><use href="#i-check"/></svg>EAM</span>` : ""}</div></article>`).join("")}</div>`;
+    return `<div class="col"><h3>${s}<span class="chip">${ws.length}</span></h3>${ws.map((w) => `<article class="wo" role="button" tabindex="0" data-asset="${w.asset}"><div class="row"><span class="pri ${w.pri}">${w.pri}</span><span class="meta" style="margin:0">${w.id}</span></div><div class="t" style="margin-top:6px">${w.title}</div><div class="meta">${w.asset} · ${w.street}</div><div class="foot"><svg class="ico" style="width:13px;height:13px"><use href="#i-${w.crew ? "users" : "calendar"}"/></svg><span class="trunc">${w.crew ? w.crew.split(" · ")[1] : "Unassigned"}</span>${eamNo(w) ? `<span class="eam" title="Synced to EAM"><svg class="ico"><use href="#i-check"/></svg>EAM</span>` : ""}</div></article>`).join("")}</div>`;
   }).join("");
   document.getElementById("listBody").innerHTML = wos.map((w) => `<tr><td>${w.title}<span class="id">${w.id}</span></td><td class="mono">${w.asset}<span class="id">${w.street}</span></td><td>${w.stage}</td><td><span class="pri ${w.pri}">${w.pri}</span></td><td>${w.crew || '<span class="faint">Unassigned</span>'}</td><td class="num">${fmtShort(w.sched)}</td><td>${eamNo(w) ? `<span class="chip ok">#${eamNo(w)}</span>` : '<span class="faint">Not sent</span>'}</td></tr>`).join("");
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { const l = b.dataset.view === "list"; document.getElementById("list").hidden = !l; document.getElementById("board").hidden = l; }));
@@ -490,6 +490,12 @@
       window.publicWorksMap = m;
       window.dispatchEvent(new Event("publicworksmapready"));
     },
+  });
+  document.addEventListener("keydown", (e) => {
+    const card = e.target.closest(".wo[data-asset]");
+    if (!card || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    card.click();
   });
   document.addEventListener("click", (e) => {
     const c = e.target.closest("[data-asset]"); if (c && map) { const a = byId.get(c.dataset.asset); if (a) { selectAsset(a); map.flyTo({ center: a.c, zoom: 17, duration: 700 }); document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" }); } }
