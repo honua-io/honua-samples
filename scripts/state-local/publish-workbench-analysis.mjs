@@ -6,11 +6,10 @@ import { runAnalysis, validateManifest } from '../../shared/state-local/workbenc
 export async function publishWorkbenchAnalysis(source, destination) {
   const manifest = validateManifest(JSON.parse(await readFile(path.join(source, 'manifest.json'), 'utf8')));
   const files = new Map();
-  for (const config of Object.values(manifest.operations)) {
-    for (const name of [config.recording, config.agentRecording].filter(Boolean)) {
-      if (!/^[a-z0-9-]+\.json$/.test(name)) throw new Error('Analysis artifact names must be local JSON basenames');
-      files.set(name, await readFile(path.join(source, name), 'utf8'));
-    }
+  const names = Object.values(manifest.operations).flatMap(config => [config.recording, config.agentRecording].filter(Boolean));
+  for (const name of names) {
+    if (!/^[a-z0-9-]+\.json$/.test(name)) throw new Error('Analysis artifact names must be local JSON basenames');
+    files.set(name, await readFile(path.join(source, name), 'utf8'));
   }
   const base = 'https://analysis.invalid/';
   for (const key of Object.keys(manifest.operations)) {
