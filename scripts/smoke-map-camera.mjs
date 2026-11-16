@@ -89,6 +89,8 @@ async function checkRoute(context, route) {
 try {
   for (const width of [1440, 390]) {
     const context = await browser.newContext({ viewport: { width, height: 900 } });
+    // Web-font cache timing changes layout while the initial camera is fitted.
+    await context.route('https://fonts.googleapis.com/**', (route) => route.abort());
     try {
       for (const route of routes) {
         await checkRoute(context, route);
