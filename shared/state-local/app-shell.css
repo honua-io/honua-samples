@@ -15,6 +15,7 @@ body.app-shell {
 .app-shell > .xbanner, .app-shell > .statusbar { flex-shrink: 0; }
 .app-shell .appbar { position: relative; }
 .app-shell .demostrip { max-height: 72px; overflow: auto; }
+.demostrip a, a[href$="sources.json"] { text-decoration: underline; }
 .app-emergency .xbanner { flex-wrap: wrap; max-height: 100px; overflow: auto; }
 .app-emergency .xbanner .t { white-space: normal; }
 .app-emergency .statusbar { position: static; height: auto; max-height: 54px; padding: 4px 10px; gap: 4px 12px; flex-wrap: wrap; white-space: normal; overflow: auto; }

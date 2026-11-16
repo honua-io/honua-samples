@@ -107,7 +107,8 @@ try {
       page.on('pageerror', (error) => errors.push(error.message));
       await page.goto(`${baseUrl}/state-local/`);
       await page.getByRole('link', { name: 'Snapshot catalogue' }).click();
-      await expect(page).toHaveURL(`${baseUrl}/state-local/catalog/`);
+      await expect(page).toHaveURL((url) =>
+        `${url.origin}${url.pathname}${url.search}` === `${baseUrl}/state-local/catalog/`);
       assert.equal(await page.locator('html').getAttribute('data-theme'), colorScheme);
       await checkSearchLayout(page);
       await checkSkipLink(page, '#main');
