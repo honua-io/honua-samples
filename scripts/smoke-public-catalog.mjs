@@ -17,11 +17,11 @@ async function checkSearchLayout(page) {
 }
 
 async function checkSkipLink(page, target) {
-  const hash = await page.evaluate(() => location.hash);
+  const dataset = await page.evaluate(() => new URLSearchParams(location.hash.slice(1)).get('ds'));
   await page.locator('.skip-link').focus();
   await page.keyboard.press('Enter');
   await expect(page.locator(target)).toBeFocused();
-  assert.equal(await page.evaluate(() => location.hash), hash);
+  assert.equal(await page.evaluate(() => new URLSearchParams(location.hash.slice(1)).get('ds')), dataset);
 }
 
 async function checkSearch(page) {
@@ -58,6 +58,13 @@ async function checkDataset(page, baseUrl) {
   await expect(page.locator('#dsView tbody tr')).toHaveCount(50);
   await page.locator('#fullTable').click();
   await expect(page.locator('#tableRange')).toHaveText('51–97 of 97 rows');
+  const rows = await page.locator('#tableRows').innerHTML();
+  for (let change = 0; change < 2; change++) {
+    await page.locator('.theme-toggle').click();
+    await expect(page.locator('#tableRange')).toHaveText('51–97 of 97 rows');
+    assert.equal(await page.locator('#tableRows').innerHTML(), rows);
+    await expect(page.locator('#fullTable')).toHaveText('Back to first rows');
+  }
   await page.evaluate(() => { location.hash += '&map=12/20.9/-156.4'; });
   await expect(page.locator('#tableRange')).toHaveText('51–97 of 97 rows');
   await page.locator('#jumpDownloads').click();

@@ -330,13 +330,13 @@
       event.currentTarget.textContent = offset ? "Next 50 rows" : "Back to first rows";
     });
     if (dsMap) { dsMap.remove(); dsMap = null; }
-    const c = topicColor(d.topic);
+    const c = TOPIC_VAR[d.topic] || "--viz-1";
     dsMap = HM.create(document.getElementById("dsMap"), { bounds: [[d.bbox[0], d.bbox[1]], [d.bbox[2], d.bbox[3]]], padding: 24, roadLabels: false, onload: (m) => {
       HM.add(m, "ds", d.fc);
-      const fillC = d.id === "tsunami" ? ["match", ["get", "code"], 1, HM.cssVar("--hz-tsu"), 2, HM.cssVar("--hz-tsux"), HM.cssVar("--c-ok")] : c;
-      if (d.geom === "Polygon") { m.addLayer({ id: "ds-f", type: "fill", source: "ds", paint: { "fill-color": fillC, "fill-opacity": d.id === "parcels" ? 0.08 : d.id === "tsunami" ? ["match", ["get", "code"], 1, 0.32, 2, 0.2, 0.07] : 0.3 } }, "roads-casing"); m.addLayer({ id: "ds-l", type: "line", source: "ds", paint: { "line-color": fillC, "line-width": d.id === "parcels" ? 0.6 : 1.2 } }); }
-      else if (d.geom === "Line") m.addLayer({ id: "ds-l", type: "line", source: "ds", paint: { "line-color": c, "line-width": 2 } });
-      else m.addLayer({ id: "ds-p", type: "circle", source: "ds", paint: { "circle-color": c, "circle-radius": d.n > 100 ? 3.5 : 6, "circle-stroke-color": HM.cssVar("--map-pin-ring"), "circle-stroke-width": 1.5 } });
+      const fillC = d.id === "tsunami" ? ["match", ["get", "code"], 1, "--hz-tsu", 2, "--hz-tsux", "--c-ok"] : c;
+      if (d.geom === "Polygon") { HM.themed(m, { id: "ds-f", type: "fill", source: "ds", paint: { "fill-color": fillC, "fill-opacity": d.id === "parcels" ? 0.08 : d.id === "tsunami" ? ["match", ["get", "code"], 1, 0.32, 2, 0.2, 0.07] : 0.3 } }, "roads-casing"); HM.themed(m, { id: "ds-l", type: "line", source: "ds", paint: { "line-color": fillC, "line-width": d.id === "parcels" ? 0.6 : 1.2 } }); }
+      else if (d.geom === "Line") HM.themed(m, { id: "ds-l", type: "line", source: "ds", paint: { "line-color": c, "line-width": 2 } });
+      else HM.themed(m, { id: "ds-p", type: "circle", source: "ds", paint: { "circle-color": c, "circle-radius": d.n > 100 ? 3.5 : 6, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
     } });
     window.scrollTo(0, 0);
   }
@@ -349,7 +349,7 @@
     content.scrollIntoView();
   });
   window.addEventListener("hashchange", route); route();
-  document.addEventListener("honua:theme", () => { if (activeDatasetId) showDataset(activeDatasetId); else render(); });
+  document.addEventListener("honua:theme", () => { if (!activeDatasetId) render(); });
 })();
 </script>
 </body>
