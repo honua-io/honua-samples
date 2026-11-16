@@ -21,6 +21,43 @@ function sameCamera(actual, expected, label) {
   actual.center.forEach((value, index) => assert.ok(Math.abs(value - expected.center[index]) <= 0.001, `${label}: center restored`));
 }
 
+async function checkDeferredHistoryWrite(page, route) {
+  // Force the deferred native serializer into the gap between popstate and
+  // hashchange. Without synchronous restoration it overwrites zoom 11 with 13.
+  const serialized = await page.evaluate(() => {
+    const map = window.HM.maps.find((entry) => entry._hash);
+    map.jumpTo({ center: [-156.44, 20.91], zoom: 13 });
+    history.replaceState(history.state, '', '#keep=hello%20world&map=11/20.86/-156.50');
+    window.dispatchEvent(new PopStateEvent('popstate', { state: history.state }));
+    map._hash._updateHashUnthrottled();
+    const hash = new URLSearchParams(location.hash.slice(1));
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    return { camera: hash.get('map'), keep: hash.get('keep') };
+  });
+  assert.equal(Number(serialized.camera.split('/')[0]), 11, `${route}: deferred writer preserves history destination`);
+  assert.equal(serialized.keep, 'hello world');
+  sameCamera(await camera(page), { center: [-156.50, 20.86], zoom: 11 }, `${route}: deferred history write`);
+}
+
+async function checkBrowserHistory(page, route) {
+  // Exercise real rapid and settled browser traversal as well as the forced gap.
+  for (const delay of [0, 350]) {
+    await page.evaluate(() => { location.hash = 'keep=hello%20world&map=13/20.91/-156.44'; });
+    await page.waitForFunction(() => Math.abs(HM.maps.find((map) => map._hash).getZoom() - 13) < 0.01);
+    if (delay) await page.waitForTimeout(delay);
+    await page.goBack();
+    await page.waitForFunction(() => Math.abs(HM.maps.find((map) => map._hash).getZoom() - 11) < 0.01);
+    if (delay) await page.waitForTimeout(delay);
+    await page.goForward();
+    await page.waitForFunction(() => Math.abs(HM.maps.find((map) => map._hash).getZoom() - 13) < 0.01);
+    await page.waitForTimeout(350);
+    sameCamera(await camera(page), { center: [-156.44, 20.91], zoom: 13 }, `${route}: Forward (${delay}ms)`);
+    assert.equal(await page.evaluate(() => new URLSearchParams(location.hash.slice(1)).get('keep')), 'hello world');
+    await page.evaluate(() => { location.hash = 'keep=hello%20world&map=11/20.86/-156.50'; });
+    await page.waitForFunction(() => Math.abs(HM.maps.find((map) => map._hash).getZoom() - 11) < 0.01);
+  }
+}
+
 async function checkRoute(context, route) {
   const page = await context.newPage(), errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -43,6 +80,8 @@ async function checkRoute(context, route) {
     sameCamera(await camera(page), saved, `${route}: valid input`);
     await page.reload();
     sameCamera(await camera(page), saved, `${route}: valid reload`);
+    await checkDeferredHistoryWrite(page, route);
+    await checkBrowserHistory(page, route);
     assert.deepEqual(errors, [], `${route}: page exceptions`);
   } finally { await page.close(); }
 }
@@ -53,7 +92,7 @@ try {
     try {
       for (const route of routes) {
         await checkRoute(context, route);
-        console.log(`PASS ${width}px ${route}: four invalid cameras normalize and reload; valid camera preserved`);
+        console.log(`PASS ${width}px ${route}: four invalid cameras normalize and reload; valid camera and rapid/settled history preserved`);
       }
     } finally { await context.close(); }
   }
