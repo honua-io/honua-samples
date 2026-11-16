@@ -419,8 +419,13 @@
   document.getElementById("fAdd").addEventListener("click", () => { const v = document.getElementById("fVal").value.trim(); if (!v) return; S.attr.push({ f: document.getElementById("fField").value, op: document.getElementById("fOp").value, v }); refresh(); });
   document.getElementById("fRows").addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; const r = b.dataset.rm; if (r === "s") { S.spatial = null; clearDrawn(); } else if (r.startsWith("a:")) S.attr.splice(+r.slice(2), 1); else delete S.chartF[r.slice(2)]; refresh(); });
   document.getElementById("fClear").addEventListener("click", () => { S.attr = []; S.chartF = {}; S.spatial = null; S.time = null; S.sel.clear(); clearDrawn(); setTimeInputs(); refresh(); });
-  function setTimeInputs() { const L = LAYERS[S.layer]; if (!L.time) return; const ds = L.rows.map((r) => r[L.time]).sort(); document.getElementById("tFrom").value = S.time ? S.time[0] : ds[0]; document.getElementById("tTo").value = S.time ? S.time[1] : ds[ds.length - 1]; }
-  ["tFrom", "tTo"].forEach((id) => document.getElementById(id).addEventListener("change", () => { S.time = [document.getElementById("tFrom").value, document.getElementById("tTo").value]; refresh(); }));
+  function timeExtent() { const L = LAYERS[S.layer], dates = L.rows.map((r) => r[L.time]).sort(); return [dates[0], dates[dates.length - 1]]; }
+  function setTimeInputs() { if (!LAYERS[S.layer].time) return; const range = S.time || timeExtent(); document.getElementById("tFrom").value = range[0]; document.getElementById("tTo").value = range[1]; }
+  ["tFrom", "tTo"].forEach((id) => document.getElementById(id).addEventListener("change", () => {
+    const extent = timeExtent();
+    S.time = [document.getElementById("tFrom").value || extent[0], document.getElementById("tTo").value || extent[1]].sort();
+    setTimeInputs(); refresh();
+  }));
   // ---- table ----
   function tableRows(rows) {
     const L = LAYERS[S.layer];
