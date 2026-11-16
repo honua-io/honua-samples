@@ -178,8 +178,9 @@
         set("sh", "circle-color", ["match", ["get", "st"], "closed", v("--c-neutral"), v("--c-ok")]); set("sh", "circle-stroke-color", v("--map-pin-ring")); };
       paintM(); m.on("honua:theme", paintM);
       shelters.forEach((s) => { const d = document.createElement("div"); d.className = "maplabel poi"; d.textContent = s.label; new maplibregl.Marker({ element: d, anchor: "top", offset: [0, 9] }).setLngLat(s.c).addTo(m); });
-      const me = document.createElement("div"); me.className = "me"; me.setAttribute("aria-label", "Sample location");
+      const me = document.createElement("div"); me.className = "me"; me.setAttribute("role", "img");
       new maplibregl.Marker({ element: me }).setLngLat(ME).addTo(m);
+      me.setAttribute("aria-label", "Sample location");
     },
   });
 })();
