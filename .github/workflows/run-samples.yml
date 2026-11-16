@@ -121,13 +121,16 @@ jobs:
           node scripts/state-local/build-display-site.mjs
           node scripts/build-gallery.mjs --check
           npm run test:gallery:themes
+          node scripts/smoke-workbench-analysis.mjs
 
       - name: Upload nightly gallery theme evidence
         if: ${{ always() && github.event_name == 'schedule' }}
         uses: actions/upload-artifact@v4
         with:
           name: gallery-theme-journeys
-          path: .artifacts/gallery-browser-smoke/themes
+          path: |
+            .artifacts/gallery-browser-smoke/themes
+            .artifacts/workbench-analysis
           if-no-files-found: error
 
       - name: Dump honua-server logs on failure
