@@ -118,7 +118,7 @@
   <span class="tag-demo">Exercise data</span> Warning, occupancy, road status, requests, feed readings, drafts
 </div>
 
-<div class="layout">
+<main class="layout" aria-label="Emergency situation workspace">
   <aside class="col l" aria-label="Shelters, roads and feeds">
     <section class="sec" aria-labelledby="shH">
       <div class="sec-h"><svg class="ico" style="color:var(--c-ok)"><use href="#i-home"/></svg><h2 id="shH">Shelters</h2><span class="aside" id="shSum"></span></div>
@@ -177,7 +177,7 @@
 </div>
   </div>
 
-  <aside class="col r" id="main" aria-label="Situation reports and public information">
+  <aside class="col r" id="main" tabindex="-1" aria-label="Situation reports and public information">
     <!-- EOC view -->
     <section class="sec eoc-only" style="border-bottom:0;padding-bottom:4px">
       <div class="ai-card" aria-label="Demo answer">
@@ -248,7 +248,7 @@
       <p class="muted" style="font-size:13px">Alert subscriptions and public-feed publication are coming soon. Offline persistence and live alert subscriptions are coming soon.</p>
     </section>
   </aside>
-</div>
+</main>
 
 <footer class="statusbar" aria-label="System status">
   <span><span class="dot"></span><b>Simulated county deployment</b> exercise only</span>
