@@ -6,7 +6,9 @@ import { sha256 } from '../../lib/checksum.mjs';
 const [dataDirectory, receiptDirectory, outputDirectory] = process.argv.slice(2);
 if (!outputDirectory) throw new Error('Usage: node pack.mjs <data> <receipts> <output>');
 await mkdir(outputDirectory, { recursive: true });
-const manifest = { schemaVersion: 1, crs: 'EPSG:4326', snapshot: '2026-11-10',
+// Date of the source retrieval this pack was reviewed against; also pins the archive mtime.
+const snapshot = '2026-11-15';
+const manifest = { schemaVersion: 1, crs: 'EPSG:4326', snapshot,
   attribution: 'Hawaii Statewide GIS Program and originating agencies identified per source',
   warning: 'Generalized display snapshots, not legal boundaries or live operational information. Fictional records retain synthetic_demo labels.',
   sources: {}, files: {} };
@@ -32,5 +34,6 @@ for (const file of (await readdir(outputDirectory)).filter((name) => name !== 'm
 }
 await writeFile(path.join(outputDirectory, 'manifest.json'), JSON.stringify(manifest, null, 2));
 const archive = path.resolve(outputDirectory, '..', 'maui-approved-display.tar.gz');
-execFileSync('tar', ['--sort=name', '--mtime=2026-11-10', '--owner=0', '--group=0', '-czf', archive, '-C', outputDirectory, '.']);
+execFileSync('tar', ['--sort=name', `--mtime=${snapshot}`, '--owner=0', '--group=0', '-czf', archive, '-C', outputDirectory, '.'],
+  { env: { ...process.env, TZ: 'UTC' } });
 console.log(JSON.stringify({ archive, sha256: sha256(await readFile(archive)) }));
