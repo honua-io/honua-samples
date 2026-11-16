@@ -965,6 +965,7 @@ try {
     const f = files[state.file];
     $("#copyBtn").disabled = !f;
     if (!f) { $("#code").innerHTML = `<p class="faint" style="padding:16px">${s.moved ? `This folder only holds a redirect README. See ${esc(BY[s.moved].title)}.` : "This folder holds only a README."}</p>`; $("#srcNote").textContent = ""; return; }
+    const excerpt = f.code.endsWith("// …");
     const defaults = sm ? (sm._defaultFiles ||= sm.files(sm.defaults)).find((d) => d && d.name === f.name) : null;
     const base = defaults ? defaults.code.split("\n") : null;
     const prev = state.prevCode[f.name] ? state.prevCode[f.name].split("\n") : null;
@@ -973,7 +974,7 @@ try {
     let mods = 0;
     $("#code").innerHTML = `<pre><code>${lines.map((l, i) => { const mod = base && base.length === raw.length && base[i] !== raw[i]; const fl = changed && prev && prev.length === raw.length && prev[i] !== raw[i]; if (mod) mods++; return `<span class="ln${mod ? " mod" : ""}${fl ? " flash" : ""}" data-n="${i + 1}">${l || " "}</span>`; }).join("")}</code></pre>`;
     files.forEach((x) => (state.prevCode[x.name] = x.code));
-    $("#srcNote").textContent = sm ? (mods ? `${mods} line${mods === 1 ? "" : "s"} changed by Try it` : "Trimmed from trunk; endpoint points at the demo server") : `Pinned source snapshot: ${s.path}`;
+    $("#srcNote").textContent = sm ? (mods ? `${mods} line${mods === 1 ? "" : "s"} changed by Try it` : "Trimmed from trunk; endpoint points at the demo server") : `Pinned source ${excerpt ? "excerpt" : "snapshot"}: ${s.path}${excerpt ? ". Open View on GitHub for complete files." : ""}`;
     if (changed) { const first = $("#code .ln.flash"), box = $("#code"); if (first && state.tab === "src" && (first.offsetTop < box.scrollTop || first.offsetTop > box.scrollTop + box.clientHeight - 30)) box.scrollTop = first.offsetTop - 60; }
   }
   $("#copyBtn").addEventListener("click", (e) => { const f = currentFiles()[state.file]; if (f) copyText(f.code, e.currentTarget); });
@@ -1080,7 +1081,7 @@ function sanitizedReadme(html) {
   $("#examplesIndex").href = D.examplesIndex;
   $("#verBadge").textContent = `SDK ${VER}`;
   $("#revNote").textContent = `· ${D.samples.length} samples from pinned snapshots, ${D.sdkRev.split(" ")[1]}`;
-  $("#revNote").title = `honua-sdk-js ${D.sdkRev}, honua-samples ${D.samplesRev}; source snapshots are unmodified; preview provenance is shown separately`;
+  $("#revNote").title = `honua-sdk-js ${D.sdkRev}, honua-samples ${D.samplesRev}; source tabs may show shortened excerpts; complete files are on GitHub; preview provenance is shown separately`;
   renderList();
   const hash = (location.hash || "").slice(1).split("/");
   const query = new URLSearchParams(location.search);
