@@ -27,10 +27,7 @@ async function checkExports(page, expectedIds, layer) {
   return { lines, features: collection.features };
 }
 
-async function checkLayer(page, url, layer) {
-  await page.goto(`${url}/state-local/workbench/`);
-  await page.locator(`[data-l="${layer}"]`).click();
-  await expect(page.locator('#dt tbody tr[data-id]').first()).toBeVisible();
+async function checkKeyboardSort(page, layer) {
   const heading = page.locator(`#dt th[data-sort="${layer === 'parcels' ? 'tmk' : 'id'}"]`);
   await heading.focus();
   for (const [key, direction] of [['Enter', 'ascending'], ['Space', 'descending'], ['Enter', 'ascending']]) {
@@ -38,20 +35,9 @@ async function checkLayer(page, url, layer) {
     await expect(heading).toHaveAttribute('aria-sort', direction);
     await expect(heading).toBeFocused();
   }
-  const full = JSON.parse(await downloadText(page, '#expGj')).features;
-  const ids = full.map((f) => String(f.properties.id));
-  assert.ok(ids.length > 250, 'Exports include rows beyond the rendered table cap');
-  const renderedIds = await page.locator('#dt tbody tr[data-id]').evaluateAll((rows) => rows.map((r) => r.dataset.id));
-  assert.deepEqual(ids.slice(0, 250), renderedIds, 'Export order matches the sorted table');
-  const all = await checkExports(page, ids, layer);
-  const firstId = ids[0];
-  await page.locator('#tq').fill(layer === 'requests' ? firstId : String(full[0].properties.tmk));
-  const matching = await page.locator('#dt tbody tr[data-id]').evaluateAll((rows) => rows.map((r) => r.dataset.id));
-  assert.deepEqual(matching, [firstId], 'Search isolates one record');
-  const searched = await checkExports(page, matching, layer);
-  assert.ok(all.lines.includes(searched.lines[1]), 'CSV search retains the original record values');
-  assert.deepEqual(searched.features, [full[0]], 'Search preserves source geometry and properties');
-  await page.locator('#tq').fill('');
+}
+
+async function checkKeyboardSelection(page, ids, layer) {
   const rows = page.locator('#dt tbody tr[data-id]');
   await page.locator('#dt th').last().focus();
   await page.keyboard.press('Tab');
@@ -70,6 +56,28 @@ async function checkLayer(page, url, layer) {
   await page.keyboard.press('Space');
   await expect(rows).toHaveCount(1);
   await expect(rows.nth(0)).toBeFocused();
+}
+
+async function checkLayer(page, url, layer) {
+  await page.goto(`${url}/state-local/workbench/`);
+  await page.locator(`[data-l="${layer}"]`).click();
+  await expect(page.locator('#dt tbody tr[data-id]').first()).toBeVisible();
+  await checkKeyboardSort(page, layer);
+  const full = JSON.parse(await downloadText(page, '#expGj')).features;
+  const ids = full.map((f) => String(f.properties.id));
+  assert.ok(ids.length > 250, 'Exports include rows beyond the rendered table cap');
+  const renderedIds = await page.locator('#dt tbody tr[data-id]').evaluateAll((rows) => rows.map((r) => r.dataset.id));
+  assert.deepEqual(ids.slice(0, 250), renderedIds, 'Export order matches the sorted table');
+  const all = await checkExports(page, ids, layer);
+  const firstId = ids[0];
+  await page.locator('#tq').fill(layer === 'requests' ? firstId : String(full[0].properties.tmk));
+  const matching = await page.locator('#dt tbody tr[data-id]').evaluateAll((rows) => rows.map((r) => r.dataset.id));
+  assert.deepEqual(matching, [firstId], 'Search isolates one record');
+  const searched = await checkExports(page, matching, layer);
+  assert.ok(all.lines.includes(searched.lines[1]), 'CSV search retains the original record values');
+  assert.deepEqual(searched.features, [full[0]], 'Search preserves source geometry and properties');
+  await page.locator('#tq').fill('');
+  await checkKeyboardSelection(page, ids, layer);
   const selected = await checkExports(page, [firstId], layer);
   assert.deepEqual(selected, searched, 'Selected-only and searched exports contain the same record');
   await page.locator('#tq').fill('NO_MATCH_EXPORT_REGRESSION_72819');
