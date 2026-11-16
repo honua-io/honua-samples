@@ -31,6 +31,7 @@ body.app-shell {
 .app-workbench .right > :not(.rbody), .app-workbench .nlq > * { flex-shrink: 0; }
 .app-workbench .nlq-sugg { overflow-y: hidden; }
 @media (min-width: 641px) {
+  body.app-workbench { min-height: 800px; overflow: auto; }
   .app-workbench .center { grid-template-rows: minmax(0, 1fr) minmax(100px, 36%); overflow: hidden; }
   .app-explorer #pvPanel { grid-template-rows: minmax(0, 1fr) minmax(0, 32%); overflow: hidden; }
 }

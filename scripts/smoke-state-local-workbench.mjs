@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { verifyWorkbenchExports } from './lib/verify-workbench-exports.mjs';
+import { verifyWorkbenchLayout } from './lib/verify-workbench-layout.mjs';
 import { startSmokeSite } from './lib/smoke-site.mjs';
 
 const server = await startSmokeSite({ rootDir: path.resolve('site'), baseUrl: process.env.STATE_LOCAL_SMOKE_BASE_URL });
@@ -35,6 +36,7 @@ try {
   await page.goto(link);
   await expect(page.locator('#nShown')).toHaveText(count);
   await expect(page.locator('#dt th[data-sort="type"]')).toHaveAttribute('aria-sort', 'ascending');
+  await verifyWorkbenchLayout(page);
   const downloaded = page.waitForEvent('download');
   await page.locator('#expGj').click();
   const download = await downloaded;
