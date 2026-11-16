@@ -119,6 +119,18 @@
     window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search + (hash ? "#" + hash : ""));
     return params;
   }
+  function bindCameraHistory(map, bounds) {
+    // History changes precede hashchange. Restore now so a pending MapLibre hash
+    // write cannot replace the destination URL with the previous camera.
+    const restore = () => {
+      const camera = cameraHashParams(bounds).get("map");
+      if (!camera) return;
+      const [zoom, lat, lng, , pitch] = camera.split("/").map(Number);
+      map.jumpTo({ center: [lng, lat], zoom, bearing: map.getBearing(), pitch: pitch || 0 });
+    };
+    window.addEventListener("popstate", restore);
+    map.on("remove", () => window.removeEventListener("popstate", restore));
+  }
   function create(el, opts) {
     opts = opts || {};
     if (!window.maplibregl || !window.pmtiles) return unavailableMap(el, "Map library could not load. Connect to the internet to view the interactive map.");
@@ -134,6 +146,7 @@
         interactive: opts.interactive !== false, cooperativeGestures: !!opts.cooperative,
       });
     } catch { return unavailableMap(el, "Interactive map unavailable in this browser. Try a browser with WebGL enabled."); }
+    if (hash) bindCameraHistory(map, opts.maxBounds || HI.bounds);
     maps.push(map);
     // Containers that size after first paint (grid rows, fonts, embedded frames) leave the canvas short; follow the container.
     const fitBounds = opts.bounds || VIEW[opts.view || "core"];
