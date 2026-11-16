@@ -39,15 +39,22 @@ export function renderedMapEvidence() {
     return { layers, features: layers.length ? map.queryRenderedFeatures({ layers }).length : 0 };
   });
   // Leaflet's SVG renderer exposes actual feature paths; tile images alone cannot pass.
+  // Lines may have zero width or height; either dimension counts.
   const leafletFeatures = [...document.querySelectorAll('.leaflet-overlay-pane path.leaflet-interactive')]
     .filter((node) => { const bounds = node.getBoundingClientRect(); return bounds.width > 0 || bounds.height > 0; }).length;
-  const containers = document.querySelectorAll('.maplibregl-map, .leaflet-container, canvas').length;
-  return { containers, maps: evidence, leafletFeatures,
+  return { maps: evidence, leafletFeatures,
     painted: evidence.some((map) => map.features > 0) || leafletFeatures > 0 };
 }
 
-// SVG symbols such as i-map are icons, not map containers.
-export function visibleMapContainers() {
-  return [...document.querySelectorAll('.maplibregl-map, .leaflet-container, canvas, div#map, div[id$="-map"]')]
-    .filter((node) => { const bounds = node.getBoundingClientRect(); return bounds.width > 0 && bounds.height > 0; }).length;
+export const MAP_CONTAINER_SELECTOR = '.maplibregl-map, .leaflet-container, canvas';
+export const VISIBLE_MAP_SELECTOR = `${MAP_CONTAINER_SELECTOR}, div#map, div[id$="-map"]`;
+
+// Passed to frame.evaluate on its own. A function that Playwright sends into the
+// page cannot call a module helper, so this predicate stays inside this function.
+// display:none maps still insert a canvas. Only a laid-out container must paint.
+export function countLaidOut(selector) {
+  return [...document.querySelectorAll(selector)].filter((node) => {
+    const bounds = node.getBoundingClientRect();
+    return bounds.width > 0 && bounds.height > 0;
+  }).length;
 }

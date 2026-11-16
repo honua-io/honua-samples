@@ -7,7 +7,7 @@ import { chromium, firefox, webkit } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
 import { stateLocalIslandData } from '../shared/state-local/server.mjs';
 
-const ROUTES = ['', 'workbench/', 'property/', 'property/mobile/', '311/', 'public-works/', 'emergency/'];
+const ROUTES = ['', 'workbench/', 'property/', 'property/mobile/', '311/', 'public-works/', 'emergency/', 'catalog/'];
 const ENGINES = { chromium, firefox, webkit };
 const requestedEngines = (process.env.ISLAND_SMOKE_BROWSERS ?? 'chromium,firefox').split(',');
 const ARCHIVE_PREFIX = `pmtiles://${stateLocalIslandData}`;

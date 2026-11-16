@@ -27,6 +27,9 @@ licence-policy receipts, original CRS, selection, and hashes. Source coordinates
 explicitly requested in EPSG:4326; source metadata records EPSG:3750. Display processing
 clips to Kahului, repairs geometry, simplifies boundaries and joins planning/hazard
 layers to parcel representative points. These visual joins are not a legal determination.
+Five-decimal display serialization rejects empty or invalid rounded geometries.
+A precision collapse stops regeneration rather than silently dropping or repairing
+features; inspect the source and review any regenerated display data before publication.
 Distance counts use EPSG:32604. Community-plan boundaries and shoreline setbacks are
 not invented: their sources remain pending.
 
@@ -42,7 +45,12 @@ file, and exposes its manifest and labelled exports. The download is an optimiza
 the source pipeline above regenerates the data without a private dependency. Upstream
 changes yield new hashes and must be reviewed before updating the release lock.
 
+The build reads the catalog with pyarrow; create its environment once (see `CATALOG.md`).
+The build uses `artifacts/catalog-python` automatically, or `HONUA_CATALOG_PYTHON` when set.
+
 ```sh
+python3 -m venv artifacts/catalog-python
+artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
 node scripts/state-local/build-display-site.mjs
 node scripts/smoke-state-local-display.mjs
 ```

@@ -1,4 +1,3 @@
-import { openPublication, publicationSource } from '@honua/sdk-js/publication';
 import { countyFields, countyParcel, countyTmk } from './county-parcel.mjs';
 import { mountCountyExports, updateCountyExports } from './county-export-control.mjs';
 
@@ -6,36 +5,62 @@ const descriptor = 'https://demo.honua.io/demo-data/publications/maui-county-par
 const countyLayers = ['county-fill', 'county-line', 'county-selected'];
 const snapshotLayers = ['parcels-fill', 'parcels-line', 'parcels-sel'];
 
-export function mountCountyPublication({ root, map }) {
-  const state = { root, map, status: root.querySelector('#countyStatus'), details: root.querySelector('#countyDetails'), publication: null, source: null, loading: null, request: null, sequence: 0 };
+export function mountCountyPublication({ root, map, publication }) {
+  const state = { root, map, publicationApi: publication ?? null, status: root.querySelector('#countyStatus'), details: root.querySelector('#countyDetails'), publication: null, source: null, loading: null, request: null, sequence: 0 };
   mountCountyExports(state);
   root.querySelector('#countySearch').addEventListener('submit', (event) => {
     event.preventDefault();
     selectCountyParcel(state, root.querySelector('#countyTmk').value);
   });
-  root.addEventListener('toggle', async () => {
-    if (!root.open) {
-      cancelSelection(state); countyVisibility(state);
-      if (state.camera) state.map()?.jumpTo(state.camera);
-      state.camera = null;
-      return;
-    }
-    const currentMap = state.map();
-    if (currentMap) state.camera = { center: currentMap.getCenter(), zoom: currentMap.getZoom(), bearing: currentMap.getBearing(), pitch: currentMap.getPitch() };
-    try { await connectCounty(state); if (root.open) attachCountyMap(state); }
-    catch { state.status.textContent = 'County publication unavailable. Close and reopen this panel to retry. Snapshot data remains available.'; }
-  });
+  const applyToggle = async () => {
+    const view = await countyToggle(state);
+    state.camera = view.camera;
+    if (view.status) state.status.textContent = view.status;
+  };
+  root.addEventListener('toggle', () => { void applyToggle(); });
   const sharedTmk = new URL(location.href).searchParams.get('countyTmk');
-  if (sharedTmk !== null) { root.open = true; selectCountyParcel(state, sharedTmk); }
+  const openedByShare = sharedTmk !== null && !root.open;
+  if (sharedTmk !== null) root.open = true;
+  if (root.open && !openedByShare) void applyToggle();
+  if (sharedTmk !== null) void selectCountyParcel(state, sharedTmk);
+}
+
+function capturedCamera(map) {
+  if (!map) return null;
+  return { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+}
+
+async function countyToggle(state) {
+  if (!state.root.open) {
+    cancelSelection(state);
+    countyVisibility(state);
+    if (state.camera) state.map()?.jumpTo(state.camera);
+    return { camera: null };
+  }
+  const camera = state.camera ?? capturedCamera(state.map());
+  try {
+    await connectCounty(state);
+    if (state.root.open) attachCountyMap(state);
+    return { camera };
+  } catch {
+    return { camera, status: 'County publication unavailable. Close and reopen this panel to retry. Snapshot data remains available.' };
+  }
+}
+
+async function countyPublicationApi(state) {
+  if (state.publicationApi) return state.publicationApi;
+  const api = await import('@honua/sdk-js/publication');
+  return { openPublication: api.openPublication, publicationSource: api.publicationSource };
 }
 
 async function connectCounty(state) {
   if (state.source) return;
   if (state.loading) return state.loading;
+  const api = await countyPublicationApi(state);
   state.status.textContent = 'Connecting to county publication…';
-  state.loading = openPublication(descriptor, { signal: AbortSignal.timeout(20000) }).then((publication) => {
+  state.loading = api.openPublication(descriptor, { signal: AbortSignal.timeout(20000) }).then((publication) => {
     state.publication = publication;
-    state.source = publicationSource(publication);
+    state.source = api.publicationSource(publication);
     state.status.textContent = 'County publication connected. Enter a TMK or select a county parcel on the map.';
   }).finally(() => { state.loading = null; });
   return state.loading;
@@ -107,12 +132,30 @@ function attachCountyMap(state) {
   if (state.selection) showCountySelection(state, state.selection);
 }
 
+const snapshotVisibility = new WeakMap();
+
+function captureSnapshotVisibility(map) {
+  const remembered = {};
+  for (const layer of snapshotLayers) {
+    if (map.getLayer(layer)) remembered[layer] = map.getLayoutProperty(layer, 'visibility') ?? 'visible';
+  }
+  return remembered;
+}
+
+function setLayerVisibility(map, layer, visibility) {
+  if (visibility && map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visibility);
+}
+
 function countyVisibility(state) {
   const map = state.map();
   if (!map) return;
-  for (const layer of countyLayers) if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', state.root.open && !state.mapFailed ? 'visible' : 'none');
-  const connected = state.root.open && !state.mapFailed && Boolean(map.getSource('county-publication'));
-  for (const layer of snapshotLayers) if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', connected ? 'none' : 'visible');
+  const showCounty = state.root.open && !state.mapFailed;
+  if (showCounty && !snapshotVisibility.has(state)) snapshotVisibility.set(state, captureSnapshotVisibility(map));
+  const remembered = snapshotVisibility.get(state);
+  for (const layer of countyLayers) setLayerVisibility(map, layer, showCounty ? 'visible' : 'none');
+  const hideSnapshot = showCounty && map.getSource('county-publication');
+  for (const layer of snapshotLayers) setLayerVisibility(map, layer, hideSnapshot ? 'none' : remembered?.[layer]);
+  if (!state.root.open) snapshotVisibility.delete(state);
 }
 
 function clearCountySelection(state) {

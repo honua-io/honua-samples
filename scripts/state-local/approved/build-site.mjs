@@ -1,13 +1,15 @@
-import { cp, mkdir } from 'node:fs/promises';
+import { cp, mkdir, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { build } from 'esbuild';
 import { lockedArchive, copyManifestFiles } from '../../../shared/state-local/locked-archive.mjs';
 import { islandPointLayers } from '../../../shared/state-local/island-points.mjs';
 import { PAGE_PLACEHOLDERS } from '../../../shared/state-local/server.mjs';
+import { publishWorkbenchAnalysis } from '../publish-workbench-analysis.mjs';
 
 const pages = [['01-overview.html', ''], ['12-workbench.html', 'workbench'], ['02-property.html', 'property'], ['10-property-mobile.html', 'property/mobile'],
-  ['03-311.html', '311'], ['05-public-works.html', 'public-works']];
+  ['03-311.html', '311'], ['05-public-works.html', 'public-works'], ['07-catalog.html', 'catalog']];
 
 export async function buildApprovedDemos({ root, output, lock }) {
   const directory = path.join(root, 'artifacts/approved-download');
@@ -16,14 +18,30 @@ export async function buildApprovedDemos({ root, output, lock }) {
     pattern: /^[a-z0-9_-]+\.(cjson|geojson|json|csv)$/ });
   const shared = path.join(output, 'shared');
   await mkdir(shared, { recursive: true });
-  for (const file of ['download.mjs', 'dom.mjs', 'parcel-browser.mjs', 'parcel-export-control.mjs', 'parcel-export.mjs', 'csv.mjs']) {
+  for (const file of ['download.mjs', 'dom.mjs', 'parcel-browser.mjs', 'parcel-export-control.mjs', 'parcel-export.mjs', 'csv.mjs',
+    'workbench-analytics.mjs', 'workbench-analysis-control.mjs']) {
     await cp(path.join(root, 'shared/state-local', file), path.join(shared, file));
+  }
+  await rm(path.join(output, 'data/analysis'), { recursive: true, force: true });
+  if (process.env.HONUA_WORKBENCH_ANALYSIS) {
+    await publishWorkbenchAnalysis(process.env.HONUA_WORKBENCH_ANALYSIS, path.join(output, 'data/analysis'));
   }
   await build({ entryPoints: [path.join(root, 'shared/state-local/county-publication.mjs')],
     outfile: path.join(shared, 'county-publication.mjs'), bundle: true, format: 'esm', platform: 'browser', minify: true });
   const built = path.join(root, 'artifacts/approved-pages');
+  const catalog = path.join(output, 'data/catalog');
+  // catalog.py needs pyarrow; prefer the venv CATALOG.md creates over a bare system python3.
+  const catalogVenv = path.join(root, 'artifacts/catalog-python/bin/python');
+  const catalogPython = process.env.HONUA_CATALOG_PYTHON || (existsSync(catalogVenv) ? catalogVenv : 'python3');
+  try {
+    execFileSync(catalogPython, [path.join(root, 'scripts/state-local/approved/catalog.py'), directory, catalog], { stdio: 'inherit' });
+  } catch (error) {
+    if (catalogPython !== 'python3') throw error;
+    throw new Error(`catalog.py failed with the system python3. Create the catalog environment first (scripts/state-local/approved/CATALOG.md): `
+      + 'python3 -m venv artifacts/catalog-python && artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt', { cause: error });
+  }
   execFileSync('python3', [path.join(root, 'scripts/state-local/approved/build.py'), directory, built,
-    ...pages.map(([file]) => file)], { stdio: 'inherit', env: { ...process.env, HONUA_ISLAND_DATA: path.join(output, 'data/island'),
+    ...pages.map(([file]) => file)], { stdio: 'inherit', env: { ...process.env, HONUA_CATALOG_DATA: catalog, HONUA_ISLAND_DATA: path.join(output, 'data/island'),
       HONUA_ISLAND_POINT_LAYERS: islandPointLayers.join(','), HONUA_PAGE_PLACEHOLDERS: JSON.stringify(PAGE_PLACEHOLDERS) } });
   for (const file of ['capital-projects.mjs', 'capital-project-data.mjs', 'csv.mjs', 'download.mjs', 'public-works-export.mjs']) {
     await mkdir(path.join(output, 'public-works'), { recursive: true });

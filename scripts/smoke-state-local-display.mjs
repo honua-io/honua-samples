@@ -2,6 +2,7 @@ import { verifyRequestLoop } from './lib/verify-request-loop.mjs';
 import { verifyPublicWorksExports } from './lib/verify-public-works-exports.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
 import { verifyAppShells } from './lib/state-local-app-shell.mjs';
@@ -19,6 +20,18 @@ async function open(route) {
   assert.equal(response.status(), 200);
   await expect(page.locator('.display-snapshot')).toContainText(/Real data: Hawaii Statewide GIS; demo records are labelled; snapshot \d{4}-\d{2}-\d{2}/);
   await page.locator('.maplibregl-canvas').waitFor({ timeout: 60_000 });
+}
+
+// Every real-data strip must name the snapshot of the pack the site was built from.
+async function verifySnapshotLabels() {
+  const { snapshot } = JSON.parse(await readFile(path.resolve('site/state-local/data/approved/manifest.json'), 'utf8'));
+  for (const route of ['', 'workbench', 'property', 'property/mobile', '311', 'public-works']) {
+    const html = await (await fetch(`${server.url}/state-local/${route ? `${route}/` : ''}`)).text();
+    assert.ok(html.includes(`snapshot ${snapshot}.`), `/state-local/${route} label names snapshot ${snapshot}`);
+    const stale = [...html.matchAll(/snapshot · updated (\d{4}-\d{2}-\d{2})/g)].filter((match) => match[1] !== snapshot);
+    assert.equal(stale.length, 0, `/state-local/${route} answer panel names snapshot ${snapshot}`);
+  }
+  console.log(`PASS snapshot labels name ${snapshot}`);
 }
 
 async function verifyEarlyParcelSelection(route, title) {
@@ -49,6 +62,7 @@ async function verifyEarlyParcelSelection(route, title) {
 }
 
 try {
+  await verifySnapshotLabels();
   await verifyEarlyParcelSelection('property', '#pTitle');
   await verifyEarlyParcelSelection('property/mobile', '#tmk');
   console.log('PASS Property early lookup survives map initialization');

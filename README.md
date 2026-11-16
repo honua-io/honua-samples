@@ -185,7 +185,8 @@ You need, from a clone of this repository:
 - Port `3000` free as well: the browser lane serves its pages from
   `http://localhost:3000`, the one origin `docker/compose.yml` allows through
   CORS.
-- Python 3 on `PATH` as `python` (`ogc-features-python` runs `python src/run.py`).
+- Python 3 with `venv` (`ogc-features-python` runs `python src/run.py`). The
+  activated environment below provides `python` and the Python SDK.
 - The .NET 10 SDK: the state/local samples verify their JS, Python and .NET
   snippets against the published SDKs.
 - Internet access: the `public-live` samples query `https://demo.honua.io`.
@@ -199,13 +200,15 @@ Install the browser lane and the published state/local SDKs once:
 npm ci
 npx playwright install --with-deps chromium
 npm ci --prefix scripts/state-local/sdk
-python3 -m pip install -r scripts/state-local/sdk/requirements.txt
+python3 -m venv artifacts/runner-python
+. artifacts/runner-python/bin/activate
+python -m pip install -r scripts/state-local/sdk/requirements.txt
 dotnet restore scripts/state-local/sdk/StateLocal.csproj
 ```
 
-Then start the 2026.1 candidate, run every sample, and stop the stack.
-Licensing is disabled. The admin password is passed to Compose and to the
-browser fixture harness:
+Then, in the same shell (the environment stays activated), start the 2026.1
+candidate, run every sample, and stop the stack. Licensing is disabled. The
+admin password is passed to Compose and to the browser fixture harness:
 
 ```bash
 export HONUA_SERVER_IMAGE="${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e}"
@@ -222,7 +225,11 @@ docker compose -f docker/compose.yml down -v
 ```
 
 `docker/compose.yml` defaults to that same candidate image and sets
-`Licensing__Mode=Disabled`. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it).
+`Licensing__Mode=Disabled`. It also sets the server's `PUBLIC_BASE_URL` to
+`http://localhost:<HONUA_HTTP_PORT>` (unrelated to the runner's
+`HONUA_PUBLIC_BASE_URL` below): without it the server, which does not trust
+request `Host` headers, builds catalog and self links from the container's own
+address. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it).
 The Honua service pins `platform: linux/amd64`, including with an image override.
 On an arm64 host, Docker runs the amd64 server under emulation; this is not a
 supported 2026.1 deployment topology. The
@@ -263,12 +270,30 @@ Markdown and screenshots of failed pages. Failures open or update one issue
 labelled `gallery-health`; a passing run updates and closes it. Runner failures
 also update that issue. No maintainer needs to open CI logs to see the result.
 
-Run locally after `npm ci` and `npx playwright install --with-deps chromium firefox`:
+This optional diagnostic runs from this repository's root with Node.js 22+,
+`npm` and internet access to the public gallery and its linked services. It
+runs independently of the local Compose stack and needs no admin credentials.
+Install dependencies with `npm ci` and Playwright's locked Chromium and Firefox
+with `npx playwright install --with-deps chromium firefox`; the latter installs
+system libraries and uses `sudo` on Linux.
+
+On Linux, install Xvfb and `xauth` (Debian/Ubuntu packages `xvfb` and `xauth`)
+and run both commands under `xvfb-run`, as the gallery workflow does. This gives
+Firefox a display for its WebGL checks. Other platforms can run each `node`
+command directly using their installed browsers.
 
 ```sh
-node scripts/smoke-gallery-health-controls.mjs
-node scripts/check-gallery-health.mjs
+npm ci
+npx playwright install --with-deps chromium firefox
+xvfb-run -a node scripts/smoke-gallery-health-controls.mjs
+xvfb-run -a node scripts/check-gallery-health.mjs
 ```
+
+The first command starts its own local fixture server and writes results to
+`.artifacts/gallery-health-controls/`. The second checks the deployed public
+pages and writes `.artifacts/gallery-health/`; upstream availability can fail
+that check. A passing PR controls run proves the injected failure checks, while
+a scheduled or manually dispatched live run checks the published gallery.
 
 The controls run on relevant PRs and deliberately introduce a blank map, console
 error, dead link and broken inventory in both browsers and viewports. They verify
@@ -346,6 +371,16 @@ internal capability metadata.
 
 Published at [samples.honua.io](https://samples.honua.io) -- **the single canonical Honua
 sample gallery** (decided on [honua-io/honua-samples#3](https://github.com/honua-io/honua-samples/issues/3)).
+The gallery and SDK Explorer use `shared/design-system/tokens.css`, pinned to
+the approved Honua design source identified in that file. Update that shared
+file when advancing the design revision; both builds consume it directly.
+Product pages default to light and share the `honua-theme` browser preference.
+After building the gallery, `npm run test:gallery:themes` checks desktop/mobile
+light and dark views, text contrast, route persistence, and unavailable storage.
+The nightly sample workflow uploads the screenshots and contrast results as
+`gallery-theme-journeys`. The marketing-side rollout is tracked in
+[honua-site#402](https://github.com/honua-io/honua-site/issues/402).
+
 Every deploy runs `node scripts/build-gallery.mjs`, which renders `site/` fresh
 from **two inputs**:
 
@@ -516,6 +551,8 @@ handoff runs through 2026-11-09T22:30Z
 less than three days away, so the pin is refreshed before admission refuses it.
 
 ```bash
+python3 -m venv artifacts/catalog-python   # once: the display build reads the catalog with pyarrow
+artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
 node scripts/state-local/build-display-site.mjs # fetches verified snapshots and builds
                                                 # the three state/local demo routes first
 node scripts/build-gallery.mjs          # builds site/ (index + one page per sample/entry);

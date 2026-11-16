@@ -15,6 +15,7 @@ const point = [-90.08, 29.95];
 const row = (id) => ({ ":id": `row-${id}`, objectid: String(id), gisid: `CB-${id}`,
   the_geom: { type: "Point", coordinates: point }, owner: "EXCLUDE", description: "EXCLUDE" });
 const folders = () => response({ data: [{ metadata: { id: "works-folder", title: "Public Works" } }] });
+const connections = () => response({ data: { items: [{ name: "managed" }, { name: "import-db", connectionId: "managed/id" }] } });
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status });
 
 async function directory(t) {
@@ -93,6 +94,13 @@ test("deployment activation rechecks table, snapshot, service and department bef
   await assert.rejects(saveDeployment(env, { staged, directory: output, connection: "managed" }), /remain disabled/);
 });
 
+test("a missing deployment receipt names the source to stage", async (t) => {
+  const { output, env, state } = await deploymentFixture(t);
+  await assert.rejects(activateDeployment(env, { name: "basins", directory: output }),
+    (error) => error.message === `basins has no deployment receipt in ${output}; stage it there first`);
+  assert.equal(state.writes, 0);
+});
+
 test("deployment activation refuses drift and server changes without enabling anything", async (t) => {
   const { output, env, staged, state } = await deploymentFixture(t);
   await saveDeployment(env, { staged, directory: output, connection: "managed" });
@@ -123,7 +131,7 @@ test("deployment rejects inaccessible public routes and missing department paths
   }
   assert.equal(state.writes + state.policyWrites, 0);
   state.publicStatus = 403;
-  await assert.rejects(activateDeployment(env, options), /Anonymous public layer/);
+  await assert.rejects(activateDeployment(env, options), /Service public layer index/);
   state.publicStatus = 200;
   state.publicId = 8;
   await assert.rejects(activateDeployment(env, options), /Anonymous public layer/);
@@ -215,6 +223,7 @@ test("stage uses multipart import, preserves governance and creates a disabled d
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options });
     if (url.endsWith("/folders")) return folders();
+    if (url.endsWith("/admin/connections")) return connections();
     if (url.endsWith("/import/upload")) {
       assert.ok(options.body instanceof FormData);
       assert.equal(JSON.parse(await options.body.get("file").text()).features.length, 1);
@@ -224,10 +233,11 @@ test("stage uses multipart import, preserves governance and creates a disabled d
   };
   const result = await stageSnapshot({ baseUrl: "https://server.test", adminApiKey: "test-key" },
     { name: "basins", directory: output, connection: "managed" });
-  assert.equal(calls.length, 3);
-  assert.equal(calls[1].options.headers["X-API-Key"], "test-key");
-  assert.equal(calls[1].options.headers["Content-Type"], undefined);
-  const published = JSON.parse(calls[2].options.body);
+  assert.equal(calls.length, 4);
+  assert.ok(calls[1].url.endsWith("/admin/connections"));
+  assert.equal(calls[2].options.headers["X-API-Key"], "test-key");
+  assert.equal(calls[2].options.headers["Content-Type"], undefined);
+  const published = JSON.parse(calls[3].options.body);
   assert.match(published.serviceName, /^basins-/);
   assert.equal(published.enabled, false);
   assert.equal(published.folderId, "works-folder");
@@ -245,7 +255,8 @@ test("stage rejects missing connection and unexpected upload count before public
   const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
   await assert.rejects(stageSnapshot(env, { name: "basins", directory: output }), /HONUA_SAMPLE_CONNECTION/);
   let calls = 0;
-  globalThis.fetch = async (url) => { if (url.endsWith("/folders")) return folders(); calls++; return response({ featureCount: 2, physicalTableName: "wrong" }); };
+  globalThis.fetch = async (url) => { if (url.endsWith("/folders")) return folders();
+    if (url.endsWith("/admin/connections")) return connections(); calls++; return response({ featureCount: 2, physicalTableName: "wrong" }); };
   await assert.rejects(stageSnapshot(env, { name: "basins", directory: output, connection: "managed" }), /feature count/);
   assert.equal(calls, 1);
 });
@@ -270,6 +281,7 @@ test("stage follows completed async publication and rejects failed or enabled re
   globalThis.fetch = async (input) => {
     const url = new URL(input);
     if (url.pathname.endsWith("/folders")) return folders();
+    if (url.pathname.endsWith("/admin/connections")) return connections();
     paths.push(url.pathname);
     if (url.pathname.endsWith("/import/upload")) return response({ featureCount: 1, physicalTableName: "basins" });
     if (url.pathname.endsWith("/jobs/job-id")) return response({ data: { status, layerId: 19 } });
@@ -295,6 +307,7 @@ test("stage reads the rc.2 storageLayerId from sync and async publication", asyn
   globalThis.fetch = async (input) => {
     const url = new URL(input);
     if (url.pathname.endsWith("/folders")) return folders();
+    if (url.pathname.endsWith("/admin/connections")) return connections();
     if (url.pathname.endsWith("/import/upload")) return response({ featureCount: 1, physicalTableName: "basins" });
     if (url.pathname.endsWith("/jobs/job-id")) return response({ data: { status: "Completed", storageLayerId: 19 } });
     // A storage handle must win over any other numeric id in the same record.
@@ -327,6 +340,7 @@ test("policy source stages without inventing a CC0 licence", async (t) => {
   await fetchSnapshot("cleanings", output);
   globalThis.fetch = async (input, options) => {
     if (input.endsWith("/folders")) return folders();
+    if (input.endsWith("/admin/connections")) return connections();
     if (input.endsWith("/import/upload")) return response({ featureCount: 1, physicalTableName: "cleanings" });
     const body = JSON.parse(options.body);
     assert.equal(body.license, undefined);
@@ -348,6 +362,7 @@ test("background upload polls terminal state and never guesses a physical table"
     globalThis.fetch = async (input) => {
       const url = new URL(input);
       if (url.pathname.endsWith("/folders")) return folders();
+      if (url.pathname.endsWith("/admin/connections")) return connections();
     paths.push(url.pathname);
       return url.pathname.endsWith("/upload") ? response({ jobId: "upload-job", statusUrl: "https://untrusted.test" }, 202)
         : response({ jobId: "upload-job", status, tableName: "logical-name", featuresProcessed: 1 });
@@ -362,6 +377,7 @@ function completedReceiptFetch(state) {
   return async (input, request) => {
     const url = new URL(input);
     if (url.pathname.endsWith("/folders")) return folders();
+    if (url.pathname.endsWith("/admin/connections")) return connections();
     if (url.pathname.endsWith("/upload")) {
       state.expectedTable = request.body.get("TableName");
       return response({ jobId: "upload-job", statusUrl: "https://untrusted.test" }, 202);
@@ -417,5 +433,22 @@ test("staging requires exactly one department folder before uploading", async (t
       return response({ data });
     };
     await assert.rejects(stageSnapshot(env, { name: "basins", directory: output, connection: "managed" }), /exactly one.*Public Works/);
+  }
+});
+
+test("staging requires the named managed connection before uploading", async (t) => {
+  const output = await directory(t);
+  sourceFetch(t);
+  await fetchSnapshot("basins", output);
+  const env = { baseUrl: "https://server.test", adminApiKey: "test-key" };
+  for (const data of [[], [{ name: "other" }], undefined]) {
+    const paths = [];
+    globalThis.fetch = async (url) => {
+      paths.push(new URL(url).pathname);
+      return url.endsWith("/folders") ? folders() : response({ data });
+    };
+    await assert.rejects(stageSnapshot(env, { name: "basins", directory: output, connection: "managed" }),
+      /Create the managed managed connection/);
+    assert.deepEqual(paths, ["/api/v1/admin/folders", "/api/v1/admin/connections"]);
   }
 });

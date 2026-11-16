@@ -54,6 +54,10 @@
   .faq dt { font-weight: 600; margin-top: 14px; }
   .faq dd { margin: 4px 0 0; color: var(--c-text-2); font-size: 13.5px; max-width: 80ch; }
   footer.site { padding: 24px 0 40px; border-top: 1px solid var(--c-rule); color: var(--c-text-2); font-size: 13px; }
+  @media (min-width: 901px) and (max-width: 1399px) {
+    .appbar { height: auto; min-height: 52px; padding-block: 10px; row-gap: 8px; flex-wrap: wrap; }
+    .appbar .appnav { order: 1; flex-basis: 100%; margin-left: 0; }
+  }
   @media (max-width: 1000px) {
     .hero, .two { grid-template-columns: minmax(0, 1fr); }
     .steps { grid-template-columns: minmax(0, 1fr); gap: 18px; }

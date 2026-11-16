@@ -9,10 +9,11 @@ const [schoolsPath, roadsPath, zonesPath, receiptPath, output] = process.argv.sl
 if (!output) throw new Error('Usage: emergency-snapshot.mjs schools.geojson roads.cjson zones.geojson tsunami-source.json output');
 const raw = await Promise.all([schoolsPath, roadsPath, zonesPath].map((file) => readFile(file, 'utf8')));
 const [schools, compact, zones] = raw.map(JSON.parse);
+const scale = 10 ** (compact.s || 5);
 function line(values) {
   let x = 0, y = 0;
   const points = [];
-  for (let i = 0; i < values.length; i += 2) { x += values[i]; y += values[i + 1]; points.push([x / 1e5, y / 1e5]); }
+  for (let i = 0; i < values.length; i += 2) { x += values[i]; y += values[i + 1]; points.push([x / scale, y / scale]); }
   return points;
 }
 const roads = { type: 'FeatureCollection', features: compact.g.map((lines, i) => ({

@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { publicLayerIndex } from "../lib/public-layer.mjs";
 import { adminFetch } from "../lib/admin-api.mjs";
 import { layersPath, listLayers, storageLayerId } from "./import.mjs";
 import { readSnapshot } from "./snapshot.mjs";
@@ -52,9 +53,18 @@ export async function saveDeployment(env, options) {
   return deployment;
 }
 
+async function deploymentText(directory, name) {
+  try {
+    return await readFile(receiptPath(directory, name), "utf8");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    throw new Error(`${name} has no deployment receipt in ${directory}; stage it there first`);
+  }
+}
+
 export async function readDeployment(env, options) {
   const { name, directory } = options;
-  const deployment = JSON.parse(await readFile(receiptPath(directory, name), "utf8"));
+  const deployment = JSON.parse(await deploymentText(directory, name));
   const receipt = options.snapshotReceipt ?? (await readSnapshot(name, directory)).receipt;
   if (deployment.format !== "honua.samples.deployment.v1" || deployment.source !== name
     || deployment.baseUrl !== serverUrl(env) || deployment.cleanSha256 !== receipt.cleanSha256
@@ -107,19 +117,6 @@ export async function activateDeployment(env, options) {
     await setLayerState(env, { receipt, enabled: true });
   }
   return activeDeployment(env, options);
-}
-
-// The public index is service-local and may differ from the storage handle, so
-// read it from the anonymous service listing rather than assume it.
-async function publicLayerIndex(serviceUrl, layer) {
-  const response = await fetch(`${serviceUrl}?f=json`);
-  const listing = response.ok ? await response.json() : null;
-  const layers = Array.isArray(listing?.layers) ? listing.layers : [];
-  const named = layers.filter((entry) => entry.name === layer.layerName);
-  // Fall back to the only layer solely for servers that do not report the admin layer name.
-  const match = layer.layerName ? (named.length === 1 ? named[0] : null) : layers.length === 1 ? layers[0] : null;
-  if (!Number.isInteger(match?.id)) throw new Error("Anonymous public layer index was not confirmed");
-  return match.id;
 }
 
 export async function activeDeployment(env, options) {

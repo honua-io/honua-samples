@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:gallery:themes": "node scripts/smoke-gallery-themes.mjs",
     "test:gallery:browser": "node scripts/smoke-published-gallery.mjs",
     "test:state-local:browser": "node scripts/smoke-state-local.mjs --require-previews",
     "release:audit:validate": "node scripts/release-certification.mjs validate",

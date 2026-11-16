@@ -4,6 +4,10 @@ import { readFile } from 'node:fs/promises';
 import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
+// Exports must carry the date of the pack the site was built from.
+const { snapshot } = JSON.parse(await readFile(path.resolve('site/state-local/data/approved/manifest.json'), 'utf8'));
+const snapshotLabel = `Snapshot ${snapshot}`;
+
 async function readDownload(page, format) {
   const waiting = page.waitForEvent('download');
   await page.getByRole('button', { name: `Download selected parcel ${format}`, exact: true }).click();
@@ -16,15 +20,15 @@ async function verifySelectedExport(page) {
   await page.locator('#q').fill('234039007');
   await page.locator('#q').press('Enter');
   await expect(page.locator('h1')).toContainText('3-4-039:007');
-  await expect(page.locator('#parcelExports')).toContainText('Snapshot 2026-11-10');
+  await expect(page.locator('#parcelExports')).toContainText(snapshotLabel);
   const csv = await readDownload(page, 'CSV');
   assert.match(csv, /"234039007"/);
-  assert.match(csv, /"2026-11-10"/);
+  assert.ok(csv.includes(`"${snapshot}"`));
   assert.match(csv, /Generalized display snapshots/);
   const exported = JSON.parse(await readDownload(page, 'GeoJSON'));
   const selected = await page.evaluate(() => window.HM.get('parcels').features.find((feature) => String(feature.properties.t9) === '234039007'));
   assert.deepEqual(exported.features, [selected]);
-  assert.equal(exported.provenance.snapshot, '2026-11-10');
+  assert.equal(exported.provenance.snapshot, snapshot);
   assert.ok(exported.provenance.sources.parcels.sourceUrl);
   assert.ok(exported.provenance.sources.parcels.license);
 }
@@ -38,7 +42,7 @@ async function verifyBeforeMap(page, url) {
   });
   await page.goto(deepLink);
   await expect(page.locator('h1')).toContainText('3-4-039:007');
-  await expect(page.locator('#parcelExports')).toContainText('Snapshot 2026-11-10');
+  await expect(page.locator('#parcelExports')).toContainText(snapshotLabel);
   assert.match(await readDownload(page, 'CSV'), /"234039007"/);
   assert.equal(String(JSON.parse(await readDownload(page, 'GeoJSON')).features[0].properties.t9), '234039007');
   await page.unroute(deepLink);

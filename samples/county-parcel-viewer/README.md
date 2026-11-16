@@ -114,8 +114,9 @@ The pinned SDK 0.3.2 requires explicit attribute fields for inspection and a pub
 
 Address search uses the server's GeocodeServer (`World` locator). The page credits OpenStreetMap, so it first
 reads the locator's provider and only sends an address when the provider is Nominatim (OpenStreetMap). Any other
-provider gets "Address search is unavailable right now. Search by TMK instead." On 2026-10-28 demo.honua.io reported
-`amazon-location`, so address search on the demo stays off until its geocoder is switched to Nominatim.
+provider gets "Address search is unavailable right now. Search by TMK instead." A house or building match is
+looked up as a parcel. A street centre line (OpenStreetMap `highway`, with no house number) is labelled as that
+street and asks for a TMK or a map click. It does not report "No parcel at that address".
 
 ## Try it on your own layers
 
@@ -141,6 +142,40 @@ The archive's `render_height` uses the reported height, floors × 3 metres, or a
 the 3D view displays this limitation. These are contextual estimates, not surveyed elevations.
 The SDK `scene-workspace` export remains available in the pinned 0.3.x release; its documented
 successor is `@honua/app-platform/scene-workspace` for a future SDK upgrade.
+
+## Compatibility: published SDK queries
+
+Query the imported `maui-zoning` layer with the same filter in JavaScript, Python and .NET.
+These examples run one bounded, read-only REST query. They print the source citation and
+returned attributes, with at most 20 results; they do not perform parcel overlays, permit
+lookups or a complete export, or establish native transport readiness.
+
+From the repository root, install the published packages:
+
+```sh
+npm ci --prefix scripts/state-local/sdk
+python3 -m venv artifacts/state-local/venv
+artifacts/state-local/venv/bin/pip install -r scripts/state-local/sdk/requirements.txt
+dotnet restore scripts/state-local/sdk/StateLocal.csproj
+```
+
+Use the exact service name and numeric zoning layer ID from the activated deployment
+receipt, following [the import recipe](../../docs/state-local-data.md). The layer must
+allow anonymous queries; do not put an admin key in a public client.
+
+```sh
+export HONUA_BASE_URL=http://localhost:8080
+export HONUA_SERVICE_ID=your-published-zoning-service-name
+export HONUA_LAYER_ID=0
+node scripts/state-local/sdk/query.mjs property
+artifacts/state-local/venv/bin/python scripts/state-local/sdk/query.py property
+dotnet run --project scripts/state-local/sdk/StateLocal.csproj -- property
+```
+
+The shared `property` scenario filters on `zone_code IS NOT NULL`. Select the zoning
+layer from the receipt even when parcels and zoning share a service; this query does
+not join them. Results describe the imported dataset and do not establish current
+zoning or a land-use determination.
 
 ## Verification
 

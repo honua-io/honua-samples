@@ -13,6 +13,13 @@
   .hero-map { position: relative; min-height: 500px; border-radius: 14px; overflow: hidden; border: 1px solid var(--c-rule); box-shadow: var(--shadow-panel); }
   .hero-map .map { position: absolute; inset: 0; }
   .hero-legend { left: 12px; bottom: 30px; width: 214px; }
+  .appbar { padding-block: 6px; } /* breathing room if enlarged text wraps the header */
+  /* From 901px the full nav shows and the header needs about 1114px of layout width (1129px of viewport
+     with a classic 15px scrollbar): give the nav its own row, as on Switching. */
+  @media (min-width: 901px) and (max-width: 1129px) {
+    .appbar { padding-block: 10px; }
+    .appbar .appnav { order: 1; flex-basis: 100%; margin-left: 0; }
+  }
   .hero-card { position: absolute; right: 12px; top: 12px; z-index: 5; width: 260px; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 12px 14px; font-size: 13px; }
   .hero-card .q { font-weight: 600; font-size: 13px; margin: 6px 0; }
   .facts-row { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 24px; border-top: 1px solid var(--c-rule); }
@@ -118,7 +125,7 @@
   <span class="env"><span class="dot"></span>Demo environment</span>
 </header>
 <div class="demostrip" role="note">
-  <span>Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span>Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-15. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
   <span class="tag-real">Real data</span> Parcels, zoning, flood, tsunami, sea-level rise, roads, schools and bridges (Hawaii Statewide GIS Program)
   <span class="tag-demo">Demo data</span> 311 requests, work orders, assets and agent conversations
 </div>
@@ -204,7 +211,7 @@
     </div>
     <div class="more">
       <a href="https://docs.honua.io/"><svg class="ico"><use href="#i-settings"/></svg><div><b>Console documentation</b><span>Live Console view coming; learn about folders, services and imports</span></div></a>
-      <a href="/state-local/data/approved/manifest.json"><svg class="ico"><use href="#i-grid"/></svg><div><b>Snapshot catalogue</b><span>Verified sources, attribution, checksums and snapshot downloads</span></div></a>
+      <a href="07-catalog.html"><svg class="ico"><use href="#i-grid"/></svg><div><b>Snapshot catalogue</b><span>Search datasets, inspect sources and download snapshot data</span></div></a>
       <a href="12-workbench.html"><svg class="ico"><use href="#i-chart"/></svg><div><b>Analysis workbench</b><span>Parcel and demo 311 snapshots: linked charts, filters, export and Demo answer</span></div></a>
       <a href="/state-local/sdk-explorer/"><svg class="ico"><use href="#i-code"/></svg><div><b>SDK Explorer</b><span>Runnable JavaScript, Python and .NET examples for your own services</span></div></a>
       <a href="/state-local/switching/"><svg class="ico"><use href="#i-route"/></svg><div><b>Switching guide</b><span>Product mapping and the migration path</span></div></a>
@@ -294,7 +301,8 @@
     HM.themed(map, { id, type: "circle", source: id, paint: { "circle-color": color, "circle-radius": radius, "circle-stroke-color": "--map-pin-ring", "circle-stroke-width": 1.5 } });
   }
   const hero = HM.create(document.getElementById("heroMap"), {
-    view: "wide", padding: 10, cooperative: true,
+    // Top-left: the agent card covers the default top-right zoom buttons.
+    view: "wide", padding: 10, cooperative: true, navPos: "top-left",
     onload: (m) => {
       HM.overlays(m, ["zoning", "flood", "tsunami"], "roads-casing");
       m.setPaintProperty("zoning", "fill-opacity", 0.35);

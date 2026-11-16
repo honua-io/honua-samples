@@ -2,18 +2,20 @@
    The island adapter supplies native archives and the street basemap. */
 (function () {
   const HD = (window.HD = window.HD || {});
-  function decLine(a) {
+  function decLine(a, scale) {
     const out = []; let x = 0, y = 0;
-    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; out.push([x / 1e5, y / 1e5]); }
+    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; out.push([x / scale, y / scale]); }
     return out;
   }
   function decode(c) {
     if (!c || c.type === "FeatureCollection") return c;
+    // Compact collections carry "s" (decimal places) only when a shape needed more than 1e5.
+    const scale = 10 ** (c.s || 5), line = (a) => decLine(a, scale);
     const feats = c.p.map((vals, i) => {
       const props = {}; c.k.forEach((k, j) => (props[k] = vals[j]));
       const g = c.g[i]; let geometry;
-      if (c.t === "poly") geometry = g.length === 1 ? { type: "Polygon", coordinates: g[0].map(decLine) } : { type: "MultiPolygon", coordinates: g.map((p) => p.map(decLine)) };
-      else geometry = g.length === 1 ? { type: "LineString", coordinates: decLine(g[0]) } : { type: "MultiLineString", coordinates: g.map(decLine) };
+      if (c.t === "poly") geometry = g.length === 1 ? { type: "Polygon", coordinates: g[0].map(line) } : { type: "MultiPolygon", coordinates: g.map((p) => p.map(line)) };
+      else geometry = g.length === 1 ? { type: "LineString", coordinates: line(g[0]) } : { type: "MultiLineString", coordinates: g.map(line) };
       return { type: "Feature", id: props.id != null ? props.id : i, properties: props, geometry };
     });
     return { type: "FeatureCollection", features: feats };
@@ -95,16 +97,43 @@
     setTheme(theme());
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mountToggle); else mountToggle();
+  function unavailableMap(el, message) {
+    // Pages keep controls inside #map: drop only MapLibre's partial DOM and lay the notice over the dead controls.
+    el.querySelectorAll(":scope > .maplibregl-canvas-container, :scope > .maplibregl-control-container, :scope > .map-unavailable").forEach((n) => n.remove()); el.classList.remove("maplibregl-map");
+    const notice = document.createElement("p"); notice.className = "map-unavailable"; notice.setAttribute("role", "status"); notice.textContent = message;
+    notice.style.cssText = "position:absolute;z-index:20;left:50%;top:50%;transform:translate(-50%,-50%);max-width:calc(100% - 32px);margin:0;padding:12px 16px;border-radius:8px;background:var(--c-surface,#fff);color:var(--c-text,#111);box-shadow:0 2px 12px rgba(0,0,0,.25)";
+    if (getComputedStyle(el).position === "static") el.style.position = "relative";
+    el.prepend(notice); return null;
+  }
+  function cameraHashParams(bounds) {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const camera = params.get("map");
+    if (camera === null) return params;
+    const parts = camera.split("/"), values = parts.map(Number);
+    const [zoom, lat, lng] = values;
+    if (parts.length >= 3 && parts.length <= 5 && parts.every((part) => part.trim() !== "")
+      && values.every(Number.isFinite) && zoom >= 8 && zoom <= 19
+      && lng >= bounds[0][0] && lng <= bounds[1][0] && lat >= bounds[0][1] && lat <= bounds[1][1]) return params;
+    params.delete("map");
+    const hash = params.toString();
+    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search + (hash ? "#" + hash : ""));
+    return params;
+  }
   function create(el, opts) {
     opts = opts || {};
-    if (!window.maplibregl || !window.pmtiles) { el.innerHTML = '<p style="padding:16px">Map library could not load. Connect to the internet to view the interactive map.</p>'; return null; }
+    if (!window.maplibregl || !window.pmtiles) return unavailableMap(el, "Map library could not load. Connect to the internet to view the interactive map.");
     HI.register();
-    const map = new maplibregl.Map({
-      container: el, attributionControl: false, maxBounds: opts.maxBounds || HI.bounds, dragRotate: false, pitchWithRotate: false, maxZoom: 19, minZoom: 8, hash: opts.interactive !== false && !opts.cooperative ? "map" : false,
-      style: { version: 8, glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": cssVar("--map-water", "#c9dfe8") } }] },
-      bounds: opts.bounds || VIEW[opts.view || "core"], fitBoundsOptions: { padding: opts.padding || 20 },
-      interactive: opts.interactive !== false, cooperativeGestures: !!opts.cooperative,
-    });
+    const hash = opts.interactive !== false && !opts.cooperative ? "map" : false;
+    if (hash) cameraHashParams(opts.maxBounds || HI.bounds);
+    let map;
+    try {
+      map = new maplibregl.Map({
+        container: el, attributionControl: false, maxBounds: opts.maxBounds || HI.bounds, dragRotate: false, pitchWithRotate: false, maxZoom: 19, minZoom: 8, hash,
+        style: { version: 8, glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": cssVar("--map-water", "#c9dfe8") } }] },
+        bounds: opts.bounds || VIEW[opts.view || "core"], fitBoundsOptions: { padding: opts.padding || 20 },
+        interactive: opts.interactive !== false, cooperativeGestures: !!opts.cooperative,
+      });
+    } catch { return unavailableMap(el, "Interactive map unavailable in this browser. Try a browser with WebGL enabled."); }
     maps.push(map);
     // Containers that size after first paint (grid rows, fonts, embedded frames) leave the canvas short; follow the container.
     const fitBounds = opts.bounds || VIEW[opts.view || "core"];
@@ -175,7 +204,7 @@
   function tmk(t9) { const s = String(t9).padStart(9, "0"); return `(${s[0]}) ${s[1]}-${s[2]}-${s.slice(3, 6)}:${s.slice(6)}`; }
   function money(n) { return n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US"); }
   function icon(name) { return `<svg class="ico" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
-  function hashParams() { return new URLSearchParams(location.hash.slice(1)); }
+  function hashParams() { return cameraHashParams(HI.bounds); }
   window.HM = { hashParams, themed, cssVar, setTheme, theme, restyle, maps, decode, get, points, create, add, overlays, toggle, bindToggles, label, bbox, streetNames, fitStreet, tmk, money, icon, VIEW, ZONE_GROUP, ZONE_COLOR };
 
   /* Tabs: [role=tablist] buttons with aria-controls */

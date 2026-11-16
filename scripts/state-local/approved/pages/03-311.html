@@ -88,7 +88,7 @@
   <span class="avatar" aria-label="Signed in as Malia Kahale">MK</span>
 </header>
 <div class="demostrip" role="note">
-  <span class="display-snapshot">Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span class="display-snapshot">Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-15. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
   <span class="tag-real">Real data</span> Streets, council districts, tsunami and flood zones, school exercise anchors
   <span class="tag-demo">Demo data</span> 469 service requests on real streets, crews, assistant proposals
   <span class="faint">· Monday, November 9, 2026 · synthetic reporters · anonymous exercise</span>
@@ -227,7 +227,7 @@
 </main>
 
 <div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" aria-label="Request detail" aria-hidden="true">
+<aside class="drawer" id="drawer" aria-label="Request detail" aria-hidden="true" inert>
   <div class="drawer-h">
     <div class="grow">
       <div class="kicker" id="dKick"></div>
@@ -366,9 +366,11 @@
 
   // Drawer
   const drawer = document.getElementById("drawer"), scrim = document.getElementById("scrim");
+  let drawerOpener;
   const m2 = (a, b) => Math.hypot((a[0] - b[0]) * 104000, (a[1] - b[1]) * 111000);
   function openDrawer(id) {
     const r = reqs.find((x) => x.id === id); if (!r) return;
+    if (drawer.dataset.open !== "true") drawerOpener = document.activeElement;
     const asset = HD.demo.assets.filter((a) => r.type === "Traffic signal" ? a.kind === "Traffic signal" : r.type === "Drainage / flooding" ? a.kind !== "Traffic signal" : true).reduce((best, a) => (m2(a.c, r.c) < m2(best.c, r.c) ? a : best));
     const dupes = reqs.filter((x) => x !== r && isOpen(x) && x.type === r.type && m2(x.c, r.c) < 80 && Math.abs(x.t0 - r.t0) < 14 * D);
     const dd = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) * 111000;
@@ -421,17 +423,24 @@
           <li class="ok"><b>Example CRM handoff</b> · no webhook sent<time>+1 s</time></li>
           <li class="ai"><b>Triage proposal</b> by Honua agent<time>+3 s</time></li>
         </ul></section>`;
+    drawer.inert = false;
     drawer.dataset.open = "true"; drawer.setAttribute("aria-hidden", "false"); scrim.dataset.open = "true";
     document.getElementById("dClose").focus();
     if (map && map.getLayer("sel")) { map.setFilter("sel", ["==", ["get", "rid"], r.id]); map.easeTo({ center: r.c, zoom: Math.max(map.getZoom(), 15), duration: 600 }); }
     document.querySelectorAll("#dBody [data-sel]").forEach((b) => (b.onclick = () => openDrawer(b.dataset.sel)));
     const acc = document.getElementById("acc"); if (acc) acc.onclick = () => { acc.closest(".ai-card").querySelector(".chip").className = "chip ok"; acc.closest(".ai-card").querySelector(".chip").textContent = "Demo approval · no records changed"; };
   }
-  function closeDrawer() { drawer.dataset.open = "false"; drawer.setAttribute("aria-hidden", "true"); scrim.dataset.open = "false"; }
+  function closeDrawer() {
+    if (drawer.dataset.open !== "true") return;
+    const opener = drawerOpener?.isConnected && drawerOpener !== document.body ? drawerOpener : document.querySelector("#qBody tr, [data-days]");
+    opener?.focus();
+    drawer.inert = true;
+    drawer.dataset.open = "false"; drawer.setAttribute("aria-hidden", "true"); scrim.dataset.open = "false";
+  }
   document.getElementById("dClose").onclick = closeDrawer; scrim.onclick = closeDrawer;
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
-  document.getElementById("qBody").addEventListener("click", (e) => { const tr = e.target.closest("tr"); if (tr) openDrawer(tr.dataset.id); });
-  document.getElementById("qBody").addEventListener("keydown", (e) => { const tr = e.target.closest("tr"); if (tr && e.key === "Enter") openDrawer(tr.dataset.id); });
+  document.getElementById("qBody").addEventListener("click", (e) => { const tr = e.target.closest("tr"); if (tr) { tr.focus(); openDrawer(tr.dataset.id); } });
+  document.getElementById("qBody").addEventListener("keydown", (e) => { const tr = e.target.closest("tr"); if (tr && e.key === "Enter") { e.preventDefault(); openDrawer(tr.dataset.id); } });
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-fly]"); if (b && map) map.fitBounds([[-156.481, 20.873], [-156.462, 20.888]], { duration: 700 }); });
 
   function render() { const rs = filtered(); renderKpis(rs); renderRoute(rs); renderTrend(); renderSla(rs); renderDist(); renderBrief(); renderQueue(); renderMap(rs); }

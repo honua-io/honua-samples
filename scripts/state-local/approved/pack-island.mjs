@@ -41,7 +41,8 @@ export async function packIsland(options) {
   }
   await writeFile(path.join(outputDirectory, 'manifest.json'), JSON.stringify(manifest, null, 2));
   const archive = path.resolve(outputDirectory, '..', 'maui-island-display.tar.gz');
-  execFileSync('tar', ['--sort=name', '--mtime=2026-11-10', '--owner=0', '--group=0', '-czf', archive, '-C', outputDirectory, '.']);
+  execFileSync('tar', ['--sort=name', '--mtime=2026-11-10', '--owner=0', '--group=0', '-czf', archive, '-C', outputDirectory, '.'],
+    { env: { ...process.env, TZ: 'UTC' } });
   return { archive, sha256: sha256(await readFile(archive)), files: manifest.files };
 }
 

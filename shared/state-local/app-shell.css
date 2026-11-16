@@ -17,8 +17,9 @@ body.app-shell {
 .app-shell .demostrip { max-height: 72px; overflow: auto; }
 .app-emergency .xbanner { flex-wrap: wrap; max-height: 100px; overflow: auto; }
 .app-emergency .xbanner .t { white-space: normal; }
-.app-emergency .statusbar { height: auto; max-height: 54px; padding: 4px 10px; gap: 4px 12px; flex-wrap: wrap; white-space: normal; overflow: auto; }
+.app-emergency .statusbar { position: static; height: auto; max-height: 54px; padding: 4px 10px; gap: 4px 12px; flex-wrap: wrap; white-space: normal; overflow: auto; }
 .app-emergency .statusbar > span { flex-wrap: wrap; }
+.app-emergency .legend { max-width: calc(100% - 24px); max-height: calc(100% - 130px); overflow: auto; }
 .app-shell .layout, .app-shell .wb, .app-shell .sx {
   flex: 1;
   min-height: 0;
@@ -75,7 +76,8 @@ body.app-shell {
   .app-workbench .rbody { overflow: auto; }
 }
 @media (max-width: 1000px) and (min-width: 641px) {
-  .app-explorer .sx { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
+  body.app-explorer { height: auto; overflow: auto; }
+  .app-explorer .sx { flex: none; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(640px, 70vh) 420px; }
   .app-explorer .sx > .center { grid-column: 1 / -1; grid-row: 1; min-height: 0; overflow: hidden !important; }
   .app-explorer .sx > .left { max-height: none; grid-column: 1; grid-row: 2; }
   .app-explorer .sx > .right { grid-column: 2; grid-row: 2; overflow: auto !important; }
@@ -91,9 +93,12 @@ body.app-shell {
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
   .app-property #map, .app-emergency #map { height: auto; order: -1; }
-  .app-emergency .layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); }
-  .app-emergency #map { grid-column: 1 / -1; }
+  body.app-emergency { height: auto; overflow: auto; }
+  .app-emergency .layout { flex: none; grid-template-rows: auto; overflow: visible; }
+  .app-emergency #map { grid-column: 1 / -1; height: 60vh; min-height: 320px; }
   .app-emergency .col { overflow: auto; }
+  .app-emergency .xbanner, .app-emergency .demostrip,
+  .app-emergency .statusbar { max-height: none; overflow: visible; }
   .app-requests .page, .app-works .pw-main { padding: 10px; }
   .department-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
   .app-requests .ph, .app-works .pagehead { flex-shrink: 0; gap: 8px; margin-bottom: 10px; }
@@ -102,4 +107,39 @@ body.app-shell {
 @media (max-width: 640px) {
   body.app-explorer, body.app-workbench { height: auto; overflow: auto; }
   .app-explorer .sx, .app-workbench .wb { overflow: visible; }
+  .app-explorer .sx > .center { min-height: 760px; }
+  .app-explorer .shead .path, .app-explorer .right { overflow-wrap: anywhere; }
 }
+
+@media (min-width: 901px) {
+  body.app-emergency { min-height: 800px; overflow: auto; }
+  .app-emergency .legend { bottom: 56px; max-height: calc(100% - 156px); }
+}
+
+@media (min-width: 901px) and (max-width: 1240px) {
+  .app-emergency .appbar .appnav { display: none; }
+  .app-emergency .wordmark { flex: 1; }
+  .app-emergency .wordmark strong { flex-shrink: 0; }
+  .app-emergency .wordmark small { white-space: normal; }
+}
+
+@media (min-width: 1001px) {
+  body.app-explorer { min-height: 800px; overflow: auto; }
+}
+
+/* Overflow guards, mainly for enlarged text (WCAG 1.4.4). Each rule only acts when content no
+   longer fits: the hidden skip link stops bleeding over the header, buttons grow instead of
+   spilling, and headers, tables and the landing agent card wrap or scroll instead of running off
+   the page. Two of them also fix the default size on landing: the header wraps at 901-1129px and
+   the comparison table scrolls at 641-700px. */
+.skip-link:not(:focus) { clip-path: inset(50%); }
+.skip-link { max-width: calc(100% - 16px); }
+.btn, .seg button { min-height: fit-content; }
+body:not(.app-shell) .appbar { flex-wrap: wrap; height: auto; min-height: 52px; row-gap: 8px; }
+body:not(.app-shell) .appnav { flex-wrap: wrap; }
+.hero .btn { white-space: normal; }
+.proto { flex-wrap: wrap; }
+.facts-row > div { overflow-wrap: anywhere; min-width: 0; }
+.tbl-wrap { overflow-x: auto; }
+.hero-card { max-height: calc(100% - 56px); overflow: auto; }
+@media (max-width: 700px) { .map-tbl a.screen { white-space: normal; } }

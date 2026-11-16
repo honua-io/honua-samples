@@ -1,8 +1,13 @@
 import { adminFetch } from './admin-api.mjs';
 
+export async function managedConnections(env) {
+  const response = await adminFetch(env, { method: 'GET', apiPath: '/api/v1/admin/connections' });
+  const connections = response?.data?.items ?? response?.data;
+  return Array.isArray(connections) ? connections : [];
+}
+
 export async function ensureConnection(env, name) {
-  const existing = await adminFetch(env, { method: 'GET', apiPath: '/api/v1/admin/connections' });
-  if ((existing.data ?? []).some((connection) => connection.name === name)) return;
+  if ((await managedConnections(env)).some((connection) => connection.name === name)) return;
   await adminFetch(env, { method: 'POST', apiPath: '/api/v1/admin/connections', body: {
     name,
     host: process.env.HONUA_SAMPLE_DB_HOST ?? 'postgres',

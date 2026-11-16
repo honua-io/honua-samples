@@ -196,10 +196,20 @@ jobs:
           MIN_RUNNABLE_BUNDLES: "11"
         run: node scripts/lib/sample-bundles.mjs
 
+      - name: Install pinned public catalog exporters
+        run: |
+          python3 -m venv artifacts/catalog-python
+          artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+
+      - name: Verify display geometry and public catalog export boundaries
+        run: artifacts/catalog-python/bin/python -m unittest discover -s scripts/state-local/approved -p 'test_*.py' -v
+
       - name: Install gallery dependencies
         run: npm ci
 
       - name: Build snapshot-backed state and local demos
+        env:
+          HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: node scripts/state-local/build-display-site.mjs
 
       - name: Build gallery
@@ -227,6 +237,12 @@ jobs:
         # config/required-published-apps.v1.json: every app it lists must be
         # runnable in this artifact (scripts/smoke-published-gallery.mjs).
         run: npm run test:gallery:browser
+
+      - name: Verify light and dark gallery journeys
+        run: npm run test:gallery:themes
+
+      - name: Verify signed-out public catalog workflow
+        run: node scripts/smoke-public-catalog.mjs
 
       - name: Island map layers draw in Chromium and Firefox
         # The state-local maps read their PMTiles archives byte-exact from the demo CDN.

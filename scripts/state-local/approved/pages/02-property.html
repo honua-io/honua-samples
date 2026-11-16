@@ -80,7 +80,7 @@
   <a class="btn ghost hide-sm" href="#">Staff sign in</a>
 </header>
 <div class="demostrip" role="note">
-  <span class="display-snapshot">Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-10. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
+  <span class="display-snapshot">Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-15. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
   <span class="tag-real">Real data</span> Parcels, zoning, FEMA flood zones, tsunami zones, sea-level-rise exposure (Hawaii Statewide GIS Program)
   <span class="tag-demo">Demo data</span> Assistant answers · permits live in the County permit system (MAPPS)
   <span class="faint">· Verified snapshot · static preview · anonymous viewing</span>
@@ -91,7 +91,7 @@
     <div class="side-sec" style="padding-bottom:8px">
       <div class="search">
         <label class="sr-only" for="q">Search by TMK, street or place</label>
-        <div class="field"><svg class="ico faint"><use href="#i-search"/></svg><input id="q" autocomplete="off" placeholder="Search TMK, street or place" value="3-7-004:006" aria-controls="sug" aria-expanded="false"><span class="kbd">/</span></div>
+        <div class="field"><svg class="ico faint"><use href="#i-search"/></svg><input id="q" tabindex="1" autocomplete="off" placeholder="Search TMK, street or place" value="3-7-004:006" aria-controls="sug" aria-expanded="false"><span class="kbd">/</span></div>
         <div class="suggest" id="sug" role="listbox" aria-label="Suggestions"></div>
       </div>
       <p class="faint" style="font-size:14px;margin-top:6px">Island-wide reference map · parcel lookup covers the Kahului/Wailuku demo area.</p>
@@ -113,7 +113,7 @@
 
     <section class="side-sec" aria-labelledby="snapshotQuestions" id="parcelQuestions">
       <h2 id="snapshotQuestions" style="font-size:13px">Questions about this snapshot</h2>
-      <p class="faint" style="font-size:12px">Demo answers · scripted snapshot · updated 2026-11-10 · <a href="/state-local/data/approved/manifest.json">Hawaii Statewide GIS sources</a></p>
+      <p class="faint" style="font-size:12px">Demo answers · scripted snapshot · updated 2026-11-15 · <a href="/state-local/data/approved/manifest.json">Hawaii Statewide GIS sources</a></p>
     </section>
 
     <section class="side-sec" style="padding-top:4px" aria-labelledby="askH">
@@ -392,17 +392,17 @@
   // Citations: each one shows its source on the map
   const CITE = {
     parcel: () => select(FEAT, true),
-    zoning: () => { document.querySelector('[data-layers="zoning,zoning-line"]').checked = true; HM.toggle(map, ["zoning", "zoning-line"], true); document.getElementById("t2").click(); },
+    zoning: () => { document.querySelector('[data-layers="zoning,zoning-line"]').checked = true; map && HM.toggle(map, ["zoning", "zoning-line"], true); document.getElementById("t2").click(); },
     code: () => document.getElementById("t2").click(),
-    flood: () => { HM.toggle(map, ["flood", "flood-line"], true); document.getElementById("t3").click(); },
+    flood: () => { map && HM.toggle(map, ["flood", "flood-line"], true); document.getElementById("t3").click(); },
     bfe: () => document.getElementById("t3").click(),
-    tsunami: () => { const cb = document.querySelector('[data-layers="tsunami,tsunami-x,tsunami-line"]'); cb.checked = true; HM.toggle(map, ["tsunami", "tsunami-x", "tsunami-line"], true); map.fitBounds([[-156.484, 20.879], [-156.46, 20.896]], { duration: 700 }); },
-    shelter: () => map.fitBounds([[-156.476, 20.877], [-156.466, 20.892]], { duration: 700 }),
-    slud: () => { const cb = document.querySelector('[data-layers="slud-line,slud-lbl"]'); cb.checked = true; HM.toggle(map, ["slud-line", "slud-lbl"], true); document.getElementById("t0").click(); },
-    sma: () => { HM.toggle(map, ["sma-line"], true); map.fitBounds([[-156.5, 20.876], [-156.45, 20.902]], { duration: 700 }); document.getElementById("t0").click(); },
-    cplan: () => { const cb = document.querySelector('[data-layers="cplan-line"]'); cb.checked = true; HM.toggle(map, ["cplan-line"], true); document.getElementById("t0").click(); },
-    mip: () => { const cb = document.querySelector('[data-layers="mip-line"]'); cb.checked = true; HM.toggle(map, ["mip-line"], true); map.fitBounds(HM.VIEW.wide, { duration: 700 }); },
-    slr: () => { const cb = document.querySelector('[data-layers="slr"]'); cb.checked = true; HM.toggle(map, ["slr"], true); map.fitBounds([[-156.49, 20.884], [-156.462, 20.9]], { duration: 700 }); },
+    tsunami: () => { const cb = document.querySelector('[data-layers="tsunami,tsunami-x,tsunami-line"]'); cb.checked = true; map && HM.toggle(map, ["tsunami", "tsunami-x", "tsunami-line"], true); map?.fitBounds([[-156.484, 20.879], [-156.46, 20.896]], { duration: 700 }); },
+    shelter: () => map?.fitBounds([[-156.476, 20.877], [-156.466, 20.892]], { duration: 700 }),
+    slud: () => { const cb = document.querySelector('[data-layers="slud-line,slud-lbl"]'); cb.checked = true; map && HM.toggle(map, ["slud-line", "slud-lbl"], true); document.getElementById("t0").click(); },
+    sma: () => { map && HM.toggle(map, ["sma-line"], true); map?.fitBounds([[-156.5, 20.876], [-156.45, 20.902]], { duration: 700 }); document.getElementById("t0").click(); },
+    cplan: () => { const cb = document.querySelector('[data-layers="cplan-line"]'); cb.checked = true; map && HM.toggle(map, ["cplan-line"], true); document.getElementById("t0").click(); },
+    mip: () => { const cb = document.querySelector('[data-layers="mip-line"]'); cb.checked = true; map && HM.toggle(map, ["mip-line"], true); map?.fitBounds(HM.VIEW.wide, { duration: 700 }); },
+    slr: () => { const cb = document.querySelector('[data-layers="slr"]'); cb.checked = true; map && HM.toggle(map, ["slr"], true); map?.fitBounds([[-156.49, 20.884], [-156.462, 20.9]], { duration: 700 }); },
   };
   document.querySelectorAll("[data-cite]").forEach((b) => b.addEventListener("click", () => CITE[b.dataset.cite] && CITE[b.dataset.cite]()));
 

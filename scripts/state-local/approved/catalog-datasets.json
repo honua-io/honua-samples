@@ -1,0 +1,213 @@
+[
+  {
+    "id": "parcels",
+    "title": "Parcels (TMK)",
+    "topic": "Land and property",
+    "geom": "Polygon",
+    "tags": [
+      "TMK",
+      "assessment",
+      "cadastral"
+    ],
+    "desc": "Generalized tax map key parcels near Kahului with assessment attributes. This extract is not a legal boundary or a complete county dataset."
+  },
+  {
+    "id": "zoning",
+    "title": "County zoning",
+    "topic": "Land and property",
+    "geom": "Polygon",
+    "tags": [
+      "zoning",
+      "Title 19"
+    ],
+    "desc": "Zoning districts under Maui County Code Title 19, with zone code and district name."
+  },
+  {
+    "id": "slud",
+    "title": "State land use districts",
+    "topic": "Land and property",
+    "geom": "Polygon",
+    "tags": [
+      "HRS 205",
+      "land use"
+    ],
+    "desc": "Urban, Agricultural, Conservation and Rural districts set by the State Land Use Commission under HRS Chapter 205."
+  },
+  {
+    "id": "sma",
+    "title": "Special management area",
+    "topic": "Land and property",
+    "geom": "Polygon",
+    "tags": [
+      "HRS 205A",
+      "coastal zone"
+    ],
+    "desc": "Coastal special management area administered by the County under HRS Chapter 205A. Development inside it needs an SMA permit or exemption."
+  },
+  {
+    "id": "cplan",
+    "title": "Wailuku-Kahului community plan (2002)",
+    "topic": "Land and property",
+    "geom": "Polygon",
+    "tags": [
+      "community plan",
+      "future land use"
+    ],
+    "desc": "Community plan land use designations for the Wailuku-Kahului community plan area, adopted 2002."
+  },
+  {
+    "id": "mip_growth",
+    "title": "Maui Island Plan growth boundaries",
+    "topic": "Land and property",
+    "geom": "Polygon",
+    "tags": [
+      "Maui Island Plan",
+      "growth"
+    ],
+    "desc": "Urban, rural and small town growth boundaries from the Maui Island Plan (2012), directed growth map."
+  },
+  {
+    "id": "mip_protected",
+    "title": "Maui Island Plan protected areas",
+    "topic": "Environment",
+    "geom": "Polygon",
+    "tags": [
+      "Maui Island Plan",
+      "open space"
+    ],
+    "desc": "Greenways, park lands and other protected areas from the Maui Island Plan (2012)."
+  },
+  {
+    "id": "dfirm",
+    "title": "FEMA flood hazard zones (DFIRM)",
+    "topic": "Hazards and safety",
+    "geom": "Polygon",
+    "tags": [
+      "FEMA",
+      "flood",
+      "NFIP"
+    ],
+    "desc": "Digital flood insurance rate map zones (A, AE, AO, VE, X) for Maui County, with special flood hazard area flag."
+  },
+  {
+    "id": "tsunami",
+    "title": "Tsunami evacuation zones",
+    "topic": "Hazards and safety",
+    "geom": "Polygon",
+    "tags": [
+      "tsunami",
+      "evacuation"
+    ],
+    "desc": "Tsunami evacuation zone, extreme tsunami evacuation zone and safe zone for Kahului and Wailuku."
+  },
+  {
+    "id": "slr32",
+    "title": "Sea-level rise exposure area, 3.2 ft",
+    "topic": "Hazards and safety",
+    "geom": "Polygon",
+    "tags": [
+      "climate",
+      "sea-level rise"
+    ],
+    "desc": "Area exposed to chronic flooding with 3.2 feet of sea-level rise (passive flooding, annual high wave flooding and coastal erosion)."
+  },
+  {
+    "id": "shelters",
+    "title": "Evacuation shelters",
+    "topic": "Hazards and safety",
+    "geom": "Point",
+    "tags": [
+      "shelters",
+      "preparedness"
+    ],
+    "desc": "Potential emergency shelters with address, capacity where known, pet-friendly and special-needs flags."
+  },
+  {
+    "id": "fire",
+    "title": "Fire stations",
+    "topic": "Hazards and safety",
+    "geom": "Point",
+    "tags": [
+      "fire",
+      "facilities"
+    ],
+    "desc": "Fire stations with station name and status."
+  },
+  {
+    "id": "roads",
+    "title": "Road centerlines",
+    "topic": "Transportation",
+    "geom": "Line",
+    "tags": [
+      "roads",
+      "centerlines"
+    ],
+    "desc": "Road centerlines for Maui with street name and road class."
+  },
+  {
+    "id": "bridges",
+    "title": "Bridges (National Bridge Inventory)",
+    "topic": "Infrastructure",
+    "geom": "Point",
+    "tags": [
+      "NBI",
+      "bridges",
+      "condition"
+    ],
+    "desc": "Bridges with structure number, year built, traffic, deck, superstructure and substructure condition ratings."
+  },
+  {
+    "id": "schools",
+    "title": "Public schools",
+    "topic": "Community",
+    "geom": "Point",
+    "tags": [
+      "schools"
+    ],
+    "desc": "Public schools with name, address, grades and school type."
+  },
+  {
+    "id": "streams",
+    "title": "Streams",
+    "topic": "Environment",
+    "geom": "Line",
+    "tags": [
+      "streams",
+      "hydrology"
+    ],
+    "desc": "Perennial and intermittent streams with stream name and type."
+  },
+  {
+    "id": "council",
+    "title": "Council districts",
+    "topic": "Community",
+    "geom": "Polygon",
+    "tags": [
+      "council",
+      "boundaries"
+    ],
+    "desc": "Maui County Council residency areas with district number and name."
+  },
+  {
+    "id": "requests",
+    "title": "311 service requests",
+    "topic": "Community",
+    "geom": "Point",
+    "tags": [
+      "311",
+      "Open311"
+    ],
+    "desc": "Service requests with type, status, department, SLA and council district. Reporter details are never published."
+  },
+  {
+    "id": "assets",
+    "title": "Storm drain and signal assets",
+    "topic": "Infrastructure",
+    "geom": "Point",
+    "tags": [
+      "assets",
+      "condition"
+    ],
+    "desc": "Storm drain inlets, culverts and traffic signals with condition score, install year and last inspection."
+  }
+]
