@@ -1,5 +1,6 @@
 import { operations, publicUrl, validateManifest, runAnalysis, exportCsv, exportGeoJson } from './workbench-analytics.mjs';
 import { download } from './download.mjs';
+import { element } from './dom.mjs';
 
 const panel = document.querySelector('#serverAnalysis');
 const status = panel.querySelector('[role=status]');
@@ -7,12 +8,6 @@ const output = panel.querySelector('[data-results]');
 const select = panel.querySelector('select');
 const run = panel.querySelector('[data-run]');
 let manifest, result, map = document.querySelector('#map').honuaAnalysisMap;
-
-function element(tag, text) {
-  const node = document.createElement(tag);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
 
 function updateMap() {
   if (!map) return;
@@ -29,21 +24,21 @@ function updateMap() {
 
 function renderTable() {
   const definition = operations[result.key];
-  const table = element('table');
+  const table = element('table', null);
   table.setAttribute('aria-label', `${definition.title} server result`);
-  const head = element('tr');
+  const head = element('tr', null);
   head.append(element('th', definition.label), element('th', definition.value));
-  const thead = element('thead');
+  const thead = element('thead', null);
   thead.append(head);
   table.append(thead);
-  const body = element('tbody');
+  const body = element('tbody', null);
   for (const row of result.rows) {
-    const tr = element('tr');
+    const tr = element('tr', null);
     tr.append(element('td', row.label), element('td', String(row.value)));
     body.append(tr);
   }
   table.append(body);
-  const scroll = element('div');
+  const scroll = element('div', null);
   scroll.style.cssText = 'max-height:240px;overflow:auto';
   scroll.append(table);
   output.append(scroll);
@@ -57,7 +52,7 @@ function renderAgent() {
   const agent = result.agent;
   output.append(element('h3', agent.chart.title), element('p', `Recorded agent answer · ${agent.provider} / ${agent.model} · ${agent.createdAt}`),
     element('p', `Question: ${agent.question}`));
-  const chart = element('div');
+  const chart = element('div', null);
   chart.setAttribute('aria-label', 'Recorded agent chart; values verified against the server table');
   const max = Math.max(1, ...agent.chart.series.map((row) => row.value));
   for (const row of agent.chart.series) {
@@ -70,7 +65,7 @@ function renderAgent() {
 
 function renderResult() {
   output.replaceChildren();
-  const provenance = element('details');
+  const provenance = element('details', null);
   provenance.append(element('summary', 'Dataset and request provenance'), element('pre', JSON.stringify({ dataset: result.dataset,
     request: result.request, responseSha256: result.sha256, serverImage: result.serverImage ?? null }, null, 2)));
   provenance.style.cssText = 'overflow-wrap:anywhere;white-space:normal';
@@ -78,7 +73,7 @@ function renderResult() {
   output.append(provenance);
   renderTable();
   renderAgent();
-  const actions = element('div');
+  const actions = element('div', null);
   for (const format of ['CSV', 'GeoJSON']) {
     const button = element('button', `Export analysis ${format}`);
     button.type = 'button';
