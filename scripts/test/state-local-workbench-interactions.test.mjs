@@ -76,3 +76,17 @@ for (const [name, value, cell] of [
     });
   });
 }
+
+for (const value of ["O'Brien", "two 'quoted' names", "Mālama 🌺", ""]) {
+  test(`contains query keeps ${JSON.stringify(value)} inside one CQL text literal`, () => {
+    const context = vm.createContext({ attribute: { f: 'zoning', op: 'contains', v: value } });
+    const start = source.indexOf('  const q =');
+    const end = source.indexOf('  function cqlText(', start);
+    assert.ok(start >= 0 && end > start);
+    vm.runInContext(source.slice(start, end), context);
+    const cql = vm.runInContext('clause(attribute)', context);
+    const literal = cql.match(/^zoning LIKE '((?:[^']|'')*)'$/);
+    assert.ok(literal, `Expected exactly one valid text literal: ${cql}`);
+    assert.equal(literal[1].replaceAll("''", "'"), `%${value}%`);
+  });
+}

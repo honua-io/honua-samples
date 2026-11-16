@@ -376,7 +376,7 @@
     if (a.op === "not in") return `${a.f} NOT IN (${a.v.map(q).join(", ")})`;
     if (a.op === "between-date") return `${a.f} BETWEEN DATE('${a.v[0]}') AND DATE('${a.v[1]}')`;
     if (a.op === "between") return `${a.f} BETWEEN ${Math.round(a.v[0] * 1000) / 1000} AND ${Math.round(a.v[1] * 1000) / 1000}`;
-    if (a.op === "contains") return `${a.f} LIKE '%${a.v}%'`;
+    if (a.op === "contains") return `${a.f} LIKE ${q(`%${a.v}%`)}`;
     return `${a.f} ${a.op === "≠" ? "<>" : a.op === "≥" ? ">=" : a.op} ${isNaN(+a.v) || a.v === "" ? q(a.v) : +a.v}`;
   }
   function cqlText() {
