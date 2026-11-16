@@ -31,7 +31,7 @@ async function checkDataset(page, baseUrl) {
   await page.goto(`${baseUrl}/state-local/catalog/#ds=dfirm`);
   await expect(page.locator('#dsView')).toBeVisible();
   await expect(page.locator('#dsView')).toContainText('Public domain');
-  await expect(page.locator('#dsView')).toContainText('Nov 10, 2026');
+  await expect(page.locator('#dsView')).toContainText('Nov 15, 2026');
   await page.locator('#fullTable').click();
   await expect(page.locator('#tableRange')).toHaveText('1–50 of 97 rows');
   await expect(page.locator('#dsView tbody tr')).toHaveCount(50);
