@@ -83,7 +83,7 @@
   function setTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
     try { localStorage.setItem("honua-theme", t); } catch (e) { /* storage unavailable: mode lasts for this page view */ }
-    maps.forEach((m) => { try { if (m.isStyleLoaded()) restyle(m); else m.once("load", () => restyle(m)); } catch (e) {} });
+    maps.forEach((m) => { try { restyle(m); } catch (e) {} });
     document.querySelectorAll(".theme-toggle").forEach((b) => { b.setAttribute("aria-pressed", t === "dark"); b.setAttribute("aria-label", t === "dark" ? "Switch to light mode" : "Switch to dark mode"); b.title = b.getAttribute("aria-label"); });
     document.dispatchEvent(new CustomEvent("honua:theme", { detail: { theme: t } }));
   }
