@@ -84,6 +84,10 @@ and mobile widths, including a photo, reload, and CSV download.
 
 ## Workbench table exports
 
+Tab reaches sortable headings and data rows. Enter or Space sorts a heading or selects
+a row; Shift or Command with row activation adds to the selection. Sorting and
+selection preserve keyboard focus.
+
 CSV and GeoJSON export all rows matching the analysis filters, table search and
 Selected only toggle, in table sort order. The 250-row display cap does not limit
 downloads. Empty results produce CSV headers and an empty GeoJSON FeatureCollection.

@@ -73,6 +73,7 @@
   .dt td { padding: 7px 12px; border-bottom: 1px solid var(--c-rule); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .dt td.n, .dt th.n { text-align: right; }
   .dt tbody tr { cursor: pointer; }
+  .dt tbody tr:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -2px; }
   .dt tbody tr:hover td { background: var(--c-zebra); }
   .dt tbody tr[aria-selected="true"] td { background: var(--c-selected); }
   .dt .mono { font-family: var(--font-mono); font-size: 12px; }
@@ -431,15 +432,27 @@
   }
   function renderTable(rows) {
     const L = LAYERS[S.layer], rs = tableRows(rows);
+    const active = document.querySelector("#dt").contains(document.activeElement) ? document.activeElement : null;
+    const focusedSort = active?.dataset.sort, focusedRow = active?.dataset.id;
     document.querySelector("#dt thead").innerHTML = "<tr>" + L.cols.map((c) => `<th scope="col" data-sort="${escapeHtml(c[0])}" class="${["money", "num"].includes(c[2]) ? "n" : ""}" aria-sort="${S.sort && S.sort[0] === c[0] ? (S.sort[1] > 0 ? "ascending" : "descending") : "none"}" tabindex="0">${escapeHtml(c[1])}</th>`).join("") + "</tr>";
     const shown = rs.slice(0, 250);
-    document.querySelector("#dt tbody").innerHTML = shown.map((r) => `<tr data-id="${escapeHtml(r[L.idField])}" aria-selected="${S.sel.has(r[L.idField])}">` + L.cols.map((c) => `<td class="${["money", "num"].includes(c[2]) ? "n" : ""} ${c[2] === "mono" ? "mono" : ""}">${escapeHtml(fmt(r[c[0]], c[2]))}</td>`).join("") + "</tr>").join("");
+    document.querySelector("#dt tbody").innerHTML = shown.map((r) => `<tr data-id="${escapeHtml(r[L.idField])}" tabindex="0" aria-selected="${S.sel.has(r[L.idField])}">` + L.cols.map((c) => `<td class="${["money", "num"].includes(c[2]) ? "n" : ""} ${c[2] === "mono" ? "mono" : ""}">${escapeHtml(fmt(r[c[0]], c[2]))}</td>`).join("") + "</tr>").join("");
     document.getElementById("more").textContent = rs.length > shown.length ? `Showing ${shown.length} of ${rs.length.toLocaleString()} rows; the SDK table pages the rest from the server.` : "";
     document.getElementById("tCount").textContent = `${rs.length.toLocaleString()} rows${S.sel.size ? ` · ${S.sel.size} selected` : ""}`;
+    if (focusedSort !== undefined || focusedRow !== undefined) {
+      const controls = document.querySelectorAll("#dt [data-sort], #dt tr[data-id]");
+      [...controls].find((el) => focusedSort !== undefined ? el.dataset.sort === focusedSort : el.dataset.id === focusedRow)?.focus({ preventScroll: true });
+    }
   }
   document.querySelector("#dt thead").addEventListener("click", (e) => { const th = e.target.closest("th"); if (!th) return; const f = th.dataset.sort; S.sort = S.sort && S.sort[0] === f ? [f, -S.sort[1]] : [f, 1]; renderTable(filtered()); });
-  document.querySelector("#dt thead").addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.click(); });
   document.querySelector("#dt tbody").addEventListener("click", (e) => { const tr = e.target.closest("tr"); if (!tr) return; const L = LAYERS[S.layer]; const id = L.rows[0][L.idField].constructor === Number ? +tr.dataset.id : tr.dataset.id; select([id], { replace: !e.shiftKey && !e.metaKey, fly: true }); });
+  document.getElementById("dt").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const control = e.target.closest("th[data-sort], tr[data-id]");
+    if (!control) return;
+    e.preventDefault();
+    control.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: e.shiftKey, metaKey: e.metaKey }));
+  });
   document.getElementById("tq").addEventListener("input", (e) => { S.tq = e.target.value; renderTable(filtered()); });
   document.getElementById("selOnly").addEventListener("click", (e) => { S.selOnly = !S.selOnly; e.currentTarget.setAttribute("aria-pressed", S.selOnly); renderTable(filtered()); });
   // ---- charts (SVG) ----
