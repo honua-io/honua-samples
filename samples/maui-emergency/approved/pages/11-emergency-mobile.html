@@ -47,6 +47,11 @@
   .foot .endpoint .p { min-width: 92px; }
   .me { width: 16px; height: 16px; border-radius: 50%; background: var(--c-info); border: 3px solid var(--map-pin-ring); box-shadow: 0 0 0 6px color-mix(in srgb, var(--c-info) 25%, transparent); }
   .maplabel.poi { font-size: 10.5px; }
+  @media print {
+    .phone { height: auto; overflow: visible; border-radius: 0; box-shadow: none; }
+    .m-top { position: static; }
+    .foot { break-inside: avoid; }
+  }
   @media (max-width: 430px) {
     :root { --x-banner-bg: #fff4e6; --x-banner-line: #f5c89a; --x-banner-text: #5c2c06; --x-banner-strong: #3d1d04; --x-banner-meta: #7a3a0a; --x-ex: #c2410c; --x-ex-text: #ffffff;
     --x-res-bg: #fff7f2; --x-res-line: #f3c9b3; --x-res-head: #8a2c07; --x-frame: #e6ebe9; }
