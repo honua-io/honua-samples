@@ -414,7 +414,7 @@
     onStreet: (name) => HM.fitStreet(map, name, 80),
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key !== "/" || e.defaultPrevented || e.isComposing || e.ctrlKey || e.altKey || e.metaKey) return;
+  if (e.key !== "/" || e.defaultPrevented || e.isComposing || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
     const target = e.target;
     if (target instanceof HTMLElement && (target.isContentEditable || target.closest("input, textarea, select"))) return;
     e.preventDefault();

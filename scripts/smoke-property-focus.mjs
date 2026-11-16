@@ -22,6 +22,8 @@ async function verifySearchShortcut(page) {
   await tab.focus();
   await tab.press('Control+/');
   await expect(tab).toBeFocused();
+  await tab.dispatchEvent('keydown', { key: '/', shiftKey: true, bubbles: true, cancelable: true });
+  await expect(tab).toBeFocused();
   await tab.press('/');
   await expect(search).toBeFocused();
   expect(await search.evaluate((input) => input.selectionEnd - input.selectionStart)).toBe('parcel/'.length);
