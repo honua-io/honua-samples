@@ -34,7 +34,7 @@ const overrides = {
 };
 const approvedData = { exerciseShelters };
 // Layers regenerated from a released display pack carry their source receipt; the rest predate receipts.
-const layerReceipts = JSON.parse(await read(path.join(approved, 'data', 'receipts.json')));
+const layerReceipts = JSON.parse(await read(path.join(approved, 'data', 'layer-sources.json')));
 const receipts = [];
 const endpoints = { land: 'Terrestrial/MapServer/3', contours: 'Elevation/MapServer/5',
   streams: 'FreshWater/MapServer/1', waterbodies: 'FreshWater/MapServer/19',
@@ -49,7 +49,7 @@ function layerReceipt(name, file, raw) {
       licenseUrl: 'https://planning.hawaii.gov/gis/download-gis-data-expanded/',
       retrievalDate: null, note: 'Approved simplified display snapshot; original retrieval date was not recorded.' };
   }
-  if (known.file !== file || known.sha256 !== sha256) throw new Error(`approved/data/receipts.json does not match ${file}`);
+  if (known.file !== file || known.sha256 !== sha256) throw new Error(`approved/data/layer-sources.json does not match ${file}`);
   return { dataset: name, sourceUrl: known.sourceUrl, sha256, attribution: known.attribution,
     license: known.license, licenseUrl: known.licenseUrl, retrievalDate: known.retrievedAt,
     note: `Generalized display snapshot from the ${layerReceipts.pack} release; not a legal boundary.` };

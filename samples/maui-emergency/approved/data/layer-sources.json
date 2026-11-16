@@ -1,6 +1,6 @@
 {
   "pack": "maui-approved-display-2026-11-15",
-  "note": "Layers copied unchanged from the approved Maui display pack; sha256 must match the file beside this receipt.",
+  "note": "Layers copied unchanged from the approved Maui display pack; sha256 must match the file beside this record.",
   "layers": {
     "dfirm": {
       "file": "dfirm.cjson",
