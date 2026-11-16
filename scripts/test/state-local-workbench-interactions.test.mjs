@@ -45,3 +45,34 @@ for (const type of ['hist', 'time']) {
     assert.equal(refreshes, 2);
   });
 }
+
+for (const [name, value, cell] of [
+  ['Unicode', 'Mālama 🌺', 'Mālama 🌺'],
+  ['comma', 'Kahului, Maui', '"Kahului, Maui"'],
+  ['quotation mark', 'say "aloha"', '"say ""aloha"""'],
+  ['line feed', 'first\nsecond', '"first\nsecond"'],
+  ['carriage return', 'first\rsecond', '"first\rsecond"'],
+  ['CRLF', 'first\r\nsecond', '"first\r\nsecond"'],
+  ['empty field', '', ''],
+]) {
+  test(`CSV export preserves a field containing ${name}`, () => {
+    let click;
+    let exported;
+    const rows = [{ id: 1, value }, { id: 2, value: 'next record' }];
+    const context = vm.createContext({
+      document: { getElementById: () => ({ addEventListener: (_, callback) => { click = callback; } }) },
+      S: { layer: 'requests' },
+      LAYERS: { requests: { cols: [['id', 'ID'], ['value', 'Value']] } },
+      filtered: () => rows, tableRows: (items) => items,
+      download: (name, text, type) => { exported = { name, text, type }; },
+    });
+    const handler = source.split('\n').find((line) => line.includes('getElementById("expCsv").addEventListener'));
+    assert.ok(handler, 'CSV export click handler exists');
+    vm.runInContext(handler, context);
+    click();
+    assert.deepEqual(exported, {
+      name: 'maui-requests.csv', type: 'text/csv',
+      text: `ID,Value\n1,${cell}\n2,next record`,
+    });
+  });
+}
