@@ -7,25 +7,28 @@ let browser;
 let server;
 let binding;
 let unsafe;
+let foldered;
 
 test.beforeAll(async ({}, info) => {
   info.setTimeout(600_000);
   const geojson = { type: 'FeatureCollection', features: Array.from({ length: 205 }, (_, index) => request(index)) };
   const unlabelled = structuredClone(geojson);
   unlabelled.features.forEach(({ properties }) => { properties.is_demo = false; });
+  const folderedRequests = { type: 'FeatureCollection', features: geojson.features.slice(0, 12) };
   browser = await prepareOperationsBrowser({ sampleUrl: new URL('..', import.meta.url), scenario: '311', seeds: {
     binding: { prefix: 'maui-311-ui', allowAnonymous: true, protocols: ['OgcFeatures'], fixture: { geojson, count: 205 } },
-    unsafe: { prefix: 'maui-311-unsafe', allowAnonymous: true, fixture: { geojson: unlabelled, count: 205 } }
+    unsafe: { prefix: 'maui-311-unsafe', allowAnonymous: true, fixture: { geojson: unlabelled, count: 205 } },
+    foldered: { prefix: 'maui-311-folder', allowAnonymous: true, department: '311', fixture: { geojson: folderedRequests, count: 12 } }
   } });
   server = browser.server;
-  ({ binding, unsafe } = browser.bindings);
+  ({ binding, unsafe, foldered } = browser.bindings);
 });
 
 test.afterAll(async () => { await closeOperationsBrowser(browser); });
 
 function url(source = binding) {
   const target = new URL('/maui-311/app/', server.url);
-  target.search = new URLSearchParams({ baseUrl: serverEnv().baseUrl, service: source.serviceName, layer: String(source.layerId) });
+  target.search = new URLSearchParams({ baseUrl: serverEnv().baseUrl, service: source.servicePath, layer: String(source.layerId) });
   return target.href;
 }
 
@@ -129,6 +132,13 @@ test('mobile and dark mode retain disclosure, controls and accessible request se
   await page.getByRole('button', { name: /light mode/i }).click();
   await settleMapCanvas(page);
   await page.screenshot({ path: info.outputPath('311-desktop-light.png'), fullPage: true });
+});
+
+test('a recipe import in its department folder binds from the receipt folder/service path', async ({ page }) => {
+  expect(foldered.servicePath).toBe(`service-requests/${foldered.serviceName}`);
+  await page.goto(url(foldered));
+  await expect(page.locator('body')).toHaveAttribute('data-sample-status', 'pass', { timeout: 60_000 });
+  await expect(page.locator('#load-status')).toContainText('12 exercise requests');
 });
 
 test('unconfigured app makes no claim that a county service is connected', async ({ page }) => {

@@ -21,8 +21,10 @@ closed shelters. No operational use or evacuation guidance.
 ## Run the public exercise map
 
 Import `maui-demo-shelters` and `maui-demo-closures` through the
-[department pipeline](../../docs/state-local-data.md). Use the exact published
-service names and numeric layer IDs from the approved receipts. Public reads must
+[department pipeline](../../docs/state-local-data.md). For each layer,
+take the service path and layer from its activated receipt's `layerUrl`: the path between
+`/rest/services/` and `/FeatureServer/` (`folder/service` for a department import) and
+the number after it. Public reads must
 be enabled explicitly; no administrative credential belongs in the browser URL.
 
 ```sh

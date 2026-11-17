@@ -111,8 +111,10 @@ python3 -m http.server 3000 --directory site
 ```
 
 Open `/maui-public-works/app/` on that local server. This local staging step does
-not activate the full journey in the public portfolio. Supply the activated
-service names and numeric layer IDs in the URL:
+not activate the full journey in the public portfolio. Supply each activated
+layer's service path and layer from its receipt `layerUrl` (the path between
+`/rest/services/` and `/FeatureServer/`, `folder/service` for a department import,
+and the number after it) in the URL:
 
 ```text
 ?baseUrl=http://localhost:8080&bridgeService=BRIDGES&bridgeLayer=1&orderService=ORDERS&orderLayer=2&inspectionService=INSPECTIONS&inspectionLayer=3

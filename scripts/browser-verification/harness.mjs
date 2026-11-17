@@ -19,6 +19,7 @@
 import { adminFetch, serverEnv } from "../lib/admin-api.mjs";
 import { publicLayerIndex } from "../lib/public-layer.mjs";
 import { ensureConnection } from "../lib/sample-connection.mjs";
+import { departments, ensureDepartments } from "../state-local/departments.mjs";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -138,7 +139,7 @@ async function importFixture({ fixture, tableName, importFields = {} }) {
  *
  * @param {{ prefix: string, allowAnonymous: boolean, protocols?: string[], fixture?: {geojson: object, count: number} }} opts
  */
-export async function seedFeatureService({ prefix, allowAnonymous, protocols = [], fixture: suppliedFixture, description }) {
+export async function seedFeatureService({ prefix, allowAnonymous, protocols = [], fixture: suppliedFixture, description, department }) {
   const env = serverEnv();
   const fixture = suppliedFixture ?? await loadFixture();
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -150,6 +151,7 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
 
   const connectionName = process.env.HONUA_SAMPLE_CONNECTION ?? "local";
   await ensureConnection(env, connectionName);
+  const folderId = await departmentFolderId(env, department);
   const published = await adminFetch(env, { method: "POST", apiPath: `/api/v1/admin/connections/${connectionName}/layers`, body: {
     schema: upload.schema ?? "honua_data",
     table: upload.physicalTableName,
@@ -157,6 +159,7 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
     ...(description ? { description } : {}),
     srid: 4326,
     serviceName,
+    ...(folderId ? { folderId } : {}),
     enabled: true,
   } });
   if (published.data?.enabled !== true) {
@@ -170,12 +173,35 @@ export async function seedFeatureService({ prefix, allowAnonymous, protocols = [
     await adminFetch(env, { method: "PUT", apiPath: `/api/v1/admin/services/${serviceName}/access-policy`, body: { allowAnonymous: true, allowAnonymousWrite: false } });
   }
 
-  const serviceUrl = `${env.baseUrl}/rest/services/${serviceName}/FeatureServer`;
+  const servicePath = await publicServicePath(env, serviceName, folderId);
+  const serviceUrl = `${env.baseUrl}/rest/services/${servicePath}/FeatureServer`;
   const headers = allowAnonymous ? undefined : { "X-API-Key": env.adminApiKey };
   const layerId = await waitForLayerIndex(serviceUrl, published.data, headers);
   const layerUrl = `${serviceUrl}/${layerId}`;
   await waitForFeatureServer({ env, layerUrl, allowAnonymous, expectedCount: fixture.count });
-  return { serviceName, layerId, layerName, serviceUrl, layerUrl, allowAnonymous, tableName };
+  return { serviceName, servicePath, layerId, layerName, serviceUrl, layerUrl, allowAnonymous, tableName };
+}
+
+/** Resolve a department folder the way the state-local recipe does: by its exact Console title. */
+async function departmentFolderId(env, title) {
+  if (title === undefined) return undefined;
+  if (!departments.some((entry) => entry.title === title)) throw new Error(`unknown state-local department: ${title}`);
+  await ensureDepartments(env);
+  const folders = await adminFetch(env, { method: "GET", apiPath: "/api/v1/admin/folders" });
+  const matches = folders?.data?.filter((folder) => !folder.deleted && folder.metadata?.title === title && folder.metadata?.id);
+  if (matches?.length !== 1) throw new Error(`expected exactly one ${title} department folder, found ${matches?.length ?? 0}`);
+  return matches[0].metadata.id;
+}
+
+/** A foldered service is public at `folder/service`, as the activated deployment receipt's layerUrl records. */
+async function publicServicePath(env, serviceName, folderId) {
+  if (folderId === undefined) return serviceName;
+  const services = await adminFetch(env, { method: "GET", apiPath: `/api/v1/admin/services/?q=${encodeURIComponent(serviceName)}` });
+  const service = services?.data?.items?.find((entry) => entry.serviceName === serviceName);
+  if (service?.folderId !== folderId || !service.folderName || !service.publicName) {
+    throw new Error(`service ${serviceName} has no public path in department folder ${folderId}`);
+  }
+  return `${encodeURIComponent(service.folderName)}/${encodeURIComponent(service.publicName)}`;
 }
 
 async function waitForLayerIndex(serviceUrl, layer, headers) {
