@@ -5,6 +5,7 @@ html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); font-size: var(--text-sm); line-height: var(--leading-normal); -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01"; }
 a { color: var(--c-link); text-decoration: none; }
 a:hover { text-decoration: underline; }
+.feed a, .mapattr a { text-decoration: underline; text-underline-offset: 2px; }
 h1, h2, h3, h4 { margin: 0; line-height: var(--leading-tight); font-weight: var(--weight-semibold); letter-spacing: -0.012em; }
 h1 { font-size: var(--text-2xl); } h2 { font-size: var(--text-lg); } h3 { font-size: var(--text-md); } h4 { font-size: var(--text-sm); }
 p { margin: 0; }
