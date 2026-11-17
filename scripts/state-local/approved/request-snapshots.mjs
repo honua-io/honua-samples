@@ -4,8 +4,9 @@ import { sha256 } from '../../lib/checksum.mjs';
 
 export function labelDemoRecords(demo) {
   const labelled = { ...demo };
-  for (const collection of ['requests', 'assets', 'workorders']) {
-    labelled[collection] = demo[collection].map((record) => ({ ...record, is_demo: true, exercise_only: true }));
+  for (const collection of ['requests', 'assets', 'workorders', 'agent']) {
+    labelled[collection] = (demo[collection] ?? []).map((record) => ({ ...record, data_origin: 'synthetic_demo',
+      disclaimer: 'DEMO DATA; not county operations', is_demo: true, exercise_only: true }));
   }
   return labelled;
 }

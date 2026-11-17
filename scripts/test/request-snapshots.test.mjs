@@ -15,7 +15,8 @@ async function source(t) {
   await mkdir(directory);
   const request = { id: 'DEMO-1', type: 'Drainage', status: 'Open', c: [-156.47, 20.89],
     data_origin: 'synthetic_demo', disclaimer: 'DEMO DATA; not county operations' };
-  const values = { 'demo.json': JSON.stringify({ requests: [request], assets: [{ ...request, id: 'ASSET-1' }], workorders: [{ ...request, id: 'WORK-1' }] }),
+  const values = { 'demo.json': JSON.stringify({ requests: [request], assets: [{ ...request, id: 'ASSET-1' }], workorders: [{ ...request, id: 'WORK-1' }],
+    agent: [{ id: request.id, shelter: 'Exercise school', dist_m: 230 }] }),
     'requests.csv': 'original CSV', 'requests.geojson': 'original GeoJSON', 'parcels.cjson': '{"real":true}' };
   const manifest = { schemaVersion: 1, crs: 'EPSG:4326', sources: { roads: { attribution: 'State GIS' } }, files: {} };
   for (const [file, text] of Object.entries(values)) {
@@ -46,6 +47,8 @@ test('verified snapshot derivation preserves request identity and publishes exac
   for (const [collection, id] of [['assets', 'ASSET-1'], ['workorders', 'WORK-1']]) {
     assert.deepEqual(demo[collection], [{ ...request, id, is_demo: true, exercise_only: true }]);
   }
+  assert.deepEqual(demo.agent, [{ id: request.id, shelter: 'Exercise school', dist_m: 230,
+    data_origin: 'synthetic_demo', disclaimer: 'DEMO DATA; not county operations', is_demo: true, exercise_only: true }]);
   const geojson = JSON.parse(await readFile(path.join(output, 'requests.geojson')));
   const { c, ...properties } = demo.requests[0];
   assert.deepEqual(geojson.features, [{ type: 'Feature', properties, geometry: { type: 'Point', coordinates: c } }]);
@@ -62,16 +65,20 @@ test('source integrity rejects tampering before deriving display files', async (
 });
 
 test('regenerated packages retain both flags in demo data and snapshot downloads', async (t) => {
-  const { root, directory } = await source(t);
+  const { root, directory, request } = await source(t);
   const receipts = path.join(root, 'receipts');
   await mkdir(receipts);
   const output = path.join(root, 'package');
   execFileSync(process.execPath, ['scripts/state-local/approved/pack.mjs', directory, receipts, output]);
   const demo = JSON.parse(await readFile(path.join(output, 'demo.json')));
-  for (const record of [...demo.requests, ...demo.assets, ...demo.workorders]) {
+  for (const record of [...demo.requests, ...demo.assets, ...demo.workorders, ...demo.agent]) {
+    assert.equal(record.data_origin, 'synthetic_demo');
+    assert.equal(record.disclaimer, 'DEMO DATA; not county operations');
     assert.equal(record.is_demo, true);
     assert.equal(record.exercise_only, true);
   }
+  assert.deepEqual(demo.agent.map(({ id, shelter, dist_m }) => ({ id, shelter, dist_m })),
+    [{ id: request.id, shelter: 'Exercise school', dist_m: 230 }]);
   const manifest = JSON.parse(await readFile(path.join(output, 'manifest.json')));
   for (const [file, integrity] of Object.entries(manifest.files)) {
     assert.equal(integrity.sha256, sha256(await readFile(path.join(output, file))));
