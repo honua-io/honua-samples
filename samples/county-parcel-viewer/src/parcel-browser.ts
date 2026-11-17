@@ -2,11 +2,15 @@ import {
   createHonuaApplicationContext, createHonuaFeatureInspectionFromApplicationContext,
   createHonuaFeatureTable, mountHonuaApplication,
   type HonuaFeatureInspectionElement, type HonuaFeatureTableElement,
-  type HonuaFeatureTable, type HonuaFeatureTableSecureExportAdapter,
-} from "@honua/sdk-js/web-components";
+  type HonuaApplicationBinding, type HonuaFeatureTable, type HonuaFeatureTableSecureExportAdapter,
+} from "@honua/app-platform/web-components";
 import { DEFAULT_BASE_URL, DISPLAY_SNAPSHOT, OFFLINE_FIXTURE, type ViewerConfig } from "./config.js";
 import { layer, parcelById, type Parcel } from "./data.js";
 import { normalizeTmk } from "./tmk.js";
+
+// @honua/app-platform 0.4.0 ships its own copy of the contract declarations, so
+// the @honua/sdk-js source is the same object at runtime but a distinct type.
+type AppPlatformSource = NonNullable<HonuaApplicationBinding<Record<string, unknown>>["source"]>;
 
 const EXPORT_ROWS = 100;
 const EXPORT_BYTES = 1_000_000;
@@ -96,20 +100,21 @@ function connectExports(options: {
 }
 
 function connectPointerSelection(table: HonuaFeatureTable, signal: AbortSignal): void {
-  // SDK 0.3.2 can replace a focused row before its click fires. Remove after upgrading the SDK.
+  // The table selects a row on every pointerdown, so a touch scroll that starts on a row
+  // would select it. Touch and pen presses are kept from the table and select on a completed tap.
   const host = element("parcel-table");
   let tap: { id: number; key: string; x: number; y: number } | undefined;
   host.addEventListener("pointerdown", (event) => {
     tap = undefined;
-    if (event.button !== 0 || !event.isPrimary) return;
+    if (event.pointerType === "mouse" || event.button !== 0 || !event.isPrimary) return;
     const path = event.composedPath();
     if (path.some((node) => node instanceof Element && node.matches("a, button, input, select, textarea, [contenteditable]"))) return;
     const row = path.find((node) => node instanceof HTMLElement && node.dataset.rowKey) as HTMLElement | undefined;
     const key = row?.dataset.rowKey;
     if (!key) return;
-    if (event.pointerType === "mouse") table.select([key], { replace: true });
-    else tap = { id: event.pointerId, key, x: event.clientX, y: event.clientY };
-  }, { signal });
+    event.stopPropagation();
+    tap = { id: event.pointerId, key, x: event.clientX, y: event.clientY };
+  }, { signal, capture: true });
   host.addEventListener("pointermove", (event) => {
     if (tap && (event.pointerId !== tap.id || Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 8)) tap = undefined;
   }, { signal });
@@ -132,8 +137,10 @@ export async function createParcelBrowser(config: ViewerConfig, onPick: (id: str
     element("parcel-components").hidden = true;
     return { select: (_parcel: Parcel) => {}, clear: () => {}, dispose: () => {} };
   }
-  const { source, idField } = await layer(config.parcelsUrl);
-  if (!source) throw new Error("The parcel source is unavailable.");
+  const parcels = await layer(config.parcelsUrl);
+  if (!parcels.source) throw new Error("The parcel source is unavailable.");
+  const source = parcels.source as AppPlatformSource;
+  const { idField } = parcels;
   const sourceId = source.descriptor.id;
   const context = createHonuaApplicationContext({ status: "ready", binding: { source, sourceIdentity: sourceId },
     authorization: { status: "authorized", scopes: ["anonymous-public"] } });

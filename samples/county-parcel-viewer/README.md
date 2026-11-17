@@ -18,8 +18,8 @@ its number (TMK on Maui), by street address or by clicking it on the map, and se
 - a link to that parcel you can copy and share;
 - a linked, paged parcel table and attribute inspection panel, with exact TMK filtering and bounded exports.
 
-It is a Vite app built on the published Honua JavaScript SDK (`@honua/sdk-js@0.3.2`, pinned in
-`package-lock.json`), running on public Maui County demo data. It is not affiliated with the County of Maui.
+It is a Vite app built on the published Honua JavaScript SDK (`@honua/sdk-js@0.4.0`) and
+application platform (`@honua/app-platform@0.4.0`), both pinned in `package-lock.json`, running on public Maui County demo data. It is not affiliated with the County of Maui.
 
 | | |
 | --- | --- |
@@ -27,7 +27,7 @@ It is a Vite app built on the published Honua JavaScript SDK (`@honua/sdk-js@0.3
 | Level | Intermediate |
 | Time | About 20 minutes |
 | Prerequisites | Node.js 22.12 or later, a modern web browser, internet access |
-| Libraries | `@honua/sdk-js` 0.3.2, `maplibre-gl` 6.4.1, `pmtiles` 4.5.0, `@fontsource` Public Sans 5.3.0 and Source Serif 4 5.3.1 |
+| Libraries | `@honua/sdk-js` and `@honua/app-platform` 0.4.0, `maplibre-gl` 6.4.1, `pmtiles` 4.5.0, `@fontsource` Public Sans 5.3.0 and Source Serif 4 5.3.1 |
 
 ## Data sources and freshness
 
@@ -108,7 +108,7 @@ identify and overlap math. The local fixture draws its synthetic polygons from a
 
 The planning-layer controls show zoning and high-risk flood candidates for the selected parcel, using the same queries as the results panel. They do not download the full datasets.
 
-The pinned SDK 0.3.2 requires explicit attribute fields for inspection and a public `table.select()` pointer handler because focusing a row can replace it before its click fires. Keyboard selection remains native. Remove these compatibility measures after upgrading to a published SDK with those fixes.
+The viewer passes explicit attribute fields for inspection. `@honua/app-platform` 0.4.0 selects a table row on any pointerdown, which would let a touch scroll that starts on a row select it, so touch and pen presses select only on a completed tap; mouse and keyboard selection are the component's own.
 
 ### Address search
 
@@ -140,8 +140,10 @@ clipped to Maui Nui. Attribution: **Overture Maps Foundation · © OpenStreetMap
 licensed under [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
 The archive's `render_height` uses the reported height, floors × 3 metres, or a 4 metre fallback;
 the 3D view displays this limitation. These are contextual estimates, not surveyed elevations.
-The SDK `scene-workspace` export remains available in the pinned 0.3.x release; its documented
-successor is `@honua/app-platform/scene-workspace` for a future SDK upgrade.
+The extrusion layer comes from `@honua/app-platform/scene-workspace`, and the parcel table and
+inspection panel from `@honua/app-platform/web-components`; `@honua/sdk-js` 0.4.0 no longer exports
+either. The two packages declare the shared source contract separately, so `src/parcel-browser.ts`
+hands the SDK source to the application platform through one typed adapter.
 
 ## Compatibility: published SDK queries
 

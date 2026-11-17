@@ -8,7 +8,7 @@
     "build:contract": "vite build"
   },
   "dependencies": {
-    "@honua/sdk-js": "0.3.2",
+    "@honua/sdk-js": "0.4.0",
     "maplibre-gl": "6.4.1"
   },
   "devDependencies": {

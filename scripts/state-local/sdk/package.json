@@ -2,6 +2,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@honua/sdk-js": "0.3.2"
+    "@honua/sdk-js": "0.4.0"
   }
 }

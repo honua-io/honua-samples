@@ -62,7 +62,7 @@ export function buildMcpJourney(name, deployments) {
   return { format: "honua.samples.mcp-journey.v1", scenario: name, requirement: scenario.requirement,
     status: "setup-only; agent journey not executed", sources, prompt,
     clientConfig: { mcpServers: { honua: { command: "npx",
-      args: ["-y", "-p", "@honua/sdk-js@0.3.2", "-p", "@honua/mcp-server@0.3.0", "honua-mcp"],
+      args: ["-y", "-p", "@honua/sdk-js@0.4.0", "-p", "@honua/mcp-server@0.6.1", "honua-mcp"],
       env: { HONUA_BASE_URL: deployments[0].baseUrl, HONUA_TRANSPORT: "rest", HONUA_API_KEY: "" } } } } };
 }
 

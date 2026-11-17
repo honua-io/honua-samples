@@ -36,7 +36,7 @@ configuration, such as Claude Desktop's `claude_desktop_config.json`, merging it
 `mcpServers.honua` entry with existing servers. Do not replace an existing server
 configuration inadvertently. Restart the client, then paste the generated
 `prompt` as a new question. The setup uses Node.js 22.12 or newer, `npx`, published
-`@honua/mcp-server@0.3.0` and `@honua/sdk-js@0.3.2`, and REST transport. Initial
+`@honua/mcp-server@0.6.1` and `@honua/sdk-js@0.4.0`, and REST transport. Initial
 package acquisition needs network access. `HONUA_API_KEY` is explicitly empty so
 the child process queries the public deployment anonymously.
 
