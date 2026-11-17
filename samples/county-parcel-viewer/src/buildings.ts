@@ -1,4 +1,4 @@
-import { toMapLibreExtrusionLayer, type SceneExtrusionPrimitive } from "@honua/sdk-js/scene-workspace";
+import { toMapLibreExtrusionLayer, type SceneExtrusionPrimitive } from "@honua/app-platform/scene-workspace";
 import type { Map, FillExtrusionLayerSpecification } from "maplibre-gl";
 import { SharedPromiseCache, type PMTiles } from "pmtiles";
 import { token, reducedMotion } from "./dom.js";

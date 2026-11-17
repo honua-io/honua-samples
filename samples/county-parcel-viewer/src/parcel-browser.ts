@@ -2,11 +2,15 @@ import {
   createHonuaApplicationContext, createHonuaFeatureInspectionFromApplicationContext,
   createHonuaFeatureTable, mountHonuaApplication,
   type HonuaFeatureInspectionElement, type HonuaFeatureTableElement,
-  type HonuaFeatureTable, type HonuaFeatureTableSecureExportAdapter,
-} from "@honua/sdk-js/web-components";
+  type HonuaApplicationBinding, type HonuaFeatureTable, type HonuaFeatureTableSecureExportAdapter,
+} from "@honua/app-platform/web-components";
 import { DEFAULT_BASE_URL, DISPLAY_SNAPSHOT, OFFLINE_FIXTURE, type ViewerConfig } from "./config.js";
 import { layer, parcelById, type Parcel } from "./data.js";
 import { normalizeTmk } from "./tmk.js";
+
+// @honua/app-platform 0.4.0 ships its own copy of the contract declarations, so
+// the @honua/sdk-js source is the same object at runtime but a distinct type.
+type AppPlatformSource = NonNullable<HonuaApplicationBinding<Record<string, unknown>>["source"]>;
 
 const EXPORT_ROWS = 100;
 const EXPORT_BYTES = 1_000_000;
@@ -96,7 +100,7 @@ function connectExports(options: {
 }
 
 function connectPointerSelection(table: HonuaFeatureTable, signal: AbortSignal): void {
-  // SDK 0.3.2 can replace a focused row before its click fires. Remove after upgrading the SDK.
+  // SDK 0.3.2 could replace a focused row before its click fired; kept on app-platform 0.4.0 until retested.
   const host = element("parcel-table");
   let tap: { id: number; key: string; x: number; y: number } | undefined;
   host.addEventListener("pointerdown", (event) => {
@@ -132,8 +136,10 @@ export async function createParcelBrowser(config: ViewerConfig, onPick: (id: str
     element("parcel-components").hidden = true;
     return { select: (_parcel: Parcel) => {}, clear: () => {}, dispose: () => {} };
   }
-  const { source, idField } = await layer(config.parcelsUrl);
-  if (!source) throw new Error("The parcel source is unavailable.");
+  const parcels = await layer(config.parcelsUrl);
+  if (!parcels.source) throw new Error("The parcel source is unavailable.");
+  const source = parcels.source as AppPlatformSource;
+  const { idField } = parcels;
   const sourceId = source.descriptor.id;
   const context = createHonuaApplicationContext({ status: "ready", binding: { source, sourceIdentity: sourceId },
     authorization: { status: "authorized", scopes: ["anonymous-public"] } });

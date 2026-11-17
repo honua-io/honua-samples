@@ -18,7 +18,8 @@
     "test:fixture": "node --experimental-strip-types --test fixture/service.test.mjs"
   },
   "dependencies": {
-    "@honua/sdk-js": "0.3.2",
+    "@honua/app-platform": "0.4.0",
+    "@honua/sdk-js": "0.4.0",
     "@turf/area": "7.4.0",
     "@turf/bbox": "7.4.0",
     "@turf/boolean-contains": "7.4.0",
