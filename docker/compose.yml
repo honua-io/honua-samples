@@ -1,8 +1,8 @@
 # Composed stack for the headless sample runner (see scripts/run-samples.mjs
 # and .github/workflows/run-samples.yml).
 #
-# The default is the pinned candidate nightly-jit-9d2169c
-# (digest sha256:48d73e13…),
+# The default is the 2026.1-rc.2 candidate image nightly-aot-532565b
+# (multi-arch index sha256:d56e8815…, honua-server 532565b),
 # with licensing disabled. HONUA_SERVER_IMAGE may override the image. The
 # floating :trunk tag is not this release.
 services:
@@ -27,8 +27,7 @@ services:
       retries: 10
 
   honua:
-    platform: linux/amd64
-    image: "${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e}"
+    image: "${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-aot-532565b@sha256:d56e88152d3ca17f963542a3ecc6b0b28c355f3173a734bc69a8396331c6c9a9}"
     ports:
       - "${HONUA_HTTP_PORT:-8080}:8080"
     environment:
@@ -46,10 +45,10 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      # The server image ships bash but no wget or curl (honua-server#6798).
-      # Probe /healthz/ready over /dev/tcp the way honua-server's own
-      # docker-compose.yml does; only an exact 200 status passes.
-      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /healthz/ready HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' >&3 && IFS=' ' read -r proto code rest <&3 && [ \"$$code\" = 200 ]"]
+      # The rc.2 server image has no shell, wget or curl. Use its compiled
+      # readiness probe (the image's own HEALTHCHECK), which passes only
+      # when GET /healthz/ready answers 200.
+      test: ["CMD", "/app/honua-healthcheck", "--ready"]
       interval: 5s
       timeout: 5s
       retries: 30

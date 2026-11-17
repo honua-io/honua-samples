@@ -3,6 +3,7 @@ import { HonuaClient } from '@honua/sdk-js';
 import { namedBindings } from '../../../shared/state-local/binding.mjs';
 import { collectFeatures } from '../../../shared/state-local/features.mjs';
 import { wgs84Geometry } from '../../../shared/state-local/geometry.mjs';
+import { revalidatingFetch } from '../../../shared/state-local/revalidate.mjs';
 import { bridgeRecord, exerciseRecord } from './records.mjs';
 
 export function bindings(search) {
@@ -11,7 +12,7 @@ export function bindings(search) {
 }
 
 async function readExercise(binding, kind) {
-  const client = new HonuaClient({ baseUrl: binding.baseUrl });
+  const client = new HonuaClient({ baseUrl: binding.baseUrl, fetchFn: revalidatingFetch });
   return collectFeatures(client, binding, (feature) => {
     const properties = exerciseRecord(feature.attributes);
     if (properties.record_type !== kind) throw new Error(`Expected ${kind} records`);
@@ -20,7 +21,7 @@ async function readExercise(binding, kind) {
 }
 
 async function readBridges(binding) {
-  const client = new HonuaClient({ baseUrl: binding.baseUrl });
+  const client = new HonuaClient({ baseUrl: binding.baseUrl, fetchFn: revalidatingFetch });
   const metadata = await client.getLayerMetadata(binding.serviceId, binding.layerId);
   if (!metadata.description?.includes('Data vintage 2025-06-20')) throw new Error('Bridge layer is missing its verified 2025-06-20 vintage. Re-import with the current pipeline');
   return collectFeatures(client, binding, (feature) => {

@@ -39,7 +39,7 @@ function pageUrl(params) {
 
 test("draws the fixture layer, fits it, and opens a popup on click", async ({ page }, testInfo) => {
   await page.goto(
-    pageUrl({ baseUrl: serverEnv().baseUrl, service: service.serviceName, layer: String(service.layerId), labelField: "properties.name" }),
+    pageUrl({ baseUrl: serverEnv().baseUrl, service: service.serviceName, layer: String(service.layerId), labelField: "name" }),
   );
   await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass", { timeout: 30_000 });
   await expect(page.locator("body")).toHaveAttribute("data-feature-count", String(fixture.count));

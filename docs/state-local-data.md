@@ -225,14 +225,14 @@ topology or predict geometry repair outcomes or the server’s separate WKB byte
 limit. A candidate-server import remains required. Rollback remains available for
 previously staged layers whose receipts match the current source contract.
 
-The pinned Compose image `nightly-jit-9d2169c` predates honua-server#7242 and
-enforces 10,000 vertices and 100 rings per feature. On it `maui-zoning`,
-`maui-flood-hazard` and `maui-special-management-area` pass this check but the
-server rejects the upload with `import.geometry_invalid`; inspect and delete the
-failed import in Console. One `maui-sea-level-rise` feature has 6,516 polygon
-rings, so this check refuses it under both sets of limits. `property-app` needs all
-nine layers and therefore cannot complete on `nightly-jit-9d2169c`. The other three
-MCP questions and their seven sources stage, activate and generate on it.
+Images before honua-server#7242 (fixed by honua-server#7330 and included in the rc.2 candidate
+`nightly-aot-532565b` that Compose now pins) enforced 10,000 vertices and 100 rings
+per feature. On those older images `maui-zoning`, `maui-flood-hazard` and
+`maui-special-management-area` pass this check but the server rejects the upload
+with `import.geometry_invalid`; inspect and delete the failed import in Console.
+One `maui-sea-level-rise` feature has 6,516 polygon rings, so this check refuses
+it under both sets of limits. `property-app` needs all nine layers and therefore still
+cannot complete on any image.
 
 The island import in [ISLAND.md](../scripts/state-local/approved/ISLAND.md)
 subdivides geometry below both sets of limits and feeds the public property display.

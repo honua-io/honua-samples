@@ -67,17 +67,18 @@ export async function loadFixture() {
 }
 
 /**
- * The fixture's GeoJSON properties as a published feature carries them. A
- * file import keeps them in one `properties` field, which the server returns
- * either as an object (the 2026-09 candidate) or as the JSON string its
- * esriFieldTypeString declaration implies (trunk since 2026-10); accept both
- * so the oracle compares fixture values, not the field's encoding.
+ * The fixture's GeoJSON properties as a published feature carries them. The
+ * rc.2 server (honua-server 532565b) imports each property as its own column,
+ * so the attributes are the properties. Older candidates kept them in one
+ * `properties` field, returned as an object (2026-09) or as JSON text (2026-10);
+ * accept those too so the oracle compares fixture values, not the encoding.
  */
 export function importedProperties(attributes) {
   const value = attributes?.properties;
   if (typeof value === "string") return JSON.parse(value);
   if (value && typeof value === "object") return value;
-  throw new Error(`feature has no imported properties field: ${JSON.stringify(attributes).slice(0, 200)}`);
+  if (typeof attributes?.fixtureId === "string") return attributes;
+  throw new Error(`feature has no imported fixture properties: ${JSON.stringify(attributes).slice(0, 200)}`);
 }
 
 function bboxCenter(ring) {

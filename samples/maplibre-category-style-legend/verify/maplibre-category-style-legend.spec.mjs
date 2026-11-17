@@ -40,10 +40,10 @@ function pageUrl(params) {
 }
 
 test("styles the fixture by category and builds the legend from its values", async ({ page }, testInfo) => {
-  // A file import keeps the fixture's GeoJSON properties in one nested
-  // `properties` field, so the category is addressed by a dotted path.
+  // The rc.2 server imports each GeoJSON property as its own column, so the
+  // category is a top-level field.
   await page.goto(
-    pageUrl({ baseUrl: serverEnv().baseUrl, collection: String(service.layerId), field: "properties.category", bbox: "none" }),
+    pageUrl({ baseUrl: serverEnv().baseUrl, collection: String(service.layerId), field: "category", bbox: "none" }),
   );
   await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass", { timeout: 30_000 });
   await expect(page.locator("body")).toHaveAttribute("data-feature-count", String(fixture.count));

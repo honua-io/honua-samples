@@ -101,6 +101,7 @@ async function publishLayer(physicalTableName) {
   if (body.data?.enabled !== true) {
     throw new Error(`layer publish response did not confirm serving enablement: ${JSON.stringify(body)}`);
   }
+  return body.data.storageLayerId;
 }
 
 async function configureService() {
@@ -123,7 +124,18 @@ async function configureService() {
   );
 }
 
-async function verifyCapabilities() {
+// GetCapabilities names each layer by its server layer id (LAYERS={layerId}
+// in the server's WMS reference) and titles it with the published name. A
+// re-run publishes a second layer with the same title, so prefer the id the
+// publish call returned.
+function wmsLayerNameFor(xml, title, layerId) {
+  const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const name = layerId == null ? "[^<]+" : escape(String(layerId));
+  const match = xml.match(new RegExp(`<Name>(${name})</Name>\\s*<Title>${escape(title)}</Title>`));
+  return match?.[1];
+}
+
+async function verifyCapabilities(layerId) {
   // Publishing and protocol changes invalidate metadata asynchronously on the
   // current trunk server. Poll the real WMS document to convergence instead of
   // mistaking the first, pre-invalidation snapshot for the final contract.
@@ -133,7 +145,8 @@ async function verifyCapabilities() {
   for (;;) {
     const response = await fetch(url);
     const xml = await response.text();
-    if (response.ok && xml.includes(`<Name>${LAYER_NAME}</Name>`)) return;
+    const layerName = response.ok ? wmsLayerNameFor(xml, LAYER_NAME, layerId) : undefined;
+    if (layerName) return layerName;
     if (Date.now() >= deadline) {
       throw new Error(
         `GetCapabilities did not converge on layer ${LAYER_NAME} within 30s (last HTTP ${response.status}): ${xml.slice(0, 500)}`,
@@ -143,12 +156,12 @@ async function verifyCapabilities() {
   }
 }
 
-async function verifyMap() {
+async function verifyMap(layerName) {
   const parameters = new URLSearchParams({
     SERVICE: "WMS",
     VERSION: "1.3.0",
     REQUEST: "GetMap",
-    LAYERS: LAYER_NAME,
+    LAYERS: layerName,
     STYLES: "",
     CRS: "EPSG:4326",
     BBOX: "37.7,-122.5,37.9,-122.3",
@@ -179,13 +192,13 @@ async function main() {
   log(`2/6 registering connection "${CONNECTION_NAME}"...`);
   await registerConnection();
   log(`3/6 publishing layer "${LAYER_NAME}" on service "${SERVICE_NAME}"...`);
-  await publishLayer(physicalTableName);
+  const layerId = await publishLayer(physicalTableName);
   log("4/6 enabling WMS and anonymous reads...");
   await configureService();
   log("5/6 requesting GetCapabilities...");
-  await verifyCapabilities();
-  log(`6/6 requesting GetMap (${MAP_WIDTH}x${MAP_HEIGHT})...`);
-  const image = await verifyMap();
+  const layerName = await verifyCapabilities(layerId);
+  log(`6/6 requesting GetMap for layer ${layerName} (${MAP_WIDTH}x${MAP_HEIGHT})...`);
+  const image = await verifyMap(layerName);
   log(`PASS in ${Date.now() - started}ms: ${image.width}x${image.height} image/png (${image.bytes} bytes)`);
 }
 
