@@ -124,7 +124,6 @@ jobs:
         with:
           node-version: "22"
 
-      # samples#327: #314 deployed a descriptor URL that returned 403.
       - name: Hosted county descriptors are served
         run: node scripts/check-hosted-descriptors.mjs shared/state-local
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Fails when a published county page names a demo.honua.io publication
-// descriptor that the host does not serve. samples#314 deployed while that
-// GET returned 403; the browser smoke is not a required check.
+// descriptor that the host does not serve.
 
 import { realpathSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";

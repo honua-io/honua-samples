@@ -68,7 +68,6 @@ jobs:
         with:
           node-version: "22"
 
-      # samples#327: fail the deploy when a county descriptor URL is not served.
       - name: Hosted county descriptors are served
         run: node scripts/check-hosted-descriptors.mjs shared/state-local
 
