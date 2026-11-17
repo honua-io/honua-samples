@@ -152,12 +152,14 @@ until both agree.
 ## Remove the isolated server
 
 The server writes archives as its container user, so the host user cannot delete
-them directly. Delete them from a root container, then remove the stack and its
-database volume:
+them directly. The server image has no shell, so find runs in the Postgres image
+this stack already runs. Then remove the stack and its database volume:
 
 ```sh
 docker compose -p samples-island -f docker/compose.yml -f docker/compose.island-tiles.yml \
-  run --rm --no-deps --user 0 --entrypoint find honua "$HONUA_TILE_STORAGE_ROOT" -mindepth 1 -delete
+  run --rm --no-deps --user 0 \
+  -v "$HONUA_TILE_STORAGE_ROOT:$HONUA_TILE_STORAGE_ROOT" \
+  --entrypoint find postgres "$HONUA_TILE_STORAGE_ROOT" -mindepth 1 -delete
 docker compose -p samples-island -f docker/compose.yml -f docker/compose.island-tiles.yml down -v
 rmdir "$HONUA_TILE_STORAGE_ROOT"
 ```
