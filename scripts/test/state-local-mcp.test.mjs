@@ -16,7 +16,7 @@ test("MCP setup uses verified public department paths without serializing privat
   assert.ok(result.sources[0].attribution.includes("fictional"));
   assert.equal(JSON.stringify(result).includes("PRIVATE-"), false);
   const client = result.clientConfig.mcpServers.honua;
-  assert.deepEqual(client.args, ["-y", "-p", "@honua/sdk-js@0.3.2", "-p", "@honua/mcp-server@0.3.0", "honua-mcp"]);
+  assert.deepEqual(client.args, ["-y", "-p", "@honua/sdk-js@0.4.0", "-p", "@honua/mcp-server@0.6.1", "honua-mcp"]);
   assert.deepEqual(client.env, { HONUA_BASE_URL: "https://server.test", HONUA_TRANSPORT: "rest", HONUA_API_KEY: "" });
   assert.match(result.status, /not executed/);
 });

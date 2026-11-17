@@ -17,7 +17,7 @@ select the Connect wire protocol. ADR-0087 leaves that protocol for a later ADR.
 transport below. Install its optional runtimes explicitly:
 
 ```sh
-npm install @honua/sdk-js@0.3.2 @bufbuild/protobuf@^2 @connectrpc/connect@^2 @connectrpc/connect-web@^2
+npm install @honua/sdk-js@0.4.0 @bufbuild/protobuf@^2 @connectrpc/connect@^2 @connectrpc/connect-web@^2
 ```
 
 Configure the client in the signed-in application, using its existing session's
@@ -51,7 +51,7 @@ Exercise results must retain `DEMO DATA` and the provenance fields checked by th
 [shared validator](../shared/state-local/exercise-provenance.mjs).
 
 This setup is a transport example, **not a qualified browser build or a completed
-demo**. SDK 0.3.2 loads the optional transport dynamically. Installing peers alone
+demo**. SDK 0.4.0 loads the optional transport dynamically. Installing peers alone
 does not prove that a production bundler includes those runtime modules. Before
 switching a demo, run its production bundle in a browser, verify that the gRPC-Web
 modules load and inspect actual RPC traffic. A missing runtime, rejected
