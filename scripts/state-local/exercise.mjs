@@ -19,16 +19,39 @@ export const exerciseSources = Object.fromEntries(Object.entries(recipes).map(([
   attribution: 'Honua fictional exercise records; geometry from Hawaii Statewide GIS Program public-domain sources',
 }]));
 
-function details(source, index) {
-  const created = new Date(Date.UTC(2026, 7, 10 + index % 84));
-  const due = new Date(created.getTime() + 72 * 3_600_000);
+const HOUR_MS = 3_600_000;
+const SCENARIO_DATE = '2026-11-03';
+const REQUEST_START = Date.UTC(2026, 7, 10);
+const REQUEST_SPACING_MS = 264 * 60_000;
+
+// Requests open at an even pace over twelve weeks in a permuted order, so creation time,
+// category (index % 3) and district vary independently. The last four days are unresolved, half
+// of the requests from the six days before are still open or in progress, and the rest closed
+// within 12 to 96 hours, so about a quarter of closures miss the 72-hour SLA.
+function requestTimeline(index) {
+  const created = REQUEST_START + (index * 139) % 468 * REQUEST_SPACING_MS;
+  const age = Date.parse(`${SCENARIO_DATE}T23:59:59.999Z`) - created;
+  const step = Math.floor(index / 3);
+  if (age < 96 * HOUR_MS || (age < 10 * 24 * HOUR_MS && step % 2 === 0)) {
+    return { status: step % 5 < 3 ? 'exercise_open' : 'exercise_in_progress', created, closed: null };
+  }
+  return { status: 'exercise_closed', created, closed: created + (12 + index * 29 % 85) * HOUR_MS };
+}
+
+function defaultTimeline(source, index) {
+  const created = Date.UTC(2026, 7, 10 + index % 84);
   const stage = index % 5;
+  const status = source.kind === 'work_order'
+    ? ['exercise_new', 'exercise_triaged', 'exercise_scheduled', 'exercise_in_progress', 'exercise_closed'][stage]
+    : ['exercise_open', 'exercise_in_progress', 'exercise_closed'][index % 3];
+  return { status, created, closed: status === 'exercise_closed' ? created + 48 * HOUR_MS : null };
+}
+
+function details(source, index) {
+  const { status, created, closed } = source.kind === 'service_request' ? requestTimeline(index) : defaultTimeline(source, index);
   return {
-    status: source.kind === 'work_order'
-      ? ['exercise_new', 'exercise_triaged', 'exercise_scheduled', 'exercise_in_progress', 'exercise_closed'][stage]
-      : ['exercise_open', 'exercise_in_progress', 'exercise_closed'][index % 3],
-    opened_at: created.toISOString(), due_at: due.toISOString(),
-    closed_at: (source.kind === 'work_order' ? stage === 4 : index % 3 === 2) ? new Date(created.getTime() + 48 * 3_600_000).toISOString() : null,
+    status, opened_at: new Date(created).toISOString(), due_at: new Date(created + 72 * HOUR_MS).toISOString(),
+    closed_at: closed === null ? null : new Date(closed).toISOString(),
     sla_hours: 72, crew: `Demo crew ${1 + index % 4} (fictional)`,
     condition: ['exercise_good', 'exercise_fair', 'exercise_poor'][index % 3],
     ...(source.kind === 'exercise_shelter' ? { capacity: 100 + index * 10, occupancy: 20 + index * 3 } : {}),
@@ -44,9 +67,9 @@ function exerciseFeature(source, feature, index) {
       exercise_only: true, operational_use: 'None. Not a real request, work order, closure or designated shelter.',
       geometry_source: mauiSources[source.anchor].licenseUrl,
       anchor_source: source.anchor, anchor_feature_id: String(feature.id),
-      asset_id: `${source.anchor}:${feature.id}`, district: `Demo district ${1 + index % 3} (fictional)`,
+      asset_id: `${source.anchor}:${feature.id}`, district: `Demo district ${1 + (source.kind === 'service_request' ? index % 13 : index) % 3} (fictional)`,
       category: ['drainage', 'road_surface', 'accessibility'][index % 3],
-      scenario_date: '2026-11-03', ...details(source, index),
+      scenario_date: SCENARIO_DATE, ...details(source, index),
     } };
 }
 
@@ -63,7 +86,7 @@ function provenance(options, built) {
   return { source: name, dataset: name, department: source.department, license: source.license,
     licenseUrl: source.licenseUrl, attribution: source.attribution, outputCrs: 'EPSG:4326',
     selection: { kind: 'fictional exercise; deterministic cycling of accepted anchor features; geometry copied, not observed activity' },
-    recipeVersion: 4, anchorSource: source.anchor, anchorSha256: built.anchorHash,
+    recipeVersion: 5, anchorSource: source.anchor, anchorSha256: built.anchorHash,
     accepted: built.geojson.features.length, rejected: 0, cleanSha256: sha256(JSON.stringify(built.geojson)) };
 }
 
