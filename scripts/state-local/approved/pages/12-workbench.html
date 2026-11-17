@@ -48,8 +48,8 @@
   body.show-sdk .sdk { display: inline-block; }
   /* map */
   .map { min-height: 0; }
-  .tools { position: absolute; z-index: 6; top: 12px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .toolgrp { display: flex; gap: 2px; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 3px; }
+  .tools { pointer-events: none; position: absolute; z-index: 6; top: 12px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .toolgrp { pointer-events: auto; display: flex; gap: 2px; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 3px; }
   .toolgrp button { border: 0; background: transparent; height: 30px; padding: 0 10px; border-radius: 5px; font-size: 13px; font-weight: 500; color: var(--c-text-2); display: inline-flex; gap: 6px; align-items: center; }
   .toolgrp button:hover { background: var(--c-surface-2); color: var(--c-text); }
   .toolgrp button[aria-pressed="true"], #selOnly[aria-pressed="true"] { background: var(--c-accent-soft); color: var(--c-accent-ink); }
