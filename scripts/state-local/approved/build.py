@@ -5,6 +5,7 @@ Placeholders: {{HEAD}} (fonts, MapLibre, inlined CSS), {{ICONS}}, {{DATA name,na
 Data files live in data/ (.cjson compact, .geojson, .json). demo.json subkeys are selected with demo.<key>.
 """
 import json, os, re, sys
+from urllib.parse import quote
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.abspath(sys.argv[2])
@@ -49,7 +50,9 @@ def data_block(spec):
 
 def head(uses_map):
     css = read(os.path.join(SRC, "tokens.css")) + "\n" + read(os.path.join(SRC, "app.css"))
+    favicon = quote(read(os.path.join(SHARED, "favicon.svg")), safe="")
     parts = [
+        f'<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,{favicon}">',
         '<script>try{var t=localStorage.getItem("honua-theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){document.documentElement.setAttribute("data-theme","light")}</script>',
         '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
         '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">',

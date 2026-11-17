@@ -10,7 +10,9 @@ export async function approvedPage({ template, assets, data }) {
   const island = withStateLocalEndpoints(await readFile(new URL('./island-map.js', import.meta.url), 'utf8'));
   const mapKit = await readFile(new URL('./honua-map.js', import.meta.url), 'utf8');
   const kit = `<script>${island}\n${mapKit}</script>`;
+  const favicon = encodeURIComponent(await readFile(new URL('./favicon.svg', import.meta.url), 'utf8'));
   const head = `${themeBootstrap}
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${favicon}">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
