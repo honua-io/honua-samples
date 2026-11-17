@@ -577,9 +577,9 @@
   const hav = (a, b) => { const R = 6371008.8, r = Math.PI / 180; const d1 = (b[1] - a[1]) * r, d2 = (b[0] - a[0]) * r; const h = Math.sin(d1 / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(d2 / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
   const areaM2 = (pts) => { const r = Math.PI / 180, R = 6371008.8; let s = 0; for (let i = 0; i < pts.length; i++) { const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length]; s += (x2 - x1) * r * (2 + Math.sin(y1 * r) + Math.sin(y2 * r)); } return Math.abs((s * R * R) / 2); };
   function drawSketch() {
-    const fs = measurePts.map((p) => ({ type: "Feature", geometry: { type: "Point", coordinates: p } }));
-    if (measurePts.length > 1) fs.push({ type: "Feature", geometry: { type: "LineString", coordinates: measurePts } });
-    if (mode === "draw" && measurePts.length > 2) fs.push({ type: "Feature", geometry: { type: "Polygon", coordinates: [[...measurePts, measurePts[0]]] } });
+    const fs = measurePts.map((p) => ({ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: p } }));
+    if (measurePts.length > 1) fs.push({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: measurePts } });
+    if (mode === "draw" && measurePts.length > 2) fs.push({ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[...measurePts, measurePts[0]]] } });
     map?.getSource("draw")?.setData({ type: "FeatureCollection", features: fs });
     let d = 0; for (let i = 1; i < measurePts.length; i++) d += hav(measurePts[i - 1], measurePts[i]);
     if (mode === "measure") hintText(measurePts.length < 2 ? "Click points to measure. Double-click or Done to finish." : `Distance <b>${d >= 1000 ? (d / 1000).toFixed(2) + " km" : Math.round(d) + " m"}</b>${measurePts.length > 2 ? ` · enclosed area <b>${(areaM2(measurePts) / 4046.86).toFixed(2)} acres</b>` : ""}`);
@@ -600,7 +600,7 @@
   }
   document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
   document.getElementById("spDraw").addEventListener("click", () => setMode("draw"));
-  document.getElementById("spView").addEventListener("click", () => { if (!map) return; const b = map.getBounds(); S.spatial = [[b.getWest(), b.getSouth()], [b.getEast(), b.getSouth()], [b.getEast(), b.getNorth()], [b.getWest(), b.getNorth()], [b.getWest(), b.getSouth()]]; map.getSource("draw").setData({ type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Polygon", coordinates: [S.spatial] } }] }); refresh(); });
+  document.getElementById("spView").addEventListener("click", () => { if (!map) return; const b = map.getBounds(); S.spatial = [[b.getWest(), b.getSouth()], [b.getEast(), b.getSouth()], [b.getEast(), b.getNorth()], [b.getWest(), b.getNorth()], [b.getWest(), b.getSouth()]]; map.getSource("draw").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [S.spatial] } }] }); refresh(); });
   document.getElementById("hintDone").addEventListener("click", finishSketch);
   document.getElementById("hintCancel").addEventListener("click", () => setMode("select"));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && mode !== "select") setMode("select"); });
