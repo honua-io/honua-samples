@@ -3,6 +3,7 @@ import { HonuaClient } from '@honua/sdk-js';
 import { validateRecord } from './records.mjs';
 import { collectFeatures } from '../../../shared/state-local/features.mjs';
 import { wgs84Geometry } from '../../../shared/state-local/geometry.mjs';
+import { revalidatingFetch } from '../../../shared/state-local/revalidate.mjs';
 export { sourceBinding } from '../../../shared/state-local/binding.mjs';
 export { positions } from '../../../shared/state-local/geometry.mjs';
 
@@ -15,7 +16,7 @@ export async function loadRequests(binding) {
   if (displaySnapshot) return (await snapshotFeatures('maui-demo-requests')).map((feature) => ({
     ...feature, geometry: wgs84Geometry(feature.geometry), properties: validateRecord(feature.properties),
   }));
-  return collectRequests(new HonuaClient({ baseUrl: binding.baseUrl }), binding);
+  return collectRequests(new HonuaClient({ baseUrl: binding.baseUrl, fetchFn: revalidatingFetch }), binding);
 }
 
 export async function collectRequests(client, binding) {

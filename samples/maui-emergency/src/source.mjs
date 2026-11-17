@@ -2,12 +2,15 @@ import { HonuaClient } from '@honua/sdk-js';
 import { namedBindings } from '../../../shared/state-local/binding.mjs';
 import { collectFeatures } from '../../../shared/state-local/features.mjs';
 import { wgs84Geometry } from '../../../shared/state-local/geometry.mjs';
+import { revalidatingFetch } from '../../../shared/state-local/revalidate.mjs';
 import { emergencyRecord } from './records.mjs';
 
 export const bindings = (search) => namedBindings(search, ['shelter', 'closure']);
 
+export const verifyingClient = (baseUrl) => new HonuaClient({ baseUrl, fetchFn: revalidatingFetch });
+
 async function readLayer(binding, kind) {
-  return collectFeatures(new HonuaClient({ baseUrl: binding.baseUrl }), binding, (feature) => {
+  return collectFeatures(verifyingClient(binding.baseUrl), binding, (feature) => {
     const properties = emergencyRecord(feature.attributes, kind);
     const geometry = wgs84Geometry(feature.geometry);
     const point = kind === 'exercise_shelter';
