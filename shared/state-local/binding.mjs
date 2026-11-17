@@ -1,12 +1,15 @@
 import { isLocalServer, stateLocalServer } from './server.mjs';
 
+// A receipt's public path is `service` or `folder/service`: a recipe import lands in its department folder.
+const SERVICE_PATH = /^[a-zA-Z0-9_-]{1,128}(?:\/[a-zA-Z0-9_-]{1,128})?$/;
+
 export function sourceBinding(search) {
   const params = new URLSearchParams(search);
   const serviceId = params.get('service');
   const layer = params.get('layer');
   if (!serviceId && !layer) return null;
-  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(serviceId ?? '') || !/^\d{1,9}$/.test(layer ?? '')) {
-    throw new Error('Use the service and numeric layer from the approved deployment receipt');
+  if (!SERVICE_PATH.test(serviceId ?? '') || !/^\d{1,9}$/.test(layer ?? '')) {
+    throw new Error('Use the service path and numeric layer from the approved deployment receipt');
   }
   const url = new URL(params.get('baseUrl') ?? stateLocalServer);
   if ((!isLocalServer(url) && url.origin !== stateLocalServer) || !['http:', 'https:'].includes(url.protocol)

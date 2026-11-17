@@ -50,6 +50,10 @@ Open `analysis.html` with both approved anonymous layers:
 analysis.html?baseUrl=https://demo.honua.io&parcelsService=SERVICE&parcelsLayer=ID&requestsService=SERVICE&requestsLayer=ID
 ```
 
+For each layer, use the path between `/rest/services/` and `/FeatureServer/` in the
+`layerUrl` that `cli.mjs activate` prints (`folder/service` for a department import)
+and the number after it.
+
 Localhost origins also work for a local PostGIS-only candidate. Other origins and
 credential-bearing URLs are rejected. No layers are inferred or substituted.
 The parcel layer must provide `tmk_txt`, `gisacres`, and `taxacres`; the 311 layer
