@@ -3,6 +3,7 @@ import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { verifyWorkbenchExports } from './lib/verify-workbench-exports.mjs';
 import { verifyWorkbenchLayout } from './lib/verify-workbench-layout.mjs';
+import { verifyWorkbenchSketch } from './lib/verify-workbench-sketch.mjs';
 import { startSmokeSite } from './lib/smoke-site.mjs';
 
 const server = await startSmokeSite({ rootDir: path.resolve('site'), baseUrl: process.env.STATE_LOCAL_SMOKE_BASE_URL });
@@ -70,6 +71,7 @@ try {
   await page.goto(`${server.url}/state-local/workbench/#s=${malicious}`);
   await expect(page.locator('[data-l="parcels"]')).toHaveAttribute('aria-pressed', 'true');
   await verifyWorkbenchExports(page, server.url);
+  await verifyWorkbenchSketch(page);
   assert.deepEqual(errors, []);
   console.log('PASS overview mini-maps; workbench chart filters, share round trip, sorted table, labelled GeoJSON and invalid-state fallback');
 } finally {
