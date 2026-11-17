@@ -619,7 +619,7 @@
   }
   document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
   document.getElementById("spDraw").addEventListener("click", () => setMode("draw"));
-  document.getElementById("spView").addEventListener("click", () => { if (!map) return; const b = map.getBounds(); S.spatial = [[b.getWest(), b.getSouth()], [b.getEast(), b.getSouth()], [b.getEast(), b.getNorth()], [b.getWest(), b.getNorth()], [b.getWest(), b.getSouth()]]; map.getSource("draw").setData({ type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Polygon", coordinates: [S.spatial] } }] }); refresh(); });
+  document.getElementById("spView").addEventListener("click", () => { if (!map) return; setMode("select"); const b = map.getBounds(); S.spatial = [[b.getWest(), b.getSouth()], [b.getEast(), b.getSouth()], [b.getEast(), b.getNorth()], [b.getWest(), b.getNorth()], [b.getWest(), b.getSouth()]]; map.getSource("draw").setData({ type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Polygon", coordinates: [S.spatial] } }] }); refresh(); });
   document.getElementById("hintDone").addEventListener("click", finishSketch);
   document.getElementById("hintCancel").addEventListener("click", () => setMode("select"));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && mode !== "select") setMode("select"); });
