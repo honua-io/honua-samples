@@ -1,7 +1,7 @@
 {
   "id": "gp-local-dev",
   "title": "Local GP buffer with the Python SDK",
-  "description": "Submits a metric buffer through the published Python SDK and verifies the returned polygon bounds and area against a local Redis-backed server.",
+  "description": "Submits a metric buffer through the published Python SDK and verifies the returned polygon bounds and area against a local PostgreSQL-backed server.",
   "contentKind": "walkthrough",
   "learning": {
     "goal": "automate-workflow",

@@ -40,7 +40,7 @@ not claim active-gallery or release certification coverage.
 | Sample | Runnable behavior | CI validation |
 | --- | --- | --- |
 | [STAC operations](samples/stac-ops/README.md) | Independently hosted Blazor dashboard targeting a selected STAC server | Dashboard regression tests, published WebAssembly build, Chromium loading and source switching |
-| [Local GP](samples/gp-local-dev/README.md) | Published Python SDK submits a metric buffer to the pinned local server | Real PostgreSQL/Redis/server execution with polygon bounds and area assertions |
+| [Local GP](samples/gp-local-dev/README.md) | Published Python SDK submits a metric buffer to the pinned local server | Real PostgreSQL/server execution with polygon bounds and area assertions |
 | [Plugin endpoint](samples/plugin-endpoint/README.md) | Executes the public custom-endpoint contract | Compiles against the pinned SDK and validates the response |
 | [GP process templates](samples/gp-process-templates/README.md) | Custom Python and .NET summary tools | Golden, invalid-input, missing-input and output-cap tests against the pinned harness |
 

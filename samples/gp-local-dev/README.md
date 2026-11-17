@@ -11,14 +11,14 @@ Run these commands from the repository root with Python 3.11+ and Docker Compose
 ```bash
 python3 -m venv artifacts/gp-venv
 artifacts/gp-venv/bin/python -m pip install -r samples/gp-local-dev/requirements.txt
-docker compose -f docker/compose.yml -f docker/compose.gp.yml up --wait -d
+docker compose -f docker/compose.yml up --wait -d
 PYTHON=artifacts/gp-venv/bin/python bash samples/gp-local-dev/submit-buffer.sh
-docker compose -f docker/compose.yml -f docker/compose.gp.yml down --volumes --remove-orphans
+docker compose -f docker/compose.yml down --volumes --remove-orphans
 ```
 
-The stack uses the gallery's pinned published Honua Server image, PostgreSQL,
-and Redis. Its Development-only Pro grant enables the Redis-backed local job
-queue. No worker product source is copied or built. The sample submits the
+The stack is the gallery's pinned published Honua Server image and PostgreSQL,
+nothing else: the server keeps the job queue, status and result package in
+PostgreSQL. No worker product source is copied or built. The sample submits the
 buffer, waits for completion, then checks polygon type, bounds, and area;
 any mismatch fails the command and its CI job.
 

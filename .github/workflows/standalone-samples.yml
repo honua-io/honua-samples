@@ -80,7 +80,7 @@ jobs:
       - name: Install the pinned published SDK
         run: python -m pip install -r samples/gp-local-dev/requirements.txt
       - name: Start the published local server
-        run: docker compose -f docker/compose.yml -f docker/compose.gp.yml up --wait -d
+        run: docker compose -f docker/compose.yml up --wait -d
       - name: Execute and verify the buffer sample
         run: |
           mkdir -p artifacts/gp-local-dev
@@ -89,10 +89,10 @@ jobs:
         if: always()
         run: |
           mkdir -p artifacts/gp-local-dev
-          docker compose -f docker/compose.yml -f docker/compose.gp.yml logs > artifacts/gp-local-dev/stack.log
+          docker compose -f docker/compose.yml logs > artifacts/gp-local-dev/stack.log
       - name: Stop the local stack
         if: always()
-        run: docker compose -f docker/compose.yml -f docker/compose.gp.yml down --volumes --remove-orphans
+        run: docker compose -f docker/compose.yml down --volumes --remove-orphans
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
