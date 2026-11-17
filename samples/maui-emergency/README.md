@@ -22,7 +22,7 @@ closed shelters. No operational use or evacuation guidance.
 
 Import `maui-demo-shelters` and `maui-demo-closures` through the
 [department pipeline](../../docs/state-local-data.md). For each layer,
-take the service path and layer from its activated receipt's `layerUrl`: the path between
+take the service path and layer from the `layerUrl` that `cli.mjs activate` prints: the path between
 `/rest/services/` and `/FeatureServer/` (`folder/service` for a department import) and
 the number after it. Public reads must
 be enabled explicitly; no administrative credential belongs in the browser URL.

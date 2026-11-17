@@ -112,7 +112,7 @@ python3 -m http.server 3000 --directory site
 
 Open `/maui-public-works/app/` on that local server. This local staging step does
 not activate the full journey in the public portfolio. Supply each activated
-layer's service path and layer from its receipt `layerUrl` (the path between
+layer's service path and layer from the `layerUrl` that `cli.mjs activate` prints (the path between
 `/rest/services/` and `/FeatureServer/`, `folder/service` for a department import,
 and the number after it) in the URL:
 

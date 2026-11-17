@@ -44,9 +44,9 @@ python3 -m http.server 3000 --directory site
 Open `/maui-311/app/?service=YOUR_SERVICE&layer=0` on that local server. The default
 API is `https://demo.honua.io`; a disposable local API can be selected with
 `&baseUrl=http://localhost:8080`.
-Take the service path and layer from the activated receipt's `layerUrl`: the path between
+Take the service path and layer from the `layerUrl` that `cli.mjs activate` prints: the path between
 `/rest/services/` and `/FeatureServer/` (a department import is `folder/service`, for
-example `service-requests/maui-demo-requests-<id>`) and the number after it. The receipt's
+example `service-requests/maui-demo-requests-<id>`) and the number after it. The saved receipt's
 bare `serviceName` is the admin name and answers 404 for a foldered layer.
 This explicit local staging step is needed while the full journey remains withheld
 from the public portfolio. No API key belongs in the URL or browser. Without a binding the page shows an honest
