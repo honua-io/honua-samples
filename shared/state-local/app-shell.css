@@ -13,7 +13,9 @@ body.app-shell {
 }
 .app-shell > .appbar, .app-shell > .demostrip,
 .app-shell > .xbanner, .app-shell > .statusbar { flex-shrink: 0; }
-.app-shell .appbar { position: relative; }
+.app-shell .appbar { position: relative; flex-wrap: wrap; height: auto; min-height: 52px; padding-block: 8px; row-gap: 8px; }
+.app-shell .wordmark, .app-shell .appnav, .app-shell .appnav a { flex-shrink: 0; }
+.app-shell .wordmark, .app-shell .appnav { flex-wrap: wrap; }
 .app-shell .demostrip { max-height: 72px; overflow: auto; }
 .app-shell .demostrip:focus-visible { outline: 2px solid var(--c-accent-ink); outline-offset: -3px; }
 @media (forced-colors: active) {

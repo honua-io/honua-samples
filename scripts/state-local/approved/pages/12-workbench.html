@@ -52,7 +52,7 @@
   .toolgrp { display: flex; gap: 2px; background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 3px; }
   .toolgrp button { border: 0; background: transparent; height: 30px; padding: 0 10px; border-radius: 5px; font-size: 13px; font-weight: 500; color: var(--c-text-2); display: inline-flex; gap: 6px; align-items: center; }
   .toolgrp button:hover { background: var(--c-surface-2); color: var(--c-text); }
-  .toolgrp button[aria-pressed="true"] { background: var(--c-accent-soft); color: var(--c-accent-ink); }
+  .toolgrp button[aria-pressed="true"], #selOnly[aria-pressed="true"] { background: var(--c-accent-soft); color: var(--c-accent-ink); }
   .toolgrp select { border: 0; background: transparent; height: 30px; font-size: 13px; font-weight: 500; color: var(--c-text); padding: 0 6px; }
   .maphint { position: absolute; z-index: 6; left: 50%; bottom: 14px; transform: translateX(-50%); background: var(--c-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-raised); padding: 10px 14px; font-size: 13px; display: none; gap: 10px; align-items: center; max-width: calc(100% - 24px); }
   .maphint[data-on="true"] { display: flex; }

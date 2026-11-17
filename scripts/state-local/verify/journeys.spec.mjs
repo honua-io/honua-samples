@@ -15,8 +15,7 @@ function watchPage(page, siteOrigin) {
   const allowedOrigins = new Set([siteOrigin, stateLocalServer, ...archives.map((url) => new URL(url).origin), ...LIBRARY_ORIGINS]);
   page.on('pageerror', (error) => seen.errors.push(error.message));
   page.on('console', (message) => {
-    const missingFavicon = message.location().url?.endsWith('/favicon.ico');
-    if (message.type() === 'error' && !missingFavicon) seen.errors.push(message.text());
+    if (message.type() === 'error') seen.errors.push(message.text());
   });
   page.on('request', (request) => {
     const { origin, protocol } = new URL(request.url());
