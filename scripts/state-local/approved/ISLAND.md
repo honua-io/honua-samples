@@ -34,16 +34,19 @@ manifest records GEOS/Shapely versions, repairs, part counts and both checksum c
 ## Start an isolated server and import
 
 Use dedicated ports and a dedicated Compose project. The archive bind directory
-must be writable by the server's container group, 1001. This setup retains the
-host user's ownership and grants no public directory access.
+must be writable by the server's container group, 1001. The server image has no
+shell, so the Postgres image this stack already runs sets the group and mode.
+This setup retains the host user's ownership and grants no public directory access.
 
 ```sh
 export HONUA_TILE_STORAGE_ROOT="$PWD/artifacts/island-storage"
 export HONUA_HTTP_PORT=18085 POSTGRES_PORT=15435
 mkdir -p "$HONUA_TILE_STORAGE_ROOT"
 docker compose -p samples-island -f docker/compose.yml -f docker/compose.island-tiles.yml \
-  run --rm --no-deps --user 0 --entrypoint bash honua -c \
-  'chgrp 1001 "$FileStorage__LocalStorage__BasePath" && chmod 2770 "$FileStorage__LocalStorage__BasePath"'
+  run --rm --no-deps --user 0 \
+  -v "$HONUA_TILE_STORAGE_ROOT:$HONUA_TILE_STORAGE_ROOT" \
+  --entrypoint sh postgres -c \
+  'chgrp 1001 "$1" && chmod 2770 "$1"' _ "$HONUA_TILE_STORAGE_ROOT"
 docker compose -p samples-island -f docker/compose.yml -f docker/compose.island-tiles.yml up -d --wait
 export HONUA_BASE_URL=http://localhost:18085
 export HONUA_ADMIN_API_KEY=quickstart-admin-password
@@ -149,12 +152,14 @@ until both agree.
 ## Remove the isolated server
 
 The server writes archives as its container user, so the host user cannot delete
-them directly. Delete them from a root container, then remove the stack and its
-database volume:
+them directly. The server image has no shell, so find runs in the Postgres image
+this stack already runs. Then remove the stack and its database volume:
 
 ```sh
 docker compose -p samples-island -f docker/compose.yml -f docker/compose.island-tiles.yml \
-  run --rm --no-deps --user 0 --entrypoint find honua "$HONUA_TILE_STORAGE_ROOT" -mindepth 1 -delete
+  run --rm --no-deps --user 0 \
+  -v "$HONUA_TILE_STORAGE_ROOT:$HONUA_TILE_STORAGE_ROOT" \
+  --entrypoint find postgres "$HONUA_TILE_STORAGE_ROOT" -mindepth 1 -delete
 docker compose -p samples-island -f docker/compose.yml -f docker/compose.island-tiles.yml down -v
 rmdir "$HONUA_TILE_STORAGE_ROOT"
 ```
