@@ -68,6 +68,10 @@ jobs:
         with:
           node-version: "22"
 
+      # samples#327: fail the deploy when a county descriptor URL is not served.
+      - name: Hosted county descriptors are served
+        run: node scripts/check-hosted-descriptors.mjs shared/state-local
+
       - name: Read immutable SDK producer lock
         id: sdk-lock
         run: node scripts/emit-sdk-producer-lock.mjs
@@ -211,6 +215,9 @@ jobs:
         env:
           HONUA_CATALOG_PYTHON: artifacts/catalog-python/bin/python
         run: node scripts/state-local/build-display-site.mjs
+
+      - name: Built county pages name a served descriptor
+        run: node scripts/check-hosted-descriptors.mjs site/state-local
 
       - name: Build gallery
         # KEY_LIST_URL is the published capability list at the 2026.1 server
