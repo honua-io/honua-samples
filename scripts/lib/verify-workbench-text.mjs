@@ -17,9 +17,9 @@ export async function verifyWorkbenchText(page, url) {
         const sizes = [...document.querySelectorAll('body, body *')].map((element) => [element, parseFloat(getComputedStyle(element).fontSize)]);
         for (const [element, size] of sizes) element.style.setProperty('font-size', `${size * 2}px`, 'important');
       }, theme);
-      const collisions = await page.evaluate(() => {
-        const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > OVERLAP_TOLERANCE_PX
-          && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > OVERLAP_TOLERANCE_PX;
+      const collisions = await page.evaluate((overlapTolerance) => {
+        const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > overlapTolerance
+          && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > overlapTolerance;
         const header = [...document.querySelectorAll('.appbar strong, .appbar small, .appnav a, #sdkBtn, .appbar .env, #shareBtn')]
           .filter((element) => element.getBoundingClientRect().width > 0).map((element) => {
             const range = document.createRange();
@@ -38,8 +38,13 @@ export async function verifyWorkbenchText(page, url) {
             || overlap(label.getBoundingClientRect(), count.getBoundingClientRect())) failures.push(`Chart label overlaps: ${label.textContent}`);
           if (row.scrollWidth > row.clientWidth + 1) failures.push(`Chart row overflows: ${label.textContent}`);
         }
+        for (const chart of document.querySelectorAll('.chart')) {
+          const tracks = [...chart.querySelectorAll('.bar-track')].map((track) => track.getBoundingClientRect());
+          if (tracks.some((track) => Math.abs(track.left - tracks[0].left) > overlapTolerance
+            || Math.abs(track.width - tracks[0].width) > overlapTolerance)) failures.push('Chart rows use different scales');
+        }
         return failures;
-      });
+      }, OVERLAP_TOLERANCE_PX);
       assert.deepEqual(collisions, [], `${theme} ${width}px at 200% text`);
     }
   }
@@ -51,13 +56,14 @@ export async function verifyWorkbenchText(page, url) {
   await first.focus();
   await page.keyboard.press('Enter');
   await expect(first).toHaveAttribute(PRESSED_ATTRIBUTE, 'true');
+  await expect(first).toBeFocused();
   assert.notEqual(await page.locator('#nShown').textContent(), count);
   await bars.nth(1).click({ modifiers: ['Shift'] });
   await expect(first).toHaveAttribute(PRESSED_ATTRIBUTE, 'true');
   await expect(bars.nth(1)).toHaveAttribute(PRESSED_ATTRIBUTE, 'true');
   await first.click();
   await expect(bars.nth(1)).toHaveAttribute(PRESSED_ATTRIBUTE, 'false');
-  await first.focus();
+  await expect(first).toBeFocused();
   await page.keyboard.press('Space');
   await expect(first).toHaveAttribute(PRESSED_ATTRIBUTE, 'false');
   await expect(page.locator('#nShown')).toHaveText(count);
