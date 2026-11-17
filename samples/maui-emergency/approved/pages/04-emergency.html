@@ -403,11 +403,15 @@
   }
   document.querySelectorAll(".seg [data-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
   function bindShelters() {
-    document.querySelectorAll(".shel").forEach((el) => { const go = () => map && map.flyTo({ center: el.dataset.c.split(",").map(Number), zoom: 16, duration: 700 }); el.addEventListener("click", go); el.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), go())); });
+    document.querySelectorAll(".shel").forEach((el) => { const go = () => fly(el.dataset.c.split(",").map(Number)); el.addEventListener("click", go); el.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), go())); });
   }
   renderShelters(); bindShelters();
 
-  const fly = (c, z) => map && map.flyTo({ center: c, zoom: z || 16, duration: 700 });
+  function fly(c, z = 16) {
+    if (!map) return;
+    map.resize();
+    map.flyTo({ center: c, zoom: z, duration: 700 });
+  }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-cite]"); if (!b || !map) return;
     const k = b.dataset.cite, id = b.dataset.id;
