@@ -1609,6 +1609,7 @@ async function assertNoMutableTrunkLinks(root) {
 async function copyAssets() {
   const destDir = path.join(SITE_DIR, "assets");
   await mkdir(destDir, { recursive: true });
+  await cp(new URL('../shared/state-local/favicon.ico', import.meta.url), path.join(SITE_DIR, 'favicon.ico'));
   await cp(new URL('../shared/design-system/tokens.css', import.meta.url), path.join(destDir, 'tokens.css'));
   const brandAssets = new URL('../samples/county-parcel-viewer/public/honua/', import.meta.url);
   for (const name of ['theme.js', 'geist-latin.woff2', 'OFL.txt']) {
