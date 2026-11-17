@@ -43,7 +43,7 @@ All real sources below come from the [Hawaii Statewide GIS catalogue](https://pl
 which declares its contents public domain. Every download captures that declaration,
 the layer metadata and the linked source summary. The table lists API layer paths
 under [State GIS services](https://geodata.hawaii.gov/arcgis/rest/services/).
-Source summaries live under [State GIS metadata](https://files.hawaii.gov/dbedt/op/gis/data/).
+Source summaries are linked from each layer in the [Hawaii Statewide GIS catalogue](https://planning.hawaii.gov/gis/download-gis-data-expanded/).
 Attribution is retained even for public-domain data.
 
 | Source key | API layer | Source summary / vintage | Attribution |
