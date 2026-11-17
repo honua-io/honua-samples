@@ -1,9 +1,9 @@
 ### Honua local GP dev — geometry.buffer over OGC API Processes
-### Prereq: docker compose -f docker/compose.yml -f docker/compose.gp.yml up
+### Prereq: docker compose -f docker/compose.yml up
 ### Works with the VS Code REST Client / JetBrains HTTP client.
 ###
 ### The job runs IN-PROCESS in the honua container on the local backend
-### ("local"); Redis carries the job queue / status / result package. No cloud.
+### ("local"); PostgreSQL carries the job queue / status / result package. No cloud.
 
 @base = http://localhost:8080
 # Admin password (compose default) doubles as the X-API-Key; the admin role

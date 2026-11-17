@@ -2,11 +2,13 @@
 
 Switching and SDK Explorer port the approved mockup templates and kit from the emergency sample, sharing the honua-theme preference. The landing uses the county parcel tokens pending its approved port. The gallery build assembles the pages and checks local links after emitting sample pages.
 
-The Explorer catalogue is derived from the approved `sdk_samples.py` generator. Regenerate after fetching `origin/trunk` in honua-sdk-js, honua-samples and honua-server:
+The Explorer catalogue is derived from the approved `sdk_samples.py` generator. Regenerate after fetching `origin/trunk` and tags in honua-sdk-js, honua-samples and honua-server. Snapshot the SDK at the release the samples pin (rc.2 ships `@honua/sdk-js` 0.4.0), not sdk-js trunk:
 
 ```sh
-python3 -I scripts/state-local/sdk_samples.py --root /path/to/workspace --output scripts/state-local/site/sdk-explorer/catalog.json
+python3 -I scripts/state-local/sdk_samples.py --root /path/to/workspace --output scripts/state-local/site/sdk-explorer/catalog.json --sdk-ref js-sdk-v0.4.0
 ```
+
+The generator fails when a catalogued example is missing at that revision, so examples removed from the SDK leave the Explorer. `--samples-ref <pushed commit>` snapshots sample READMEs from a branch whose README changes have not reached trunk yet.
 
 The snapshot records each repository revision and links source files to immutable commits. It contains source excerpts and rendered READMEs, not a claim that every sample runs in a browser.
 

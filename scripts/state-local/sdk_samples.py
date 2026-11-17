@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Build the source catalog JSON for the SDK Explorer screen.
 
-Reads examples from origin/trunk of honua-sdk-js, honua-samples and honua-server (run `git fetch` in all three first), so a stale
-checkout never leaks into the gallery. Hand-written fields: category, title, one-line description, API names and lifecycle status. Read from git: README (rendered to HTML), the main source file (trimmed) and package/sample metadata.
+Reads examples from fetched refs, never the working tree: origin/trunk by default, or the revisions given by --sdk-ref
+(use the released honua-sdk-js tag the samples pin) and --samples-ref. Run `git fetch --tags` in all three first. Hand-written fields: category, title, one-line description, API names and lifecycle status. Read from git: README (rendered to HTML), the main source file (trimmed) and package/sample metadata.
 
-Usage: python3 -I sdk_samples.py --root /path/to/workspace --output /path/to/catalog.json
-The workspace folder must hold all three repositories with freshly fetched origin/trunk refs.
+Usage: python3 -I sdk_samples.py --root /path/to/workspace --output /path/to/catalog.json --sdk-ref js-sdk-v0.4.0
+The workspace folder must hold all three repositories with freshly fetched refs.
 """
 import argparse, html, json, os, re, subprocess
 
@@ -34,13 +34,13 @@ CATALOG = [
     ("maplibre-category-style-legend", SAMPLES_REPO, "maps", "Category style and legend from OGC API Features", "Colour features by a category field with one match expression; the legend and popup use the same values.", ["/queryables", "/items", "match expression"], ['HTML'], {}),
     ("maplibre-ogc-tiles-mvt", SAMPLES_REPO, "maps", "OGC API Tiles vector tiles in MapLibre", "Turn a tileset's templated link into a MapLibre vector source; Maui buildings extruded by render_height.", ["/tiles", "fill-extrusion"], ['HTML'], {}),
     ("pmtiles-static", SDK_REPO, "maps", "PMTiles static basemap", "A basemap from one .pmtiles archive on static hosting; the runtime registers pmtiles:// and reads the archive metadata.", ["describePmtilesArchive", "isPmtilesProtocolRegistered", "loadMapPackage", "HonuaClient"], ['TypeScript'], {}),
-    ("storytelling-25d-map", SDK_REPO, "maps", "2.5D storytelling map", "A pitched corridor walkthrough: compatibility gating, OGC API Features extrusions, hover and selection.", ["HonuaClient.checkCompatibility", "ogcFeatures().collection().items()", "toMapLibreExtrusionLayer", "createHoverHandler", "createSelectionHandler"], ['TypeScript'], {}),
     ("temporal-playback", SDK_REPO, "maps", "Temporal playback", "Animate a month of events with createTemporalPlayback, styled by a classBreaksRenderer and its legend.", ["createTemporalPlayback", "classBreaksRenderer", "renderer.legendItems"], ['TypeScript'], {}),
     ("imagery-cog-quickstart", SDK_REPO, "maps", "Imagery and terrain journey", "Search STAC by extent, date and cloud cover, open a COG on MapLibre and sample an elevation profile.", ["connect", "HonuaClient.stac().search", "openStacCogAsset", "mountStacCogAssetToMapLibre", "sampleElevationProfile"], ['TypeScript'], {}),
 
     ("maui-311", SAMPLES_REPO, "maps", "311 operations", "Labelled service-request exercises over public Maui geography.", ["HonuaClient"], ['TypeScript'], {}),
     ("maui-emergency", SAMPLES_REPO, "maps", "Emergency preparedness exercise", "Public geography and explicitly fictional shelter and road-status records.", ["HonuaClient"], ['TypeScript'], {}),
     ("maui-public-works", SAMPLES_REPO, "maps", "Public works assets", "Public road and bridge sources with labelled inspection exercises.", ["HonuaClient"], ['TypeScript'], {}),
+    ("maui-public-map", SAMPLES_REPO, "maps", "Public fire-station map", "Import real Maui fire stations, seal a Studio map version and request public publication; on the default server a human approves it.", ["admin REST imports", "Studio maps", "MCP honua_list_layers"], ['Node'], {}),
     ("county-parcel-viewer", SAMPLES_REPO, "query", "County parcel viewer", "Find a parcel by TMK, address or click and see the zoning and FEMA flood zones that cover it, with shares.", ["connect", "QueryBuilder", "HonuaGeocodingClient", "esriGeometryToGeoJSON", "registerPmtilesSource"], ['TypeScript'], {}),
     ("geocoding-quickstart", SDK_REPO, "query", "Address to pin", "One HonuaGeocodingClient.forwardGeocode() request; the chosen candidate becomes a synchronized MapLibre pin.", ["HonuaGeocodingClient", "forwardGeocode"], ['TypeScript'], {}),
     ("geocode-single-line", SAMPLES_REPO, "query", "Geocode one address", "Send one anonymous request to a GeocodeServer and print the best candidate.", ["GeocodeServer findAddressCandidates"], ['Node'], {}),
@@ -48,20 +48,17 @@ CATALOG = [
     ("overture-geoparquet", SDK_REPO, "query", "Overture columnar lab", "A protocol-neutral spatial query on GeoParquet through DuckDB-WASM, with one bounded policy.", ["GeoparquetRuntime", "createBrowserDuckDbDriver", "geoparquetResolver", "createDataset"], ['TypeScript'], {}),
 
     ("sketch-editing", SDK_REPO, "edit", "Sketch editing with terra-draw", "Draw, edit and delete through one edit-sketch workflow with snapping, undo and redo, then applyEdits.", ["createEditSketchWorkflow", "createSnapIndex", "createTerraDrawSketch", "terraDrawSketchToolCapabilities", "workflow.submit"], ['TypeScript'], {}),
-    ("edit-workflow-demo", SDK_REPO, "edit", "Edit workflow demo", "Metadata-backed forms, optimistic edits, attachments, conflicts and recovery on one fixture layer.", ["createEditSession", "createEditSketchWorkflow", "createSnapIndex", "resolveSnapCandidate"], ['TypeScript'], {}),
 
     ("spatial-analytics-workbench", SDK_REPO, "analysis", "Linked spatial analysis workbench", "Explain, accept, execute: one query plan links the area, the filter, the map, the table and the chart.", ["createExplorationContext", "connectView", "setAggregation", "setFilter", "selectLinkedViewQueryProjection", "explainQuery"], ['TypeScript'], {}),
     ("maui-workbench", SAMPLES_REPO, "analysis", "Maui linked analysis workbench", "Parcel and fictional 311 layers share one filter registry across the map, table and status chart, with bounded exports.", ["connect", "createFilterRegistry", "projectFilterRegistryToQuery", "compileOgcApiFeaturesQuery", "createEditSketchWorkflow"], ['TypeScript'], {}),
     ("realtime-incident-dashboard", SDK_REPO, "analysis", "Realtime incident dashboard", "Uses the server stream when advertised, else a visible read-only replay; map, filters, queue and metrics stay linked.", ["createHonuaServerRealtimeSubscription", "createRealtimeFeatureStore", "bindFilterControlsToExploration", "syncMapLayerFilterToExploration", "uniqueValueRenderer"], ['TypeScript'], {}),
 
-    ("geoprocessing-job-runner", SDK_REPO, "gp", "Run a buffer job and collect the result", "Execute geometry.buffer through OGC API Processes, follow the job and read its output.", ["HonuaClient", "ogcProcesses().execute", "job.result"], ['TypeScript'], {}),
     ("gp-local-dev", SAMPLES_REPO, "gp", "Local geoprocessing with the Python SDK", "Submit and verify a 500 m planar buffer with the published Python SDK.", ["honua_sdk.HonuaClient", "client.geoprocessing()"], ['Python'], {}),
     ("gp-process-templates", SAMPLES_REPO, "gp", "GP process templates", "Executable evidence for the Python and .NET process templates against the custom-code contract.", ["custom-code worker contract"], ['Python', '.NET'], {}),
     ("maui-data-pipeline", SAMPLES_REPO, "gp", "Maui department data pipeline", "Import department data into a disposable local Honua Server through the admin REST API.", ["admin REST imports"], ['Node'], {}),
 
     ("nl-map-control", SDK_REPO, "ai", "Ask this map", "Review a schema-grounded spatial query, approve it, then see the same returned IDs on the map and in the table.", ["createAskMapSession", "createNlMapControl", "mountAskMapControl", "session.invalidate", "compileSemanticDuckDbQuery"], ['TypeScript'], {"status": "Experimental"}),
     ("ai-spatial-app-builder", SDK_REPO, "ai", "Safe agent workbench", "An agent proposes spatial work; the SDK authorizes the effect with a dry run, an approval and a verifiable receipt.", ["dryRunAgentPlan", "issueAgentApproval", "verifyAgentStepAuthorization", "issueAgentExecutionReceipt", "explainQuery"], ['TypeScript'], {}),
-    ("mcp-gis-assistant", SDK_REPO, "ai", "MCP GIS assistant", "Grounded discovery of services, layers and schemas with review-before-apply filters and raw tool-call diagnostics.", ["createExplorationContext", "createHonuaAppWorkspace", "selectHonuaAppWorkspaceDrafts"], ['TypeScript'], {}),
 
     ("service-explorer", SDK_REPO, "interop", "Universal GIS service explorer", "Paste a service root, inspect discovery evidence and run only operations both the endpoint and the planner accept.", ["createHonua", "explainAutomaticSourceToMapLibre", "mountAutomaticSourceToMapLibre", "executeQueryPlan"], ['TypeScript'], {}),
     ("coverages-wcs-basic", SDK_REPO, "interop", "Coverages and WCS", "OGC API Coverages and WCS 2.0.1 clients side by side, both mounted as MapLibre raster layers.", ["createCoverageClient", "createWcsClient", "coverageToMapLibreImage"], ['TypeScript'], {}),
@@ -77,12 +74,19 @@ CATALOG = [
     ("react-quickstart", SDK_REPO, "frameworks", "React quickstart", "The @honua/sdk-js/react bindings on an app-owned MapLibre map, published to Honua through HonuaMapProvider.", ["HonuaMapProvider", "useDataset", "useQuery", "useSelection", "useHover", "useCapabilities"], ['React'], {}),
     ("create-honua-app-react-ts", SAMPLES_REPO, "frameworks", "create-honua-app: react-ts", "Scaffold the react-ts starter and point it at a FeatureServer layer on your server.", ["npm create honua-app"], ['React'], {}),
     ("create-honua-app-vanilla-ts", SAMPLES_REPO, "frameworks", "create-honua-app: vanilla-ts", "Scaffold the vanilla-ts starter and point it at a FeatureServer layer on your server.", ["npm create honua-app"], ['TypeScript'], {}),
-    ("runtime-parity-showcase", SDK_REPO, "frameworks", "Runtime parity showcase", "fetchMapPackage and loadMapPackage, a HonuaController, and web components for layers, legend, search, table and chart.", ["fetchMapPackage", "loadMapPackage", "createHonuaController", "createHonuaWebComponentControllerFromRuntime"], ['Web components'], {}),
     ("node-backend-quickstart", SDK_REPO, "frameworks", "Node.js backend quickstart", "A minimal Node HTTP service that uses the SDK from a backend process, without Express.", ["HonuaClient", "isHonuaError"], ['Node'], {}),
     ("plugin-endpoint", SAMPLES_REPO, "frameworks", "A public plugin endpoint", "Implement ICustomEndpoint from the Honua plugin contract and run it without a server.", ["ICustomEndpoint"], ['.NET'], {}),
 ]
 
 REPOS = {SDK_REPO: ("honua-sdk-js", "examples"), SAMPLES_REPO: ("honua-samples", "samples")}
+
+
+# Revision read from each repository; --sdk-ref pins honua-sdk-js to a release.
+REFS = {}
+
+
+def ref(repo):
+    return REFS.get(os.path.abspath(repo), "origin/trunk")
 
 
 def git(repo, *args):
@@ -91,14 +95,14 @@ def git(repo, *args):
 
 def show(repo, path):
     try:
-        return git(repo, "show", f"origin/trunk:{path}")
+        return git(repo, "show", f"{ref(repo)}:{path}")
     except subprocess.CalledProcessError:
         return None
 
 
 def ls(repo, path):
     try:
-        return git(repo, "ls-tree", "-r", "--name-only", "origin/trunk", path).split()
+        return git(repo, "ls-tree", "-r", "--name-only", ref(repo), path).split()
     except subprocess.CalledProcessError:
         return []
 
@@ -230,11 +234,15 @@ def run_command(root, sample, readme):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", required=True, help="Workspace containing honua-sdk-js and honua-samples")
+    parser.add_argument("--root", required=True, help="Workspace containing honua-sdk-js, honua-samples and honua-server")
     parser.add_argument("--output", required=True, help="Destination JSON snapshot")
+    parser.add_argument("--sdk-ref", default="origin/trunk", help="honua-sdk-js revision, e.g. the release tag js-sdk-v0.4.0")
+    parser.add_argument("--samples-ref", default="origin/trunk", help="honua-samples revision, e.g. a pushed commit that changes sample READMEs")
     args = parser.parse_args()
     sdk_repo, samples_repo = (os.path.join(args.root, REPOS[k][0]) for k in (SDK_REPO, SAMPLES_REPO))
-    revisions = {name: git(os.path.join(args.root, name), "rev-parse", "origin/trunk").strip()
+    parser_refs = {sdk_repo: args.sdk_ref, samples_repo: args.samples_ref}
+    REFS.update({os.path.abspath(repo): value for repo, value in parser_refs.items()})
+    revisions = {name: git(os.path.join(args.root, name), "rev-parse", f"{ref(os.path.join(args.root, name))}^{{commit}}").strip()
                  for name in ("honua-sdk-js", "honua-samples", "honua-server")}
     out = []
     for sid, repo, cat, title, desc, apis, langs, extra in CATALOG:
@@ -248,7 +256,7 @@ def main():
                                     f"raw.githubusercontent.com/honua-io/{name}/{revision}/")
         out.append({
             "id": sid, "repo": repo, "cat": cat, "title": title, "desc": desc, "apis": apis,
-            "path": f"{repo_name}/{sub}/{sid}", "url": f"https://github.com/honua-io/{repo_name}/tree/{git(os.path.join(args.root, repo_name), 'rev-parse', 'origin/trunk').strip()}/{sub}/{sid}",
+            "path": f"{repo_name}/{sub}/{sid}", "url": f"https://github.com/honua-io/{repo_name}/tree/{revisions[repo_name]}/{sub}/{sid}",
             "run": run, "files": files, "langs": langs,
             "readme": render_readme(readme), **extra,
         })
@@ -257,7 +265,10 @@ def main():
         dirs = {p.split("/")[1] for p in ls(repo, sub) if p.count("/") >= 2} - {"_kit", "shared"}
         missing = dirs - ids
         if missing: raise SystemExit(f"Uncatalogued {sub} in {os.path.basename(repo)}: {sorted(missing)}")
-    rev = lambda r: git(r, "log", "-1", "--format=%h %cs", "origin/trunk").strip()
+        catalogued = {r[0] for r in CATALOG if REPOS[r[1]][0] == os.path.basename(repo)}
+        absent = catalogued - dirs
+        if absent: raise SystemExit(f"Catalogued {sub} missing from {os.path.basename(repo)} at {ref(repo)}: {sorted(absent)}")
+    rev = lambda r: git(r, "log", "-1", "--format=%h %cs", ref(r)).strip()
     sdk_revision = revisions["honua-sdk-js"]
     doc = {"version": json.loads(show(sdk_repo, "package.json"))["version"], "sdkRev": rev(sdk_repo), "samplesRev": rev(samples_repo),
            "examplesIndex": f"https://github.com/honua-io/honua-sdk-js/blob/{sdk_revision}/examples/README.md",
