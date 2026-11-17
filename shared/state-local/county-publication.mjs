@@ -1,7 +1,7 @@
-import { countyFieldText, countyFields, countyParcel, countyTmk } from './county-parcel.mjs';
+import { countyFields, countyParcel, countyTmk } from './county-parcel.mjs';
 import { mountCountyExports, updateCountyExports } from './county-export-control.mjs';
 
-const descriptor = 'https://demo.honua.io/demo-data/publications/maui-county-parcels/20261117T170941Z/descriptor.json';
+const descriptor = 'https://demo.honua.io/demo-data/publications/maui-county-parcels/20261113T122054Z/descriptor.json';
 const countyLayers = ['county-fill', 'county-line', 'county-selected'];
 const snapshotLayers = ['parcels-fill', 'parcels-line', 'parcels-sel'];
 
@@ -91,7 +91,7 @@ async function selectCountyParcel(state, value) {
     renderCountyDetails(state, feature);
     showCountySelection(state, feature);
     const warning = answer.limit ? ` ${answer.limit.message} Live lookup is not connected in this demo.` : '';
-    state.status.textContent = `County TMK ${tmk} · GeoParquet details · captured 17 November 2026.${warning}`;
+    state.status.textContent = `County TMK ${tmk} · GeoParquet details · captured 13 November 2026.${warning}`;
   } catch (error) {
     if (sequence === state.sequence && state.root.open) state.status.textContent = `County lookup unavailable: ${error.message} Snapshot data remains available.`;
   }
@@ -101,7 +101,7 @@ function renderCountyDetails(state, feature) {
   state.root.querySelector('#countyTmk').value = feature.properties.tmk_txt;
   for (const [name, value] of Object.entries(feature.properties)) {
     const label = document.createElement('dt'), detail = document.createElement('dd');
-    label.textContent = countyFields[name]; detail.textContent = countyFieldText(name, value);
+    label.textContent = countyFields[name]; detail.textContent = value === null ? 'Unknown' : String(value);
     state.details.append(label, detail);
   }
 }
@@ -112,7 +112,7 @@ function attachCountyMap(state) {
   if (!map.getLayer('parcels-sel')) { map.once('load', () => { if (state.root.open) attachCountyMap(state); }); return; }
   if (!map.getSource('county-publication')) {
     const display = state.publication.display;
-    map.addSource('county-publication', { type: 'vector', url: `pmtiles://${display.pmtilesUrl}`, promoteId: display.promoteId, minzoom: display.minzoom, maxzoom: display.maxzoom, attribution: 'County of Maui; County of Maui Department of Planning; Hawaii Statewide GIS Program' });
+    map.addSource('county-publication', { type: 'vector', url: `pmtiles://${display.pmtilesUrl}`, promoteId: display.promoteId, minzoom: display.minzoom, maxzoom: display.maxzoom, attribution: 'County of Maui; Hawaii Statewide GIS Program' });
     map.addLayer({ id: 'county-fill', type: 'fill', source: 'county-publication', 'source-layer': display.sourceLayer, paint: { 'fill-color': '#4897de', 'fill-opacity': 0.22 } });
     map.addLayer({ id: 'county-line', type: 'line', source: 'county-publication', 'source-layer': display.sourceLayer, paint: { 'line-color': '#2575be', 'line-width': 1.2 } });
     map.addSource('county-selection', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
