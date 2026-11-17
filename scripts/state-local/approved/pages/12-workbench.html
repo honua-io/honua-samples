@@ -7,6 +7,7 @@
 {{HEAD}}
 <style>
   body { height: max(100vh, 920px); display: flex; flex-direction: column; overflow: hidden; }
+  .appbar .wordmark strong, .appbar .wordmark small { flex-shrink: 0; }
   .wb { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); }
   .left { grid-column: 1; grid-row: 1 / span 2; }
   .nlq { grid-column: 2 / span 2; grid-row: 1; }
@@ -95,7 +96,13 @@
   .chart-h .x { margin-left: auto; display: flex; align-items: center; gap: 6px; }
   .chart .cbody svg { display: block; width: 100%; height: auto; overflow: visible; }
   .chart .cbody svg text { font: 11px var(--font-sans); fill: var(--c-text-3); }
-  .chart .bar { cursor: pointer; }
+  .chart .bar { display: grid; grid-template-columns: minmax(0, 140fr) minmax(0, 170fr) max-content; align-items: center; gap: 6px; width: 100%; min-height: 24px; padding: 0; border: 0; background: transparent; color: var(--c-text-3); text-align: left; cursor: pointer; }
+  .chart .bar-label { color: var(--c-text-2); font: 12px var(--font-sans); overflow-wrap: anywhere; }
+  .chart .bar-track { position: relative; height: 14px; }
+  .chart .bar-total, .chart .bar-value { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+  .chart .bar-total { background: var(--c-surface-2); }
+  .chart .bar-count { font: 11.5px var(--font-sans); font-variant-numeric: tabular-nums; }
+  .chart .bar:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; }
   .chart .bar:hover { opacity: .85; }
   .chart .hint { font-size: 12px; color: var(--c-text-3); margin-top: 4px; }
   .addchart { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; padding: 14px 16px; }
@@ -478,8 +485,11 @@
     if (c.t === "bar") {
       const cnt = {}, tot = {}; rows.forEach((r) => (cnt[r[c.f]] = (cnt[r[c.f]] || 0) + 1)); all.forEach((r) => (tot[r[c.f]] = (tot[r[c.f]] || 0) + 1));
       const cats = Object.keys(tot).sort((a, b) => tot[b] - tot[a]).slice(0, 7); const max = Math.max(1, ...cats.map((k) => tot[k]));
-      const act = S.chartF[key(c)]; const rowH = 24;
-      el.innerHTML = `<svg viewBox="0 0 ${W} ${cats.length * rowH}" role="img" aria-label="${escapeHtml(chartTitle(c, L))}">` + cats.map((k, i) => { const on = !act || act.v.includes(k); const wAll = (tot[k] / max) * 170, w = ((cnt[k] || 0) / max) * 170; return `<g class="bar" data-cat="${encodeURIComponent(k)}" transform="translate(0 ${i * rowH})"><title>${escapeHtml(k)}: ${cnt[k] || 0}</title><text x="0" y="15" style="fill:var(--c-text-2);font-size:12px">${escapeHtml(k.length > 22 ? k.slice(0, 21) + "…" : k)}</text><rect x="140" y="5" width="${wAll}" height="14" rx="3" style="fill:var(--c-surface-2)"/><rect x="140" y="5" width="${Math.max(w, 0)}" height="14" rx="3" style="fill:${on ? color : "var(--c-surface-3)"}"/><text x="${140 + Math.max(wAll, w) + 6}" y="16" style="font-size:11.5px">${(cnt[k] || 0).toLocaleString()}</text></g>`; }).join("") + "</svg>";
+      const act = S.chartF[key(c)];
+      el.innerHTML = cats.map((k) => {
+        const on = !act || act.v.includes(k), count = cnt[k] || 0;
+        return `<button type="button" class="bar" data-cat="${encodeURIComponent(k)}" aria-pressed="${!!act?.v.includes(k)}" title="${escapeHtml(k)}: ${count}"><span class="bar-label">${escapeHtml(k)}</span><span class="bar-track" aria-hidden="true"><span class="bar-total" style="width:${tot[k] / max * 100}%"></span><span class="bar-value" style="width:${count / max * 100}%;background:${on ? color : "var(--c-surface-3)"}"></span></span><span class="bar-count">${count.toLocaleString()}</span></button>`;
+      }).join("");
       el.querySelectorAll(".bar").forEach((g) => g.addEventListener("click", (e) => { const k = decodeURIComponent(g.dataset.cat); const cur = S.chartF[key(c)]; let v = cur ? [...cur.v] : []; if (e.shiftKey || e.metaKey) v = v.includes(k) ? v.filter((x) => x !== k) : [...v, k]; else v = cur && cur.v.length === 1 && cur.v[0] === k ? [] : [k]; if (v.length) S.chartF[key(c)] = { f: c.f, op: "in", v }; else delete S.chartF[key(c)]; refresh(); }));
       el.insertAdjacentHTML("beforeend", `<div class="hint">Gray is the unfiltered total. Shift-click to pick several.</div>`);
     } else if (c.t === "hist" || c.t === "time") {
