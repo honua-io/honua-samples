@@ -72,11 +72,8 @@ try {
   await page.goto(`${server.url}/state-local/workbench/#s=${malicious}`);
   await expect(page.locator('[data-l="parcels"]')).toHaveAttribute('aria-pressed', 'true');
   await verifyWorkbenchExports(page, server.url);
-<<<<<<< HEAD
   await verifyWorkbenchSketch(page);
-=======
   await verifyWorkbenchText(page, `${server.url}/state-local/workbench/`);
->>>>>>> origin/trunk
   assert.deepEqual(errors, []);
   console.log('PASS overview mini-maps; workbench chart filters, share round trip, sorted table, labelled GeoJSON and invalid-state fallback');
 } finally {
