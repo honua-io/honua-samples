@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
 import { expect } from '@playwright/test';
 
+const PHONE_WIDTH = 390;
+const DESKTOP_WIDTH = 1440;
+const OVERLAP_TOLERANCE_PX = 0.5;
+const PRESSED_ATTRIBUTE = 'aria-pressed';
+
 export async function verifyWorkbenchText(page, url) {
   for (const theme of ['light', 'dark']) {
-    for (const width of [390, 1440]) {
+    for (const width of [PHONE_WIDTH, DESKTOP_WIDTH]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(url);
       await expect(page.locator('#map canvas')).toBeVisible();
@@ -13,8 +18,8 @@ export async function verifyWorkbenchText(page, url) {
         for (const [element, size] of sizes) element.style.setProperty('font-size', `${size * 2}px`, 'important');
       }, theme);
       const collisions = await page.evaluate(() => {
-        const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5
-          && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+        const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > OVERLAP_TOLERANCE_PX
+          && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > OVERLAP_TOLERANCE_PX;
         const header = [...document.querySelectorAll('.appbar strong, .appbar small, .appnav a, #sdkBtn, .appbar .env, #shareBtn')]
           .filter((element) => element.getBoundingClientRect().width > 0).map((element) => {
             const range = document.createRange();
@@ -45,15 +50,15 @@ export async function verifyWorkbenchText(page, url) {
   const count = await page.locator('#nShown').textContent();
   await first.focus();
   await page.keyboard.press('Enter');
-  await expect(first).toHaveAttribute('aria-pressed', 'true');
+  await expect(first).toHaveAttribute(PRESSED_ATTRIBUTE, 'true');
   assert.notEqual(await page.locator('#nShown').textContent(), count);
   await bars.nth(1).click({ modifiers: ['Shift'] });
-  await expect(first).toHaveAttribute('aria-pressed', 'true');
-  await expect(bars.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(first).toHaveAttribute(PRESSED_ATTRIBUTE, 'true');
+  await expect(bars.nth(1)).toHaveAttribute(PRESSED_ATTRIBUTE, 'true');
   await first.click();
-  await expect(bars.nth(1)).toHaveAttribute('aria-pressed', 'false');
+  await expect(bars.nth(1)).toHaveAttribute(PRESSED_ATTRIBUTE, 'false');
   await first.focus();
   await page.keyboard.press('Space');
-  await expect(first).toHaveAttribute('aria-pressed', 'false');
+  await expect(first).toHaveAttribute(PRESSED_ATTRIBUTE, 'false');
   await expect(page.locator('#nShown')).toHaveText(count);
 }
