@@ -67,7 +67,7 @@ Manifests are validated against the canonical capability key list published
 with honua-server at `docs/gis/data/capability-keys.v1.json`
 ([honua-server#2893](https://github.com/honua-io/honua-server/issues/2893),
 closed 2026-07-17). CI fetches the copy at the pinned candidate server commit
-`9d2169cc12ee6323519567368774d0deba829686`, the same commit as the `nightly-jit-9d2169c` image
+`532565bc7215d4b9ce9657bc110cbd0366076e31`, the same commit as the `nightly-aot-532565b` image
 `docker/compose.yml` runs.
 
 `scripts/validate-manifests.mjs` reads the `KEY_LIST_URL` environment
@@ -211,7 +211,7 @@ candidate, run every sample, and stop the stack. Licensing is disabled. The
 admin password is passed to Compose and to the browser fixture harness:
 
 ```bash
-export HONUA_SERVER_IMAGE="${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e}"
+export HONUA_SERVER_IMAGE="${HONUA_SERVER_IMAGE:-ghcr.io/honua-io/honua-server:nightly-aot-532565b@sha256:d56e88152d3ca17f963542a3ecc6b0b28c355f3173a734bc69a8396331c6c9a9}"
 export HONUA_ADMIN_PASSWORD="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}"
 export HONUA_ADMIN_API_KEY="$HONUA_ADMIN_PASSWORD"
 docker compose -f docker/compose.yml up -d --wait
@@ -230,16 +230,16 @@ docker compose -f docker/compose.yml down -v
 `HONUA_PUBLIC_BASE_URL` below): without it the server, which does not trust
 request `Host` headers, builds catalog and self links from the container's own
 address. An exported `HONUA_SERVER_IMAGE` overrides the image (the block above keeps it).
-The Honua service pins `platform: linux/amd64`, including with an image override.
-On an arm64 host, Docker runs the amd64 server under emulation; this is not a
-supported 2026.1 deployment topology. The
+The default image is a multi-arch index (amd64 and arm64), so Docker pulls the
+native server on either host. The
 floating `:trunk` tag is not the 2026.1 candidate. `HONUA_ADMIN_API_KEY`
 must match the composed server's admin password; browser specs use it when
 they create fixtures. PostGIS auto-starts via `docker/init-db.sql` (a vendored
 copy of honua-server's own init script); the server's readiness probe is
 `GET /healthz/ready`, which `--wait` and the runner both wait for. The server
-image ships `bash` but no HTTP client such as `wget`, so the Compose healthcheck sends
-that request over bash's `/dev/tcp` and passes only on an exact `200`.
+image has no shell or HTTP client, so the Compose healthcheck runs the image's
+compiled probe, `/app/honua-healthcheck --ready`, which passes only on a `200`.
+An image older than honua-server 532565b may lack that probe and never turn healthy.
 
 Additional optional environment variables: `HONUA_BASE_URL` (default `http://localhost:8080`),
 `HONUA_READY_TIMEOUT_MS` (default `120000`), `HONUA_SAMPLE_MAX_ATTEMPTS`

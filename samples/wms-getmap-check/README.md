@@ -23,7 +23,7 @@ the stack's `HONUA_ADMIN_PASSWORD`, which `docker/compose.yml` defaults to
 `quickstart-admin-password`:
 
 ```bash
-export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-jit-9d2169c@sha256:48d73e13bf47c3c837106f3ee959230c20bfeac926754b1dfecd4cad29b0486e
+export HONUA_SERVER_IMAGE=ghcr.io/honua-io/honua-server:nightly-aot-532565b@sha256:d56e88152d3ca17f963542a3ecc6b0b28c355f3173a734bc69a8396331c6c9a9
 docker compose -f docker/compose.yml up -d --wait
 HONUA_BASE_URL=http://localhost:8080 \
 HONUA_ADMIN_API_KEY="${HONUA_ADMIN_PASSWORD:-quickstart-admin-password}" \
