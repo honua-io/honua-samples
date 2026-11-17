@@ -419,8 +419,13 @@
   document.getElementById("fAdd").addEventListener("click", () => { const v = document.getElementById("fVal").value.trim(); if (!v) return; S.attr.push({ f: document.getElementById("fField").value, op: document.getElementById("fOp").value, v }); refresh(); });
   document.getElementById("fRows").addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; const r = b.dataset.rm; if (r === "s") { S.spatial = null; clearDrawn(); } else if (r.startsWith("a:")) S.attr.splice(+r.slice(2), 1); else delete S.chartF[r.slice(2)]; refresh(); });
   document.getElementById("fClear").addEventListener("click", () => { S.attr = []; S.chartF = {}; S.spatial = null; S.time = null; S.sel.clear(); clearDrawn(); setTimeInputs(); refresh(); });
-  function setTimeInputs() { const L = LAYERS[S.layer]; if (!L.time) return; const ds = L.rows.map((r) => r[L.time]).sort(); document.getElementById("tFrom").value = S.time ? S.time[0] : ds[0]; document.getElementById("tTo").value = S.time ? S.time[1] : ds[ds.length - 1]; }
-  ["tFrom", "tTo"].forEach((id) => document.getElementById(id).addEventListener("change", () => { S.time = [document.getElementById("tFrom").value, document.getElementById("tTo").value]; refresh(); }));
+  function timeExtent() { const L = LAYERS[S.layer], dates = L.rows.map((r) => r[L.time]).sort(); return [dates[0], dates[dates.length - 1]]; }
+  function setTimeInputs() { if (!LAYERS[S.layer].time) return; const range = S.time || timeExtent(); document.getElementById("tFrom").value = range[0]; document.getElementById("tTo").value = range[1]; }
+  ["tFrom", "tTo"].forEach((id) => document.getElementById(id).addEventListener("change", () => {
+    const extent = timeExtent();
+    S.time = [document.getElementById("tFrom").value || extent[0], document.getElementById("tTo").value || extent[1]].sort();
+    setTimeInputs(); refresh();
+  }));
   // ---- table ----
   function tableRows(rows) {
     const L = LAYERS[S.layer];
@@ -713,13 +718,14 @@
   }
   // history for Undo (the SDK's AnalyticsLinkCommit.undo() restores one commit; this keeps a stack)
   const HIST = [];
-  const snap = () => JSON.parse(JSON.stringify({ layer: S.layer, attr: S.attr, chartF: Object.fromEntries(Object.entries(S.chartF).map(([k, a]) => [k, { ...a, v: Array.isArray(a.v) ? a.v.map((x) => (x === Infinity ? 1e15 : x)) : a.v }])), spatial: S.spatial, time: S.time, charts: S.charts, sel: [...S.sel], q: lastQ, plan: lastPlan, prop: proposal }));
+  const snap = () => JSON.parse(JSON.stringify({ layer: S.layer, attr: S.attr, chartF: Object.fromEntries(Object.entries(S.chartF).map(([k, a]) => [k, { ...a, v: Array.isArray(a.v) ? a.v.map((x) => (x === Infinity ? 1e15 : x)) : a.v }])), spatial: S.spatial, time: S.time, charts: S.charts, sel: [...S.sel], tq: S.tq, sort: S.sort, selOnly: S.selOnly, q: lastQ, plan: lastPlan, prop: proposal }));
   function pushHist() { HIST.push(snap()); if (HIST.length > 12) HIST.shift(); updUndo(); }
   function updUndo() { const b = document.getElementById("nlqUndo"), n = document.getElementById("undoN"); b.disabled = !HIST.length; n.hidden = !HIST.length; n.textContent = HIST.length; b.title = HIST.length ? `Undo (${HIST.length} step${HIST.length > 1 ? "s" : ""})` : "Nothing to undo"; }
   document.getElementById("nlqUndo").addEventListener("click", () => {
     const h = HIST.pop(); if (!h) return;
     if (S.layer !== h.layer) setLayer(h.layer);
-    Object.assign(S, { attr: h.attr, chartF: h.chartF, spatial: h.spatial, time: h.time, charts: h.charts, sel: new Set(h.sel) });
+    Object.assign(S, { attr: h.attr, chartF: h.chartF, spatial: h.spatial, time: h.time, charts: h.charts, sel: new Set(h.sel), tq: h.tq, sort: h.sort, selOnly: h.selOnly });
+    document.getElementById("tq").value = S.tq;
     document.getElementById("nlqIn").value = h.q; lastPlan = h.plan; proposal = h.prop; lastQ = h.q; document.getElementById("nlqMiss").hidden = true; setTimeInputs(); refresh(); renderNL(); updUndo();
   });
   let lastPlan = null, proposal = null, lastQ = "";
@@ -794,8 +800,8 @@
       const i = +ed.dataset.qe, a = S.attr[i]; const cur = Array.isArray(a.v) ? a.v.join(", ") : a.v;
       ed.outerHTML = `<span class="ql"><b>${escapeHtml(LABEL(LAYERS[S.layer], a.f))}</b> ${escapeHtml(a.op)}</span><input data-qi="${i}" value="${escapeHtml(cur)}" aria-label="Edit value for ${escapeHtml(LABEL(LAYERS[S.layer], a.f))}">`;
       const inp = document.querySelector(`[data-qi="${i}"]`); inp.focus(); inp.select();
-      const commit = () => { const v = inp.value.trim(); if (v && v !== String(cur)) { pushHist(); if (a.op === "between") { const nums = v.split(/\s*(?:[-–]|to|and)\s*/).map((x) => parseFloat(x.replace(/[$,]/g, ""))).filter((x) => !isNaN(x)); if (nums.length >= 2) a.v = nums.slice(0, 2); else if (nums.length === 1) { a.op = ">"; a.v = String(nums[0]); } } else a.v = Array.isArray(a.v) ? v.split(/\s*,\s*/) : v.replace(/[$,]/g, ""); refresh(); } renderNL(); };
-      inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(); } if (ev.key === "Escape") renderNL(); });
+      const commit = () => { inp.removeEventListener("blur", commit); const v = inp.value.trim(); if (v && v !== String(cur)) { pushHist(); if (a.op === "between") { const nums = v.split(/\s*(?:[-–]|to|and)\s*/).map((x) => parseFloat(x.replace(/[$,]/g, ""))).filter((x) => !isNaN(x)); if (nums.length >= 2) a.v = nums.slice(0, 2); else if (nums.length === 1) { a.op = ">"; a.v = String(nums[0]); } } else a.v = Array.isArray(a.v) ? v.split(/\s*,\s*/) : v.replace(/[$,]/g, ""); refresh(); } renderNL(); };
+      inp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); commit(); } if (ev.key === "Escape") { inp.removeEventListener("blur", commit); renderNL(); } });
       inp.addEventListener("blur", commit, { once: true });
     }
   });
@@ -817,7 +823,7 @@
     const is3d = document.getElementById("v3d").getAttribute("aria-pressed") === "true";
     const view = map ? { center: map.getCenter().toArray(), zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() }
       : is3d ? CAMERA_3D : { center: [(MAP_BOUNDS[0][0] + MAP_BOUNDS[1][0]) / 2, (MAP_BOUNDS[0][1] + MAP_BOUNDS[1][1]) / 2], zoom: 15, pitch: 0, bearing: 0 };
-    const state = { ...snap(), view, sort: S.sort, tq: S.tq, selOnly: S.selOnly, is3d }; delete state.plan; delete state.prop;
+    const state = { ...snap(), view, is3d }; delete state.plan; delete state.prop;
     const url = new URL(location.href); url.searchParams.delete("s"); url.hash = new URLSearchParams({ s: JSON.stringify(state) }).toString();
     document.getElementById("shareLink").textContent = url.href;
     document.getElementById("embedCode").textContent = `<iframe src="${url.href.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" width="100%" height="640" title="Maui analysis"></iframe>`;
