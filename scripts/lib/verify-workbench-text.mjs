@@ -48,7 +48,10 @@ export async function verifyWorkbenchText(page, url) {
       assert.deepEqual(collisions, [], `${theme} ${width}px at 200% text`);
     }
   }
-  // Native chart buttons retain single, multiple and keyboard selection.
+  await verifyChartSelection(page, url);
+}
+
+async function verifyChartSelection(page, url) {
   await page.goto(url);
   const bars = page.locator('.chart .bar');
   const first = bars.first();
