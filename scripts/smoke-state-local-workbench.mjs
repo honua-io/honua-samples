@@ -1,3 +1,4 @@
+import { verifyWorkbenchSketch } from './lib/verify-workbench-sketch.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
@@ -37,6 +38,7 @@ try {
   await expect(page.locator('#nShown')).toHaveText(count);
   await expect(page.locator('#dt th[data-sort="type"]')).toHaveAttribute('aria-sort', 'ascending');
   await verifyWorkbenchLayout(page);
+  await verifyWorkbenchSketch(browser, `${server.url}/state-local/workbench/`);
   const downloaded = page.waitForEvent('download');
   await page.locator('#expGj').click();
   const download = await downloaded;

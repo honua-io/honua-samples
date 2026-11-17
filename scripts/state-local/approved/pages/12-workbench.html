@@ -588,7 +588,12 @@
   function hintText(h) { document.getElementById("hintText").innerHTML = h; document.getElementById("hint").dataset.on = "true"; }
   function finishSketch() {
     if (mode === "draw" && measurePts.length > 2) { S.spatial = [...measurePts, measurePts[0]]; setMode("select", true); refresh(); return; }
-    if (mode === "measure") { document.getElementById("hintText").innerHTML += ' <span class="faint">(kept)</span>'; mode = "select"; document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mode === "select")); return; }
+    if (mode === "measure") {
+      const keptHint = document.getElementById("hintText").innerHTML + ' <span class="faint">(kept)</span>';
+      setMode("select", true);
+      hintText(keptHint);
+      return;
+    }
     setMode("select");
   }
   function clearDrawn() { measurePts = []; if (map && map.getSource("draw")) map.getSource("draw").setData({ type: "FeatureCollection", features: [] }); }
