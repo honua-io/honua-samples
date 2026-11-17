@@ -15,7 +15,8 @@ async function source(t) {
   await mkdir(directory);
   const request = { id: 'DEMO-1', type: 'Drainage', status: 'Open', c: [-156.47, 20.89],
     data_origin: 'synthetic_demo', disclaimer: 'DEMO DATA; not county operations' };
-  const values = { 'demo.json': JSON.stringify({ requests: [request], assets: [{ ...request, id: 'ASSET-1' }], workorders: [{ ...request, id: 'WORK-1' }] }),
+  const values = { 'demo.json': JSON.stringify({ requests: [request], agent: [{ id: request.id, shelter: 'Exercise site', dist_m: 250 }],
+    assets: [{ ...request, id: 'ASSET-1' }], workorders: [{ ...request, id: 'WORK-1' }] }),
     'requests.csv': 'original CSV', 'requests.geojson': 'original GeoJSON', 'parcels.cjson': '{"real":true}' };
   const manifest = { schemaVersion: 1, crs: 'EPSG:4326', sources: { roads: { attribution: 'State GIS' } }, files: {} };
   for (const [file, text] of Object.entries(values)) {
@@ -43,6 +44,8 @@ test('verified snapshot derivation preserves request identity and publishes exac
   }
   const demo = JSON.parse(await readFile(path.join(output, 'demo.json')));
   assert.deepEqual(demo.requests, [{ ...request, is_demo: true, exercise_only: true }]);
+  assert.deepEqual(demo.agent, [{ id: request.id, shelter: 'Exercise site', dist_m: 250,
+    data_origin: 'synthetic_demo', disclaimer: 'DEMO DATA; not county operations', is_demo: true, exercise_only: true }]);
   for (const [collection, id] of [['assets', 'ASSET-1'], ['workorders', 'WORK-1']]) {
     assert.deepEqual(demo[collection], [{ ...request, id, is_demo: true, exercise_only: true }]);
   }
@@ -68,9 +71,11 @@ test('regenerated packages retain both flags in demo data and snapshot downloads
   const output = path.join(root, 'package');
   execFileSync(process.execPath, ['scripts/state-local/approved/pack.mjs', directory, receipts, output]);
   const demo = JSON.parse(await readFile(path.join(output, 'demo.json')));
-  for (const record of [...demo.requests, ...demo.assets, ...demo.workorders]) {
+  for (const record of [...demo.requests, ...demo.agent, ...demo.assets, ...demo.workorders]) {
     assert.equal(record.is_demo, true);
     assert.equal(record.exercise_only, true);
+    assert.equal(record.data_origin, 'synthetic_demo');
+    assert.equal(record.disclaimer, 'DEMO DATA; not county operations');
   }
   const manifest = JSON.parse(await readFile(path.join(output, 'manifest.json')));
   for (const [file, integrity] of Object.entries(manifest.files)) {
