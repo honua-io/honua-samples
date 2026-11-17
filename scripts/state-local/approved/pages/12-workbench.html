@@ -554,7 +554,13 @@
     if (replace) S.sel.clear(); ids.forEach((id) => S.sel.add(id));
     renderTable(filtered()); renderMap(filtered()); if (S.charts.some((c) => c.t === "scatter")) renderCharts();
     if (fly && ids.length === 1) { const L = LAYERS[S.layer]; const r = L.rows.find((x) => x[L.idField] === ids[0]); if (r && map) map.easeTo({ center: r.c, zoom: Math.max(map.getZoom(), 16), duration: 600 }); }
-    const tr = document.querySelector(`#dt tbody tr[data-id="${ids[0]}"]`); if (tr && !fly) tr.scrollIntoView({ block: "nearest" });
+    const tr = document.querySelector(`#dt tbody tr[data-id="${ids[0]}"]`);
+    if (tr && !fly) {
+      const pane = tr.closest('.tp-b'), row = tr.getBoundingClientRect(), viewport = pane.getBoundingClientRect();
+      // Reveal the selected row without moving the map under the next pointer click.
+      if (row.top < viewport.top) pane.scrollTop += row.top - viewport.top;
+      else if (row.bottom > viewport.bottom) pane.scrollTop += row.bottom - viewport.bottom;
+    }
   }
   const linkHash = HM.hashParams();
   const MAP_BOUNDS = [[-156.4925, 20.874], [-156.4595, 20.896]];
