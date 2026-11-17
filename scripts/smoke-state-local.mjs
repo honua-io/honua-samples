@@ -39,6 +39,18 @@ try {
   await expect(page.locator('#list .item')).toHaveCount(0);
   await expect(page.locator('#list .empty')).toBeVisible();
   await page.locator('#q').fill('');
+  const firstSample = page.locator('#list .item').first();
+  const secondSample = page.locator('#list .item').nth(1);
+  await firstSample.focus();
+  await page.keyboard.press('Enter');
+  await expect(firstSample).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(secondSample).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(secondSample).toBeFocused();
+  await expect(secondSample).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Shift+Tab');
+  await expect(firstSample).toBeFocused();
   await page.locator('#flt [data-f=live]').click();
   await expect(page.locator('#list .item')).toHaveCount(ids.length);
   await page.locator('#tabSrc').focus();

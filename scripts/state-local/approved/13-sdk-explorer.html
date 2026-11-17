@@ -790,12 +790,14 @@ try {
   }
   const CATNAME = Object.fromEntries(D.categories.map((c) => [c.id, c.name]));
   function renderList() {
+    const focusedId = $("#list .item:focus")?.dataset.id;
     const html = D.categories.map((c) => {
       const items = D.samples.filter((s) => s.cat === c.id && matches(s)).sort((a, b) => (!!b.live - !!a.live) || (!!a.moved - !!b.moved));
       if (!items.length) return "";
       return `<section class="cat" aria-labelledby="cat-${c.id}"><h2 id="cat-${c.id}">${esc(c.name)}<span class="ct">${items.length}</span></h2>${items.map((s) => `<button type="button" class="item${s.status === "Moved" || s.status === "Retired" ? " dim" : ""}" data-id="${s.id}" aria-pressed="${s.id === state.id}"><span class="t"><span>${esc(s.title)}</span>${s.live ? `<span class="chip sm accent">Live</span>` : s.status ? `<span class="chip sm">${esc(s.status)}</span>` : ""}</span><span class="s"><em>${esc(s.id)}</em><span>·</span><span>${s.repo === "sdk-js" ? "sdk-js" : "samples"}</span></span></button>`).join("")}</section>`;
     }).join("");
     $("#list").innerHTML = html || `<p class="empty">No samples match "${esc(state.q)}".</p>`;
+    if (focusedId) $(`#list .item[data-id="${CSS.escape(focusedId)}"]`)?.focus({ preventScroll: true });
   }
   $("#list").addEventListener("click", (e) => { const b = e.target.closest(".item"); if (b) select(b.dataset.id); });
   $("#q").addEventListener("input", (e) => { state.q = e.target.value.trim(); renderList(); });
