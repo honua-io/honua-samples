@@ -11,9 +11,8 @@ const composeBlocks = [...island.matchAll(/```sh\n([\s\S]*?)```/g)]
 test('island commands do not enter the shell-less server image', () => {
   assert.ok(composeBlocks.length >= 2);
   for (const block of composeBlocks) {
-    assert.doesNotMatch(block, /entrypoint bash honua/);
-    assert.doesNotMatch(block, /entrypoint find honua/);
-    assert.doesNotMatch(block, /\bhonua -c\b/);
+    assert.doesNotMatch(block, /entrypoint \S+ honua\b/);
+    assert.doesNotMatch(block, /\brun\b[\s\S]*\bhonua\b/);
   }
   const prepare = composeBlocks.find((block) => block.includes('chgrp'));
   const cleanup = composeBlocks.find((block) => block.includes('-delete'));
