@@ -655,13 +655,18 @@
   document.addEventListener("honua:theme", () => { applyBasemap(); renderCharts(); renderLayers(); });
   // ---- layer switch ----
   function setLayer(l) {
+    if (S.layer !== l) {
+      lastPlan = null; proposal = null; lastQ = "";
+      document.getElementById("nlqIn").value = "";
+      document.getElementById("nlqMiss").hidden = true;
+    }
     S.layer = l; S.attr = []; S.chartF = {}; S.time = null; S.sel.clear(); S.sort = null; S.tq = ""; document.getElementById("tq").value = "";
     S.charts = LAYERS[l].charts.map((c) => ({ ...c }));
     setTimeInputs(); fillChartFields(); renderLayers();
     if (map && map.getLayer("p3d")) { const on = document.getElementById("v3d").getAttribute("aria-pressed") === "true"; HM.toggle(map, ["p3d"], on && l === "parcels"); }
     refresh();
   }
-  function refresh() { const rows = filtered(); renderFilterUI(); renderTable(rows); renderCharts(); renderMap(rows); if (lastPlan) renderNL(); }
+  function refresh() { const rows = filtered(); renderFilterUI(); renderTable(rows); renderCharts(); renderMap(rows); renderNL(); }
   // ---- natural-language query bar (createNlMapControl / createAskMapSession → proposeMapPlan → approveNlMapPlan → executeMapPlan) ----
   const SUGGEST = [
     "parcels over 0.25 acres outside the flood zone, by zone group",
@@ -756,7 +761,7 @@
     if (S.layer !== plan.layer) setLayer(plan.layer);
     S.attr = plan.clauses.map((c) => ({ ...c })); S.chartF = {}; S.time = plan.time ? [...plan.time] : null; S.sel.clear(); setTimeInputs();
     proposal = plan.group ? { t: plan.chartKind === "hist" ? "hist" : plan.chartKind || "bar", f: plan.group, agent: 1 } : null;
-    plan.hash = hashPlan(plan); lastPlan = plan; lastQ = text;
+    plan.hash = hashPlan(plan); lastPlan = plan; lastQ = text; document.getElementById("nlqIn").value = text;
     refresh(); renderNL(); renderPlanTab(plan);
   }
   function chipText(a) {
@@ -766,7 +771,13 @@
   }
   function renderNL() {
     const out = document.getElementById("nlqOut");
-    if (!lastPlan) { out.hidden = true; document.getElementById("nlqExp").hidden = true; return; }
+    if (!lastPlan) {
+      out.hidden = true;
+      document.getElementById("nlqExp").hidden = true;
+      document.getElementById("nlqProp").replaceChildren();
+      document.getElementById("plan").textContent = "Ask a question to see its plan and sources.";
+      return;
+    }
     out.hidden = false;
     renderPlanTab(lastPlan);
     const L = LAYERS[S.layer];
