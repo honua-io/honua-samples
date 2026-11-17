@@ -8,7 +8,7 @@ The Explorer catalogue is derived from the approved `sdk_samples.py` generator. 
 python3 -I scripts/state-local/sdk_samples.py --root /path/to/workspace --output scripts/state-local/site/sdk-explorer/catalog.json --sdk-ref js-sdk-v0.4.0
 ```
 
-The generator fails when a catalogued example is missing at that revision, so examples removed from the SDK leave the Explorer.
+The generator fails when a catalogued example is missing at that revision, so examples removed from the SDK leave the Explorer. `--samples-ref <pushed commit>` snapshots sample READMEs from a branch whose README changes have not reached trunk yet.
 
 The snapshot records each repository revision and links source files to immutable commits. It contains source excerpts and rendered READMEs, not a claim that every sample runs in a browser.
 

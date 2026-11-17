@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the source catalog JSON for the SDK Explorer screen.
 
-Reads examples from origin/trunk of honua-samples and honua-server and from the released honua-sdk-js tag given by --sdk-ref
-(run `git fetch --tags` in all three first), so a stale checkout or an unreleased SDK never leaks into the gallery. Hand-written fields: category, title, one-line description, API names and lifecycle status. Read from git: README (rendered to HTML), the main source file (trimmed) and package/sample metadata.
+Reads examples from fetched refs, never the working tree: origin/trunk by default, or the revisions given by --sdk-ref
+(use the released honua-sdk-js tag the samples pin) and --samples-ref. Run `git fetch --tags` in all three first. Hand-written fields: category, title, one-line description, API names and lifecycle status. Read from git: README (rendered to HTML), the main source file (trimmed) and package/sample metadata.
 
 Usage: python3 -I sdk_samples.py --root /path/to/workspace --output /path/to/catalog.json --sdk-ref js-sdk-v0.4.0
 The workspace folder must hold all three repositories with freshly fetched refs.
@@ -234,12 +234,14 @@ def run_command(root, sample, readme):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", required=True, help="Workspace containing honua-sdk-js and honua-samples")
+    parser.add_argument("--root", required=True, help="Workspace containing honua-sdk-js, honua-samples and honua-server")
     parser.add_argument("--output", required=True, help="Destination JSON snapshot")
     parser.add_argument("--sdk-ref", default="origin/trunk", help="honua-sdk-js revision, e.g. the release tag js-sdk-v0.4.0")
+    parser.add_argument("--samples-ref", default="origin/trunk", help="honua-samples revision, e.g. a pushed commit that changes sample READMEs")
     args = parser.parse_args()
     sdk_repo, samples_repo = (os.path.join(args.root, REPOS[k][0]) for k in (SDK_REPO, SAMPLES_REPO))
-    REFS[os.path.abspath(sdk_repo)] = args.sdk_ref
+    parser_refs = {sdk_repo: args.sdk_ref, samples_repo: args.samples_ref}
+    REFS.update({os.path.abspath(repo): value for repo, value in parser_refs.items()})
     revisions = {name: git(os.path.join(args.root, name), "rev-parse", f"{ref(os.path.join(args.root, name))}^{{commit}}").strip()
                  for name in ("honua-sdk-js", "honua-samples", "honua-server")}
     out = []
