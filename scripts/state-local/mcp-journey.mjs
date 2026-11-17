@@ -3,7 +3,7 @@ import { activeDeployment } from "./deployment.mjs";
 import { getSource } from "./sources.mjs";
 
 const scenarios = JSON.parse(await readFile(new URL("./sdk/scenarios.json", import.meta.url), "utf8"));
-const questions = {
+export const questions = {
   property: "Choose one parcel and report its TMK and intersecting mapped zoning districts. Cite the parcel and zoning feature IDs. For manual permit lookup, use only these verified references: County search https://publicweb1.co.maui.hi.us/PublicSearch/MAPPSSearch.aspx and guidance https://mapps.mauicounty.gov/305/Searches-in-MAPPS. The form requires 13 digits without dashes, including CPR; the parcel layer has no CPR. Copy the parcel TMK as a reference and ask the user to obtain the full identifier from county records. Never pad the TMK, add a CPR suffix, or construct a ?tmk= prefill URL. Do not invent permits, CPR digits or a legal determination.",
   "311": "Which exercise districts have the most open drainage service requests? Report counts by district and status with the exact filter, source and feature IDs. These districts are fictional exercise groupings, not official wards.",
   emergency: "Which open exercise shelters have remaining capacity? Report capacity minus occupancy, status and feature IDs. These are fictional activations at real locations, not an official list of designated or currently operating shelters.",
