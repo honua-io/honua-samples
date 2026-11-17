@@ -108,7 +108,7 @@ identify and overlap math. The local fixture draws its synthetic polygons from a
 
 The planning-layer controls show zoning and high-risk flood candidates for the selected parcel, using the same queries as the results panel. They do not download the full datasets.
 
-The viewer passes explicit attribute fields for inspection and uses a public `table.select()` pointer handler, because in SDK 0.3.2 focusing a row could replace it before its click fired. Keyboard selection remains native. These measures are kept unchanged on `@honua/app-platform` 0.4.0 and have not been retested there; remove them once a published release is shown to fix both.
+The viewer passes explicit attribute fields for inspection. `@honua/app-platform` 0.4.0 selects a table row on any pointerdown, which would let a touch scroll that starts on a row select it, so touch and pen presses select only on a completed tap; mouse and keyboard selection are the component's own.
 
 ### Address search
 

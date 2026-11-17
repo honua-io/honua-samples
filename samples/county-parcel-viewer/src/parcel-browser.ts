@@ -100,20 +100,21 @@ function connectExports(options: {
 }
 
 function connectPointerSelection(table: HonuaFeatureTable, signal: AbortSignal): void {
-  // SDK 0.3.2 could replace a focused row before its click fired; kept on app-platform 0.4.0 until retested.
+  // The table selects a row on every pointerdown, so a touch scroll that starts on a row
+  // would select it. Touch and pen presses are kept from the table and select on a completed tap.
   const host = element("parcel-table");
   let tap: { id: number; key: string; x: number; y: number } | undefined;
   host.addEventListener("pointerdown", (event) => {
     tap = undefined;
-    if (event.button !== 0 || !event.isPrimary) return;
+    if (event.pointerType === "mouse" || event.button !== 0 || !event.isPrimary) return;
     const path = event.composedPath();
     if (path.some((node) => node instanceof Element && node.matches("a, button, input, select, textarea, [contenteditable]"))) return;
     const row = path.find((node) => node instanceof HTMLElement && node.dataset.rowKey) as HTMLElement | undefined;
     const key = row?.dataset.rowKey;
     if (!key) return;
-    if (event.pointerType === "mouse") table.select([key], { replace: true });
-    else tap = { id: event.pointerId, key, x: event.clientX, y: event.clientY };
-  }, { signal });
+    event.stopPropagation();
+    tap = { id: event.pointerId, key, x: event.clientX, y: event.clientY };
+  }, { signal, capture: true });
   host.addEventListener("pointermove", (event) => {
     if (tap && (event.pointerId !== tap.id || Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 8)) tap = undefined;
   }, { signal });
