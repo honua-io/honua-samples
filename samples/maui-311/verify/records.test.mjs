@@ -60,6 +60,13 @@ test('binding permits approved demo or disposable localhost, never credentials o
   assert.throws(() => sourceBinding('?service=exercise'));
 });
 
+test('binding accepts a receipt folder/service path and refuses any other service path', () => {
+  assert.equal(sourceBinding('?service=service-requests/maui-demo-requests-a1&layer=39').serviceId, 'service-requests/maui-demo-requests-a1');
+  for (const service of ['a/b/c', '/a', 'a/', 'a//b', '../a', 'a/..', 'a%2Fb', 'a b/c', 'a\\b']) {
+    assert.throws(() => sourceBinding(`?${new URLSearchParams({ service, layer: '39' })}`), /service path and numeric layer/, service);
+  }
+});
+
 test('pagination collects beyond the server page size using published SDK query fields', async () => {
   const calls = [];
   const client = { async queryFeatures(query) {

@@ -38,6 +38,8 @@ test('both approved layer bindings are required and retain the shared origin pol
   assert.equal(namedBindings(params, ['shelter', 'closure']).closure.layerId, 8);
   assert.throws(() => namedBindings(`${params}&baseUrl=https://unapproved.example`, ['shelter', 'closure']), /demo\.honua\.io/);
   assert.throws(() => namedBindings(params.replace('closureLayer=8', 'closureLayer=bad'), ['shelter', 'closure']), /numeric layer/);
+  const foldered = namedBindings(params.replace('closureService=roads', 'closureService=emergency-management/roads'), ['shelter', 'closure']);
+  assert.equal(foldered.closure.serviceId, 'emergency-management/roads');
 });
 
 test('canonical imports carry geometry provenance accepted by the emergency reader', async () => {
