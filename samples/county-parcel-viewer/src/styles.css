@@ -92,9 +92,9 @@ section.group h2 { margin: 0 0 10px; font-family: var(--font-sans); font-size: 1
 .note { margin: 12px 0 0; padding: 10px 12px; background: var(--c-surface-2); font-size: 15px; }
 .section-status { margin: 0; color: var(--c-text-2); }
 .empty-text { margin: 0; }
-.limits { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 15px; }
+.limits { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: 15px; }
 .limits dt { color: var(--c-text-2); }
-.limits dd { margin: 0; color: var(--c-text-2); font-style: italic; }
+.limits dd { margin: 0; overflow-wrap: anywhere; color: var(--c-text-2); font-style: italic; }
 .limits dd.val { color: var(--c-text); font-style: normal; font-variant-numeric: tabular-nums; }
 .error { padding: 12px; border: 1px solid var(--c-danger); background: var(--c-danger-soft); }
 .error p { margin: 0 0 10px; font-size: 15px; }
