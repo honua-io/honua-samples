@@ -33,7 +33,7 @@ features; inspect the source and review any regenerated display data before publ
 Distance counts use EPSG:32604. Community-plan boundaries and shoreline setbacks are
 not invented: their sources remain pending.
 
-311 requests, assets and work orders are deterministic fictional records with
+311 requests, derived agent tuples, assets and work orders are deterministic fictional records with
 `data_origin=synthetic_demo`. School locations are real; shelter activation is an
 exercise, not a designated-shelter assertion. The property page links to the County's
 MAPPS public search and displays the TMK to enter there; no unsupported deep-link format
@@ -41,7 +41,7 @@ or fictional permit record is presented. Regulatory decisions require County rev
 
 Large data and receipts stay under ignored `artifacts/`. The display build downloads a
 checksum-pinned release archive from `config/state-local-display.v1.json`, verifies every
-file, and exposes its manifest and labelled exports. The display build derives demo flags for requests, assets and work orders only after source verification. Its manifest hashes the published bytes and retains original file integrity under `derivedFrom`; the pinned source archive stays unchanged. The download is an optimization;
+file, and exposes its manifest and labelled exports. The display build derives demo disclosures for requests, derived agent tuples, assets and work orders only after source verification. Its manifest hashes the published bytes and retains original file integrity under `derivedFrom`; the pinned source archive stays unchanged. The download is an optimization;
 the source pipeline above regenerates the data without a private dependency. Upstream
 changes yield new hashes and must be reviewed before updating the release lock.
 

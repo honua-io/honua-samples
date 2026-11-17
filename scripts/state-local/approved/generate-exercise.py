@@ -166,7 +166,7 @@ for i, st in enumerate(stages):
     WOS.append({"id": f"WO-26-{7710 + i}", "title": wt[0], "asset": a["id"], "street": a["street"], "stage": st,
                 "crew": rng.choice(CREWS) if st != "Backlog" else None, "pri": rng.choice(["P1", "P2", "P2", "P3", "P3"]),
                 "created": created.date().isoformat(), "sched": sched.date().isoformat(), "hrs": rng.choice([2, 3, 4, 6, 8]), "c": a["c"]})
-for record in reqs + assets + WOS:
+for record in reqs + ans + assets + WOS:
     record["data_origin"] = "synthetic_demo"
     record["is_demo"] = True
     record["exercise_only"] = True
