@@ -21,5 +21,8 @@
     "@honua/sdk-js": "0.4.0",
     "@playwright/test": "1.58.2",
     "esbuild": "0.25.12"
+  },
+  "overrides": {
+    "@honua/honua-migrate": "npm:@honua/sdk@0.4.0"
   }
 }

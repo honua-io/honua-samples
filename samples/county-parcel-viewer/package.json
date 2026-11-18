@@ -42,5 +42,8 @@
     "@types/node": "22.20.5",
     "typescript": "5.9.3",
     "vite": "8.2.4"
+  },
+  "overrides": {
+    "@honua/honua-migrate": "npm:@honua/sdk@0.4.0"
   }
 }
