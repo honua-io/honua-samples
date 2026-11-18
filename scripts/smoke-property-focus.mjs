@@ -2,6 +2,26 @@ import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
 
+async function focusSearchFromSkip(page, route, target) {
+  await page.keyboard.press('Tab');
+  const skip = page.getByRole('link', { name: 'Skip to parcel details', exact: true });
+  await expect(skip).toBeFocused();
+  await expect(skip).toBeVisible();
+  await expect(skip).toHaveAttribute('href', `#${target}`);
+  await page.keyboard.press('Enter');
+  await expect(page.locator(`#${target}`)).toBeFocused();
+  const search = page.locator('#q');
+  if (route === 'property') {
+    await page.keyboard.press('/');
+  } else {
+    for (let step = 0; step < 30; step += 1) {
+      if (await search.evaluate((input) => input === document.activeElement)) break;
+      await page.keyboard.press('Shift+Tab');
+    }
+  }
+  await expect(search).toBeFocused();
+}
+
 async function verifySearchShortcut(page) {
   const question = page.locator('#askInput');
   await question.fill('zoning');
@@ -43,15 +63,7 @@ try {
     await page.goto(`${server.url}/state-local/${route}/`);
     await expect.poll(() => page.evaluate(() => Boolean(window.HM?.maps[0]?.getSource('parcels'))), { timeout: 60_000 }).toBe(true);
     const initialZoom = await page.evaluate(() => HM.maps[0].getZoom());
-    await page.keyboard.press('Tab');
-    await expect(page.locator('#q')).toBeFocused();
-    await page.keyboard.press('Tab');
-    const skip = page.getByRole('link', { name: 'Skip to parcel details', exact: true });
-    await expect(skip).toBeFocused();
-    await expect(skip).toBeVisible();
-    await expect(skip).toHaveAttribute('href', `#${target}`);
-    await page.keyboard.press('Shift+Tab');
-    await expect(page.locator('#q')).toBeFocused();
+    await focusSearchFromSkip(page, route, target);
     await page.keyboard.press('ControlOrMeta+A');
     await page.keyboard.type('(2) 3-4-039:007');
     await page.keyboard.press('ArrowDown');
