@@ -3,5 +3,8 @@
   "type": "module",
   "dependencies": {
     "@honua/sdk-js": "0.4.0"
+  },
+  "overrides": {
+    "@honua/honua-migrate": "npm:@honua/sdk@0.4.0"
   }
 }
