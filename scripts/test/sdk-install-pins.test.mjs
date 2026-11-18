@@ -29,3 +29,30 @@ test("sample installs fetch only pinned Honua packages", async () => {
     assert.equal(text.includes("/sdk-0.2."), false, relative);
   }
 });
+
+const geometryTurf = [
+  "area",
+  "bbox",
+  "boolean-contains",
+  "boolean-intersects",
+  "boolean-within",
+  "buffer",
+  "centroid",
+  "convex",
+  "difference",
+  "intersect",
+  "length",
+  "nearest-point",
+  "simplify",
+  "union",
+];
+
+test("geometry samples pin the turf packages sdk-js 0.4.0 imports", async () => {
+  for (const sample of ["samples/maui-emergency", "samples/maui-workbench", "samples/county-parcel-viewer"]) {
+    const manifest = JSON.parse(await readFile(path.join(root, sample, "package.json"), "utf8"));
+    for (const name of geometryTurf) {
+      assert.equal(manifest.dependencies?.[`@turf/${name}`], "7.4.0", `${sample} @turf/${name}`);
+    }
+    assert.equal(manifest.dependencies?.proj4, "2.22.0", `${sample} proj4`);
+  }
+});
