@@ -30,9 +30,10 @@ HONUA_SAMPLE_VERIFY_RECEIPT=path/to/public-map.json node samples/maui-public-map
 
 If the server holds the publication for a human approval, the sample proves the request is
 durable, unreadable and refused to anonymous callers, then stops with the proposal id. Approve it
-in Console, then rerun with the receipt to read the released map. On a server without a sign-in
-provider nobody can approve it yet (honua-io/honua-server#7227), so the sample stays in draft
-status and outside the CI run until a published image releases the map.
+in Console, then rerun with the receipt to read the released map. Approval needs a person signed
+in to Console; an API key is refused. The default PostGIS-only install accepts the admin password
+sign-in for this, so no separate sign-in provider is needed. Because the approval is a human step,
+the sample stays in draft status and outside the unattended CI run.
 
 Each run keeps a new map and layer for Console inspection. Do not run it against a shared
 deployment without its operator's approval. Data sources and licences:
