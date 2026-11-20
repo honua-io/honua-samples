@@ -143,9 +143,9 @@ test('an outside bot wall (403 on HEAD and GET) is unverified, not broken', asyn
   assert.equal(await resolveLink(request, 'https://www.npmjs.com/package/x'), `${UNVERIFIED}HTTP 403`);
 });
 
-test('a 403 or 429 from a Honua host stays a broken link', async () => {
+test('a 403, 429 or 503 from a Honua host stays a broken link', async () => {
   for (const url of ['https://honua.io/demo.html', 'https://samples.honua.io/x/']) {
-    for (const code of [403, 429]) {
+    for (const code of [403, 429, 503]) {
       const request = { head: async () => stubResponse(code), get: async () => stubResponse(code) };
       assert.equal(await resolveLink(request, url, { wait: async () => {} }), `HTTP ${code}`);
     }
@@ -175,6 +175,21 @@ test('a rate limit that persists is unverified, and a 404 after the wait is brok
   const wait = async () => {};
   assert.equal(await resolveLink({ head: async () => stubResponse(429), get: async () => stubResponse(429) }, 'https://github.com/o/r', { wait }), `${UNVERIFIED}HTTP 429`);
   assert.equal(await resolveLink({ head: async () => stubResponse(429), get: async () => stubResponse(404) }, 'https://github.com/o/r', { wait }), 'HTTP 404');
+});
+
+test('an outside 503 is retried once; a persistent 503 is unverified and stops its host', async () => {
+  const waits = [];
+  const wait = async (ms) => { waits.push(ms); };
+  assert.equal(await resolveLink({ head: async () => stubResponse(503), get: async () => stubResponse(200) }, 'https://github.com/o/r', { wait }), 'ok');
+  assert.deepEqual(waits, [3_000]);
+  assert.equal(await resolveLink({ head: async () => stubResponse(503), get: async () => stubResponse(503) }, 'https://github.com/o/r', { wait }), `${UNVERIFIED}HTTP 503`);
+  assert.equal(await resolveLink({ head: async () => stubResponse(503), get: async () => stubResponse(404) }, 'https://github.com/o/r', { wait }), 'HTTP 404');
+  const cache = createLinkCache();
+  let calls = 0;
+  const overloaded = async () => { calls++; return `${UNVERIFIED}HTTP 503`; };
+  await checkLinkUrls(['https://github.com/o/r/1'], null, { cache, resolve: overloaded });
+  await checkLinkUrls(['https://github.com/o/r/2'], null, { cache, resolve: overloaded });
+  assert.equal(calls, 1);
 });
 
 test('GET transport errors remain link failures', async () => {

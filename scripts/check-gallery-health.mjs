@@ -60,7 +60,7 @@ async function writeReport() {
   const rows = report.results.map((result) => `| ${result.engine}/${result.profile ?? 'startup'} | ${result.url ?? 'Runner'} | ${result.ok ? 'PASS' : 'FAIL'} | ${result.firstPaintMs ?? '—'} | ${String(result.failure ?? '').replaceAll('|', '\\|').replaceAll('\n', ' ')} |`);
   const unverified = [...new Set(report.results.flatMap((result) => result.unverifiedLinks ?? []))];
   const warnings = unverified.length
-    ? `\n\nUnverified links (rate limited or blocked by the outside site, not counted as broken):\n\n${unverified.map((link) => `- ${link}`).join('\n')}\n` : '';
+    ? `\n\nUnverified links (rate limited, overloaded or blocked by the outside site, not counted as broken):\n\n${unverified.map((link) => `- ${link}`).join('\n')}\n` : '';
   await writeFile(path.join(directory, 'latest.md'), `Gallery health: **${report.ok ? 'PASS' : 'FAIL'}** — ${report.checkedAt}\n\nFresh signed-out contexts; Chromium and Firefox; desktop and mobile.\n\n| Browser/viewport | Page | Result | First paint (ms) | Failure |\n| --- | --- | --- | --- | --- |\n${rows.join('\n')}\n${warnings}`);
   if (!report.ok) process.exitCode = 1;
 }

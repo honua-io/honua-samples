@@ -127,13 +127,15 @@ export async function checkLinkUrls(urls, request, { cache = createLinkCache(), 
   return outcome;
 }
 
-// An outside site's rate limit (429) or bot wall (403) says nothing about
-// whether the link exists: report it as unverified instead of broken. A 403 or
-// 429 from Honua's own hosts stays a failure.
+// An outside site's rate limit (429), overload (503) or bot wall (403) says
+// nothing about whether the link exists: report it as unverified instead of
+// broken. GitHub answers a burst of link checks from one runner with 503. A
+// 403, 429 or 503 from Honua's own hosts stays a failure.
 export const UNVERIFIED = 'unverified: ';
 // A rate limit that outlived its retry, or a reset or timeout: later links to
 // that host would only wait out the same answer.
-const stalls = (status) => status.startsWith(UNVERIFIED) && (status === `${UNVERIFIED}HTTP 429` || OUTSIDE_TRANSPORT.test(status));
+const stalls = (status) => status.startsWith(UNVERIFIED) && (RETRIED_STATUSES.some((code) => status === `${UNVERIFIED}HTTP ${code}`) || OUTSIDE_TRANSPORT.test(status));
+const RETRIED_STATUSES = [429, 503];
 const OUTSIDE_TRANSPORT = /ECONNRESET|ETIMEDOUT|Timeout \d+ms exceeded/;
 const isHonuaHost = (hostname) => hostname === 'honua.io' || hostname.endsWith('.honua.io');
 
@@ -150,7 +152,7 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
       await response.dispose();
       response = await request.get(url, { timeout: 15_000 });
     }
-    if (response.status() === 429) {
+    if (RETRIED_STATUSES.includes(response.status())) {
       onOutsideDelay();
       const delay = retryDelayMs(response);
       await response.dispose();
@@ -159,7 +161,7 @@ export async function resolveLink(request, url, { wait = (ms) => new Promise((re
     }
     const code = response.status();
     const status = response.ok() ? 'ok'
-      : (code === 429 || code === 403) && !isHonuaHost(new URL(url).hostname) ? `${UNVERIFIED}HTTP ${code}`
+      : (RETRIED_STATUSES.includes(code) || code === 403) && !isHonuaHost(new URL(url).hostname) ? `${UNVERIFIED}HTTP ${code}`
         : `HTTP ${code}`;
     await response.dispose();
     return status;
