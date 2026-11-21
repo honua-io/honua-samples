@@ -16,6 +16,7 @@ let model;
 let bindings;
 let revision = 0;
 let active;
+let exportController;
 let unsubscribe;
 let exportSnapshot;
 const explanation = bindSelectionExplanation({ model: () => model,
@@ -73,6 +74,7 @@ element('feature-table').addEventListener('pointerdown', (event) => {
 
 function resetAnalysis() {
   active?.abort();
+  exportController?.abort();
   unsubscribe?.();
   model?.table.dispose();
   model = null;
@@ -195,11 +197,24 @@ function showError(error) {
   explanation.invalidate();
   revision += 1;
   active?.abort();
+  exportController?.abort();
   exportSnapshot = undefined;
   setControlsState('busy');
   element('feature-table').table = undefined;
   map.update({ type: 'FeatureCollection', features: [] });
-  status.textContent = `Could not finish the query: ${error.message} Clear filters or reconnect to retry.`;
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.id = 'retry-analysis';
+  retry.textContent = 'Retry';
+  retry.addEventListener('click', () => {
+    retry.disabled = true;
+    if (model) void refreshAnalysis();
+    else if (bindings) void chooseCatalog();
+  });
+  status.replaceChildren(
+    document.createTextNode(`Could not finish the query: ${error.message} Clear filters or retry. `),
+    retry,
+  );
   element('map-status').textContent = 'No completed map result. Retry before using these records.';
   element('status-chart').chartModel = { id: 'status', title: 'Requests by status', kind: 'bar', status: 'error', message: error.message };
   element('clear').disabled = !model;
@@ -230,11 +245,14 @@ bindQueryControls({ model: () => model, refresh: () => { describeFilters(); void
 async function download(format) {
   const current = revision;
   const next = model;
+  exportController?.abort();
+  const controller = new AbortController();
+  exportController = controller;
   setControlsState('busy');
   element('export-status').textContent = 'Collecting bounded, filtered records…';
   try {
-    const collection = exportSnapshot ?? await collectAnalysisExport(next, analysisQuery(next), active.signal);
-    if (current !== revision) return;
+    const collection = exportSnapshot ?? await collectAnalysisExport(next, analysisQuery(next), controller.signal);
+    if (current !== revision || controller.signal.aborted) return;
     exportSnapshot = collection;
     const content = encodeAnalysisExport(collection, next.columns, format);
     if (new TextEncoder().encode(content).byteLength > 8 * 1024 * 1024) throw new Error('Encoded export exceeds 8 MiB. Narrow the filter.');
@@ -281,7 +299,7 @@ try { bindings = analysisBindings(location.search); restoreAnalysis(); }
 catch (error) { status.textContent = error.message; }
 window.addEventListener('pagehide', (event) => {
   if (event.persisted) return;
-  active?.abort(); unsubscribe?.(); model?.table.dispose(); map.dispose();
+  active?.abort(); exportController?.abort(); unsubscribe?.(); model?.table.dispose(); map.dispose();
 });
 
 element('depth-link').search = location.search;

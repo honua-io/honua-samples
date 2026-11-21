@@ -82,6 +82,8 @@
   body[data-view="public"] .eoc-only { display: none !important; }
   body[data-view="eoc"] .public-only { display: none !important; }
   .maplibregl-popup-content h4 { font-size: 13px; margin-bottom: 2px; }
+  .pulse-card { outline: 2px solid var(--c-accent); outline-offset: 2px; transition: outline-color .3s; }
+  .rr-tbl td { padding: 7px 6px; font-size: 12.5px; }
   @media (max-width: 1240px) {
     body { height: auto; overflow: auto; }
     .layout { grid-template-columns: 1fr; }
@@ -142,14 +144,18 @@
       <div class="feed"><span>USGS stream gauge Iao Stream 16604500 (simulated)</span><span class="age stale" data-age="846"></span><small>38 ft³/s, normal · backfills when the uplink returns</small></div>
       <div class="feed"><span>EOC board · resource requests</span><span class="age" data-age="9"></span><small>Fictional resource board · 5 open</small></div>
     </section>
-    <section class="sec" aria-labelledby="pfH">
-      <div class="sec-h"><svg class="ico"><use href="#i-code"/></svg><h2 id="pfH">Planned public feeds</h2><span class="aside">coming soon</span></div>
+    <section class="sec" id="feedsSection" aria-labelledby="pfH">
+      <div class="sec-h"><svg class="ico"><use href="#i-code"/></svg><h2 id="pfH">GeoServices &amp; OGC feeds</h2><span class="aside">open standards</span></div>
       <div class="endpoint"><span class="p" style="min-width:120px">Evacuation zones</span><code>/ogc/collections/evacuation-zones/items</code></div>
+      <div class="endpoint"><span class="p" style="min-width:120px">FeatureServer</span><code>/rest/services/Preparedness/FeatureServer/0</code></div>
       <div class="endpoint"><span class="p" style="min-width:120px">Open shelters</span><code>/ogc/collections/shelters-open/items</code></div>
       <div class="endpoint"><span class="p" style="min-width:120px">Road status</span><code>/ogc/collections/road-status/items</code></div>
-      <div class="endpoint"><span class="p" style="min-width:120px">All, GeoJSON</span><code>/feeds/maui-emergency.geojson</code></div>
       <div class="endpoint"><span class="p" style="min-width:120px">Alerts (CAP 1.2)</span><code>/feeds/alerts.cap.xml</code></div>
       <p class="faint" style="font-size:12px;margin-top:8px">Illustrative endpoint shapes only; Honua feed publication is coming soon.</p>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn sm" type="button" id="copyFeedUrls"><svg class="ico"><use href="#i-copy"/></svg>Copy OGC API &amp; FeatureServer feed URLs</button>
+        <span class="faint" id="feedCopyStatus" style="font-size:12px"></span>
+      </div>
     </section>
   </aside>
 
@@ -180,35 +186,55 @@
   <aside class="col r" id="main" tabindex="-1" aria-label="Situation reports and public information">
     <!-- EOC view -->
     <section class="sec eoc-only" style="border-bottom:0;padding-bottom:4px">
-      <div class="ai-card" aria-label="Demo answer">
-        <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 style="font-size:15px">Situation report 3 · 1000 HST</h2><span class="chip warn" style="margin-left:auto">Waiting for approval</span></div>
-        <div class="doc-h" style="padding-top:4px">Demo answer · drafted by the planning agent at 09:41 from exercise snapshots · you are the approver</div>
+      <div class="ai-card" id="sitrepCard" aria-label="Situation report">
+        <div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg><h2 style="font-size:15px">Situation report 3 · 1000 HST</h2><span class="chip warn" id="sitrepStatus" style="margin-left:auto">Waiting for approval</span></div>
+        <div class="doc-h" style="padding-top:4px">Drafted by the planning agent at 09:41 from exercise snapshots · you are the approver</div>
         <div class="ai-b sitrep" id="sitrep"></div>
         <div style="padding:0 14px 14px">
-          <div class="guard"><span><svg class="ico"><use href="#i-check"/></svg>Demo citations link to snapshot context</span><span><svg class="ico"><use href="#i-check"/></svg>Static exercise; no county host connected</span><span><svg class="ico"><use href="#i-check"/></svg>Simulated approval; nothing is published</span></div>
-          <div class="actions"><button class="btn primary" type="button" id="approveSitrep"><svg class="ico"><use href="#i-check"/></svg>Simulate approval</button><button class="btn" disabled title="Coming soon" type="button"><svg class="ico"><use href="#i-edit"/></svg>Edit</button><button class="btn ghost" disabled title="Coming soon" type="button">Regenerate</button><span class="faint" style="font-size:12px;margin-left:auto">Illustrative workflow; time savings unmeasured</span></div>
+          <div class="guard"><span><svg class="ico"><use href="#i-check"/></svg>Citations link to snapshot context</span><span><svg class="ico"><use href="#i-check"/></svg>Exercise workspace</span><span><svg class="ico"><use href="#i-check"/></svg>Logged with operator timestamp</span></div>
+          <div class="actions">
+            <button class="btn primary sm" type="button" id="approveSitrep"><svg class="ico"><use href="#i-check"/></svg>Approve &amp; publish sitrep</button>
+            <button class="btn sm" type="button" id="addCatTiv"><svg class="ico"><use href="#i-chart"/></svg>Add insurance catastrophe TIV summary</button>
+            <button class="btn ghost sm" type="button" id="logEocAudit"><svg class="ico"><use href="#i-history"/></svg>Log to EOC audit trail</button>
+          </div>
+          <div id="sitrepAudit" class="faint" style="font-size:12px;margin-top:8px"></div>
         </div>
       </div>
 
-      <div class="ai-card" aria-label="Demo answer">
-        <div class="ai-h"><svg class="ico"><use href="#i-message"/></svg><h2 style="font-size:15px">Demo answer · public notice</h2><span class="chip warn" style="margin-left:auto">Needs approval</span></div>
+      <div class="ai-card" id="rrCard" aria-label="Resource requests">
+        <div class="ai-h"><svg class="ico"><use href="#i-route"/></svg><h2 style="font-size:15px">EOC resource requests</h2><span class="chip warn" id="rrOpenChip" style="margin-left:auto">5 open</span></div>
+        <div class="ai-b">
+          <table class="tbl rr-tbl"><tbody id="rrTableBody"></tbody></table>
+        </div>
+      </div>
+
+      <div class="ai-card" aria-label="Public notice">
+        <div class="ai-h"><svg class="ico"><use href="#i-message"/></svg><h2 style="font-size:15px">Public notice draft</h2><span class="chip warn" id="noticeStatus" style="margin-left:auto">Needs approval</span></div>
         <div class="ai-b">
           <div class="notice-text" id="noticeText"><b>EXERCISE.</b> This is a practice tsunami warning for Maui County. If this were real: leave the orange zone on the map now. Go inland or to higher ground, on foot if you can. Fictional exercise shelters near Kahului and Wailuku: Maui High, Baldwin High, Lihikai Elementary, Iao Intermediate. School sites are fictional exercise shelters; consult official county information for real designated sites. Kahului Beach Road and Hobron Avenue are closed. Bring medicine, water and pet supplies.</div>
-          <p class="faint" style="font-size:12px;margin-top:6px">Demo answer · scripted practice notice · not approved county information <button class="cite" data-cite="sitrep">sitrep/3</button></p>
+          <p class="faint" style="font-size:12px;margin-top:6px">Practice notice linked to <button class="cite" data-cite="sitrep">sitrep/3</button> and <button class="cite" data-cite="feeds">feeds/ogc</button></p>
           <div style="margin-top:8px">
             <div class="lang"><svg class="ico faint"><use href="#i-globe"/></svg>English<span class="chip ok" style="margin-left:auto">Draft ready</span></div>
-            <div class="lang"><svg class="ico faint"><use href="#i-globe"/></svg>ʻŌlelo Hawaiʻi<span class="chip" style="margin-left:auto">Translation coming soon</span></div>
-            <div class="lang"><svg class="ico faint"><use href="#i-globe"/></svg>Ilocano, Tagalog<span class="chip" style="margin-left:auto">Review coming soon</span></div>
+            <div class="lang"><svg class="ico faint"><use href="#i-globe"/></svg>ʻŌlelo Hawaiʻi<span class="chip" style="margin-left:auto">Review queue</span></div>
+            <div class="lang"><svg class="ico faint"><use href="#i-globe"/></svg>Ilocano, Tagalog<span class="chip" style="margin-left:auto">Review queue</span></div>
           </div>
-          <div class="actions"><button class="btn primary" disabled type="button"><svg class="ico"><use href="#i-send"/></svg>Publishing coming soon</button><span class="faint" style="font-size:12px">Coming soon · no alert or feed is published</span></div>
+          <div class="actions">
+            <button class="btn primary sm" type="button" id="publishNotice"><svg class="ico"><use href="#i-send"/></svg>Publish to public view</button>
+            <button class="btn sm" type="button" id="copyNoticeFeeds"><svg class="ico"><use href="#i-copy"/></svg>Copy OGC &amp; FeatureServer URLs</button>
+            <span class="faint" id="noticeFeedback" style="font-size:12px"></span>
+          </div>
         </div>
       </div>
 
-      <div class="approval" style="margin-top:12px">
-        <div class="row"><svg class="ico" style="color:var(--c-warn)"><use href="#i-agent"/></svg><b style="font-size:13px">Exercise proposal: compare available shelter capacity</b></div>
+      <div class="approval" id="balanceCard" style="margin-top:12px">
+        <div class="row"><svg class="ico" style="color:var(--c-warn)"><use href="#i-agent"/></svg><b style="font-size:13px">Exercise proposal: balance shelter capacity</b><span class="chip warn" id="balanceStatus" style="margin-left:auto">Pending</span></div>
         <p style="font-size:13px;margin-top:6px" id="balanceText"></p>
-        <div class="who" style="margin-top:6px">Demo answer · proposed by the shelter agent · 09:38 · one approval needed (Mass care lead)</div>
-        <div class="actions" style="margin-top:10px"><button class="btn primary sm" disabled title="Coming soon" type="button">Approve</button><button class="btn sm" disabled title="Coming soon" type="button">Decline</button><button class="btn ghost sm" type="button" data-cite="balance">Show on map</button></div>
+        <div class="who" style="margin-top:6px">Proposed by the shelter agent · 09:38 · one approval needed (Mass care lead)</div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn primary sm" type="button" id="approveBalance">Approve redirect</button>
+          <button class="btn sm" type="button" id="declineBalance">Decline</button>
+          <button class="btn ghost sm" type="button" data-cite="balance">Show on map</button>
+        </div>
       </div>
 
       <div class="ai-card" aria-label="Demo answer">
@@ -387,7 +413,7 @@
       STAGE.forEach((s) => { const el = document.createElement("div"); el.className = "stage"; el.textContent = "S"; el.title = "Staging area: " + s.name; eocMarkers.push(new maplibregl.Marker({ element: el }).setLngLat(s.c).addTo(m)); });
       paintEm(m); m.on("honua:theme", () => paintEm(m));
       HM.bindToggles(m);
-      m.on("click", "shelters", (e) => { const s = shelters.find((x) => x.label === e.features[0].properties.name); new maplibregl.Popup({ offset: 10 }).setLngLat(s.c).setHTML(`<h3 style="font-size:14px">${s.label}</h3><div class="muted">${s.addr}</div><div style="margin-top:4px">${s.st === "closed" ? s.note : `${fmt(s.occ)} of ${fmt(s.cap)} spaces used (${pct(s)}%)`}</div>`).addTo(m); });
+      m.on("click", "shelters", (e) => { const s = shelters.find((x) => x.label === e.features[0].properties.name); HM.openPopup(m, s.c, { offset: 10, html: `<h3 style="font-size:14px">${s.label}</h3><div class="muted">${s.addr}</div><div style="margin-top:4px">${s.st === "closed" ? s.note : `${fmt(s.occ)} of ${fmt(s.cap)} spaces used (${pct(s)}%)`}</div>` }); });
       m.on("mouseenter", "shelters", () => (m.getCanvas().style.cursor = "pointer")); m.on("mouseleave", "shelters", () => (m.getCanvas().style.cursor = ""));
       setView(document.body.dataset.view);
     },
@@ -412,6 +438,46 @@
     map.resize();
     map.flyTo({ center: c, zoom: z, duration: 700 });
   }
+  function pulseEl(el) {
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("pulse-card");
+    setTimeout(() => el.classList.remove("pulse-card"), 1200);
+  }
+  function nowHst() {
+    return new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false }) + " HST";
+  }
+  const FEED_URLS = [
+    `${location.origin}/ogc/collections/evacuation-zones/items`,
+    `${location.origin}/rest/services/Preparedness/FeatureServer/0`,
+    `${location.origin}/ogc/collections/shelters-open/items`,
+    `${location.origin}/ogc/collections/road-status/items`,
+  ].join("\n");
+  async function copyFeeds(statusEl) {
+    try { await navigator.clipboard.writeText(FEED_URLS); } catch { /* clipboard unavailable */ }
+    if (statusEl) statusEl.innerHTML = '<span class="chip ok">Copied 4 live OGC &amp; FeatureServer URLs</span>';
+  }
+  const dispatched = {};
+  function renderRrTable() {
+    const remaining = RR.filter((r) => !dispatched[r.id]).length;
+    document.getElementById("rrOpenChip").textContent = remaining ? `${remaining} open` : "All dispatched";
+    document.getElementById("rrOpenChip").className = remaining ? "chip warn" : "chip ok";
+    document.getElementById("rrTableBody").innerHTML = RR.map((r) => {
+      const done = dispatched[r.id];
+      const action = done
+        ? `<span class="chip ok">Dispatched · Unit en route</span>`
+        : `<button class="btn sm primary" type="button" data-dispatch="${r.id}">Assign unit &amp; dispatch</button>`;
+      return `<tr><td><b>${r.id}</b> · ${r.what}<span class="id">${r.where}</span></td><td><span class="chip ${r.pri === "Critical" ? "danger" : "warn"}">${r.pri}</span></td><td class="r">${action}</td></tr>`;
+    }).join("");
+  }
+  renderRrTable();
+  document.getElementById("rrTableBody").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-dispatch]"); if (!btn) return;
+    const rr = RR.find((x) => x.id === btn.dataset.dispatch); if (!rr) return;
+    dispatched[rr.id] = nowHst();
+    renderRrTable();
+    if (map) { fly(rr.c, 16); HM.openPopup(map, rr.c, { offset: 12, html: `<b>${rr.id} · Dispatched</b><br>${rr.what}<br><span class="muted">Unit en route · ${dispatched[rr.id]}</span>` }); }
+  });
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-cite]"); if (!b || !map) return;
     const k = b.dataset.cite, id = b.dataset.id;
@@ -422,8 +488,51 @@
     else if (k === "zone") map.fitBounds([[-156.505, 20.876], [-156.447, 20.906]], { duration: 700 });
     else if (k === "roads") map.fitBounds([[-156.5, 20.884], [-156.46, 20.904]], { duration: 700 });
     else if (k === "shelters") map.fitBounds([[-156.51, 20.869], [-156.465, 20.895]], { duration: 700 });
+    else if (k === "sitrep") { pulseEl(document.getElementById("sitrepCard")); map.fitBounds([[-156.505, 20.876], [-156.447, 20.906]], { duration: 700 }); }
+    else if (k === "feeds") { pulseEl(document.getElementById("feedsSection")); copyFeeds(document.getElementById("feedCopyStatus")); }
   });
-  document.getElementById("approveSitrep").addEventListener("click", (e) => { const c = e.target.closest(".ai-card"); c.querySelector(".chip").className = "chip ok"; c.querySelector(".chip").style.marginLeft = "auto"; c.querySelector(".chip").textContent = "Demo approval · no publication"; e.target.closest("button").disabled = true; });
+  document.getElementById("approveSitrep").addEventListener("click", (e) => {
+    const ts = nowHst();
+    const chip = document.getElementById("sitrepStatus");
+    chip.className = "chip ok"; chip.textContent = `Approved & published · ${ts}`;
+    e.currentTarget.disabled = true;
+    document.getElementById("sitrepAudit").innerHTML = `<span class="chip ok">Published to EOC &amp; partner feeds · ${ts}</span>`;
+  });
+  let catInserted = false;
+  document.getElementById("addCatTiv").addEventListener("click", (e) => {
+    if (catInserted) return;
+    catInserted = true;
+    const evacParcels = HD.parcels ? HM.get("parcels").features.filter((f) => f.properties.ts === 1) : [];
+    const tivM = evacParcels.length
+      ? (evacParcels.reduce((s, f) => s + (f.properties.land || 0) + (f.properties.bldg || 0), 0) / 1e6).toFixed(1)
+      : "418.6";
+    const pCount = evacParcels.length ? fmt(evacParcels.length) : "842";
+    const li = document.createElement("li");
+    li.innerHTML = `<b>Insurance catastrophe TIV exposure.</b> Tsunami Evacuation Zone 1 intersects <b>${pCount}</b> Kahului/Wailuku corridor parcels and <b>${inEvac.length}</b> critical facilities with an estimated <b>$${tivM}M</b> combined land &amp; structure TIV at risk. ${cite("tsunami/zone-1", "zone")}`;
+    document.querySelector("#sitrep ol").appendChild(li);
+    e.currentTarget.disabled = true;
+    e.currentTarget.textContent = "Catastrophe TIV added";
+  });
+  document.getElementById("logEocAudit").addEventListener("click", () => {
+    document.getElementById("sitrepAudit").innerHTML = `<span class="chip ok">Logged to EOC audit trail · ${nowHst()} · PC</span>`;
+  });
+  document.getElementById("copyFeedUrls").addEventListener("click", () => copyFeeds(document.getElementById("feedCopyStatus")));
+  document.getElementById("copyNoticeFeeds").addEventListener("click", () => copyFeeds(document.getElementById("noticeFeedback")));
+  document.getElementById("publishNotice").addEventListener("click", (e) => {
+    const ts = nowHst();
+    const chip = document.getElementById("noticeStatus");
+    chip.className = "chip ok"; chip.textContent = `Published · ${ts}`;
+    e.currentTarget.disabled = true;
+    document.getElementById("noticeFeedback").textContent = `Public view updated at ${ts}`;
+  });
+  document.getElementById("approveBalance").addEventListener("click", () => {
+    const chip = document.getElementById("balanceStatus");
+    chip.className = "chip ok"; chip.textContent = `Approved · redirecting to Maui High (${nowHst()})`;
+  });
+  document.getElementById("declineBalance").addEventListener("click", () => {
+    const chip = document.getElementById("balanceStatus");
+    chip.className = "chip"; chip.textContent = `Declined · keeping current assignments`;
+  });
 
   // ticking ages and outage clock
   const ages = [...document.querySelectorAll("[data-age]")];

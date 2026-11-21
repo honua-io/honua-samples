@@ -118,9 +118,8 @@ async function addBasemap(map: maplibregl.Map, config: ViewerConfig, signal: Abo
   try {
     const archive = pmtilesArchive(config.basemapUrl);
     await archive.getHeader();
-    if (signal.aborted) return "off (map removed)";
+    if (signal.aborted || !map.style) return "off (map removed)";
     map.addSource("basemap", { type: "vector", url: `pmtiles://${config.basemapUrl}` });
-    // Under every data layer.
     const before = map.getStyle().layers.find((layer) => layer.id !== "background")?.id;
     map.addLayer({ id: "basemap-earth", type: FILL_LAYER, source: BASEMAP_SOURCE, "source-layer": "earth", paint: { "fill-color": token("--map-land") } }, before);
     map.addLayer({ id: "basemap-water", type: FILL_LAYER, source: BASEMAP_SOURCE, "source-layer": WATER_LAYER, paint: { "fill-color": token("--map-water") } }, before);
@@ -190,6 +189,22 @@ function addParcelLayers(map: maplibregl.Map): void {
   });
 }
 
+function addSelectedGeoLayers(map: maplibregl.Map): void {
+  map.addSource("selected-parcel-geo", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({
+    id: "parcel-selected-geo-fill",
+    type: FILL_LAYER,
+    source: "selected-parcel-geo",
+    paint: { "fill-color": token("--map-select"), "fill-opacity": 0.45 },
+  });
+  map.addLayer({
+    id: "parcel-selected-geo-line",
+    type: "line",
+    source: "selected-parcel-geo",
+    paint: { "line-color": token("--map-select-line"), "line-width": 3 },
+  });
+}
+
 function watchTheme(map: maplibregl.Map): void {
   const restyle = () => {
     const paints = [
@@ -197,6 +212,7 @@ function watchTheme(map: maplibregl.Map): void {
       ["basemap-earth", "fill-color", "--map-land"], ["basemap-water", "fill-color", "--map-water"],
       ["basemap-roads", "line-color", "--map-road"], ["parcel-outlines", "line-color", "--map-parcel"],
       ["parcel-selected-fill", "fill-color", "--map-select"], ["parcel-selected-line", "line-color", "--map-select-line"],
+      ["parcel-selected-geo-fill", "fill-color", "--map-select"], ["parcel-selected-geo-line", "line-color", "--map-select-line"],
       ["overture-buildings", "fill-extrusion-color", "--map-select"],
       ["zoning-fill", "fill-color", "--map-select"],
       ["flood-fill", "fill-color", "--hz-flood"], ["flood-line", "line-color", "--hz-flood"],
@@ -258,25 +274,25 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
   let selectedTmk: string | null = null;
 
   const ready = new Promise<void>((resolve) => {
-    map.once("load", async () => {
+    map.once("load", () => {
       try {
         addParcelOutlines(map, config);
       } catch (error) {
         events.onNote(`Parcel outlines are unavailable (${error instanceof Error ? error.message : String(error)}). Search still works.`, "error");
       }
-      // Flood zones sit over the selected parcel's fill and under its outline.
-      const underOutline = map.getLayer("parcel-selected-line") ? "parcel-selected-line" : undefined;
+      addSelectedGeoLayers(map);
+      const underOutline = map.getLayer("parcel-selected-line") ? "parcel-selected-line" : "parcel-selected-geo-line";
       map.addSource("zoning", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "zoning-fill", type: FILL_LAYER, source: "zoning", paint: { "fill-color": token("--map-select"), "fill-opacity": 0.12 } }, underOutline);
       map.addSource("flood", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "flood-fill", type: FILL_LAYER, source: "flood", paint: { "fill-color": token("--hz-flood"), "fill-opacity": 0.18 } }, underOutline);
       map.addLayer({ id: "flood-line", type: "line", source: "flood", paint: { "line-color": token("--hz-flood"), "line-opacity": 0.6, "line-width": 1, "line-dasharray": [3, 2] } }, underOutline);
       connectOverlayControls(map);
-      const basemap = await addBasemap(map, config, lifetime.signal);
-      if (lifetime.signal.aborted) return;
-      events.onBasemap(basemap);
       installBuildingControl(map, { archiveUrl: config.buildingsUrl, archiveFor: pmtilesArchive });
       resolve();
+      void addBasemap(map, config, lifetime.signal).then((basemap) => {
+        if (!lifetime.signal.aborted) events.onBasemap(basemap);
+      });
     });
   });
 
@@ -293,10 +309,12 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
     events.onPick([event.lngLat.lng, event.lngLat.lat]);
   });
 
-  const setSelectedFilter = (tmk: string) => {
+  const setSelection = (tmk: string, geometry?: GeoJsonGeometry) => {
     for (const id of ["parcel-selected-fill", "parcel-selected-line"]) {
       if (map.getLayer(id)) map.setFilter(id, ["==", ["get", "tmk_txt"], tmk]);
     }
+    const useGeoFallback = Boolean(geometry) && !map.getLayer("parcel-selected-line");
+    setOverlay(map, "selected-parcel-geo", useGeoFallback && geometry ? [geometry] : []);
   };
 
   return {
@@ -305,10 +323,9 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
     select(tmk, geometry) {
       selectedTmk = tmk;
       void ready.then(() => {
-        setSelectedFilter(tmk);
+        if (selectedTmk !== tmk || lifetime.signal.aborted) return;
+        setSelection(tmk, geometry);
         map.fitBounds(boundsOf(geometry), { padding: 48, maxZoom: 18, duration: reducedMotion() ? 0 : 600 });
-        // The outline comes from the tiles only. Say so when they do not draw it
-        // here, instead of drawing the REST geometry in its place.
         map.once("idle", () => {
           if (selectedTmk !== tmk || !config.parcelTilesUrl) return;
           const drawn = map.queryRenderedFeatures({ layers: ["parcel-selected-line"] }).length > 0;
@@ -325,7 +342,8 @@ export function createParcelMap(container: HTMLElement, config: ViewerConfig, ev
     clearSelection() {
       selectedTmk = null;
       void ready.then(() => {
-        setSelectedFilter("");
+        if (lifetime.signal.aborted) return;
+        setSelection("");
         for (const source of ["flood", "zoning"]) setOverlay(map, source, []);
       });
     },

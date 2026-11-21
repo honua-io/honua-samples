@@ -40,10 +40,18 @@ const config: ViewerConfig = readConfig(new URLSearchParams(location.search));
 document.querySelector(".search .field")!.append(provenancePanel(config));
 const usingDemoParcels = !new URLSearchParams(location.search).get("parcelsUrl") && config.baseUrl === DEFAULT_BASE_URL;
 
-// The overlap math lives in its own chunk; if it cannot load, both sections
-// say "Overlap check unavailable" instead of guessing (design D9).
-const geometryOps: Promise<GeometryOps> = import("./geometry-ops.js").then((module) => module.geometryOps);
-geometryOps.catch(() => {});
+let geometryOps: Promise<GeometryOps> | undefined;
+
+function loadGeometryOps(): Promise<GeometryOps> {
+  geometryOps ??= import("./geometry-ops.js")
+    .then((module) => module.geometryOps)
+    .catch((err) => {
+      geometryOps = undefined;
+      throw err;
+    });
+  return geometryOps;
+}
+void loadGeometryOps().catch(() => {});
 
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -301,9 +309,9 @@ async function lookupAddress(text: string): Promise<void> {
   const lookup = beginLookup(`Looking up ${text}…`);
   let matches: AddressMatch[];
   try {
-    matches = await geocode(config, text);
+    matches = await geocode(config, text, lookup.signal);
   } catch (error) {
-    if (!current(lookup.id)) return;
+    if (!current(lookup.id) || lookup.signal.aborted) return;
     panelProblem("Address search is unavailable right now. Search by TMK instead.", { alert: true });
     signal({ searchState: "geocoder-unavailable" });
     // A refused geocoder provider is a configured state, not a failed request.
@@ -403,7 +411,7 @@ function renderParcel(parcel: Parcel, example: boolean, lookupSignal: AbortSigna
       ...copyLinkControls(parcel.tmk),
     ),
     h("section", { class: "group", "aria-labelledby": "zoning-heading" }, h("h2", { id: "zoning-heading" }, "Zoning"), zoning),
-    planningPanel(parcel, { config, geometryOps, signal: lookupSignal }),
+    planningPanel(parcel, { config, geometryOps: loadGeometryOps(), signal: lookupSignal }),
     h("section", { class: "group", "aria-labelledby": "flood-heading" }, h("h2", { id: "flood-heading" }, "Flood hazard"), flood),
     h(
       "section",
@@ -434,8 +442,8 @@ function renderZoning(target: HTMLElement, state: SectionState, groups: OverlapG
   else if (state === "unavailable") target.replaceChildren(h("p", { class: "section-status" }, "Overlap check unavailable"));
   else if (state === "empty") target.replaceChildren(h("p", { class: "empty-text", id: "zoning-empty" }, "Not in the county zoning layer"));
   else if (state === "error") {
-    const button = h("button", { class: "btn quiet", type: "button" }, "Retry zoning check");
-    if (retry) button.addEventListener("click", retry);
+    const button = h("button", { class: "btn quiet retry-btn", type: "button" }, "Retry zoning check") as HTMLButtonElement;
+    if (retry) button.addEventListener("click", () => { button.disabled = true; retry(); });
     target.replaceChildren(h("div", { class: "error", role: "alert" }, h("p", {}, h("strong", {}, "Zoning check failed."), " We couldn't reach the county zoning layer, so this parcel's zoning is unknown."), button));
   } else {
     const [main, ...others] = groups;
@@ -458,8 +466,8 @@ function renderFlood(target: HTMLElement, state: SectionState, groups: OverlapGr
     const [before] = FLOOD_EMPTY_TEXT.split("official FEMA Flood Map Service Center");
     target.replaceChildren(h("p", { class: "empty-text", id: "flood-empty" }, before, femaLink(), "."));
   } else if (state === "error") {
-    const button = h("button", { class: "btn quiet", type: "button" }, "Retry flood check");
-    if (retry) button.addEventListener("click", retry);
+    const button = h("button", { class: "btn quiet retry-btn", type: "button" }, "Retry flood check") as HTMLButtonElement;
+    if (retry) button.addEventListener("click", () => { button.disabled = true; retry(); });
     target.replaceChildren(
       h(
         "div",
@@ -517,12 +525,13 @@ async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { 
   if (focus) (document.getElementById("parcel-title") as HTMLElement | null)?.focus({ preventScroll: false });
 
   let failures: string[] = [];
+  const activeRetries = new Set<string>();
   const runZoning = async (): Promise<void> => {
     renderZoning(sections.zoning, "loading");
     signal({ zoningState: "loading", zoningMain: undefined });
     let ops: GeometryOps;
     try {
-      ops = await geometryOps;
+      ops = await loadGeometryOps();
     } catch (error) {
       renderZoning(sections.zoning, "unavailable");
       signal({ zoningState: "unavailable" });
@@ -547,7 +556,7 @@ async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { 
     signal({ floodState: "loading", floodMain: undefined });
     let ops: GeometryOps;
     try {
-      ops = await geometryOps;
+      ops = await loadGeometryOps();
     } catch (error) {
       renderFlood(sections.flood, "unavailable");
       signal({ floodState: "unavailable" });
@@ -567,14 +576,17 @@ async function showParcel(lookup: Lookup, parcel: Parcel, { example, focus }: { 
       throw error;
     }
   };
-  // A retry re-runs one section; the page status follows the sections' states.
   const rerun = async (run: () => Promise<void>, name: string): Promise<void> => {
+    if (activeRetries.has(name)) return;
+    activeRetries.add(name);
     signal({ sampleStatus: "loading" });
     failures = failures.filter((failure) => !failure.startsWith(`${name}:`));
     try {
       await run();
     } catch (error) {
       failures.push(`${name}: ${message(error)}`);
+    } finally {
+      activeRetries.delete(name);
     }
     settle();
   };

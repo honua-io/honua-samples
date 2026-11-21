@@ -293,9 +293,17 @@
       <div class="row" style="align-items:baseline;gap:10px"><span class="stat">${risk.length + late.length}</span><span class="muted">open requests will be past SLA by Wednesday unless they move today: ${late.length} already late, ${risk.length} due by Wed 11:59 PM.</span></div>
       <ul>${top.map(([t, n]) => `<li><span><span class="tdot" style="background:${TYPE_COLOR[t]}"></span>${t}</span><span class="num">${n}</span></li>`).join("")}</ul>
       <p style="margin-top:10px">${drainD4} drainage requests in District 4 are in this filtered open queue. <button class="cite" data-fly="drain">311 · drainage · D4</button> <button class="cite" data-fly="crew">crews/kahului-drainage</button> Example crew availability: Kahului Drainage Crew 1 has 5 open hours on Tuesday.</p>
-      <div class="row" style="margin-top:10px"><button class="btn sm primary" id="briefOpen">Show these ${risk.length + late.length}</button><button class="btn sm">Propose reassignment</button></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm primary" id="briefOpen">Show these ${risk.length + late.length}</button><button class="btn sm" id="briefReassign" type="button">Propose reassignment</button></div>
       <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Read-only job</span><span><svg class="ico"><use href="#i-check"/></svg>Counts link to the list</span></div>`;
     document.getElementById("briefOpen").onclick = () => { state.riskOnly = true; renderQueue(); document.getElementById("queue").scrollIntoView({ behavior: "smooth" }); };
+    document.getElementById("briefReassign").onclick = (e) => {
+      const target = [...risk, ...late].filter((r) => r.type === "Drainage / flooding" && r.district === 4);
+      target.forEach((r) => { getReqState(r).crew = FIELD_CREWS[0]; });
+      const btn = e.currentTarget;
+      btn.className = "chip ok";
+      btn.textContent = `Proposed · ${target.length} routed to ${FIELD_CREWS[0]}`;
+      if (activeReqId) openDrawer(activeReqId);
+    };
   }
   function renderRoute(rs) {
     const open = base().filter(isOpen); const by = {};
@@ -364,33 +372,53 @@
   document.getElementById("mHeat").onclick = () => HM.toggle(map, ["heat"], true);
   document.getElementById("mPts").onclick = () => HM.toggle(map, ["heat"], false);
 
-  // Drawer
   const drawer = document.getElementById("drawer"), scrim = document.getElementById("scrim");
   let drawerOpener;
   const m2 = (a, b) => Math.hypot((a[0] - b[0]) * 104000, (a[1] - b[1]) * 111000);
-  function openDrawer(id) {
-    const r = reqs.find((x) => x.id === id); if (!r) return;
-    if (drawer.dataset.open !== "true") drawerOpener = document.activeElement;
-    const asset = HD.demo.assets.filter((a) => r.type === "Traffic signal" ? a.kind === "Traffic signal" : r.type === "Drainage / flooding" ? a.kind !== "Traffic signal" : true).reduce((best, a) => (m2(a.c, r.c) < m2(best.c, r.c) ? a : best));
-    const dupes = reqs.filter((x) => x !== r && isOpen(x) && x.type === r.type && m2(x.c, r.c) < 80 && Math.abs(x.t0 - r.t0) < 14 * D);
-    const dd = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) * 111000;
-    const shelter = HD.shelters.features.reduce((b, s) => (dd(s.geometry.coordinates, r.c) < dd(b.geometry.coordinates, r.c) ? s : b));
-    const sName = shelter.properties.name.replace("Maui Community College", "UH Maui College");
-    const total = (r.tdue - r.t0) / H, used = (NOW - r.t0) / H, pct = Math.min(100, (used / total) * 100);
-    document.getElementById("dKick").textContent = `${r.id} · ${r.channel} · ${ago(r.t0)}`;
-    document.getElementById("dTitle").textContent = `${r.type} · ${r.addr}`;
-    document.getElementById("dChips").innerHTML = `<span class="chip ${r.status === "New" ? "info" : "accent"}">${r.status}</span><span class="chip">${r.dept}</span>${r.evac ? '<span class="chip warn">Tsunami evacuation zone</span>' : ""}${r.flood ? '<span class="chip info">Flood zone</span>' : ""}<span class="tag-demo">Demo data</span>`;
+  const dd = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) * 111000;
+  const FIELD_CREWS = ["Field Crew 1 — Kahului", "Field Crew 2 — Wailuku", "Traffic Signal Unit"];
+  const PRIORITIES = ["High", "Normal", "Low"];
+  const reqState = {};
+  let activeReqId = null, activeContext = null;
+
+  function getReqState(r) {
+    if (!reqState[r.id]) {
+      reqState[r.id] = {
+        triage: "pending", priority: "Normal", note: "", editingTriage: false,
+        crew: CREW[r.dept] || FIELD_CREWS[0], replySent: false, editingReply: false,
+        replyText: `<b>Example reply · not sent.</b> Aloha, thank you for your ${r.type.toLowerCase()} report on ${r.street}. A dispatcher would review the proposed assignment before any work is scheduled. Reference ${r.id}.`,
+        workOrder: null,
+      };
+    }
+    return reqState[r.id];
+  }
+  function triageBadge(st) {
+    if (st.triage === "accepted") return '<span class="chip ok" style="margin-left:auto">Demo approval · no records changed</span>';
+    if (st.triage === "dismissed") return '<span class="chip" style="margin-left:auto">Manual triage active</span>';
+    return '<span class="chip warn" style="margin-left:auto">Waiting for dispatcher</span>';
+  }
+  function renderDrawerHtml(r, ctx) {
+    const { asset, dupes, shelter, sName, pct } = ctx;
+    const st = getReqState(r);
     const isNew = r.id === incoming.id;
-    document.getElementById("dBody").innerHTML = `
-      ${isNew || dupes.length ? `<section class="dsec"><div class="ai-card"><div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg>Demo answer · triage proposal<span class="chip warn" style="margin-left:auto">Waiting for dispatcher</span></div><div class="ai-b">
-        <ul class="tl" style="margin-top:6px">
-          <li class="ai"><b>Possible duplicate</b> of ${dupes.map((d) => `<button class="cite" data-sel="${d.id}">${d.id}</button>`).join(" ") || "none"}: same type, ${dupes.length ? Math.round(m2(dupes[0].c, r.c)) : 0} m away, opened ${dupes.length ? ago(dupes[0].t0) : ""}. Merge and notify both reporters.</li>
-          <li class="ai"><b>Route to</b> Public Works · Engineering → ${CREW[r.dept]}. Nearest asset is ${asset.kind.toLowerCase()} <button class="cite" data-asset="1">assets/${asset.id}</button>, condition ${asset.cond}/5, last cleaned ${new Date(asset.insp).toLocaleDateString("en-US", { month: "short", year: "numeric" })}.</li>
-          <li class="ai"><b>Example priority P2</b>: ${r.evac ? 'inside the tsunami evacuation zone <button class="cite">tsunami/1</button>' : "outside the tsunami evacuation zone"}, ${Math.round(dd(shelter.geometry.coordinates, r.c) / 10) * 10} m from the ${sName} school exercise anchor <button class="cite">shelters/${sName.toLowerCase().replace(/ /g, "-")}</button>.</li>
-        </ul>
-        <div class="row" style="margin-top:4px"><button class="btn sm primary" id="acc">Accept all</button><button class="btn sm">Edit</button><button class="btn sm ghost">Dismiss</button></div>
-        <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Demo approval only</span><span><svg class="ico"><use href="#i-check"/></svg>No records changed</span></div>
-      </div></div></section>` : ""}
+    const triageCard = isNew || dupes.length ? `<section class="dsec"><div class="ai-card"><div class="ai-h"><svg class="ico"><use href="#i-agent"/></svg>Demo answer · triage proposal · Priority ${st.priority}${triageBadge(st)}</div><div class="ai-b">
+      <ul class="tl" style="margin-top:6px">
+        <li class="ai"><b>Possible duplicate</b> of ${dupes.map((d) => `<button class="cite" data-sel="${d.id}">${d.id}</button>`).join(" ") || "none"}: same type, ${dupes.length ? Math.round(m2(dupes[0].c, r.c)) : 0} m away${dupes.length ? ", opened " + ago(dupes[0].t0) : ""}.</li>
+        <li class="ai"><b>Route to</b> ${r.dept} → <b>${st.crew}</b>. Nearest asset <button class="cite" data-asset="1" data-cite="asset">assets/${asset.id}</button>, condition ${asset.cond}/5.</li>
+        <li class="ai"><b>Example priority ${st.priority}</b>: ${r.evac ? 'inside tsunami evacuation zone <button class="cite" data-cite="tsunami">tsunami/1</button>, ' : ""}${Math.round(dd(shelter.geometry.coordinates, r.c) / 10) * 10} m from the ${sName} school exercise anchor <button class="cite" data-cite="shelter">shelters/${sName.toLowerCase().replace(/ /g, "-")}</button>.</li>
+      </ul>
+      ${st.note ? `<p class="muted" style="margin:6px 0;font-size:12.5px"><b>Dispatcher note:</b> ${st.note}</p>` : ""}
+      ${st.editingTriage ? `<div class="row wrap" style="margin-top:8px;gap:6px"><input id="triageNoteIn" class="field" style="flex:1;height:30px;padding:0 8px" placeholder="Add triage note" value="${st.note.replace(/"/g, "&quot;")}"><button class="btn sm primary" type="button" data-action="save-note">Save</button></div>` : ""}
+      <div class="row wrap" style="margin-top:8px;gap:6px"><button class="btn sm primary" id="acc" type="button" data-action="accept-triage"${st.triage === "accepted" ? " disabled" : ""}>${st.triage === "accepted" ? "Accepted" : "Accept all"}</button><button class="btn sm" type="button" data-action="edit-triage">Edit (${st.priority})</button><button class="btn sm ghost" type="button" data-action="dismiss-triage">Dismiss</button></div>
+      <div class="guard" style="margin-top:10px"><span><svg class="ico"><use href="#i-check"/></svg>Demo approval only</span><span><svg class="ico"><use href="#i-check"/></svg>No records changed</span></div>
+    </div></div></section>` : "";
+    const replyCtrl = st.replySent
+      ? '<span class="chip ok"><svg class="ico" style="width:12px;height:12px"><use href="#i-check"/></svg>Demo approval · no message sent</span>'
+      : `<button class="btn sm primary" type="button" data-action="send-reply">Approve and send</button><button class="btn sm" type="button" data-action="edit-reply">${st.editingReply ? "Cancel edit" : "Edit"}</button><span class="faint" style="font-size:12px">Sends by app notification and SMS</span>`;
+    const woCtrl = st.workOrder
+      ? `<span class="chip ok"><svg class="ico" style="width:12px;height:12px"><use href="#i-check"/></svg>Created · ${st.workOrder}</span>`
+      : '<button class="btn sm primary" type="button" data-action="create-wo">Create</button>';
+    return `${triageCard}
       <section class="dsec"><h3><svg class="ico faint"><use href="#i-clock"/></svg>SLA · ${r.sla} days</h3>
         <div class="clock"><div class="meter"><span style="width:${pct}%;background:${pct >= 100 ? "var(--c-danger)" : pct > 70 ? "var(--c-warn)" : "var(--c-ok)"}"></span></div><span class="sla ${slaClass(r)}">${slaText(r)}</span></div>
         <p class="faint" style="font-size:12px;margin-top:6px">Due ${r.tdue.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</p></section>
@@ -399,8 +427,8 @@
           <dt>Council district</dt><dd>${r.district} · ${COUNCIL[r.district] || ""}</dd>
           <dt>Maintenance zone</dt><dd>${r.district === 3 ? "Wailuku W-1" : "Kahului K-2"} <span class="tag-demo">demo</span></dd>
           <dt>Street</dt><dd>${r.street}, county road</dd>
-          <dt>Nearest asset</dt><dd>${asset.kind} ${asset.id}, ${Math.round(m2(asset.c, r.c))} m</dd>
-          <dt>Crew</dt><dd>${CREW[r.dept]}</dd>
+          <dt>Nearest asset</dt><dd>${asset.kind} <button class="cite" data-cite="asset">${asset.id}</button>, ${Math.round(m2(asset.c, r.c))} m</dd>
+          <dt>Crew</dt><dd class="row wrap" style="gap:6px"><span class="chip accent">${st.crew}</span><button class="btn sm" type="button" data-action="cycle-crew">Propose reassignment</button></dd>
           <dt>Hazard zones</dt><dd>${r.evac ? "Tsunami evacuation zone" : "Outside tsunami zone"} · ${r.flood ? "FEMA flood zone" : "Flood zone X"}</dd>
         </dl></section>
       <section class="dsec"><h3><svg class="ico faint"><use href="#i-camera"/></svg>Report</h3>
@@ -408,28 +436,71 @@
         <div class="photos" style="margin-top:10px"><div class="photo"><span>Photo 1 · reporter</span></div><div class="photo b"><span>Photo 2 · reporter</span></div><div class="photo"><span>Street view</span></div></div>
         <div class="row" style="margin-top:10px;font-size:13px"><svg class="ico faint"><use href="#i-lock"/></svg><span class="muted">Synthetic reporter · no personal data</span></div></section>
       <section class="dsec"><h3><svg class="ico" style="color:var(--c-ai)"><use href="#i-message"/></svg>Update for the resident</h3>
-        <div class="reply"><b>Example reply · not sent.</b> Aloha, thank you for your ${r.type.toLowerCase()} report on ${r.street}. A dispatcher would review the proposed assignment before any work is scheduled. Reference ${r.id}.</div>
-        <p style="margin-top:6px;font-size:12px" class="faint">Draft from <button class="cite">${r.id}</button> <button class="cite">crews/kahului-drainage/2026-11-10</button> · plain language, grade 6</p>
-        <div class="row" style="margin-top:8px"><button class="btn sm primary">Approve and send</button><button class="btn sm">Edit</button><span class="faint" style="font-size:12px">Sends by app notification and SMS</span></div></section>
+        ${st.editingReply ? `<textarea id="replyEditBox" rows="3" style="width:100%;padding:8px;border:1px solid var(--c-border-strong);border-radius:var(--radius-md);font:13px/1.5 var(--font-sans)">${st.replyText.replace(/<[^>]+>/g, "")}</textarea><div class="row" style="margin-top:6px"><button class="btn sm primary" type="button" data-action="save-reply">Save draft</button></div>` : `<div class="reply">${st.replyText}</div>`}
+        <p style="margin-top:6px;font-size:12px" class="faint">Draft from <button class="cite" data-cite="req">${r.id}</button> <button class="cite" data-cite="crew">crews/${st.crew.toLowerCase().replace(/[^a-z0-9]+/g, "-")}</button> · plain language, grade 6</p>
+        <div class="row wrap" style="margin-top:8px;gap:8px">${replyCtrl}</div></section>
       <section class="dsec"><h3><svg class="ico faint"><use href="#i-route"/></svg>Hand off</h3>
         <div class="handoff">
-          <div class="opt"><b>Create work order</b><span class="muted">Honua work orders, linked to ${asset.id}</span><div style="margin-top:8px"><button class="btn sm">Create</button></div></div>
+          <div class="opt"><b>Create work order</b><span class="muted">Honua work orders, linked to ${asset.id}</span><div style="margin-top:8px">${woCtrl}</div></div>
           <div class="opt"><b>Send to county CRM</b><span class="muted">Webhook with district, asset and crew</span><div style="margin-top:8px"><span class="chip ok"><svg class="ico" style="width:12px;height:12px"><use href="#i-check"/></svg>Preview only · no webhook sent</span></div></div>
         </div></section>
       <section class="dsec"><h3><svg class="ico faint"><use href="#i-history"/></svg>Timeline</h3>
         <ul class="tl">
           <li><b>Received</b> via ${r.channel}<time>${r.t0.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time></li>
-          <li class="ok"><b>Location resolved</b> district ${r.district}, ${asset.id}, crew<time>+84 ms</time></li>
+          <li class="ok"><b>Location resolved</b> district ${r.district}, ${asset.id}, ${st.crew}<time>+84 ms</time></li>
           <li class="ok"><b>Example CRM handoff</b> · no webhook sent<time>+1 s</time></li>
           <li class="ai"><b>Triage proposal</b> by Honua agent<time>+3 s</time></li>
+          ${st.triage !== "pending" ? `<li class="ok"><b>Triage ${st.triage}</b> · Priority ${st.priority}<time>Preview</time></li>` : ""}
+          ${st.workOrder ? `<li class="ok"><b>Work order ${st.workOrder}</b> linked to ${asset.id}<time>Created</time></li>` : ""}
+          ${st.replySent ? `<li class="ok"><b>Resident update previewed</b> · no message sent<time>Preview</time></li>` : ""}
         </ul></section>`;
+  }
+  function openDrawer(id) {
+    const r = reqs.find((x) => x.id === id); if (!r) return;
+    if (drawer.dataset.open !== "true") drawerOpener = document.activeElement;
+    const asset = HD.demo.assets.filter((a) => r.type === "Traffic signal" ? a.kind === "Traffic signal" : r.type === "Drainage / flooding" ? a.kind !== "Traffic signal" : true).reduce((best, a) => (m2(a.c, r.c) < m2(best.c, r.c) ? a : best));
+    const dupes = reqs.filter((x) => x !== r && isOpen(x) && x.type === r.type && m2(x.c, r.c) < 80 && Math.abs(x.t0 - r.t0) < 14 * D);
+    const shelter = HD.shelters.features.reduce((b, s) => (dd(s.geometry.coordinates, r.c) < dd(b.geometry.coordinates, r.c) ? s : b));
+    const sName = shelter.properties.name.replace("Maui Community College", "UH Maui College");
+    const total = (r.tdue - r.t0) / H, used = (NOW - r.t0) / H, pct = Math.min(100, (used / total) * 100);
+    activeReqId = r.id;
+    activeContext = { r, asset, dupes, shelter, sName, pct };
+    const st = getReqState(r);
+    document.getElementById("dKick").textContent = `${r.id} · ${r.channel} · ${ago(r.t0)}`;
+    document.getElementById("dTitle").textContent = `${r.type} · ${r.addr}`;
+    document.getElementById("dChips").innerHTML = `<span class="chip ${r.status === "New" ? "info" : "accent"}">${r.status}</span><span class="chip">${st.crew}</span>${r.evac ? '<span class="chip warn">Tsunami evacuation zone</span>' : ""}${r.flood ? '<span class="chip info">Flood zone</span>' : ""}<span class="tag-demo">Demo data</span>`;
+    document.getElementById("dBody").innerHTML = renderDrawerHtml(r, activeContext);
     drawer.inert = false;
     drawer.dataset.open = "true"; drawer.setAttribute("aria-hidden", "false"); scrim.dataset.open = "true";
     document.getElementById("dClose").focus();
     if (map && map.getLayer("sel")) { map.setFilter("sel", ["==", ["get", "rid"], r.id]); map.easeTo({ center: r.c, zoom: Math.max(map.getZoom(), 15), duration: 600 }); }
-    document.querySelectorAll("#dBody [data-sel]").forEach((b) => (b.onclick = () => openDrawer(b.dataset.sel)));
-    const acc = document.getElementById("acc"); if (acc) acc.onclick = () => { acc.closest(".ai-card").querySelector(".chip").className = "chip ok"; acc.closest(".ai-card").querySelector(".chip").textContent = "Demo approval · no records changed"; };
   }
+  function handleDrawerCite(kind, btn) {
+    if (!activeContext || !map) return;
+    const { r, asset, shelter, sName } = activeContext;
+    btn.style.outline = "2px solid var(--c-accent)";
+    setTimeout(() => (btn.style.outline = ""), 900);
+    if (kind === "asset") { map.easeTo({ center: asset.c, zoom: 16.5, duration: 500 }); HM.openPopup(map, asset.c, { offset: 10, html: `<b>${asset.id}</b><br>${asset.kind} · Condition ${asset.cond}/5` }); return; }
+    if (kind === "shelter") { const c = shelter.geometry.coordinates; map.easeTo({ center: c, zoom: 15.5, duration: 500 }); HM.openPopup(map, c, { offset: 10, html: `<b>${sName}</b><br>School exercise anchor` }); return; }
+    map.easeTo({ center: r.c, zoom: 16, duration: 500 });
+    HM.openPopup(map, r.c, { offset: 10, html: `<b>${r.id}</b> · ${r.type}<br>${r.addr} · ${getReqState(r).crew}` });
+  }
+  document.getElementById("dBody").addEventListener("click", (e) => {
+    const selBtn = e.target.closest("[data-sel]"); if (selBtn) { openDrawer(selBtn.dataset.sel); return; }
+    const citeBtn = e.target.closest("[data-cite]"); if (citeBtn) { handleDrawerCite(citeBtn.dataset.cite, citeBtn); return; }
+    const actBtn = e.target.closest("[data-action]"); if (!actBtn || !activeContext) return;
+    const { r } = activeContext, st = getReqState(r), act = actBtn.dataset.action;
+    if (act === "accept-triage") st.triage = "accepted";
+    else if (act === "dismiss-triage") { st.triage = "dismissed"; st.editingTriage = false; }
+    else if (act === "edit-triage") { st.priority = PRIORITIES[(PRIORITIES.indexOf(st.priority) + 1) % PRIORITIES.length]; st.editingTriage = true; }
+    else if (act === "save-note") { const inp = document.getElementById("triageNoteIn"); if (inp) st.note = inp.value.trim(); st.editingTriage = false; }
+    else if (act === "cycle-crew") { const i = FIELD_CREWS.indexOf(st.crew); st.crew = FIELD_CREWS[(i + 1) % FIELD_CREWS.length]; }
+    else if (act === "send-reply") { st.replySent = true; st.editingReply = false; }
+    else if (act === "edit-reply") st.editingReply = !st.editingReply;
+    else if (act === "save-reply") { const ta = document.getElementById("replyEditBox"); if (ta) st.replyText = ta.value.trim(); st.editingReply = false; }
+    else if (act === "create-wo") st.workOrder = `WO-2026-${r.id.slice(-4)}`;
+    openDrawer(r.id);
+  });
   function closeDrawer() {
     if (drawer.dataset.open !== "true") return;
     const opener = drawerOpener?.isConnected && drawerOpener !== document.body ? drawerOpener : document.querySelector("#qBody tr, [data-days]");

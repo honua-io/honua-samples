@@ -2,7 +2,8 @@ const PAGE_SIZE = 200;
 const MAX_RECORDS = 10_000;
 
 export async function collectFeatures(client, binding, featureFromWire) {
-  const query = { serviceId: binding.serviceId, layerId: binding.layerId, where: '1=1', method: 'GET' };
+  const signal = binding.signal ? { signal: binding.signal } : {};
+  const query = { serviceId: binding.serviceId, layerId: binding.layerId, where: '1=1', method: 'GET', ...signal };
   const count = (await client.queryFeatures({ ...query, extraParams: { returnCountOnly: true } })).count;
   if (!Number.isSafeInteger(count) || count < 0 || count > MAX_RECORDS) throw new Error('Layer count is missing or exceeds the 10,000-record demo limit');
   const records = [];
