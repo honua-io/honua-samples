@@ -1,5 +1,6 @@
 // Public county/state servers fail some queries at random; a full snapshot is hundreds of pages.
 const attempts = 8;
+const defaultTimeout = 120_000;
 const retryableStatus = (status) => status === 429 || status >= 500;
 const pause = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -15,6 +16,7 @@ async function withRetry(operation, { wait = pause } = {}) {
     try {
       return await operation();
     } catch (error) {
+      // Timeouts, network errors and garbled bodies (JSON parse) are retried too.
       if (attempt >= attempts || error.retryable === false) throw error;
       await wait(Math.min(8_000, 1_000 * 2 ** (attempt - 1)));
     }
@@ -27,14 +29,14 @@ async function downloadOnce(url, timeout) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-export async function download(url, timeout = 120_000, options) {
+export async function download(url, timeout = defaultTimeout, options) {
   return withRetry(() => downloadOnce(url, timeout), options);
 }
 
 // ArcGIS servers report transient query failures as HTTP 200 with {"error":{"code":500}}.
 export async function fetchJson(url, timeout, options) {
   return withRetry(async () => {
-    const data = JSON.parse((await downloadOnce(url, timeout ?? 120_000)).toString());
+    const data = JSON.parse((await downloadOnce(url, timeout ?? defaultTimeout)).toString());
     if (retryableStatus(Number(data?.error?.code))) throw new SourceError(`Source query failed: ${data.error.message}`, true);
     return data;
   }, options);

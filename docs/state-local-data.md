@@ -173,8 +173,8 @@ server stops activation. Staging remains non-idempotent; if saving its receipt
 fails, inspect Console before attempting another import.
 
 After reviewing and activating all nine property layers, build a receipt-bound
-public app link. One `maui-sea-level-rise` feature exceeds the server's per-feature
-ring limit, so this step cannot complete yet ([load limits](#bounded-shared-load));
+public app link. One `maui-sea-level-rise` feature exceeds the per-feature ring
+limit, so staging refuses it and this step cannot complete yet ([load limits](#bounded-shared-load));
 the public property display uses the subdivided island import instead:
 
 ```sh
