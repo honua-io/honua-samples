@@ -15,7 +15,7 @@ You need Node.js 20+. The script reads two optional variables:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `HONUA_BASE_URL` | `https://demo.honua.io` | Honua server to query. |
-| `HONUA_SAMPLE_SERVICE` | `maui-buildings` | An anonymous FeatureServer service on that server with at least three features. The script reads its first layer. |
+| `HONUA_SAMPLE_SERVICE` | `maui-buildings` | An anonymous FeatureServer service on that server. The script reads its first layer, which needs at least one feature with geometry. |
 
 Leave both unset to query the public demo, or export both to point the same
 code at your own server, for example:
@@ -31,7 +31,8 @@ Then run:
 node src/run.mjs
 ```
 
-Expected result, with your service name and its first layer ID:
+Expected result, with your service name, its first layer ID and up to three
+features:
 
 ```text
 PASS: .../FeatureServer/... returned 3 feature(s) with geometry
@@ -43,5 +44,5 @@ Against the public demo it prints
 ## What the code does
 
 1. Reads the service metadata and discovers its first layer ID.
-2. Sends one FeatureServer query for three records.
+2. Sends one FeatureServer query for up to three records.
 3. Checks that real geometries came back.
