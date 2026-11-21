@@ -381,12 +381,20 @@
   const reqState = {};
   let activeReqId = null, activeContext = null;
 
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
   function getReqState(r) {
     if (!reqState[r.id]) {
       reqState[r.id] = {
         triage: "pending", priority: "Normal", note: "", editingTriage: false,
         crew: CREW[r.dept] || FIELD_CREWS[0], replySent: false, editingReply: false,
-        replyText: `<b>Example reply · not sent.</b> Aloha, thank you for your ${r.type.toLowerCase()} report on ${r.street}. A dispatcher would review the proposed assignment before any work is scheduled. Reference ${r.id}.`,
+        replyText: `Aloha, thank you for your ${r.type.toLowerCase()} report on ${r.street}. A dispatcher would review the proposed assignment before any work is scheduled. Reference ${r.id}.`,
         workOrder: null,
       };
     }
@@ -436,7 +444,7 @@
         <div class="photos" style="margin-top:10px"><div class="photo"><span>Photo 1 · reporter</span></div><div class="photo b"><span>Photo 2 · reporter</span></div><div class="photo"><span>Street view</span></div></div>
         <div class="row" style="margin-top:10px;font-size:13px"><svg class="ico faint"><use href="#i-lock"/></svg><span class="muted">Synthetic reporter · no personal data</span></div></section>
       <section class="dsec"><h3><svg class="ico" style="color:var(--c-ai)"><use href="#i-message"/></svg>Update for the resident</h3>
-        ${st.editingReply ? `<textarea id="replyEditBox" rows="3" style="width:100%;padding:8px;border:1px solid var(--c-border-strong);border-radius:var(--radius-md);font:13px/1.5 var(--font-sans)">${st.replyText.replace(/<[^>]+>/g, "")}</textarea><div class="row" style="margin-top:6px"><button class="btn sm primary" type="button" data-action="save-reply">Save draft</button></div>` : `<div class="reply">${st.replyText}</div>`}
+        ${st.editingReply ? `<textarea id="replyEditBox" rows="3" style="width:100%;padding:8px;border:1px solid var(--c-border-strong);border-radius:var(--radius-md);font:13px/1.5 var(--font-sans)">${escHtml(st.replyText)}</textarea><div class="row" style="margin-top:6px"><button class="btn sm primary" type="button" data-action="save-reply">Save draft</button></div>` : `<div class="reply"><b>Example reply · not sent.</b> ${escHtml(st.replyText)}</div>`}
         <p style="margin-top:6px;font-size:12px" class="faint">Draft from <button class="cite" data-cite="req">${r.id}</button> <button class="cite" data-cite="crew">crews/${st.crew.toLowerCase().replace(/[^a-z0-9]+/g, "-")}</button> · plain language, grade 6</p>
         <div class="row wrap" style="margin-top:8px;gap:8px">${replyCtrl}</div></section>
       <section class="dsec"><h3><svg class="ico faint"><use href="#i-route"/></svg>Hand off</h3>
