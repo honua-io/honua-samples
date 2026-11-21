@@ -29,12 +29,13 @@ class Node {
   removeAttribute(name) { if (name === 'href') this.href = undefined; }
 }
 
-function publicationApi(opened) {
+function publicationApi(opened, attribution = 'Fixture attribution') {
   return {
     openPublication: async () => {
       opened.push('open');
       return {
         display: { pmtilesUrl: 'https://example.test/parcels.pmtiles', promoteId: 'tmk_txt', minzoom: 0, maxzoom: 14, sourceLayer: 'parcels' },
+        descriptor: { provenance: { attribution } },
         publicFields: [],
       };
     },
@@ -67,7 +68,7 @@ function page({ open }) {
     getLayoutProperty: (id, prop) => layers[id][prop],
     setLayoutProperty: (id, prop, value) => { layers[id][prop] = value; },
     getSource: (id) => sources[id],
-    addSource: (id) => { sources[id] = { id }; },
+    addSource: (id, def) => { sources[id] = { id, ...def }; },
     addLayer: (layer) => { layers[layer.id] = { visibility: 'visible' }; },
     on() {},
     once() {},
@@ -99,4 +100,12 @@ test('closing the county panel restores the snapshot layers the user had hidden'
   await root.dispatch('toggle');
   assert.equal(layers['parcels-fill'].visibility, 'none');
   assert.equal(layers['parcels-line'].visibility, 'visible');
+});
+
+test('county map source carries the descriptor provenance attribution', async () => {
+  const attribution = 'Test descriptor attribution';
+  const { root, map, sources } = page({ open: true });
+  mountCountyPublication({ root, map: () => map, publication: publicationApi([], attribution) });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(sources['county-publication'].attribution, attribution);
 });
