@@ -8,7 +8,7 @@ export function countyExport(publication, feature, format) {
   if (!capture.capturedAt || !capture.captureId || !source?.attribution || !source.license || !sourceUrl || !publication.url) throw new Error('Incomplete county publication provenance.');
   const sanitized = countyParcel(publication, { attributes: feature.properties, geometry: feature.geometry });
   const provenance = { snapshot: capture.capturedAt, attribution: source.attribution,
-    warning: 'County publication capture; not a current legal boundary survey.',
+    warning: 'County publication capture; not a current legal boundary survey. Zoning is the main County of Maui district (largest share, at least 10% of the parcel), reference data, not a zoning determination.',
     sources: { parcels: { sourceUrl, license: source.license, publicationUrl: publication.url, ...capture, crs: publication.descriptor.crs.geoparquet } } };
   const serialize = new Map([['csv', parcelCsv], ['geojson', parcelGeoJson]]).get(format);
   if (!serialize) throw new Error('Unsupported county export format.');
