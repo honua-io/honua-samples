@@ -21,8 +21,14 @@ async function main() {
     throw new Error("Every public collection should link to its items endpoint");
   }
 
+  const search = await getJson("/stac/search?limit=1");
+  const item = search.features?.[0];
+  if (search.type !== "FeatureCollection" || !item?.geometry) {
+    throw new Error("Expected /stac/search to return at least one item with geometry");
+  }
+
   console.log(
-    `PASS: STAC ${root.stac_version} exposes ${collections.length} collection(s): ${collections.map((collection) => collection.title).join(", ")}`,
+    `PASS: STAC ${root.stac_version} exposes ${collections.length} collection(s): ${collections.map((collection) => collection.title).join(", ")}; search returned item ${item.id} from ${item.collection}`,
   );
 }
 

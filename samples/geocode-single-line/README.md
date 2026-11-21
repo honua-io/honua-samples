@@ -17,7 +17,7 @@ node src/run.mjs
 Expected result:
 
 ```text
-PASS: "380 New York St, Redlands, CA" -> "..." (..., ...), score ...
+PASS: "200 S High St, Wailuku, HI 96793" -> "..." (..., ...), score ...
 ```
 
 Set `HONUA_SAMPLE_ADDRESS` to try another address or `HONUA_BASE_URL` to use

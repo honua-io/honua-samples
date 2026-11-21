@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const BASE_URL = process.env.HONUA_BASE_URL ?? "https://demo.honua.io";
-const ADDRESS = process.env.HONUA_SAMPLE_ADDRESS ?? "380 New York St, Redlands, CA";
+const ADDRESS = process.env.HONUA_SAMPLE_ADDRESS ?? "200 S High St, Wailuku, HI 96793";
 
 async function main() {
   const query = new URLSearchParams({ SingleLine: ADDRESS, f: "json" });
