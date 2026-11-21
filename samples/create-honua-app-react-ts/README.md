@@ -15,10 +15,10 @@ FeatureServer layer on your Honua server.
 npm create honua-app@0.2.5 my-map -- --template react-ts
 cd my-map
 npm install
-VITE_HONUA_ENDPOINT=http://localhost:8080/rest/services/<service>/FeatureServer/<layerId> npm run dev -- --port 3000
+VITE_HONUA_ENDPOINT=http://localhost:8080/rest/services/<service>/FeatureServer/<layerId> npm run dev -- --port 3000 --strictPort
 ```
 
-Serve the app on port 3000: `http://localhost:3000` is the one browser origin the repository's
+Serve the app on port 3000 (`--strictPort` stops instead of moving to another port): `http://localhost:3000` is the one browser origin the repository's
 `docker/compose.yml` allows through CORS, so Vite's default port 5173 stops at `The workflow stopped: Failed to fetch`.
 For another Honua server, use an origin its `Cors:AllowedOrigins` allows.
 
