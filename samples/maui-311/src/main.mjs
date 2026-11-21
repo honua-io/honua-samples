@@ -93,7 +93,7 @@ function download(format) {
 form.addEventListener('submit', (event) => event.preventDefault());
 form.addEventListener('input', (event) => {
   clearTimeout(filterTimer);
-  const apply = () => { shown = 25; render(); };
+  const apply = () => { shown = 25; render(); if (map) fitMap(map, filtered); };
   if (event.target === form.elements.search) filterTimer = setTimeout(apply, FILTER_DEBOUNCE_MS);
   else apply();
 });

@@ -24,7 +24,6 @@ let view;
 let timer;
 let filterTimer;
 let loading = false;
-let initialized = false;
 let disposed = false;
 let verifiedAt;
 let selectedId;
@@ -86,12 +85,11 @@ async function load() {
   if (loading || disposed) return;
   loading = true;
   const startingLocationRevision = locationRevision;
-  if (!context) {
-    context = undefined;
-    answer.textContent = 'Zone check unavailable while exercise resources are being verified.';
-  }
+  context = undefined;
+  answer.textContent = 'Zone check unavailable while exercise resources are being verified.';
   clearTimeout(timer);
   refresh.disabled = true;
+  const preserveView = records.length > 0;
   document.body.dataset.sampleStatus = 'loading';
   status.dataset.state = 'loading';
   status.textContent = 'Checking both layers, exercise labels and every page of records…';
@@ -99,28 +97,21 @@ async function load() {
     const snapshot = source.snapshot ? await loadSnapshot() : null;
     records = snapshot ? snapshot.records : await loadExercise(source);
     try { context = snapshot ? snapshot.context : await loadContext(location.search); }
-    catch (error) {
-      if (!context) answer.textContent = `Zone check unavailable: ${error.message}. Check the approved receipts and refresh.`;
-    }
+    catch (error) { answer.textContent = `Zone check unavailable: ${error.message}. Check the approved receipts and refresh.`; }
     if (context && !checkedPoint && locationRevision === startingLocationRevision) answer.textContent = `Connected ${context.zones.length} tsunami zone features and ${context.roads.length} road features. Enter coordinates to inspect the geography.`;
     if (!source.snapshot) verifiedAt = Date.now();
     const validation = records.some(({ properties }) => [true, 1].includes(properties.validation_geometry));
     document.querySelectorAll('[data-geometry-source]').forEach((node) => { node.textContent = validation
       ? 'Synthetic validation geometry; not county source locations.' : 'Geometry: Hawaii Statewide GIS Program, public domain.'; });
     showExercise();
-    if (!initialized && view) {
-      fitFeatureMap(view, filtered);
-      initialized = true;
-    }
+    if (!preserveView && view) fitFeatureMap(view, filtered);
     status.textContent = `Loaded ${records.length} fictional exercise records. No operational use.`;
     status.dataset.state = 'ready';
     document.body.dataset.sampleStatus = 'pass';
   } catch (error) {
-    if (!initialized) {
-      records = [];
-      answer.textContent = 'Exercise resources could not be verified. Refresh before checking again.';
-      dashboard.hidden = true;
-    }
+    records = [];
+    answer.textContent = 'Exercise resources could not be verified. Refresh before checking again.';
+    dashboard.hidden = true;
     status.textContent = `Could not verify the exercise. ${error.message}. Check the import receipts, then refresh.`;
     status.dataset.state = 'error';
     document.body.dataset.sampleStatus = 'fail';
@@ -135,7 +126,7 @@ async function load() {
 form.addEventListener('submit', (event) => event.preventDefault());
 form.addEventListener('input', (event) => {
   clearTimeout(filterTimer);
-  const apply = () => { shown = 25; if (records.length) render(); };
+  const apply = () => { shown = 25; if (records.length) { render(); if (view) fitFeatureMap(view, filtered); } };
   if (event.target === form.elements.search) filterTimer = setTimeout(apply, FILTER_DEBOUNCE_MS);
   else apply();
 });
