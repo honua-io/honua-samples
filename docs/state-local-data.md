@@ -173,7 +173,9 @@ server stops activation. Staging remains non-idempotent; if saving its receipt
 fails, inspect Console before attempting another import.
 
 After reviewing and activating all nine property layers, build a receipt-bound
-public app link:
+public app link. One `maui-sea-level-rise` feature exceeds the server's per-feature
+ring limit, so this step cannot complete yet ([load limits](#bounded-shared-load));
+the public property display uses the subdivided island import instead:
 
 ```sh
 node scripts/state-local/cli.mjs property-app maui artifacts/state-local/run-001
