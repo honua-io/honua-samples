@@ -22,15 +22,14 @@ link into a MapLibre vector source, and draw the tiles. The default is
 
 Serve `src/` with any static web server. With Node.js 20+:
 
-<!-- doc-run: run ready-url="http://localhost:8123/" -->
+<!-- doc-run: run ready-url="http://localhost:3000/" -->
 ```bash
-npx serve -l 8123 src
+npx serve src
 ```
 
-Open `http://localhost:8123`. Port 8123 matters for the public demo: the
-cached tile routes on `https://demo.honua.io` send CORS headers only to
-`https://honua.io`, `https://www.honua.io` and `http://localhost:8123`.
-Against your own Honua server, any origin its `Cors:AllowedOrigins` allows works.
+Open `http://localhost:3000`. The cached tile routes on `https://demo.honua.io`
+answer any origin (`Access-Control-Allow-Origin: *`). Against your own Honua
+server, any origin its `Cors:AllowedOrigins` allows works.
 
 ## What the code does
 
@@ -71,5 +70,5 @@ on failure it shows `FAIL: <message>`.
 `verify/` holds the Playwright spec: against a composed server with a
 collection seeded from the committed fixture (OGC API Tiles enabled, every
 fixture polygon must render from the tiles), and against the public-live
-default, served from `http://localhost:8123` for the reason above. See
+default. See
 [docs/browser-verification](../../docs/browser-verification/README.md).

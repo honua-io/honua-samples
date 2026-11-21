@@ -15,8 +15,12 @@ FeatureServer layer on your Honua server.
 npm create honua-app@0.2.5 my-map -- --template vanilla-ts
 cd my-map
 npm install
-VITE_HONUA_ENDPOINT=http://localhost:8080/rest/services/<service>/FeatureServer/<layerId> npm run dev
+VITE_HONUA_ENDPOINT=http://localhost:8080/rest/services/<service>/FeatureServer/<layerId> npm run dev -- --port 3000
 ```
+
+Serve the app on port 3000: `http://localhost:3000` is the one browser origin the repository's
+`docker/compose.yml` allows through CORS, so Vite's default port 5173 stops at `The workflow stopped: Failed to fetch`.
+For another Honua server, use an origin its `Cors:AllowedOrigins` allows.
 
 The layer must allow anonymous reads: the starter sends no credentials, and Vite would publish any key you gave it
 in the page's JavaScript. Without `VITE_HONUA_ENDPOINT` the starter serves its own committed fixture instead.
