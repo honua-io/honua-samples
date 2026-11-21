@@ -135,7 +135,7 @@
     opts = opts || {};
     if (!window.maplibregl || !window.pmtiles) return unavailableMap(el, "Map library could not load. Connect to the internet to view the interactive map.");
     HI.register();
-    const hash = opts.interactive !== false && !opts.cooperative ? "map" : false;
+    const hash = opts.hash === false ? false : (opts.interactive !== false && !opts.cooperative ? "map" : false);
     if (hash) cameraHashParams(opts.maxBounds || HI.bounds);
     let map;
     try {
@@ -148,18 +148,16 @@
     } catch { return unavailableMap(el, "Interactive map unavailable in this browser. Try a browser with WebGL enabled."); }
     if (hash) bindCameraHistory(map, opts.maxBounds || HI.bounds);
     maps.push(map);
-    // Containers that size after first paint (grid rows, fonts, embedded frames) leave the canvas short; follow the container.
     const fitBounds = opts.bounds || VIEW[opts.view || "core"];
-    new ResizeObserver(() => { map.resize(); if (opts.interactive === false) map.fitBounds(fitBounds, { padding: opts.padding || 0, animate: false }); }).observe(el);
+    const ro = new ResizeObserver(() => { map.resize(); if (opts.interactive === false) map.fitBounds(fitBounds, { padding: opts.padding || 0, animate: false }); });
+    ro.observe(el);
+    map.on("remove", () => { ro.disconnect(); if (map._hmPopup) { map._hmPopup.remove(); map._hmPopup = null; } const idx = maps.indexOf(map); if (idx >= 0) maps.splice(idx, 1); });
     if (opts.nav !== false && opts.interactive !== false) map.addControl(new maplibregl.NavigationControl({ showCompass: false }), opts.navPos || "top-right");
     const a = document.createElement("div"); a.className = "mapattr";
     a.textContent = (opts.attr || "Data: Hawaii Statewide GIS · Honua tiles") + " · ";
     a.insertAdjacentHTML("beforeend", '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> · Protomaps');
     el.appendChild(a);
-    map.on("load", () => {
-      basemap(map, opts); restyle(map);
-      if (opts.onload) opts.onload(map);
-    });
+    map.on("load", () => { basemap(map, opts); restyle(map); if (opts.onload) opts.onload(map); });
     return map;
   }
   function add(map, id, data) {
@@ -217,23 +215,23 @@
   function tmk(t9) { const s = String(t9).padStart(9, "0"); return `(${s[0]}) ${s[1]}-${s[2]}-${s.slice(3, 6)}:${s.slice(6)}`; }
   function money(n) { return n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US"); }
   function icon(name) { return `<svg class="ico" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
+  function openPopup(map, lngLat, content) {
+    if (!map) return null;
+    if (map._hmPopup) map._hmPopup.remove();
+    const { html, ...opts } = typeof content === "string" ? { html: content } : content;
+    return (map._hmPopup = new maplibregl.Popup(opts).setLngLat(lngLat).setHTML(html).addTo(map));
+  }
+  function csvCell(value) { const t = String(value ?? ""); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; }
+  function csv(filename, headers, rows) {
+    const body = [headers.map(csvCell).join(","), ...rows.map((r) => r.map(csvCell).join(","))].join("\n");
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([body], { type: "text/csv;charset=utf-8" })), download: filename });
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  }
   function hashParams() { return cameraHashParams(HI.bounds); }
-  window.HM = { hashParams, themed, cssVar, setTheme, theme, restyle, maps, decode, get, points, create, add, overlays, toggle, bindToggles, label, bbox, streetNames, fitStreet, tmk, money, icon, VIEW, ZONE_GROUP, ZONE_COLOR };
-
+  window.HM = { hashParams, themed, cssVar, setTheme, theme, restyle, maps, decode, get, points, create, add, overlays, toggle, bindToggles, label, bbox, streetNames, fitStreet, tmk, money, icon, openPopup, csv, VIEW, ZONE_GROUP, ZONE_COLOR };
   /* Tabs: [role=tablist] buttons with aria-controls */
-  document.addEventListener("click", (e) => {
-    const t = e.target.closest('[role="tab"]'); if (!t) return;
-    const list = t.closest('[role="tablist"]');
-    list.querySelectorAll('[role="tab"]').forEach((b) => { const on = b === t; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; const p = document.getElementById(b.getAttribute("aria-controls")); if (p) p.hidden = !on; });
-  });
-  document.addEventListener("keydown", (e) => {
-    const t = e.target.closest && e.target.closest('[role="tab"]'); if (!t || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
-    const tabs = [...t.closest('[role="tablist"]').querySelectorAll('[role="tab"]')]; const i = tabs.indexOf(t);
-    const n = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]; n.focus(); n.click();
-  });
+  document.addEventListener("click", (e) => { const t = e.target.closest('[role="tab"]'); if (!t) return; t.closest('[role="tablist"]').querySelectorAll('[role="tab"]').forEach((b) => { const on = b === t; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; const p = document.getElementById(b.getAttribute("aria-controls")); if (p) p.hidden = !on; }); });
+  document.addEventListener("keydown", (e) => { const t = e.target.closest && e.target.closest('[role="tab"]'); if (!t || !["ArrowLeft", "ArrowRight"].includes(e.key)) return; const tabs = [...t.closest('[role="tablist"]').querySelectorAll('[role="tab"]')]; const n = tabs[(tabs.indexOf(t) + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]; n.focus(); n.click(); });
   /* Segmented buttons */
-  document.addEventListener("click", (e) => {
-    const b = e.target.closest(".seg button"); if (!b) return;
-    b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
-  });
+  document.addEventListener("click", (e) => { const b = e.target.closest(".seg button"); if (b) b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); });
 })();

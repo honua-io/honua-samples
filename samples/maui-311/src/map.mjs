@@ -21,9 +21,13 @@ export function updateMap(map, records) {
   const view = views.get(map);
   const status = view.status;
   updateFeatureMap(view, records);
-  fitFeatureMap(view, records);
   const describe = () => { status.textContent = records.length
     ? `${records.length} exercise requests mapped. Select a road or point to inspect a request.` : 'No requests match these filters.'; };
   if (map.getSource('records')) map.once('idle', describe);
   else map.once('load', () => map.once('idle', describe));
+}
+
+export function fitMap(map, records) {
+  const view = views.get(map);
+  if (view) fitFeatureMap(view, records);
 }

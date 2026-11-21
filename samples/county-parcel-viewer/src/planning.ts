@@ -70,8 +70,9 @@ async function checkLayer(target: HTMLElement, query: { layer: PlanningLayer; ur
   } catch {
     if (context.signal.aborted) return;
     result.dataset.state = "error";
-    const retry = h("button", { class: "btn quiet", type: "button" }, "Retry layer check");
+    const retry = h("button", { class: "btn quiet retry-btn", type: "button" }, "Retry layer check") as HTMLButtonElement;
     retry.addEventListener("click", () => {
+      retry.disabled = true;
       result.dataset.state = "loading";
       result.replaceChildren("Checking this parcel…");
       void checkLayer(target, query, context);

@@ -100,13 +100,12 @@ function connectExports(options: {
 }
 
 function connectPointerSelection(table: HonuaFeatureTable, signal: AbortSignal): void {
-  // The table selects a row on every pointerdown, so a touch scroll that starts on a row
-  // would select it. Touch and pen presses are kept from the table and select on a completed tap.
   const host = element("parcel-table");
   let tap: { id: number; key: string; x: number; y: number } | undefined;
   host.addEventListener("pointerdown", (event) => {
     tap = undefined;
     if (event.pointerType === "mouse" || event.button !== 0 || !event.isPrimary) return;
+    if (globalThis.getSelection?.()?.toString().trim()) return;
     const path = event.composedPath();
     if (path.some((node) => node instanceof Element && node.matches("a, button, input, select, textarea, [contenteditable]"))) return;
     const row = path.find((node) => node instanceof HTMLElement && node.dataset.rowKey) as HTMLElement | undefined;
@@ -151,7 +150,7 @@ export async function createParcelBrowser(config: ViewerConfig, onPick: (id: str
   const table = createHonuaFeatureTable<Record<string, unknown>>({ source, sourceId, identityField: idField,
     columns: [{ field: idField, label: "Source ID" }, { field: "tmk_txt", label: "TMK" },
       { field: "gisacres", label: "GIS acres", type: "number" }, { field: "taxacres", label: "Tax acres", type: "number" }],
-    budgets: { pageSize: 25, maxCachedRows: 100, maxRequests: 20, maxExportRows: EXPORT_ROWS,
+    budgets: { pageSize: 25, maxCachedRows: 100, maxRequests: 500, maxExportRows: EXPORT_ROWS,
       maxExportBytes: EXPORT_BYTES, windowOverscan: 0 }, authorizationScope: ["anonymous-public"],
   });
   let mounted: Awaited<ReturnType<typeof mountHonuaApplication>> | undefined;

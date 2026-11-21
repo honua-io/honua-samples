@@ -158,17 +158,21 @@
       const layerIds = ["layer-fill", "layer-line", "layer-point"];
       const basemap = addBasemapIfAvailable(map, "layer-fill");
 
+      let activePopup = null;
+      map.on("click", (event) => {
+        const feature = map.queryRenderedFeatures(event.point, { layers: layerIds })[0];
+        if (!feature) return;
+        activePopup?.remove();
+        const properties = feature.properties;
+        const rows = Object.entries(properties)
+          .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
+          .join("");
+        activePopup = new maplibregl.Popup({ maxWidth: "320px" })
+          .setLngLat(event.lngLat)
+          .setHTML(`<strong class="popup-title">${escapeHtml(readField(properties, labelField) ?? "(no label)")}</strong><table>${rows}</table>`)
+          .addTo(map);
+      });
       for (const id of layerIds) {
-        map.on("click", id, (event) => {
-          const properties = event.features[0].properties;
-          const rows = Object.entries(properties)
-            .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
-            .join("");
-          new maplibregl.Popup({ maxWidth: "320px" })
-            .setLngLat(event.lngLat)
-            .setHTML(`<strong class="popup-title">${escapeHtml(readField(properties, labelField) ?? "(no label)")}</strong><table>${rows}</table>`)
-            .addTo(map);
-        });
         map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
         map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
       }

@@ -10,6 +10,7 @@ import { element } from '../../../shared/state-local/dom.mjs';
 import { displayUtc } from '../../../shared/state-local/exercise-time.mjs';
 import { updateFeatureMap, fitFeatureMap } from '../../../shared/state-local/map.mjs';
 
+const FILTER_DEBOUNCE_MS = 180;
 const form = document.querySelector('#filters');
 const status = document.querySelector('#load-status');
 const freshness = document.querySelector('#freshness');
@@ -21,7 +22,9 @@ let filtered = [];
 let shown = 25;
 let view;
 let timer;
+let filterTimer;
 let loading = false;
+let disposed = false;
 let verifiedAt;
 let selectedId;
 let context;
@@ -79,7 +82,7 @@ function freshnessText() {
 }
 
 async function load() {
-  if (loading) return;
+  if (loading || disposed) return;
   loading = true;
   const startingLocationRevision = locationRevision;
   context = undefined;
@@ -116,15 +119,30 @@ async function load() {
     freshnessText();
     refresh.disabled = false;
     loading = false;
-    if (!source.snapshot) timer = setTimeout(load, 60_000);
+    if (!source.snapshot && !disposed) timer = setTimeout(load, 60_000);
   }
 }
 
 form.addEventListener('submit', (event) => event.preventDefault());
-form.addEventListener('input', () => { shown = 25; if (records.length) { render(); if (view) fitFeatureMap(view, filtered); } });
-form.addEventListener('reset', () => setTimeout(() => { shown = 25; render(); if (view) fitFeatureMap(view, filtered); }));
+form.addEventListener('input', (event) => {
+  clearTimeout(filterTimer);
+  const apply = () => { shown = 25; if (records.length) { render(); if (view) fitFeatureMap(view, filtered); } };
+  if (event.target === form.elements.search) filterTimer = setTimeout(apply, FILTER_DEBOUNCE_MS);
+  else apply();
+});
+form.addEventListener('reset', () => {
+  clearTimeout(filterTimer);
+  setTimeout(() => { shown = 25; render(); if (view) fitFeatureMap(view, filtered); });
+});
 document.querySelector('#more').addEventListener('click', () => { shown += 25; render(); });
 refresh.addEventListener('click', load);
+window.addEventListener('pagehide', (event) => {
+  if (event.persisted) return;
+  disposed = true;
+  clearTimeout(timer);
+  clearTimeout(filterTimer);
+  view?.map.remove();
+});
 const answer = document.querySelector('#location-answer');
 function checkLocation(point) {
   checkedPoint = point;

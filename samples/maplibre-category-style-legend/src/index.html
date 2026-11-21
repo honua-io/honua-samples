@@ -22,7 +22,11 @@
     #map { position: absolute; inset: 0; }
     #legend { position: absolute; left: 0.75rem; bottom: 0.75rem; max-width: min(18rem, 60%); max-height: 70%; overflow: auto; margin: 0; padding: 0.5rem 0.75rem; list-style: none; font-size: 12px; background: rgba(255, 253, 246, 0.94); border: 1px solid #b9b5a8; border-radius: 4px; }
     #legend:empty { display: none; }
-    #legend li { display: flex; gap: 0.4rem; align-items: center; }
+    #legend li { display: flex; }
+    #legend .legend-btn { display: flex; gap: 0.4rem; align-items: center; width: 100%; padding: 0.2rem 0.3rem; border: 0; border-radius: 3px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+    #legend .legend-btn:hover { background: rgba(23, 34, 28, 0.08); }
+    #legend .legend-btn[aria-pressed="true"] { background: rgba(23, 99, 58, 0.16); font-weight: 600; }
+    #legend .legend-btn.is-dimmed { opacity: 0.45; }
     #legend .swatch { flex: none; width: 0.9rem; height: 0.9rem; border: 1px solid #555; }
     #legend .count { margin-left: auto; color: #555; }
     .maplibregl-popup-content table { border-collapse: collapse; font-size: 12px; }
@@ -171,17 +175,44 @@
       map.addLayer({ id: "features-line", type: "line", source: "features", paint: { "line-color": "#ffffff", "line-width": 0.6 } });
       const basemap = addBasemapIfAvailable(map, "features-fill");
 
-      legend.innerHTML = [...classes, ...(otherCount ? [{ value: "Other", count: otherCount, color: otherColor }] : [])]
-        .map((c) => `<li data-category="${escapeHtml(c.value)}"><span class="swatch" style="background:${c.color}"></span><span class="label">${escapeHtml(c.value)}</span><span class="count">${c.count}</span></li>`)
+      const legendItems = [...classes, ...(otherCount ? [{ value: "Other", count: otherCount, color: otherColor }] : [])];
+      legend.innerHTML = legendItems
+        .map((c) => `<li data-category="${escapeHtml(c.value)}"><button type="button" class="legend-btn" aria-pressed="false"><span class="swatch" style="background:${c.color}"></span><span class="label">${escapeHtml(c.value)}</span><span class="count">${c.count}</span></button></li>`)
         .join("");
 
+      const classValues = classes.map((c) => c.value);
+      let activeCategory = null;
+      let activePopup = null;
+      const applyCategoryFilter = (category) => {
+        activeCategory = activeCategory === category ? null : category;
+        const filter = !activeCategory ? null
+          : activeCategory === "Other" ? ["!", ["in", ["get", "category_class"], ["literal", classValues]]]
+          : ["==", ["get", "category_class"], activeCategory];
+        map.setFilter("features-fill", filter);
+        map.setFilter("features-line", filter);
+        activePopup?.remove();
+        for (const item of legend.querySelectorAll("li[data-category]")) {
+          const button = item.querySelector("button");
+          const selected = item.dataset.category === activeCategory;
+          button.setAttribute("aria-pressed", String(selected));
+          button.classList.toggle("is-dimmed", Boolean(activeCategory) && !selected);
+        }
+      };
+      legend.addEventListener("click", (event) => {
+        const item = event.target.closest("li[data-category]");
+        if (item) applyCategoryFilter(item.dataset.category);
+      });
+
       map.on("click", "features-fill", (event) => {
-        const properties = event.features[0].properties;
+        const feature = event.features?.[0];
+        if (!feature) return;
+        activePopup?.remove();
+        const properties = feature.properties;
         const rows = Object.entries(properties)
           .filter(([key]) => key !== "category_class")
           .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
           .join("");
-        new maplibregl.Popup({ maxWidth: "320px" })
+        activePopup = new maplibregl.Popup({ maxWidth: "320px" })
           .setLngLat(event.lngLat)
           .setHTML(`<strong class="popup-title">${escapeHtml(properties.category_class)}</strong><table>${rows}</table>`)
           .addTo(map);

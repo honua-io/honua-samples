@@ -228,6 +228,7 @@ test('theme changes repaint map background and preserve distinguishable operatio
   await expect.poll(async () => (await readPixels(page, canvas, [[4,4]]))[0].r).toBeLessThan(light.r / 2);
   for (const anchor of ['maui-public-schools:30', 'exercise_closure-3']) {
     await page.getByLabel('Find record or anchor').fill(anchor);
+    await expect(page.locator('#rows')).toContainText(anchor);
     await expect(page.locator('#map-status')).toContainText('1 records mapped');
     await settleMapCanvas(page);
     const size = await canvas.boundingBox();

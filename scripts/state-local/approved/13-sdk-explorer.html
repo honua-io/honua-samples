@@ -613,7 +613,7 @@ try {
   }
 
   /* ---------- Map runtime: every sample adds into RT and resetRuntime() removes it ---------- */
-  let map;
+  let map, debounce;
   let restoringCamera = HM.hashParams().has("map");
   const RT = { layers: [], sources: [], handlers: [], popups: [], timers: [], cleanup: [] };
   function rtSource(id, data) { map.addSource(id, { type: "geojson", data }); RT.sources.push(id); }
@@ -624,9 +624,10 @@ try {
     rtOn(type, handler);
   }
   function rtLater(fn, ms) { RT.timers.push(setTimeout(fn, ms)); }
-  function rtPopup(lngLat, html) { const p = new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setHTML(html).addTo(map); RT.popups.push(p); return p; }
+  function rtPopup(lngLat, html) { RT.popups.splice(0).forEach((p) => p.remove()); const p = new maplibregl.Popup({ maxWidth: "320px" }).setLngLat(lngLat).setHTML(html).addTo(map); RT.popups.push(p); return p; }
   function setBasemap(on) { map.basemapLayers.forEach((id) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none")); $("#map").classList.toggle("no-labels", !on); }
   function resetRuntime() {
+    clearTimeout(debounce); debounce = null;
     RT.cleanup.splice(0).forEach((f) => { try { f(); } catch (e) { /* teardown is best effort */ } });
     RT.timers.splice(0).forEach(clearTimeout);
     RT.handlers.splice(0).forEach((h) => (h.length === 3 ? map.off(h[0], h[1], h[2]) : map.off(h[0], h[1])));
@@ -806,6 +807,7 @@ try {
   /* ---------- Selection, params, source, readme ---------- */
   const sim = () => { const s = BY[state.id]; return D.display && s && s.live ? SIMS[s.live] ?? null : null; };
   function select(id, opts = {}) {
+    clearTimeout(debounce); debounce = null;
     if (!BY[id]) id = "maplibre-featureserver-layer";
     const s = BY[id];
     state.id = id; state.file = 0; state.prevCode = {};
@@ -879,7 +881,6 @@ try {
     if (sp.type === "swatch") return `<div class="prm"><span class="lbl"><span>${esc(sp.label)}</span><code>${esc(sp.code)}</code></span><div class="sws" role="group" aria-label="${esc(sp.label)}">${COLOR_TOKENS.map((t, i) => `<button type="button" data-k="${sp.key}" data-v="${t}" aria-pressed="${t === v}" aria-label="Categorical colour ${i + 1}" title="${t}"><span style="background:var(${t})"></span></button>`).join("")}</div></div>`;
     return "";
   }
-  let debounce;
   function bindParams() {
     $("#params").querySelectorAll("select[data-k]").forEach((el) => el.addEventListener("change", () => { state.params[el.dataset.k] = el.value; paramsChanged(el.dataset.k); }));
     $("#params").querySelectorAll("input[type=checkbox][data-k]").forEach((el) => el.addEventListener("change", () => { state.params[el.dataset.k] = el.checked; paramsChanged(el.dataset.k); }));

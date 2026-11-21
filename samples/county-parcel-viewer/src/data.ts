@@ -13,9 +13,9 @@ import type { GeoJsonGeometry } from "@honua/sdk-js/geometry";
 
 import { addressPrecision, type AddressPrecision } from "./address-precision.js";
 import { DISPLAY_SNAPSHOT, OFFLINE_FIXTURE, type ViewerConfig } from "./config.js";
-import { displayCandidates, displayParcelAtPoint, displayParcelByTmk } from "./display-data.js";
+import { displayCandidates, displayParcelAtPoint, displayParcelById, displayParcelByTmk } from "./display-data.js";
 import type { OverlapCandidate } from "./overlap.js";
-import { loggedFetch } from "./request-log.js";
+import { isAbort, loggedFetch } from "./request-log.js";
 import { tmkWhere } from "./tmk.js";
 
 export interface Parcel {
@@ -118,6 +118,7 @@ export async function parcelByTmk(config: ViewerConfig, digits: string, signal: 
 
 /** Resolve a table selection by its source object ID, never its row position. */
 export async function parcelById(config: ViewerConfig, id: string | number, signal: AbortSignal): Promise<Parcel | null> {
+  if (DISPLAY_SNAPSHOT) return displayParcelById(config.parcelsUrl, id, signal);
   const { client, serviceId, layerId, fields, idField } = await layer(config.parcelsUrl);
   const response = await QueryBuilder.for(client, serviceId, layerId)
     .objectIds(String(id)).outFields(idField, ...parcelFields(fields))
@@ -208,9 +209,17 @@ let providerCheck: Promise<string> | undefined;
 // (for example Amazon Location or Esri) is refused before an address is sent.
 const OSM_PROVIDER = /nominatim|openstreetmap|\bosm\b/iu;
 
-async function checkGeocoderProvider(config: ViewerConfig): Promise<string> {
+function fetchWithSignal(signal?: AbortSignal): typeof fetch {
+  if (!signal) return loggedFetch;
+  return (input, init) => {
+    const combined = init?.signal ? AbortSignal.any([init.signal, signal]) : signal;
+    return loggedFetch(input, { ...init, signal: combined });
+  };
+}
+
+async function checkGeocoderProvider(config: ViewerConfig, signal?: AbortSignal): Promise<string> {
   const url = `${config.baseUrl}/rest/services/${encodeURIComponent(config.geocoderLocator)}/GeocodeServer?f=json`;
-  const response = await loggedFetch(url);
+  const response = await loggedFetch(url, signal ? { signal } : undefined);
   if (!response.ok) throw new GeocoderUnavailableError(`GeocodeServer metadata answered HTTP ${response.status}`);
   const body = (await response.json()) as { locatorProperties?: { Provider?: string } };
   const provider = String(body.locatorProperties?.Provider ?? "unknown");
@@ -221,14 +230,15 @@ async function checkGeocoderProvider(config: ViewerConfig): Promise<string> {
 }
 
 /** Up to five address matches. Throws GeocoderUnavailableError when address search cannot run. */
-export async function geocode(config: ViewerConfig, text: string): Promise<AddressMatch[]> {
+export async function geocode(config: ViewerConfig, text: string, signal?: AbortSignal): Promise<AddressMatch[]> {
   if (OFFLINE_FIXTURE) throw new GeocoderUnavailableError("Address search is unavailable in the synthetic fixture. Use one of the three sample TMKs.");
   if (DISPLAY_SNAPSHOT) throw new GeocoderUnavailableError("Live data coming. Search by TMK or click a parcel in this snapshot.");
-  providerCheck ??= checkGeocoderProvider(config);
+  providerCheck ??= checkGeocoderProvider(config, signal);
   providerCheck.catch(() => (providerCheck = undefined));
   try {
     await providerCheck;
-    const geocoder = new HonuaGeocodingClient({ baseUrl: config.baseUrl, locatorName: config.geocoderLocator, fetchFn: loggedFetch, timeoutMs: 20_000 });
+    signal?.throwIfAborted();
+    const geocoder = new HonuaGeocodingClient({ baseUrl: config.baseUrl, locatorName: config.geocoderLocator, fetchFn: fetchWithSignal(signal), timeoutMs: 20_000 });
     const results = await geocoder.forwardGeocode(text, { maxResults: 5, spatialReferenceWkid: 4326 });
     const seen = new Set<string>();
     const matches: AddressMatch[] = [];
@@ -245,6 +255,7 @@ export async function geocode(config: ViewerConfig, text: string): Promise<Addre
     }
     return matches.slice(0, 5);
   } catch (error) {
+    if (isAbort(error, signal)) throw error;
     if (error instanceof GeocoderUnavailableError) throw error;
     throw new GeocoderUnavailableError(error instanceof Error ? error.message : String(error));
   }
