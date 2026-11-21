@@ -7,6 +7,7 @@ import { element } from '../../../shared/state-local/dom.mjs';
 import { createInventoryMap } from './map.mjs';
 import { updateFeatureMap, fitFeatureMap } from '../../../shared/state-local/map.mjs';
 
+const FILTER_DEBOUNCE_MS = 180;
 const form = document.querySelector('#filters');
 const status = document.querySelector('#load-status');
 const refresh = document.querySelector('#refresh');
@@ -14,10 +15,14 @@ const dashboard = document.querySelector('#dashboard');
 let inventory;
 let filtered = [];
 let shown = 25;
+let selectedId;
+let initialized = false;
+let filterTimer;
 let view;
 let source;
 
 function select(feature) {
+  selectedId = feature.id;
   renderDetail(feature, inventory, select);
   const detail = document.querySelector('#detail');
   detail.scrollIntoView({ block: 'nearest' });
@@ -46,9 +51,11 @@ function renderInventory() {
   renderRows(filtered.slice(0, shown), select);
   document.querySelector('#result-count').textContent = `${filtered.length} matching records · showing ${Math.min(shown, filtered.length)}`;
   document.querySelector('#more').hidden = shown >= filtered.length;
-  document.querySelector('#detail').replaceChildren(element('h2', 'Record details'),
+  const selected = filtered.find((record) => record.id === selectedId);
+  if (selected) renderDetail(selected, inventory, select);
+  else document.querySelector('#detail').replaceChildren(element('h2', 'Record details'),
     element('p', filtered.length ? 'Select a feature on the map or a record in the list.' : 'No records match. Clear filters to restore the inventory.'));
-  if (view) { updateFeatureMap(view, filtered); fitFeatureMap(view, filtered); }
+  if (view) updateFeatureMap(view, filtered);
 }
 
 async function load() {
@@ -76,6 +83,10 @@ async function load() {
     renderCrews(inventory);
     shown = 25;
     renderInventory();
+    if (!initialized && view) {
+      fitFeatureMap(view, filtered);
+      initialized = true;
+    }
     const date = inventory.orders[0]?.properties.scenario_date ?? inventory.inspections[0]?.properties.scenario_date;
     document.querySelector('#scenario').textContent = `${fixtures ? 'Synthetic bridge validation fixtures' : 'Historical bridges: June 20, 2025'}. Maintenance exercise: ${date ?? 'no exercise records'} (UTC).`;
     status.textContent = `Loaded ${inventory.bridges.length} ${fixtures ? 'synthetic bridge fixtures' : 'historical bridges'}, ${inventory.orders.length} fictional orders and ${inventory.inspections.length} fictional inspections.`;
@@ -91,13 +102,23 @@ async function load() {
 
 form.addEventListener('submit', (event) => event.preventDefault());
 form.addEventListener('input', (event) => {
+  clearTimeout(filterTimer);
   if (event.target === form.elements.dataset) mapFilters();
-  shown = 25;
-  if (inventory) renderInventory();
+  const apply = () => { shown = 25; if (inventory) renderInventory(); };
+  if (event.target === form.elements.search) filterTimer = setTimeout(apply, FILTER_DEBOUNCE_MS);
+  else apply();
 });
-form.addEventListener('reset', () => setTimeout(() => { mapFilters(); shown = 25; if (inventory) renderInventory(); }));
+form.addEventListener('reset', () => {
+  clearTimeout(filterTimer);
+  setTimeout(() => { mapFilters(); shown = 25; if (inventory) { renderInventory(); if (view) fitFeatureMap(view, filtered); } });
+});
 document.querySelector('#more').addEventListener('click', () => { shown += 25; if (inventory) renderInventory(); });
 refresh.addEventListener('click', load);
+window.addEventListener('pagehide', (event) => {
+  if (event.persisted) return;
+  clearTimeout(filterTimer);
+  view?.map.remove();
+});
 mapFilters();
 try {
   source = displaySnapshot ? null : bindings(location.search);

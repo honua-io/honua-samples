@@ -11,9 +11,12 @@
   <style>
     html, body { height: 100%; margin: 0; }
     body { display: grid; grid-template-rows: auto minmax(320px, 1fr) auto; font: 15px/1.45 system-ui, sans-serif; color: #17221c; background: #f4f1e8; }
-    header { padding: 0.75rem 1rem; }
+    header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.75rem 1rem; }
+    .header-text { min-width: 0; }
     h1 { margin: 0 0 0.25rem; font-size: 1.15rem; }
     #status { margin: 0; }
+    #toggle-3d { padding: 0.35rem 0.75rem; border: 1px solid #1d4f3a; border-radius: 4px; background: #fffdf6; color: #1d4f3a; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    #toggle-3d[aria-pressed="true"] { background: #1d4f3a; color: #fffdf6; }
     #map { min-height: 320px; }
     pre { margin: 0; padding: 0.5rem 1rem; max-height: 7rem; overflow: auto; font-size: 12px; background: #fffdf6; border-top: 1px solid #b9b5a8; }
     [data-state="pass"] { color: #17633a; }
@@ -24,8 +27,11 @@
 </head>
 <body data-sample-status="loading">
   <header>
-    <h1>OGC API Tiles vector tiles as a MapLibre source</h1>
-    <p id="status">Reading the tileset metadata...</p>
+    <div class="header-text">
+      <h1>OGC API Tiles vector tiles as a MapLibre source</h1>
+      <p id="status">Reading the tileset metadata...</p>
+    </div>
+    <button id="toggle-3d" type="button" aria-pressed="true" hidden>Switch to 2D</button>
   </header>
   <div id="map" role="region" aria-label="Map"></div>
   <pre id="requests" aria-label="Requests this page made"></pre>
@@ -44,6 +50,19 @@
     const heightField = params.get("heightField") ?? "render_height";
     const status = document.querySelector("#status");
     const requests = document.querySelector("#requests");
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    }
+
+    function buildingPopupHtml(properties) {
+      const height = Number(properties[heightField]);
+      const title = Number.isFinite(height) ? `Building · ${height.toFixed(1)} m` : "Building footprint";
+      const rows = Object.entries(properties)
+        .map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(typeof value === "object" ? JSON.stringify(value) : value)}</td></tr>`)
+        .join("");
+      return `<strong class="popup-title">${escapeHtml(title)}</strong><table>${rows}</table>`;
+    }
 
     function logRequest(url) {
       requests.textContent += `GET ${url}\n`;
@@ -132,19 +151,53 @@
 
       await mapLoaded;
       map.addSource("tiles", { type: "vector", tiles: [template], minzoom, maxzoom });
-      map.addLayer(
-        extrude
-          ? {
-              id: "tiles-layer", type: "fill-extrusion", source: "tiles", "source-layer": sourceLayer,
-              paint: {
-                "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["to-number", ["get", heightField]], 4], 0, "#8cc4a5", 30, "#1d4f3a"],
-                "fill-extrusion-height": ["coalesce", ["to-number", ["get", heightField]], 4],
-                "fill-extrusion-opacity": 0.85,
-              },
-            }
-          : { id: "tiles-layer", type: "fill", source: "tiles", "source-layer": sourceLayer, paint: { "fill-color": "#2f7d5b", "fill-outline-color": "#1d4f3a" } },
-      );
-      const basemap = addBasemapIfAvailable(map, "tiles-layer");
+      const layer3dId = extrude ? "tiles-layer" : "buildings-3d";
+      const layer2dId = extrude ? "buildings-2d" : "tiles-layer";
+      map.addLayer({
+        id: layer3dId, type: "fill-extrusion", source: "tiles", "source-layer": sourceLayer,
+        layout: { visibility: extrude ? "visible" : "none" },
+        paint: {
+          "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["to-number", ["get", heightField]], 4], 0, "#8cc4a5", 30, "#1d4f3a"],
+          "fill-extrusion-height": ["coalesce", ["to-number", ["get", heightField]], 4],
+          "fill-extrusion-opacity": 0.85,
+        },
+      });
+      map.addLayer({
+        id: layer2dId, type: "fill", source: "tiles", "source-layer": sourceLayer,
+        layout: { visibility: extrude ? "none" : "visible" },
+        paint: { "fill-color": "#2f7d5b", "fill-outline-color": "#1d4f3a" },
+      });
+      const buildingLayers = [layer3dId, layer2dId];
+      let activePopup = null;
+      map.on("click", (event) => {
+        const feature = map.queryRenderedFeatures(event.point, { layers: buildingLayers })[0];
+        if (!feature) return;
+        activePopup?.remove();
+        activePopup = new maplibregl.Popup({ maxWidth: "320px" })
+          .setLngLat(event.lngLat)
+          .setHTML(buildingPopupHtml(feature.properties ?? {}))
+          .addTo(map);
+      });
+      for (const id of buildingLayers) {
+        map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
+        map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
+      }
+      let is3d = extrude;
+      const toggle3d = document.querySelector("#toggle-3d");
+      const syncToggle = () => {
+        toggle3d.setAttribute("aria-pressed", String(is3d));
+        toggle3d.textContent = is3d ? "Switch to 2D" : "Switch to 3D";
+      };
+      syncToggle();
+      toggle3d.hidden = false;
+      toggle3d.addEventListener("click", () => {
+        is3d = !is3d;
+        map.setLayoutProperty(layer3dId, "visibility", is3d ? "visible" : "none");
+        map.setLayoutProperty(layer2dId, "visibility", is3d ? "none" : "visible");
+        map.easeTo({ pitch: is3d ? 50 : 0, duration: 400 });
+        syncToggle();
+      });
+      const basemap = addBasemapIfAvailable(map, layer3dId);
 
       const extent = (await extentRequest)?.extent?.spatial?.bbox?.[0];
       if (view === "extent") {

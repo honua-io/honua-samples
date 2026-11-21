@@ -65,6 +65,12 @@
   .eam { font-size: 12px; color: var(--c-ok-ink); display: inline-flex; gap: 3px; align-items: center; margin-left: auto; }
   .eam .ico { width: 12px; height: 12px; }
   .hist-cond { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+  .notif-pop { position: fixed; top: 56px; right: 16px; z-index: 40; width: min(380px, calc(100vw - 32px)); background: var(--c-raised); border: 1px solid var(--c-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-3); padding: 14px 16px; }
+  .notif-pop ul { list-style: none; padding: 0; margin: 8px 0 0; }
+  .notif-pop li { padding: 8px 0; border-top: 1px solid var(--c-rule); font-size: 13px; }
+  .notif-pop li:first-child { border-top: 0; }
+  .cip-box { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--c-rule); border-radius: var(--radius-md); background: var(--c-surface-2); font-size: 12.5px; }
+  .receipt-row { padding: 8px 16px; border-top: 1px solid var(--c-rule); background: var(--c-surface-2); font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
   @media (max-width: 1100px) { .grid, .grid2 { grid-template-columns: minmax(0, 1fr); } }
   .grid2 > *, .grid > * { min-width: 0; }
   @media (max-width: 640px) {
@@ -90,9 +96,13 @@
   </nav>
   <span class="spacer"></span>
   <span class="env hide-sm"><span class="dot"></span>Snapshot · browser exercise</span>
-  <button class="iconbtn" aria-label="Notifications"><svg class="ico"><use href="#i-bell"/></svg></button>
+  <button class="iconbtn" id="notifBtn" type="button" aria-label="Notifications" aria-expanded="false" aria-controls="notifPop"><svg class="ico"><use href="#i-bell"/></svg></button>
   <span class="avatar" title="Keola Kahananui, Highways Division supervisor">KK</span>
 </header>
+<aside class="notif-pop" id="notifPop" aria-label="Operations notifications" hidden>
+  <div class="row"><b style="font-size:13.5px">Alerts &amp; MCP Ops Inbox</b><button class="iconbtn" style="margin-left:auto" type="button" id="notifClose" aria-label="Close notifications"><svg class="ico"><use href="#i-x"/></svg></button></div>
+  <ul id="notifList"></ul>
+</aside>
 <div class="demostrip" role="note">
   <span class="display-snapshot">Real data: Hawaii Statewide GIS; demo records are labelled; snapshot 2026-11-15. <a href="/state-local/data/approved/manifest.json">Sources and licences</a>. Live data coming.</span>
   <span class="tag-real">Real data</span> NBI bridges with condition ratings, roads, flood and tsunami zones (Hawaii Statewide GIS Program)
@@ -111,7 +121,7 @@
       <span class="chip ok" title="Synthetic asset inventory; download the labelled exercise data"><svg class="ico" style="width:13px;height:13px"><use href="#i-globe"/></svg>Demo catalog preview</span>
       <span class="chip" title="Illustrative integration; no external system is connected"><svg class="ico" style="width:13px;height:13px"><use href="#i-refresh"/></svg>EAM sync · preview</span>
       <a class="btn" href="#" id="publicWorksExport" title="Export demo assets, or filtered county projects in Capital projects"><svg class="ico"><use href="#i-download"/></svg>Export</a>
-      <a class="btn primary" href="#"><svg class="ico"><use href="#i-plus"/></svg>New work order</a>
+      <button class="btn primary" type="button" id="topNewWo"><svg class="ico"><use href="#i-plus"/></svg>New work order</button>
     </div>
   </div>
 <div class="row wrap" role="group" aria-label="Public works view" style="margin-bottom:12px">
@@ -185,9 +195,10 @@
         <section role="tabpanel" id="ap2" aria-labelledby="at2" class="panel-b" hidden></section>
         <section role="tabpanel" id="ap3" aria-labelledby="at3" class="panel-b" hidden></section>
       </div>
+      <div id="assetReceipts" class="receipt-row" hidden></div>
       <div class="row" style="padding:12px 16px;border-top:1px solid var(--c-rule)">
-        <button class="btn sm"><svg class="ico"><use href="#i-clipboard"/></svg>Schedule inspection</button>
-        <button class="btn sm primary" style="margin-left:auto"><svg class="ico"><use href="#i-wrench"/></svg>Create work order</button>
+        <button class="btn sm" type="button" id="schedInspBtn"><svg class="ico"><use href="#i-clipboard"/></svg>Schedule inspection</button>
+        <button class="btn sm primary" type="button" id="createWoBtn" style="margin-left:auto"><svg class="ico"><use href="#i-wrench"/></svg>Create work order</button>
       </div>
     </aside>
   </div>
@@ -203,8 +214,14 @@
         <div class="approval" style="margin-top:12px">
           <div class="row wrap" style="gap:12px">
             <div class="grow"><b id="planSum">12 inspections and cleanings · 31 crew-hours · Tue to Thu</b><div class="who">Approving creates the work orders and pushes them to the board and the EAM. Nothing is created until one person approves.</div></div>
-            <button class="btn" type="button">Edit plan</button>
+            <button class="btn" type="button" id="editPlanBtn">Edit plan</button>
             <button class="btn primary" type="button" id="approvePlan"><svg class="ico"><use href="#i-check"/></svg>Approve plan</button>
+          </div>
+          <div id="planEditPanel" hidden style="margin-top:10px;padding-top:10px;border-top:1px solid var(--c-rule)">
+            <div class="row wrap" style="gap:8px;font-size:12.5px">
+              <label class="row" style="gap:6px">Lead crew <select id="planCrewSel" style="height:28px;border:1px solid var(--c-border-strong);border-radius:4px;padding:0 6px;background:var(--c-surface)"><option value="0">Balanced (3 crews)</option><option value="1">Prioritize Vactor 1</option><option value="2">Add photo verification (+2 h)</option></select></label>
+              <button class="btn sm primary" type="button" id="applyPlanEdit">Apply schedule change</button>
+            </div>
           </div>
         </div>
         <div class="guard" style="margin-top:10px">
@@ -224,9 +241,10 @@
           <p class="faint" style="font-size:12px;margin-top:6px" id="capNote"></p>
           <div class="row wrap" style="margin-top:10px">
             <button class="btn sm" type="button" id="culvertExport"><svg class="ico"><use href="#i-download"/></svg>Export CSV</button>
-            <button class="btn sm" type="button"><svg class="ico"><use href="#i-plus"/></svg>Add to CIP draft</button>
+            <button class="btn sm" type="button" id="addCipBtn"><svg class="ico"><use href="#i-plus"/></svg>Add to CIP draft</button>
             <span class="faint" style="font-size:12px">Adding to the capital plan draft needs one approval.</span>
           </div>
+          <div class="cip-box" id="cipDraftBox" hidden></div>
           <div class="guard" style="margin-top:8px"><span><svg class="ico"><use href="#i-check"/></svg>Cites culverts and requests</span><span><svg class="ico"><use href="#i-check"/></svg>Parcel counts from the real parcel layer</span><span><svg class="ico"><use href="#i-check"/></svg>No records changed</span></div>
         </div>
       </section>
@@ -246,7 +264,7 @@
                   <div><div class="k">QField · Crew 4 · 08:41</div>Condition <b>3</b>, grate loose</div>
                   <div><div class="k">Field app · Vactor 1 · 08:55</div>Condition <b>2</b>, grate cracked, photo</div>
                 </div>
-                <div class="row wrap"><span class="muted grow" style="font-size:12px">Honua kept both versions. Nothing was overwritten.</span><button class="btn sm">Keep 3</button><button class="btn sm primary">Keep 2 and photo</button></div>
+                <div class="row wrap" id="conflictActions"><span class="muted grow" style="font-size:12px">Honua kept both versions. Nothing was overwritten.</span><button class="btn sm" type="button" data-resolve="3">Keep 3</button><button class="btn sm primary" type="button" data-resolve="2">Keep 2 and photo</button></div>
               </div>
               <time>08:56</time></div></li>
             <li><span class="src"><svg class="ico"><use href="#i-refresh"/></svg></span><div><b>Demo sync</b> previews 6 work orders. <span class="muted">Illustrative receipt; no webhook was sent.</span><br><time>09:31</time></div></li>
@@ -383,12 +401,18 @@ import { mountPublicWorksExports } from './public-works-export.mjs';
   // Work orders
   const STAGES = ["Backlog", "Scheduled", "In progress", "Awaiting parts", "Done"];
   const eamNo = (w) => (w.stage !== "Backlog" ? 48190 + (parseInt(w.id.slice(-3)) % 97) : null);
-  document.getElementById("woSub").textContent = `${wos.length} this month · ${open.length} open`;
-  document.getElementById("board").innerHTML = STAGES.map((s) => {
-    const ws = wos.filter((w) => w.stage === s);
-    return `<div class="col"><h3>${s}<span class="chip">${ws.length}</span></h3>${ws.map((w) => `<article class="wo" role="button" tabindex="0" data-asset="${w.asset}"><div class="row"><span class="pri ${w.pri}">${w.pri}</span><span class="meta" style="margin:0">${w.id}</span></div><div class="t" style="margin-top:6px">${w.title}</div><div class="meta">${w.asset} · ${w.street}</div><div class="foot"><svg class="ico" style="width:13px;height:13px"><use href="#i-${w.crew ? "users" : "calendar"}"/></svg><span class="trunc">${w.crew ? w.crew.split(" · ")[1] : "Unassigned"}</span>${eamNo(w) ? `<span class="eam" title="Synced to EAM"><svg class="ico"><use href="#i-check"/></svg>EAM</span>` : ""}</div></article>`).join("")}</div>`;
-  }).join("");
-  document.getElementById("listBody").innerHTML = wos.map((w) => `<tr><td>${w.title}<span class="id">${w.id}</span></td><td class="mono">${w.asset}<span class="id">${w.street}</span></td><td>${w.stage}</td><td><span class="pri ${w.pri}">${w.pri}</span></td><td>${w.crew || '<span class="faint">Unassigned</span>'}</td><td class="num">${fmtShort(w.sched)}</td><td>${eamNo(w) ? `<span class="chip ok">#${eamNo(w)}</span>` : '<span class="faint">Not sent</span>'}</td></tr>`).join("");
+  function renderWorkOrders() {
+    const openNow = wos.filter((w) => w.stage !== "Done");
+    document.getElementById("kOpen").textContent = openNow.length;
+    document.getElementById("kOpenD").textContent = `${openNow.filter((w) => w.pri === "P1").length} P1 · ${wos.filter((w) => w.stage === "Awaiting parts").length} awaiting parts`;
+    document.getElementById("woSub").textContent = `${wos.length} this month · ${openNow.length} open`;
+    document.getElementById("board").innerHTML = STAGES.map((s) => {
+      const ws = wos.filter((w) => w.stage === s);
+      return `<div class="col"><h3>${s}<span class="chip">${ws.length}</span></h3>${ws.map((w) => `<article class="wo" role="button" tabindex="0" data-asset="${w.asset}"><div class="row"><span class="pri ${w.pri}">${w.pri}</span><span class="meta" style="margin:0">${w.id}</span></div><div class="t" style="margin-top:6px">${w.title}</div><div class="meta">${w.asset} · ${w.street}</div><div class="foot"><svg class="ico" style="width:13px;height:13px"><use href="#i-${w.crew ? "users" : "calendar"}"/></svg><span class="trunc">${w.crew ? w.crew.split(" · ")[1] : "Unassigned"}</span>${eamNo(w) ? `<span class="eam" title="Synced to EAM"><svg class="ico"><use href="#i-check"/></svg>EAM</span>` : ""}</div></article>`).join("")}</div>`;
+    }).join("");
+    document.getElementById("listBody").innerHTML = wos.map((w) => `<tr><td>${w.title}<span class="id">${w.id}</span></td><td class="mono">${w.asset}<span class="id">${w.street}</span></td><td>${w.stage}</td><td><span class="pri ${w.pri}">${w.pri}</span></td><td>${w.crew || '<span class="faint">Unassigned</span>'}</td><td class="num">${fmtShort(w.sched)}</td><td>${eamNo(w) ? `<span class="chip ok">#${eamNo(w)}</span>` : '<span class="faint">Not sent</span>'}</td></tr>`).join("");
+  }
+  renderWorkOrders();
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { const l = b.dataset.view === "list"; document.getElementById("list").hidden = !l; document.getElementById("board").hidden = l; }));
 
   // Asset panel
@@ -405,7 +429,22 @@ import { mountPublicWorksExports } from './public-works-export.mjs';
     return out;
   }
   const condBadge = (c) => `<span class="condbadge" style="background:${COND[c][1]}">${c} of 5 · ${COND[c][0]}</span>`;
+  const assetReceipts = {};
+  const cipDraft = [];
+  let currentSelection = null, receiptSeq = 104;
+  function updateSelPin(geometry) {
+    const fc = { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry }] };
+    if (map && map.getSource("sel")) { map.getSource("sel").setData(fc); return; }
+    if (map) map.once("load", () => map.getSource("sel") && map.getSource("sel").setData(fc));
+  }
+  function renderReceipts(id) {
+    const list = assetReceipts[id] || [];
+    const box = document.getElementById("assetReceipts");
+    box.hidden = !list.length;
+    box.innerHTML = list.map((txt) => `<span class="chip ok">${txt}</span>`).join("");
+  }
   function selectAsset(a) {
+    currentSelection = { kind: a.kind, id: a.id, title: `${a.id} · ${a.street}`, street: a.street, estCost: COST[a.cond] || 45000, data: a };
     document.getElementById("aKind").textContent = a.kind;
     const assetSource = a.kind === "Traffic signal" ? "roadway-assets/signals" : a.kind === "Culvert" ? "storm-assets/culverts" : "storm-assets/inlets";
     document.getElementById("aSrc").textContent = assetSource;
@@ -435,11 +474,13 @@ import { mountPublicWorksExports } from './public-works-export.mjs';
     document.getElementById("aLinkedN").textContent = linkedWo.length + a.near.length;
     document.getElementById("ap3").innerHTML = `<h3 style="font-size:13px;margin-bottom:6px">311 requests within 150 m</h3>${a.near.length ? `<table class="tbl">${a.near.map((r) => `<tr><td>${r.type}<span class="id">${r.id} · ${r.addr}</span></td><td><span class="chip ${r.breach ? "danger" : "info"}">${r.status}</span></td></tr>`).join("")}</table>` : '<p class="muted">No open requests nearby.</p>'}
       <h3 style="font-size:13px;margin:14px 0 6px">Work orders</h3>${linkedWo.length ? `<table class="tbl">${linkedWo.map((w) => `<tr><td>${w.title}<span class="id">${w.id} · ${w.crew || "Unassigned"}</span></td><td><span class="chip">${w.stage}</span></td></tr>`).join("")}</table>` : '<p class="muted">No work orders yet.</p>'}`;
-    if (map && map.getSource("assets")) { map.getSource("sel").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: a.c } }] }); }
+    renderReceipts(a.id);
+    updateSelPin({ type: "Point", coordinates: a.c });
   }
-  function selectBridge(f) {
+  function selectBridge(f, fly) {
     const p = f.properties;
-    const insp = p.insp.length === 3 ? `0${p.insp[0]}/20${p.insp.slice(1)}` : `${p.insp.slice(0, 2)}/20${p.insp.slice(2)}`;
+    const estCost = p.cond === "P" ? 1850000 : p.cond === "F" ? 620000 : 180000;
+    currentSelection = { kind: "Bridge (NBI)", id: p.id, title: `${p.carries} over ${p.over}`, street: p.loc || p.carries, estCost, data: f };
     const insDate = new Date(`20${p.insp.slice(-2)}-${p.insp.slice(0, -2).padStart(2, "0")}-15`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
     document.getElementById("aKind").textContent = "Bridge · National Bridge Inventory";
     document.getElementById("aSrc").textContent = "bridges/nbi";
@@ -452,9 +493,14 @@ import { mountPublicWorksExports } from './public-works-export.mjs';
       <dl class="dl" style="margin-top:14px"><dt>Lowest rating</dt><dd>${p.low}</dd><dt>Last NBI inspection</dt><dd>${insDate}</dd><dt>Location</dt><dd>${p.loc}</dd><dt>Year built</dt><dd>${p.built}</dd><dt>Average daily traffic</dt><dd class="num">${p.adt.toLocaleString()}</dd></dl>
       <p class="faint" style="font-size:12px;margin-top:12px">Source: National Bridge Inventory via Hawaii Statewide GIS Program, layer Infrastructure/9.</p>`;
     document.getElementById("ap2").innerHTML = `<ol class="tl"><li class="ok"><time>${insDate} · Last NBI inspection</time>Inspection month recorded in the source snapshot.</li></ol><p class="muted">Earlier inspection history is not supplied by this source.</p>`;
-    document.getElementById("aLinkedN").textContent = 0;
-    document.getElementById("ap3").innerHTML = '<p class="muted">No open requests or work orders.</p>';
-    map.getSource("sel").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: f.geometry }] });
+    const linkedWo = wos.filter((w) => w.asset === p.id);
+    document.getElementById("aLinkedN").textContent = linkedWo.length;
+    document.getElementById("ap3").innerHTML = linkedWo.length
+      ? `<table class="tbl">${linkedWo.map((w) => `<tr><td>${w.title}<span class="id">${w.id} · ${w.crew || "Unassigned"}</span></td><td><span class="chip">${w.stage}</span></td></tr>`).join("")}</table>`
+      : '<p class="muted">No open requests or work orders.</p>';
+    renderReceipts(p.id);
+    updateSelPin(f.geometry);
+    if (fly && map) map.flyTo({ center: f.geometry.coordinates, zoom: 16.5, duration: 700 });
   }
 
   let map;
@@ -492,8 +538,8 @@ import { mountPublicWorksExports } from './public-works-export.mjs';
       HM.bindToggles(m);
       ["assets", "bridges"].forEach((l) => { m.on("mouseenter", l, () => (m.getCanvas().style.cursor = "pointer")); m.on("mouseleave", l, () => (m.getCanvas().style.cursor = "")); });
       m.on("click", "assets", (e) => selectAsset(byId.get(e.features[0].properties.id)));
-      m.on("click", "bridges", (e) => selectBridge(HD.bridges.features.find((f) => f.properties.id === e.features[0].properties.id)));
-      m.on("click", "reqs", (e) => { const p = e.features[0].properties; new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat).setHTML(`<b>${p.id}</b><br>${p.addr}<br><span style="color:var(--c-text-3)">${p.status} · ${p.note}</span>`).addTo(m); });
+      m.on("click", "bridges", (e) => selectBridge(HD.bridges.features.find((f) => f.properties.id === e.features[0].properties.id), false));
+      m.on("click", "reqs", (e) => { const p = e.features[0].properties; HM.openPopup(m, e.lngLat, { closeButton: false, html: `<b>${p.id}</b><br>${p.addr}<br><span style="color:var(--c-text-3)">${p.status} · ${p.note}</span>` }); });
       selectAsset(anomaly || plan[0]);
       window.publicWorksMap = m;
       window.dispatchEvent(new Event("publicworksmapready"));
@@ -505,9 +551,83 @@ import { mountPublicWorksExports } from './public-works-export.mjs';
     e.preventDefault();
     card.click();
   });
+  function scheduleInspection() {
+    if (!currentSelection) return;
+    const code = `INS-2026-${receiptSeq++}`;
+    (assetReceipts[currentSelection.id] ||= []).push(`Inspection scheduled · ${code}`);
+    renderReceipts(currentSelection.id);
+  }
+  function createWorkOrder() {
+    if (!currentSelection) return;
+    const code = `WO-PW-${receiptSeq++}`;
+    wos.unshift({ id: code, title: `${currentSelection.kind === "Bridge (NBI)" ? "NBI bridge follow-up" : "Drainage rehabilitation"} · ${currentSelection.id}`, asset: currentSelection.id, street: currentSelection.street, stage: "Scheduled", pri: "P2", crew: "Kahului Drainage · Crew 1", sched: "2026-11-11" });
+    (assetReceipts[currentSelection.id] ||= []).push(`Work order created · ${code}`);
+    renderWorkOrders();
+    if (currentSelection.kind === "Bridge (NBI)") selectBridge(currentSelection.data, false);
+    else selectAsset(currentSelection.data);
+  }
+  function renderCipDraft() {
+    const box = document.getElementById("cipDraftBox");
+    box.hidden = !cipDraft.length;
+    if (!cipDraft.length) return;
+    const total = cipDraft.reduce((s, item) => s + item.estCost, 0);
+    box.innerHTML = `<div class="row" style="margin-bottom:6px"><b>FY27 CIP Draft (${cipDraft.length})</b><span class="chip ok" style="margin-left:auto">Est. ${HM.money(total)}</span></div>` +
+      cipDraft.map((item, i) => `<div class="row" style="padding:4px 0;border-top:1px solid var(--c-rule)"><span class="grow"><b>${item.id}</b> · ${item.kind} (${item.street})</span><span class="num">${HM.money(item.estCost)}</span><button class="btn sm ghost" type="button" data-rm-cip="${i}">Remove</button></div>`).join("");
+  }
+  function addToCipDraft() {
+    const target = currentSelection && (currentSelection.kind === "Bridge (NBI)" || currentSelection.kind === "Culvert")
+      ? currentSelection
+      : { id: cand[0].a.id, kind: "Culvert", street: cand[0].a.street, estCost: COST[cand[0].a.cond] };
+    if (!cipDraft.some((x) => x.id === target.id)) cipDraft.push({ id: target.id, kind: target.kind, street: target.street, estCost: target.estCost });
+    renderCipDraft();
+  }
+  function renderNotifications() {
+    const bridgeAlerts = HD.bridges.features.filter((f) => f.properties.cond !== "G").slice(0, 3);
+    document.getElementById("notifList").innerHTML = [
+      ...bridgeAlerts.map((f) => `<li><span class="chip ${f.properties.cond === "P" ? "danger" : "warn"}">NBI ${f.properties.cond === "P" ? "Poor" : "Fair"}</span> <b>${f.properties.carries}</b> (lowest ${f.properties.low}) <button class="cite" data-bridge="${f.properties.id}">Focus</button></li>`),
+      `<li><span class="chip info">MCP Inbox</span> <b>pw.weekly_plan</b> awaiting supervisor approval (12 inlets)</li>`,
+      `<li><span class="chip warn">Sync</span> Offline edit conflict on <b>SD-3127</b> (QField vs Field app) <button class="cite" data-asset="SD-3127">Inspect</button></li>`,
+    ].join("");
+  }
+  renderNotifications();
+  document.getElementById("schedInspBtn").addEventListener("click", scheduleInspection);
+  document.getElementById("createWoBtn").addEventListener("click", createWorkOrder);
+  document.getElementById("topNewWo").addEventListener("click", createWorkOrder);
+  document.getElementById("addCipBtn").addEventListener("click", addToCipDraft);
+  document.getElementById("cipDraftBox").addEventListener("click", (e) => {
+    const rm = e.target.closest("[data-rm-cip]"); if (!rm) return;
+    cipDraft.splice(+rm.dataset.rmCip, 1); renderCipDraft();
+  });
+  document.getElementById("editPlanBtn").addEventListener("click", () => {
+    const p = document.getElementById("planEditPanel"); p.hidden = !p.hidden;
+  });
+  document.getElementById("applyPlanEdit").addEventListener("click", () => {
+    const mode = document.getElementById("planCrewSel").value;
+    const extra = mode === "2" ? 2 : 0;
+    const label = mode === "1" ? "Vactor 1 prioritized" : mode === "2" ? "Photo verification required" : "Balanced 3-crew rotation";
+    document.getElementById("planSum").textContent = `12 inspections · ${hrs + extra} crew-hours · ${label}`;
+    const chip = document.querySelector("#plan .ai-h .chip");
+    if (chip) { chip.className = "chip ok"; chip.textContent = `Plan updated · ${label}`; }
+    document.getElementById("planEditPanel").hidden = true;
+  });
+  document.getElementById("conflictActions").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-resolve]"); if (!btn) return;
+    const val = +btn.dataset.resolve;
+    const target = byId.get("SD-3127");
+    if (target) {
+      target.cond = val;
+      if (currentSelection && currentSelection.id === "SD-3127") selectAsset(target);
+      document.getElementById("kPoor").textContent = assets.filter((a) => a.cond <= 2).length;
+    }
+    document.getElementById("conflictActions").innerHTML = `<span class="chip ok">Resolved · kept condition ${val}${val === 2 ? " + photo (Vactor 1)" : " (Crew 4)"} · logged to audit trail</span>`;
+  });
+  const notifBtn = document.getElementById("notifBtn"), notifPop = document.getElementById("notifPop");
+  notifBtn.addEventListener("click", () => { const openNow = notifPop.hidden; notifPop.hidden = !openNow; notifBtn.setAttribute("aria-expanded", String(openNow)); });
+  document.getElementById("notifClose").addEventListener("click", () => { notifPop.hidden = true; notifBtn.setAttribute("aria-expanded", "false"); });
   document.addEventListener("click", (e) => {
+    const br = e.target.closest("[data-bridge]"); if (br && map) { const f = HD.bridges.features.find((x) => x.properties.id === br.dataset.bridge); if (f) { selectBridge(f, true); notifPop.hidden = true; } }
     const c = e.target.closest("[data-asset]"); if (c && map) { const a = byId.get(c.dataset.asset); if (a) { selectAsset(a); map.flyTo({ center: a.c, zoom: 17, duration: 700 }); document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" }); } }
-    const r = e.target.closest("[data-req]"); if (r && map) { const q = drain.find((x) => x.id === r.dataset.req); if (q) { map.flyTo({ center: q.c, zoom: 17, duration: 700 }); new maplibregl.Popup({ closeButton: false }).setLngLat(q.c).setHTML(`<b>${q.id}</b><br>${q.addr}<br><span style="color:var(--c-text-3)">${q.status} · ${q.note}</span>`).addTo(map); document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" }); } }
+    const r = e.target.closest("[data-req]"); if (r && map) { const q = drain.find((x) => x.id === r.dataset.req); if (q) { map.flyTo({ center: q.c, zoom: 17, duration: 700 }); HM.openPopup(map, q.c, { closeButton: false, html: `<b>${q.id}</b><br>${q.addr}<br><span style="color:var(--c-text-3)">${q.status} · ${q.note}</span>` }); document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" }); } }
     const z = e.target.closest("[data-zone]"); if (z && map) { const ids = z.dataset.zone === "flood" ? ["flood", "flood-line"] : ["tsunami", "tsunami-line"]; HM.toggle(map, ids, true); document.querySelector(`[data-layers^="${ids[0]}"]`).checked = true; map.fitBounds([[-156.49, 20.876], [-156.455, 20.898]], { duration: 700 }); }
   });
 })();

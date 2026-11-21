@@ -34,6 +34,12 @@ export async function displayParcelByTmk(url: string, digits: string, signal: Ab
   return parcel((await features(url, signal)).find((feature) => String(feature.properties?.tmk_txt).replace(/\D/g, '') === digits));
 }
 
+export async function displayParcelById(url: string, id: string | number, signal: AbortSignal): Promise<Parcel | null> {
+  const target = String(id);
+  return parcel((await features(url, signal)).find((feature) =>
+    String(feature.id ?? feature.properties?.OBJECTID ?? feature.properties?.objectid ?? '') === target));
+}
+
 export async function displayParcelAtPoint(url: string, point: readonly [number, number], signal: AbortSignal): Promise<Parcel | null> {
   return parcel((await features(url, signal)).find((feature) => booleanIntersects({ type: 'Point', coordinates: [...point] }, feature)));
 }

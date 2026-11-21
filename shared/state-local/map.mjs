@@ -18,6 +18,7 @@ export function createFeatureMap(options) {
     for (const paint of painters) paint(map, token);
   };
   document.addEventListener('honua:theme', updateTheme);
+  map.on('remove', () => document.removeEventListener('honua:theme', updateTheme));
   map.on('error', options.onError);
   map.on('load', () => {
     map.addSource('records', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });

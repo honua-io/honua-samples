@@ -61,7 +61,7 @@ export function createAnalysisModel(handle) {
   const registry = createFilterRegistry();
   const table = createHonuaFeatureTable({ source: validatedAnalysisSource(source, handle.catalog.validateRecord, handle.catalog.provenanceFields), sourceId: source.descriptor.id, identityField: identity,
     columns: columns.map((field) => ({ field })), sort: [{ field: identity, direction: 'asc' }],
-    returnGeometry: true, budgets: { pageSize: 100, maxCachedRows: 500, maxRequests: 100,
+    returnGeometry: true, budgets: { pageSize: 100, maxCachedRows: 500, maxRequests: 1000,
       maxExportRows: 10_000, maxExportBytes: 8 * 1024 * 1024 } });
   return { ...handle, registry, table };
 }

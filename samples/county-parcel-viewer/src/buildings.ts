@@ -11,8 +11,9 @@ interface BuildingOptions {
   archiveFor(url: string): PMTiles;
 }
 
-async function addBuildings(map: Map, options: BuildingOptions): Promise<void> {
-  if (map.getLayer(BUILDINGS) || !options.archiveUrl) return;
+async function addBuildings(map: Map, options: BuildingOptions, isDisposed: () => boolean): Promise<boolean> {
+  if (map.getLayer(BUILDINGS)) return true;
+  if (!options.archiveUrl) return false;
   const archive = options.archiveFor(options.archiveUrl);
   try {
     await archive.getHeader();
@@ -21,6 +22,7 @@ async function addBuildings(map: Map, options: BuildingOptions): Promise<void> {
     archive.cache = new SharedPromiseCache();
     throw error;
   }
+  if (isDisposed() || !map.style) return false;
   if (!map.getSource(BUILDINGS)) map.addSource(BUILDINGS, {
     type: "vector", url: `pmtiles://${options.archiveUrl}`, attribution: CREDIT,
   });
@@ -30,7 +32,9 @@ async function addBuildings(map: Map, options: BuildingOptions): Promise<void> {
     color: token("--map-select"),
   };
   const layer = toMapLibreExtrusionLayer(primitive) as FillExtrusionLayerSpecification;
-  map.addLayer({ ...layer, minzoom: 12 }, map.getLayer("parcel-selected-line") ? "parcel-selected-line" : undefined);
+  const before = map.getLayer("parcel-selected-line") ? "parcel-selected-line" : map.getLayer("parcel-selected-geo-line") ? "parcel-selected-geo-line" : undefined;
+  map.addLayer({ ...layer, minzoom: 12 }, before);
+  return true;
 }
 
 export function installBuildingControl(map: Map, options: BuildingOptions): void {
@@ -47,12 +51,16 @@ export function installBuildingControl(map: Map, options: BuildingOptions): void
   note.setAttribute("role", "status");
   note.hidden = true;
   let active = false;
+  let disposed = false;
+  const onPageHide = (event: PageTransitionEvent) => { if (!event.persisted) disposed = true; };
+  window.addEventListener("pagehide", onPageHide);
   button.addEventListener("click", async () => {
     button.disabled = true;
     note.hidden = false;
     note.textContent = "Loading building footprints…";
     try {
-      await addBuildings(map, options);
+      const mounted = await addBuildings(map, options, () => disposed);
+      if (!mounted || disposed || !map.style) return;
       active = !active;
       map.setLayoutProperty(BUILDINGS, "visibility", active ? "visible" : "none");
       map.easeTo({ pitch: active ? 55 : 0, duration: reducedMotion() ? 0 : 500 });
@@ -62,14 +70,14 @@ export function installBuildingControl(map: Map, options: BuildingOptions): void
       note.textContent = "Overture buildings · Heights use reported metres, floors × 3 m, or a 4 m estimate. Not surveyed elevations.";
       note.hidden = !active;
     } catch {
-      note.textContent = "Buildings could not load. Select 3D to retry; parcel lookup still works.";
+      if (!disposed) note.textContent = "Buildings could not load. Select 3D to retry; parcel lookup still works.";
     } finally {
-      button.disabled = false;
+      if (!disposed) button.disabled = false;
     }
   });
   group.append(button);
   map.addControl({
     onAdd() { map.getContainer().parentElement?.append(note); return group; },
-    onRemove() { group.remove(); note.remove(); },
+    onRemove() { disposed = true; window.removeEventListener("pagehide", onPageHide); group.remove(); note.remove(); },
   }, "top-right");
 }

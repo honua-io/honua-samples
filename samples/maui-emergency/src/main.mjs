@@ -10,6 +10,7 @@ import { element } from '../../../shared/state-local/dom.mjs';
 import { displayUtc } from '../../../shared/state-local/exercise-time.mjs';
 import { updateFeatureMap, fitFeatureMap } from '../../../shared/state-local/map.mjs';
 
+const FILTER_DEBOUNCE_MS = 180;
 const form = document.querySelector('#filters');
 const status = document.querySelector('#load-status');
 const freshness = document.querySelector('#freshness');
@@ -21,7 +22,10 @@ let filtered = [];
 let shown = 25;
 let view;
 let timer;
+let filterTimer;
 let loading = false;
+let initialized = false;
+let disposed = false;
 let verifiedAt;
 let selectedId;
 let context;
@@ -79,14 +83,15 @@ function freshnessText() {
 }
 
 async function load() {
-  if (loading) return;
+  if (loading || disposed) return;
   loading = true;
   const startingLocationRevision = locationRevision;
-  context = undefined;
-  answer.textContent = 'Zone check unavailable while exercise resources are being verified.';
+  if (!context) {
+    context = undefined;
+    answer.textContent = 'Zone check unavailable while exercise resources are being verified.';
+  }
   clearTimeout(timer);
   refresh.disabled = true;
-  const preserveView = records.length > 0;
   document.body.dataset.sampleStatus = 'loading';
   status.dataset.state = 'loading';
   status.textContent = 'Checking both layers, exercise labels and every page of records…';
@@ -94,21 +99,28 @@ async function load() {
     const snapshot = source.snapshot ? await loadSnapshot() : null;
     records = snapshot ? snapshot.records : await loadExercise(source);
     try { context = snapshot ? snapshot.context : await loadContext(location.search); }
-    catch (error) { answer.textContent = `Zone check unavailable: ${error.message}. Check the approved receipts and refresh.`; }
+    catch (error) {
+      if (!context) answer.textContent = `Zone check unavailable: ${error.message}. Check the approved receipts and refresh.`;
+    }
     if (context && !checkedPoint && locationRevision === startingLocationRevision) answer.textContent = `Connected ${context.zones.length} tsunami zone features and ${context.roads.length} road features. Enter coordinates to inspect the geography.`;
     if (!source.snapshot) verifiedAt = Date.now();
     const validation = records.some(({ properties }) => [true, 1].includes(properties.validation_geometry));
     document.querySelectorAll('[data-geometry-source]').forEach((node) => { node.textContent = validation
       ? 'Synthetic validation geometry; not county source locations.' : 'Geometry: Hawaii Statewide GIS Program, public domain.'; });
     showExercise();
-    if (!preserveView && view) fitFeatureMap(view, filtered);
+    if (!initialized && view) {
+      fitFeatureMap(view, filtered);
+      initialized = true;
+    }
     status.textContent = `Loaded ${records.length} fictional exercise records. No operational use.`;
     status.dataset.state = 'ready';
     document.body.dataset.sampleStatus = 'pass';
   } catch (error) {
-    records = [];
-    answer.textContent = 'Exercise resources could not be verified. Refresh before checking again.';
-    dashboard.hidden = true;
+    if (!initialized) {
+      records = [];
+      answer.textContent = 'Exercise resources could not be verified. Refresh before checking again.';
+      dashboard.hidden = true;
+    }
     status.textContent = `Could not verify the exercise. ${error.message}. Check the import receipts, then refresh.`;
     status.dataset.state = 'error';
     document.body.dataset.sampleStatus = 'fail';
@@ -116,15 +128,30 @@ async function load() {
     freshnessText();
     refresh.disabled = false;
     loading = false;
-    if (!source.snapshot) timer = setTimeout(load, 60_000);
+    if (!source.snapshot && !disposed) timer = setTimeout(load, 60_000);
   }
 }
 
 form.addEventListener('submit', (event) => event.preventDefault());
-form.addEventListener('input', () => { shown = 25; if (records.length) { render(); if (view) fitFeatureMap(view, filtered); } });
-form.addEventListener('reset', () => setTimeout(() => { shown = 25; render(); if (view) fitFeatureMap(view, filtered); }));
+form.addEventListener('input', (event) => {
+  clearTimeout(filterTimer);
+  const apply = () => { shown = 25; if (records.length) render(); };
+  if (event.target === form.elements.search) filterTimer = setTimeout(apply, FILTER_DEBOUNCE_MS);
+  else apply();
+});
+form.addEventListener('reset', () => {
+  clearTimeout(filterTimer);
+  setTimeout(() => { shown = 25; render(); if (view) fitFeatureMap(view, filtered); });
+});
 document.querySelector('#more').addEventListener('click', () => { shown += 25; render(); });
 refresh.addEventListener('click', load);
+window.addEventListener('pagehide', (event) => {
+  if (event.persisted) return;
+  disposed = true;
+  clearTimeout(timer);
+  clearTimeout(filterTimer);
+  view?.map.remove();
+});
 const answer = document.querySelector('#location-answer');
 function checkLocation(point) {
   checkedPoint = point;
