@@ -3,6 +3,9 @@ import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { chromium, expect } from '@playwright/test';
 import { startStaticServer } from './lib/browser-lane.mjs';
+import { countyFields } from '../shared/state-local/county-parcel.mjs';
+
+const publicFieldCount = Object.keys(countyFields).length;
 
 async function loadPage(page, url) {
   await page.route('**/state-local/property/**', async (route) => {
@@ -23,10 +26,13 @@ async function verifyEarlyOpen(browser, url) {
   await page.route('**/state-local/property/**', async (route) => {
     if (route.request().resourceType() !== 'document') return route.continue();
     const response = await route.fetch();
-    const body = (await response.text())
+    const original = await response.text();
+    const body = original
       .replace('map = HM.create(', 'map = window.__parcelMap = HM.create(')
-      .replace('map.on("load", () => {\n      basemap(map, opts); restyle(map);\n      if (opts.onload) opts.onload(map);\n    });',
+      .replace(/map\.on\("load", \(\) => \{\s*basemap\(map, opts\); restyle\(map\);\s*if \(opts\.onload\) opts\.onload\(map\);\s*\}\);/,
         'window.__finishSnapshot = () => { basemap(map, opts); restyle(map); if (opts.onload) opts.onload(map); };');
+    assert.ok(body.includes('window.__parcelMap = HM.create('), 'verifyEarlyOpen failed to hook HM.create');
+    assert.ok(body.includes('window.__finishSnapshot ='), 'verifyEarlyOpen regex did not match map load callback');
     await route.fulfill({ response, body });
   });
   await page.goto(url);
@@ -52,10 +58,17 @@ async function verifyLookup(page) {
   await page.getByLabel('County TMK', { exact: true }).fill('238-007-001');
   await page.getByRole('button', { name: 'Find county parcel', exact: true }).click();
   await expect(page.locator('#countyStatus')).toContainText('County TMK 238007001 · GeoParquet details', { timeout: 30000 });
+  const labels = await page.locator('#countyDetails dt').allTextContents();
+  assert.deepEqual(labels, [
+    'TMK', 'Tax map zone', 'Section', 'Plat', 'Parcel',
+    'Neighborhood code', 'Property tax class code', 'Tax acres', 'GIS acres',
+    'County zoning code', 'County zoning district',
+  ]);
   const values = await page.locator('#countyDetails dd').allTextContents();
   assert.deepEqual(values.slice(0, 5), ['238007001', '3', '8', '007', '001']);
-  assert.equal(values.length, 9);
-  assert.ok(!await page.locator('#countyDetails').textContent().then((text) => /owner|building|zoning/i.test(text)));
+  assert.equal(values.length, labels.length);
+  assert.deepEqual(values.slice(-2), ['929', 'PK Park']);
+  assert.ok(!await page.locator('#countyDetails').textContent().then((text) => /owner|building/i.test(text)));
   await expect.poll(() => page.evaluate(() => window.__parcelMap?.getSource('county-selection')?._data?.properties?.tmk_txt)).toBe('238007001');
   await expect.poll(() => page.evaluate(() => window.__parcelMap.getLayoutProperty('parcels-fill', 'visibility'))).toBe('none');
   await expect.poll(() => page.evaluate(() => window.__parcelMap.queryRenderedFeatures({ layers: ['county-fill'] }).length), { timeout: 30000 }).toBeGreaterThan(0);
@@ -91,8 +104,9 @@ async function verifyExports(page) {
     assert.equal(downloaded.suggestedFilename(), `county-parcel-${tmk}.${format.toLowerCase()}`);
     const contents = await readFile(await downloaded.path(), 'utf8');
     assert.ok(contents.includes(tmk));
-    assert.ok(contents.includes('2026-11-13T12:20:54.318Z'));
+    assert.ok(contents.includes('2026-11-17T17:09:41.935Z'));
     assert.ok(contents.includes('public-domain'));
+    assert.ok(contents.includes('zoning_district'));
     assert.ok(!/homeowner|landvalue|bldgvalue/.test(contents));
     if (format === 'GeoJSON') assert.equal(JSON.parse(contents).features[0].geometry.type, 'MultiPolygon');
   }
@@ -149,14 +163,14 @@ async function verifySlowLookup(browser, url) {
   await loadPage(page, url);
   await page.route('**/parcels.parquet', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 2100));
-    await route.continue();
+    await route.fallback();
   });
   await page.getByLabel('County TMK', { exact: true }).fill('238007001');
   await page.getByRole('button', { name: 'Find county parcel', exact: true }).click();
   await expect(page.locator('#countyStatus')).toContainText('County TMK 238007001 · GeoParquet details', { timeout: 30000 });
   await expect(page.locator('#countyStatus')).toContainText('took longer than 2.0 s');
   await expect(page.locator('#countyStatus')).toContainText('Live lookup is not connected in this demo');
-  await expect(page.locator('#countyDetails dd')).toHaveCount(9);
+  await expect(page.locator('#countyDetails dd')).toHaveCount(publicFieldCount);
   await page.close();
   console.log('PASS slow native lookup retains real details and explains the browser budget');
 }

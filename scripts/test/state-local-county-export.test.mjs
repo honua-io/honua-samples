@@ -20,6 +20,26 @@ test('county exports preserve text identity, raw geometry and capture provenance
   assert.throws(() => countyExport(publication, feature, 'html'));
 });
 
+test('county exports include public zoning fields, descriptor attribution and reference-data warning', () => {
+  const zoningPub = {
+    ...publication,
+    publicFields: [{ name: 'tmk_txt' }, { name: 'zoning_code' }, { name: 'zoning_district' }],
+    descriptor: {
+      ...publication.descriptor,
+      provenance: { attribution: 'County of Maui; Hawaii Statewide GIS Program | zoning: County of Maui Department of Planning; Hawaii Statewide GIS Program', license: 'public-domain' },
+    },
+  };
+  const zoningFeature = { properties: { tmk_txt: '238007001', zoning_code: '929', zoning_district: 'PK Park', homeowner: 'Private' }, geometry: feature.geometry };
+  const data = JSON.parse(countyExport(zoningPub, zoningFeature, 'geojson'));
+  assert.deepEqual(data.features[0].properties, { tmk_txt: '238007001', zoning_code: '929', zoning_district: 'PK Park' });
+  assert.match(data.provenance.attribution, /County of Maui Department of Planning/);
+  assert.match(data.provenance.warning, /at least 10% of the parcel.*not a zoning determination/);
+  const csv = countyExport(zoningPub, zoningFeature, 'csv');
+  assert.ok(csv.includes('zoning_code') && csv.includes('zoning_district'));
+  assert.ok(csv.includes('PK Park') && csv.includes('County of Maui Department of Planning'));
+  assert.ok(csv.includes('not a zoning determination') && !csv.includes('Private'));
+});
+
 test('county share URLs replace only county identity and validate text TMKs', () => {
   const url = new URL(countyShareUrl('https://example.org/property/?theme=dark&countyTmk=old#details', '038-007-001'));
   assert.equal(url.searchParams.get('countyTmk'), '038007001');
