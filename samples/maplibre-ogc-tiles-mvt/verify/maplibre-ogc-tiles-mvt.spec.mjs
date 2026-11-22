@@ -12,10 +12,6 @@ import { startStaticServer } from "../../../scripts/lib/browser-lane.mjs";
 const SAMPLES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PAGE = "/maplibre-ogc-tiles-mvt/src/index.html";
 const LIVE_BUDGET_MS = Number(process.env.HONUA_SAMPLE_LIVE_BUDGET_MS ?? 5_000);
-// demo.honua.io's cached tile routes answer CORS only for https://honua.io,
-// https://www.honua.io and http://localhost:8123 (honua-demo-infra
-// stacks/aws/cloudfront.tf, demo_cors), so the live spec serves the page there.
-const LIVE_TILE_ORIGIN_PORT = Number(process.env.HONUA_SAMPLE_LIVE_TILE_ORIGIN_PORT ?? 8123);
 
 test.describe.configure({ mode: "serial" });
 
@@ -66,16 +62,11 @@ test("reports a collection without tiles", async ({ page }) => {
 
 test("renders its default public-live tileset", async ({ page }, testInfo) => {
   const target = (process.env.HONUA_SAMPLE_TARGET_BASE_URL ?? "").replace(/\/+$/, "");
-  const liveServer = await startStaticServer({ rootDir: SAMPLES_DIR, port: LIVE_TILE_ORIGIN_PORT });
-  try {
-    await page.goto(pageUrl(liveServer.url, target ? { baseUrl: target } : {}));
-    await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass", { timeout: 30_000 });
-    expect(Number(await page.locator("body").getAttribute("data-rendered-features"))).toBeGreaterThan(0);
-    const elapsed = Number(await page.locator("body").getAttribute("data-sample-elapsed-ms"));
-    testInfo.annotations.push({ type: "live-elapsed-ms", description: String(elapsed) });
-    expect(elapsed).toBeLessThan(LIVE_BUDGET_MS);
-    await page.screenshot({ path: testInfo.outputPath("maplibre-ogc-tiles-mvt-live.png") });
-  } finally {
-    await liveServer.close();
-  }
+  await page.goto(pageUrl(staticServer.url, target ? { baseUrl: target } : {}));
+  await expect(page.locator("body")).toHaveAttribute("data-sample-status", "pass", { timeout: 30_000 });
+  expect(Number(await page.locator("body").getAttribute("data-rendered-features"))).toBeGreaterThan(0);
+  const elapsed = Number(await page.locator("body").getAttribute("data-sample-elapsed-ms"));
+  testInfo.annotations.push({ type: "live-elapsed-ms", description: String(elapsed) });
+  expect(elapsed).toBeLessThan(LIVE_BUDGET_MS);
+  await page.screenshot({ path: testInfo.outputPath("maplibre-ogc-tiles-mvt-live.png") });
 });
