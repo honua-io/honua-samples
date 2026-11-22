@@ -85,7 +85,7 @@ class ParcelSearch {
       empty.setAttribute('aria-disabled', 'true');
       empty.setAttribute('aria-selected', 'false');
       empty.textContent = unsupportedCpr ? 'CPR unit lookup is not supported in the loaded demo area'
-        : 'No matches in the loaded demo area';
+        : 'No TMK or street matches in the loaded demo area';
       this.list.append(empty);
     }
     this.list.dataset.open = 'true';

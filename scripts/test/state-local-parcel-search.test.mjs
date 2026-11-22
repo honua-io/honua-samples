@@ -126,7 +126,7 @@ test('Escape, Tab, outside clicks and unmatched input clear active suggestions',
   assert.equal(input.attributes['aria-expanded'], 'false');
   input.value = 'unmatched'; input.fire('input'); input.fire('keydown', { key: 'Enter' });
   assert.deepEqual(selected, []);
-  assert.match(list.children[0].textContent, /No matches/);
+  assert.match(list.children[0].textContent, /No TMK or street matches/);
   assert.equal(list.children[0].attributes.role, 'option');
   assert.equal(list.children[0].attributes['aria-disabled'], 'true');
   input.value = ''; input.fire('input');
