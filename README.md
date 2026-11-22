@@ -543,12 +543,13 @@ migration footprint scanner, lands here pre-filtered to the matching samples.
 
 The build fetches honua-sdk-js's handoff and catalog, so it needs internet
 access, and it reads the vendored sample-bundle archive for producer pin
-`fcecc81ac298316bace51502272e75609a10190a`. Qualified journey evidence on that
-handoff runs through 2026-11-09T22:30Z
-([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)).
-`validate.yml` runs daily, and its `producer evidence horizon` job
-(`node scripts/check-producer-evidence-horizon.mjs`) fails when that window is
-less than three days away, so the pin is refreshed before admission refuses it.
+`fcecc81ac298316bace51502272e75609a10190a`. `validate.yml` runs daily, and its
+`producer evidence horizon` job (`node scripts/check-producer-evidence-horizon.mjs`)
+checks the earliest `visualEvidence.expiresAt` across qualified journeys for
+SDK samples published in the public portfolio
+([honua-io/honua-samples#57](https://github.com/honua-io/honua-samples/issues/57)),
+failing when that window is less than three days away (and passing when the
+public portfolio publishes no SDK sample with a qualified journey).
 
 ```bash
 python3 -m venv artifacts/catalog-python   # once: the display build reads the catalog with pyarrow
