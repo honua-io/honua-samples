@@ -131,6 +131,13 @@
     window.addEventListener("popstate", restore);
     map.on("remove", () => window.removeEventListener("popstate", restore));
   }
+  function captureMouseDrag(map) {
+    const canvas = map.getCanvas();
+    canvas.addEventListener("pointerdown", (event) => {
+      // MapLibre needs the release on its canvas even when a drag crosses an overlay.
+      if (event.pointerType === "mouse" && event.button === 0) canvas.setPointerCapture(event.pointerId);
+    });
+  }
   function create(el, opts) {
     opts = opts || {};
     if (!window.maplibregl || !window.pmtiles) return unavailableMap(el, "Map library could not load. Connect to the internet to view the interactive map.");
@@ -146,6 +153,7 @@
         interactive: opts.interactive !== false, cooperativeGestures: !!opts.cooperative,
       });
     } catch { return unavailableMap(el, "Interactive map unavailable in this browser. Try a browser with WebGL enabled."); }
+    if (opts.interactive !== false) captureMouseDrag(map);
     if (hash) bindCameraHistory(map, opts.maxBounds || HI.bounds);
     maps.push(map);
     const fitBounds = opts.bounds || VIEW[opts.view || "core"];

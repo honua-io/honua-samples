@@ -205,6 +205,9 @@ jobs:
       - name: Verify bounded map camera URLs
         run: node scripts/smoke-map-camera.mjs
 
+      - name: Verify map drag completion across overlays
+        run: node scripts/smoke-map-drag.mjs
+
       - name: Verify light and dark gallery journeys
         run: npm run test:gallery:themes
 
