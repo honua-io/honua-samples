@@ -36,9 +36,14 @@ async function drag(page, target) {
 
 async function checkDrag(page, target) {
   const before = await camera(page);
+  const zone = page.getByRole('checkbox', { name: 'Evacuation zone', exact: true });
+  const checked = await zone.isChecked();
   await drag(page, target);
   const after = await camera(page);
   assert.ok(after.center.some((value, index) => Math.abs(value - before.center[index]) > 0.0001), `${target}: camera moved`);
+  assert.equal(await zone.isChecked(), checked, `${target}: layer selection unchanged`);
+  assert.equal(await page.evaluate(() => HM.maps.find((map) => map._hash).getLayoutProperty('tsunami', 'visibility')), checked ? 'visible' : 'none', `${target}: layer visibility unchanged`);
+  await checkLegend(page);
   await page.reload();
   await ready(page);
   const restored = await camera(page);
