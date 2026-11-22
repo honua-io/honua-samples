@@ -27,21 +27,32 @@ take the service path and layer from the `layerUrl` that `cli.mjs activate` prin
 the number after it. Public reads must
 be enabled explicitly; no administrative credential belongs in the browser URL.
 
+Build the gallery first so the app can load its shared fonts, theme and logos, then build the live SDK contract app (`build:contract`; `npm run build` assembles the static approved snapshot instead) and stage it under the same server root on `http://localhost:3000` (the origin `docker/compose.yml` allows through CORS):
+
 ```sh
+npm ci
+python3 -m venv artifacts/catalog-python
+artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+node scripts/state-local/build-display-site.mjs
+node scripts/build-gallery.mjs --check
 npm ci --prefix samples/maui-emergency
-npm run build --prefix samples/maui-emergency
-npm exec --prefix samples/maui-emergency -- vite preview samples/maui-emergency --host 127.0.0.1
+npm run build:contract --prefix samples/maui-emergency
+mkdir -p site/maui-emergency/app
+cp -R samples/maui-emergency/dist/. site/maui-emergency/app/
+python3 -m http.server 3000 --directory site
 ```
 
-Open the preview URL with these query parameters (replace the four placeholders):
+Open `http://localhost:3000/maui-emergency/app/` with these query parameters (replace the four placeholders):
 
 ```text
 ?baseUrl=http://localhost:8080&shelterService=SHELTER_SERVICE&shelterLayer=SHELTER_LAYER&closureService=CLOSURE_SERVICE&closureLayer=CLOSURE_LAYER
 ```
 
 The browser permits the approved `https://demo.honua.io` origin and disposable
-localhost servers. An unbound page displays setup instructions. In the gallery,
-the app is published at `/maui-emergency/app/` with the same parameters.
+localhost servers. An unbound page displays setup instructions. This explicit
+local staging step is needed while the live SDK app remains withheld from the
+public portfolio; the published gallery serves the static approved exercise at
+`/state-local/emergency/`.
 
 Filters, resource selection and pagination work on the complete loaded set.
 Map markers and table buttons open the same record details, including the exact
