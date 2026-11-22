@@ -860,7 +860,7 @@ try {
   }
   function installFor(s) {
     if (s.langs.includes("Python")) return s.files.some((f) => f.name === "requirements.txt") ? "pip install -r requirements.txt   # honua-sdk" : "# Python standard library only\npython src/run.py";
-    if (s.langs.includes(".NET")) return "# .NET 10 SDK\n" + (s.run || "dotnet run");
+    if (s.langs.includes(".NET")) return "# .NET 11 SDK\n" + (s.run || "dotnet run");
     if (s.repo === "samples" && !s.files.some((f) => /@honua\/sdk-js|create-honua-app/.test(f.code))) return `# No SDK needed: plain HTTP against the server\n${s.run}`;
     if (/create honua-app/.test(s.run)) return s.run;
     const extra = s.id === "react-quickstart" ? " react react-dom" : s.id === "sketch-editing" ? " terra-draw terra-draw-maplibre-gl-adapter" : "";

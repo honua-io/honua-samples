@@ -187,7 +187,7 @@ You need, from a clone of this repository:
   CORS.
 - Python 3 with `venv` (`ogc-features-python` runs `python src/run.py`). The
   activated environment below provides `python` and the Python SDK.
-- The .NET 10 SDK: the state/local samples verify their JS, Python and .NET
+- The .NET 11 SDK: the state/local samples verify their JS, Python and .NET
   snippets against the published SDKs.
 - Internet access: the `public-live` samples query `https://demo.honua.io`.
 - Chromium for the [browser lane](#browser-lane). Playwright is locked in

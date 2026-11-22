@@ -386,14 +386,12 @@
             _snapshot = null;
             _errorMessage = null;
             _isLoading = false;
-            StateHasChanged();
             return;
         }
 
         using var load = _loadCoordinator.BeginLoad();
         _isLoading = true;
         _errorMessage = null;
-        StateHasChanged();
 
         try
         {
@@ -453,7 +451,14 @@
         }
 
         _sourceInput = ReadSourceOverrideFromLocation() ?? string.Empty;
-        _ = InvokeAsync(ReloadAsync);
+        _ = InvokeAsync(async () =>
+        {
+            await ReloadAsync();
+            if (!_disposed)
+            {
+                StateHasChanged();
+            }
+        });
     }
 
     private string? ReadSourceOverrideFromLocation()
