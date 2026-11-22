@@ -44,13 +44,28 @@ and mobile views; inspection performs no additional raster downloads.
 
 ## Linked county analysis
 
-Open `analysis.html` with both approved anonymous layers:
+Build the gallery first so `analysis.html` can load its shared `/state-local/assets/` files, then build the Workbench app and serve `site/` from `http://localhost:3000` (the origin `docker/compose.yml` allows through CORS):
+
+```sh
+npm ci
+python3 -m venv artifacts/catalog-python
+artifacts/catalog-python/bin/pip install -r scripts/state-local/approved/catalog-requirements.txt
+node scripts/state-local/build-display-site.mjs
+node scripts/build-gallery.mjs --check
+npm ci --prefix samples/maui-workbench
+npm run build --prefix samples/maui-workbench
+mkdir -p site/maui-workbench/app
+cp -R samples/maui-workbench/dist/. site/maui-workbench/app/
+python3 -m http.server 3000 --directory site
+```
+
+Open `http://localhost:3000/maui-workbench/app/analysis.html` with both approved anonymous layers:
 
 ```text
 analysis.html?baseUrl=https://demo.honua.io&parcelsService=SERVICE&parcelsLayer=ID&requestsService=SERVICE&requestsLayer=ID
 ```
 
-For each layer, use the path between `/rest/services/` and `/FeatureServer/` in the
+For a disposable local stack started from `docker/compose.yml`, use `baseUrl=http://localhost:8080` from that `http://localhost:3000` origin. For each layer, use the path between `/rest/services/` and `/FeatureServer/` in the
 `layerUrl` that `cli.mjs activate` prints (`folder/service` for a department import)
 and the number after it.
 
