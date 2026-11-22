@@ -42,9 +42,17 @@ export function parseTideGauge(body) {
   if (body.error) throw new Error(body.error.message ?? 'NOAA returned an error');
   const reading = body.data?.at(-1);
   if (!reading || !isNumericReading(reading.v)) throw new Error('NOAA returned no current reading');
+  const timestamp = reading.t;
+  if (typeof timestamp !== 'string' || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(timestamp)) {
+    throw new Error('Missing or invalid NOAA reading time');
+  }
+  const observedAt = requireTime(`${timestamp.replace(' ', 'T')}:00Z`, 'NOAA reading time');
+  if (observedAt.toISOString().slice(0, 16).replace('T', ' ') !== timestamp) {
+    throw new Error('Invalid NOAA reading time');
+  }
   const preliminary = reading.q === 'p' ? ' · preliminary' : '';
   return {
-    observedAt: requireTime(`${reading.t.replace(' ', 'T')}:00Z`, 'NOAA reading time'),
+    observedAt,
     summary: `${Number(reading.v).toFixed(2)} ft above MLLW${preliminary}`,
   };
 }
