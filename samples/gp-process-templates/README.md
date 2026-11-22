@@ -29,7 +29,7 @@ Run these commands from the repository root. The SDK checkout is pinned by
 build dependencies. The script installs the Python custom-code harness into an ignored
 virtual environment, runs the Python golden tests, runs the .NET golden tests
 (which build the process, the harness, and the SDK from the checkout), and
-verifies the template manifests. No server, Redis, Docker, or cloud credentials
+verifies the template manifests. No server, Docker, or cloud credentials
 are used; the data is the committed fixture.
 
 ## Why draft

@@ -12,7 +12,7 @@ without a server. The example returns a typed JSON response for a read-only
 The plugin SDK is not yet published as a standalone NuGet package. The sample
 uses its exact public source revision from `config/server-sdk.v1.json` under
 ignored `artifacts/server-sdk/`; product code is not vendored into the sample.
-Run from the repository root with Git and the .NET 10 SDK:
+Run from the repository root with Git and the .NET 11 SDK:
 
 ```bash
 bash scripts/sync-server-sdk.sh

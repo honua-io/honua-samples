@@ -1,7 +1,7 @@
 {
   "id": "gp-process-templates",
   "title": "GP process templates (Python and .NET)",
-  "description": "Runs the golden, invalid-input, output-cap, and missing-input tests of the Python and .NET geoprocessing process templates under templates/ through the real custom-code harness; no server, Redis, or cloud credentials are involved.",
+  "description": "Runs the golden, invalid-input, output-cap, and missing-input tests of the Python and .NET geoprocessing process templates under templates/ through the real custom-code harness; no server or cloud credentials are involved.",
   "contentKind": "walkthrough",
   "learning": {
     "goal": "automate-workflow",
@@ -9,7 +9,7 @@
     "estimatedMinutes": 20,
     "prerequisites": [
       "Python 3.11+",
-      ".NET 10 SDK",
+      ".NET 11 SDK",
       "honua-server checkout for the custom-code harness (not yet published as packages)"
     ]
   },

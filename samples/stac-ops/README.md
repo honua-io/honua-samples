@@ -9,7 +9,7 @@ A standalone Blazor WebAssembly dashboard for inspecting a Honua STAC catalog,
 collection validators, extension declarations, query probes, and request timing.
 It consumes the server HTTP API and is deployed independently of Honua Server.
 
-Run from the repository root with the .NET 10 SDK:
+Run from the repository root with the .NET 11 SDK:
 
 ```bash
 dotnet run --project samples/stac-ops/Honua.StacOpsDemo.csproj --urls http://localhost:5173

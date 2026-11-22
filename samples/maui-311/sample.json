@@ -10,7 +10,7 @@
     "prerequisites": [
       "Node.js 22+",
       "Python 3.11+",
-      ".NET 10 SDK",
+      ".NET 11 SDK",
       "A published Maui layer or a disposable local Honua Server"
     ]
   },

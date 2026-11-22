@@ -8,7 +8,7 @@
     "level": "intermediate",
     "estimatedMinutes": 15,
     "prerequisites": [
-      ".NET 10 SDK",
+      ".NET 11 SDK",
       "Honua Server with STAC enabled and browser CORS configured"
     ]
   },
