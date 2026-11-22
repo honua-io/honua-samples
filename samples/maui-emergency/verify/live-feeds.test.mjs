@@ -36,6 +36,17 @@ test('NOAA tide gauge reads GMT times and surfaces API errors', () => {
   assert.throws(() => parseTideGauge({ data: [] }), /no current reading/);
 });
 
+test('NOAA timestamps must be complete calendar-valid GMT observations', () => {
+  for (const t of ['invalid-time', '2026-02-30 17:00', '2026-13-14 17:00', '2026-11-14 24:00',
+    '2026-11-14 17:60', '2026-11-14', '2026-11-14T17:00', '2026-11-14 17:00Z', '', null, undefined, 0]) {
+    const result = parseFeed(feed('tide'), { data: [{ t, v: '1.0' }] });
+    assert.match(result.error ?? '', /NOAA reading time/, `accepted ${JSON.stringify(t)}`);
+    assert.equal(feedState(feed('tide'), result, Date.now()).age, 'n/a');
+  }
+  const leapDay = parseTideGauge({ data: [{ t: '2028-02-29 23:59', v: '1.0' }] });
+  assert.equal(leapDay.observedAt.toISOString(), '2028-02-29T23:59:00.000Z');
+});
+
 test('missing and non-finite readings are unavailable while a measured zero is valid', () => {
   for (const value of ['', '  ', null, undefined, 'NaN', 'Infinity', 'not a number', false]) {
     const tide = parseFeed(feed('tide'), { data: [{ t: '2026-11-14 17:00', v: value }] });
