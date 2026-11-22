@@ -62,6 +62,9 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`${server.url}/state-local/${route}/`);
     await expect.poll(() => page.evaluate(() => Boolean(window.HM?.maps[0]?.getSource('parcels'))), { timeout: 60_000 }).toBe(true);
+    // A responsive initial fit can already be tighter than the selected parcel.
+    // Start from an overview so the lookup must visibly move into the parcel.
+    await page.evaluate(() => HM.maps[0].jumpTo({ center: [-156.47, 20.89], zoom: 10 }));
     const initialZoom = await page.evaluate(() => HM.maps[0].getZoom());
     await focusSearchFromSkip(page, route, target);
     await page.keyboard.press('ControlOrMeta+A');
