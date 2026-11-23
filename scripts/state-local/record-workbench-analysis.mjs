@@ -2,6 +2,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { validateManifest, publicUrl, resultRows, sha256 } from '../../shared/state-local/workbench-analytics.mjs';
+import { h3Prerequisite, readServerManifest } from './analysis-capabilities.mjs';
 
 const [manifestFile, output] = process.argv.slice(2);
 if (!manifestFile || !output || !process.env.HONUA_ANALYSIS_SERVER_IMAGE) {
@@ -10,12 +11,12 @@ if (!manifestFile || !output || !process.env.HONUA_ANALYSIS_SERVER_IMAGE) {
 const manifest = validateManifest(JSON.parse(await readFile(manifestFile, 'utf8')));
 const base = process.env.HONUA_ANALYSIS_SERVER ?? 'https://demo.honua.io';
 const recordings = {};
+const authHeaders = process.env.HONUA_ANALYSIS_API_KEY ? { 'X-API-Key': process.env.HONUA_ANALYSIS_API_KEY } : {};
 
 async function record(key, config) {
   const request = config.request;
   if (!request || !['GET', 'POST'].includes(request.method)) throw new Error(`${key}: a real GET/POST server request is required`);
-  const headers = { Accept: 'application/geo+json, application/json' };
-  if (process.env.HONUA_ANALYSIS_API_KEY) headers['X-API-Key'] = process.env.HONUA_ANALYSIS_API_KEY;
+  const headers = { Accept: 'application/geo+json, application/json', ...authHeaders };
   if (request.method === 'POST') headers['Content-Type'] = 'application/json';
   const response = await fetch(publicUrl(request.url, base), { method: request.method, headers, signal: AbortSignal.timeout(120000),
     ...(request.method === 'POST' ? { body: JSON.stringify(request.body ?? {}) } : {}) });
@@ -29,6 +30,16 @@ async function record(key, config) {
   console.log(`${key}: recorded ${rows.length} real server rows (${envelope.sha256})`);
 }
 
+const operations = { ...manifest.operations };
+if (operations.h3) {
+  // Ask the server that answers the H3 request: an absolute request URL may name a different origin than base.
+  const h3Server = publicUrl(operations.h3.request?.url ?? '/', base);
+  const h3 = h3Prerequisite(await readServerManifest(h3Server, { Accept: 'application/json', ...authHeaders }), operations.h3.cellLimit);
+  if (!h3.record) {
+    console.log(`h3: skipped: ${h3.reason}`);
+    delete operations.h3;
+  }
+}
 await mkdir(output, { recursive: true });
-for (const [key, config] of Object.entries(manifest.operations)) await record(key, config);
+for (const [key, config] of Object.entries(operations)) await record(key, config);
 await writeFile(path.join(output, 'manifest.json'), JSON.stringify({ ...manifest, operations: recordings }, null, 2) + '\n');
