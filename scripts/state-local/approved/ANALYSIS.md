@@ -35,10 +35,16 @@ them, then prepare a manifest in an ignored artifact directory:
 
 These are placeholders, not runnable Maui evidence. Use actual published
 service/collection identifiers and the join layer's storage ID. Use a bounded
-Maui subset; truncated responses are rejected. For H3, verify `cellLimit` against
-the installed server’s `QueryLimits.MaxH3CellsPerQuery` setting; the example
-value is only a placeholder. H3 responses at the limit are rejected because
-the endpoint can silently cap cells. Preserve this setting in recorded manifests. If operations use different
+Maui subset; truncated responses are rejected. For H3, set `cellLimit` to the
+installed server’s `QueryLimits.MaxH3CellsPerQuery`; the example value is only a
+placeholder. Before recording H3, the recorder reads
+`GET /api/v1/capabilities/manifest` (an admin route, so set
+`HONUA_ANALYSIS_API_KEY`) and stops if `limits.analysis.maxH3CellsPerQuery`
+differs from `cellLimit`. When the manifest reports `h3Available: false` (the
+default PostGIS-only image has no `h3-pg`), H3 is skipped with that reason and
+left out of the output manifest, so the workbench shows it as not published.
+H3 responses at the limit are rejected because the endpoint can silently cap
+cells. Preserve this setting in recorded manifests. If operations use different
 source layers, hash and describe the exact combined input archive, including
 the subset definitions. Verify that input independently before capture.
 
