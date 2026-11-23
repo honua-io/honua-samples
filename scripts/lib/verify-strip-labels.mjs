@@ -19,20 +19,20 @@ function stripReport() {
   });
 }
 
-async function verifyRoute(page, baseUrl, route, [width, height]) {
+async function verifyRoute(page, url, [width, height]) {
   await page.setViewportSize({ width, height });
-  assert.equal((await page.goto(`${baseUrl}/state-local/${route}`)).status(), 200, route);
+  assert.equal((await page.goto(url)).status(), 200, url);
   await page.waitForTimeout(300);
   for (const strip of await page.evaluate(stripReport)) {
-    assert.deepEqual(strip.missing, [], `Labels scrolled out of view: /${route} at ${width}x${height}`);
-    assert.equal(strip.focusable && strip.named, strip.overflowing, `Strip tab stop matches its overflow: /${route} at ${width}x${height}`);
+    assert.deepEqual(strip.missing, [], `Labels scrolled out of view: ${url} at ${width}x${height}`);
+    assert.equal(strip.focusable && strip.named, strip.overflowing, `Strip tab stop matches its overflow: ${url} at ${width}x${height}`);
   }
 }
 
 export async function verifyStripLabels(context, baseUrl) {
   const page = await context.newPage();
   try {
-    for (const viewport of viewports) for (const route of routes) await verifyRoute(page, baseUrl, route, viewport);
+    for (const viewport of viewports) for (const route of routes) await verifyRoute(page, `${baseUrl}/state-local/${route}`, viewport);
   } finally { await page.close(); }
   console.log(`PASS strip labels visible and scrolling strips keyboard-reachable on ${routes.length} routes at ${viewports.length} viewports`);
 }
