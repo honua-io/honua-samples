@@ -54,6 +54,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { portableSourceUrl, writeSnapshotIfChanged } from "./snapshot-file.mjs";
 import {
   SDK_PRODUCER_LOCK,
   assertLockedAssetDigest,
@@ -621,12 +622,12 @@ async function writeSnapshot(snapshotPath, sourceUrl, manifest) {
       "Only manifest metadata is recorded here; runnable files are staged from the byte-verified vendored archive, " +
       "never from this fallback JSON. Rewritten automatically whenever staging and full integrity verification " +
       "succeed. See honua-io/honua-samples#11.",
-    sourceUrl,
-    fetchedAt: new Date().toISOString(),
+    sourceUrl: portableSourceUrl(sourceUrl),
+    fetchedAt: null,
     manifest,
   };
   await mkdir(path.dirname(snapshotPath), { recursive: true });
-  await writeFile(snapshotPath, JSON.stringify(snapshot, null, 2) + "\n", "utf8");
+  await writeSnapshotIfChanged(snapshotPath, snapshot);
 }
 
 async function writeStatus(statusPath, result) {

@@ -22,10 +22,11 @@
 // path for any entry (or catalog version) that doesn't carry the field yet,
 // applying the same crosswalk file honua-sdk-js validates in its own CI.
 
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SDK_PRODUCER_LOCK, assertLockedProducerUrl, sdkProducerLockEnforced } from "./sdk-producer-lock.mjs";
+import { writeSnapshotIfChanged } from "./snapshot-file.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -79,10 +80,10 @@ async function writeSnapshot(snapshotPath, sourceUrl, catalog) {
       "sdk-js-side hiccup. Rewritten automatically whenever the live fetch succeeds -- commit the change to " +
       "keep the offline fallback current. See honua-io/honua-samples#3.",
     sourceUrl,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt: null,
     catalog,
   };
-  await writeFile(snapshotPath, JSON.stringify(snapshot, null, 2) + "\n", "utf8");
+  await writeSnapshotIfChanged(snapshotPath, snapshot);
 }
 
 /**
