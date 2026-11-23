@@ -32,7 +32,9 @@ async function record(key, config) {
 
 const operations = { ...manifest.operations };
 if (operations.h3) {
-  const h3 = h3Prerequisite(await readServerManifest(base, { Accept: 'application/json', ...authHeaders }), operations.h3.cellLimit);
+  // Ask the server that answers the H3 request: an absolute request URL may name a different origin than base.
+  const h3Server = publicUrl(operations.h3.request?.url ?? '/', base);
+  const h3 = h3Prerequisite(await readServerManifest(h3Server, { Accept: 'application/json', ...authHeaders }), operations.h3.cellLimit);
   if (!h3.record) {
     console.log(`h3: skipped: ${h3.reason}`);
     delete operations.h3;

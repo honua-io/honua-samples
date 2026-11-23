@@ -24,6 +24,8 @@ test('an unreadable manifest names the admin key requirement', async () => {
     return new Response('denied', { status: 401 });
   };
   await assert.rejects(readServerManifest('https://example.org/workbench/', { 'X-API-Key': 'harness' }, fetcher), /HTTP 401.*HONUA_ANALYSIS_API_KEY/);
+  const origin = async (url) => { assert.equal(url, 'https://h3.example.net/api/v1/capabilities/manifest'); return new Response('{}', { status: 200 }); };
+  await readServerManifest('https://h3.example.net/ogc/features/collections/c/h3?resolution=7', {}, origin);
   const ok = async () => new Response(JSON.stringify(server({ maxH3CellsPerQuery: 7 })), { status: 200 });
   assert.equal((await readServerManifest('https://example.org', {}, ok)).limits.analysis.maxH3CellsPerQuery, 7);
 });
