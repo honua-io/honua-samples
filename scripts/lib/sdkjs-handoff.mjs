@@ -65,6 +65,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SDK_PRODUCER_LOCK, assertLockedProducerUrl } from "./sdk-producer-lock.mjs";
+import { writeSnapshotIfChanged } from "./snapshot-file.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -779,7 +780,7 @@ async function writeSnapshotMeta({
     },
     handoffSourceUrl,
     fixtureSourceUrl,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt: null,
   };
-  await writeFile(metaPath, JSON.stringify(meta, null, 2) + "\n", "utf8");
+  await writeSnapshotIfChanged(metaPath, meta);
 }

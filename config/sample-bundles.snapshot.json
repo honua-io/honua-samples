@@ -1,7 +1,7 @@
 {
   "_comment": "Committed fallback snapshot consumed by scripts/lib/sample-bundles.mjs (via scripts/build-gallery.mjs / the pages.yml staging step) if the content-addressed vendored honua-sdk-js archive is unavailable. Only manifest metadata is recorded here; runnable files are staged from the byte-verified vendored archive, never from this fallback JSON. Rewritten automatically whenever staging and full integrity verification succeed. See honua-io/honua-samples#11.",
-  "sourceUrl": "file:///home/ubuntu/honua-io/wt-docs-honua-samples/vendor/sdk-producer/fcecc81ac298316bace51502272e75609a10190a/sample-bundles.v2.json",
-  "fetchedAt": "2026-11-03T19:43:49.661Z",
+  "sourceUrl": "vendor/sdk-producer/fcecc81ac298316bace51502272e75609a10190a/sample-bundles.v2.json",
+  "fetchedAt": "2026-11-23T02:42:56.766Z",
   "manifest": {
     "format": "honua.sdk.sample-bundles.v2",
     "schemaVersion": 2,

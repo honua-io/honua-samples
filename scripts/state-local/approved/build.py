@@ -88,6 +88,8 @@ def build(name):
     else:
         src = src.replace("</body>", kit + "\n</body>", 1)
     src = re.sub(r"\{\{DATA ([^}]*)\}\}", lambda m: data_block(m.group(1)), src)
+    head_part, body_end, tail = src.rpartition("</body>")
+    src = head_part + "<script>" + read(os.path.join(SHARED, "demostrip.js")) + "</script>\n" + body_end + tail
     if "{{REQUEST_LOOP}}" in src:
         src = src.replace("</head>", "<style>" + read(os.path.join(SHARED, "request-loop.css")) + "</style></head>", 1)
         modules = [read(os.path.join(SHARED, name)) for name in ("csv.mjs", "download.mjs", "request-records.mjs", "request-loop.mjs")]
