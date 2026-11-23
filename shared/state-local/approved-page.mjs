@@ -19,7 +19,10 @@ export async function approvedPage({ template, assets, data }) {
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js" integrity="sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn" crossorigin="anonymous"></script><style>${css}</style>`;
   const shell = await readFile(new URL('./app-shell.css', import.meta.url), 'utf8');
-  const html = (await readFile(template, 'utf8')).replace('</head>', () => `<style>${shell}</style></head>`);
+  const strip = await readFile(new URL('./demostrip.js', import.meta.url), 'utf8');
+  const page = (await readFile(template, 'utf8')).replace('</head>', () => `<style>${shell}</style></head>`);
+  const bodyEnd = page.lastIndexOf('</body>') >= 0 ? page.lastIndexOf('</body>') : page.length;
+  const html = `${page.slice(0, bodyEnd)}<script>${strip}</script>\n${page.slice(bodyEnd)}`;
   return html.replace('{{HEAD}}', () => head).replace('{{ICONS}}', () => icons).replace('{{MAPJS}}', () => kit)
     .replace(/\{\{DATA [^}]*\}\}/g, () => `<script>window.HD=${JSON.stringify(data).replaceAll('</', '<\\/')};</script>`);
 }
