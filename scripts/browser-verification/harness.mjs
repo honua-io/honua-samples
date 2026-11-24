@@ -438,14 +438,42 @@ export async function readTemplateView(sourceFile) {
  * size showing `view` (MapLibre's world is 512 px wide at zoom 0).
  */
 export function projectToMapPixel([lng, lat], view, size) {
-  const world = 512 * 2 ** view.zoom;
-  const toWorld = ([x, y]) => {
-    const phi = (y * Math.PI) / 180;
-    return [((x + 180) / 360) * world, ((1 - Math.log(Math.tan(Math.PI / 4 + phi / 2)) / Math.PI) / 2) * world];
-  };
-  const [px, py] = toWorld([lng, lat]);
-  const [cx, cy] = toWorld(view.center);
-  return [Math.round(size.width / 2 + (px - cx)), Math.round(size.height / 2 + (py - cy))];
+  return mapPixel(toMercator([lng, lat]), toMercator(view.center), 512 * 2 ** view.zoom, size);
+}
+
+/** Sample fixture interiors at the camera framed by the starter's live data fit. */
+export function fittedFixturePixels(fixture, size) {
+  const padding = 32;
+  const maximumZoom = 16;
+  const corners = fixture.features.flatMap(({ ring }) => ring.map(toMercator));
+  const xs = corners.map(([x]) => x);
+  const ys = corners.map(([, y]) => y);
+  const west = Math.min(...xs);
+  const east = Math.max(...xs);
+  const north = Math.min(...ys);
+  const south = Math.max(...ys);
+  const center = [(west + east) / 2, (north + south) / 2];
+  const world = Math.min(
+    512 * 2 ** maximumZoom,
+    (size.width - 2 * padding) / (east - west),
+    (size.height - 2 * padding) / (south - north),
+  );
+  const polygonPixels = fixture.features.map(({ interior }) => mapPixel(toMercator(interior), center, world, size));
+  // Sample the padding to the left of the full fixture extent.
+  const [left, middle] = mapPixel([west, center[1]], center, world, size);
+  return { polygonPixels, controlPixel: [left - padding / 2, middle] };
+}
+
+function toMercator([lng, lat]) {
+  const phi = (lat * Math.PI) / 180;
+  return [(lng + 180) / 360, (1 - Math.log(Math.tan(Math.PI / 4 + phi / 2)) / Math.PI) / 2];
+}
+
+function mapPixel([x, y], center, world, size) {
+  return [
+    Math.round(size.width / 2 + (x - center[0]) * world),
+    Math.round(size.height / 2 + (y - center[1]) * world),
+  ];
 }
 
 export async function settleMapCanvas(page) {

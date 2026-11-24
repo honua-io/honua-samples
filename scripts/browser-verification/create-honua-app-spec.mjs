@@ -16,6 +16,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   colourDistance,
+  fittedFixturePixels,
   importedProperties,
   loadFixture,
   outsidePoint,
@@ -100,8 +101,7 @@ function defineTests(template) {
       const map = page.locator(template.mapSelector);
       const box = await map.boundingBox();
       const size = { width: Math.round(box.width), height: Math.round(box.height) };
-      const polygonPixels = fixture.features.map((feature) => projectToMapPixel(feature.interior, view, size));
-      const controlPixel = projectToMapPixel(outsidePoint(fixture, view), view, size);
+      const { polygonPixels, controlPixel } = fittedFixturePixels(fixture, size);
       for (const [x, y] of [...polygonPixels, controlPixel]) {
         expect(x >= 0 && y >= 0 && x < size.width && y < size.height, `pixel ${x},${y} is inside the map`).toBe(true);
       }
