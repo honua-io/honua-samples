@@ -8,7 +8,7 @@
     "build:contract": "vite build"
   },
   "dependencies": {
-    "@honua/sdk-js": "0.4.0",
+    "@honua/sdk-js": "0.5.1",
     "@turf/area": "7.4.0",
     "@turf/bbox": "7.4.0",
     "@turf/boolean-contains": "7.4.0",
@@ -30,6 +30,6 @@
     "vite": "8.2.4"
   },
   "overrides": {
-    "@honua/honua-migrate": "npm:@honua/sdk@0.4.0"
+    "@honua/honua-migrate": "npm:@honua/sdk@0.5.1"
   }
 }

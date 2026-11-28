@@ -49,7 +49,7 @@ async function countyToggle(state) {
 
 async function countyPublicationApi(state) {
   if (state.publicationApi) return state.publicationApi;
-  const api = await import('@honua/sdk-js/publication');
+  const api = await import('@honua/sdk-js/export');
   return { openPublication: api.openPublication, publicationSource: api.publicationSource };
 }
 
