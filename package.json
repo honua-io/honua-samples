@@ -18,11 +18,11 @@
     "test:demo-ai:browser": "node scripts/smoke-demo-ai.mjs"
   },
   "devDependencies": {
-    "@honua/sdk-js": "0.4.0",
+    "@honua/sdk-js": "0.5.1",
     "@playwright/test": "1.58.2",
     "esbuild": "0.25.12"
   },
   "overrides": {
-    "@honua/honua-migrate": "npm:@honua/sdk@0.4.0"
+    "@honua/honua-migrate": "npm:@honua/sdk@0.5.1"
   }
 }
